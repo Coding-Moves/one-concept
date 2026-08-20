@@ -6,6 +6,7 @@ import {
   Theme,
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SpaceGrotesk_700Bold, useFonts } from '@expo-google-fonts/space-grotesk';
 import { StatusBar } from 'expo-status-bar';
 import { ComponentProps } from 'react';
@@ -13,10 +14,26 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ProgressProvider } from './src/context/ProgressContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { HistoryScreen } from './src/screens/HistoryScreen';
+import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
+import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 
 const Tab = createBottomTabNavigator();
+const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+
+function ProfileStackScreen() {
+  return (
+    <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
+      <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen
+        name="Personalization"
+        component={PersonalizationScreen}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+    </ProfileStack.Navigator>
+  );
+}
 
 type IoniconName = ComponentProps<typeof Ionicons>['name'];
 
@@ -71,6 +88,11 @@ function ThemedApp() {
             name="Stats"
             component={StatsScreen}
             options={{ tabBarIcon: tabIcon('stats-chart', 'stats-chart-outline') }}
+          />
+          <Tab.Screen
+            name="Profile"
+            component={ProfileStackScreen}
+            options={{ tabBarIcon: tabIcon('person', 'person-outline') }}
           />
         </Tab.Navigator>
       </NavigationContainer>

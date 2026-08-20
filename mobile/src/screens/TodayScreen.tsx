@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
@@ -49,7 +50,10 @@ export function TodayScreen() {
           <Text style={styles.sectionLabel}>Today’s concept</Text>
 
           {concept ? (
-            <ConceptCard concept={concept} />
+            <>
+              <ConceptCard concept={concept} />
+              <ConceptActions concept={concept} />
+            </>
           ) : (
             <Text style={styles.tagline}>No concepts available.</Text>
           )}

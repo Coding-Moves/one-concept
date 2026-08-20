@@ -10,7 +10,9 @@ import { CONCEPTS } from '../data/concepts';
 import { Category, Concept, ProgressState } from '../types';
 import { selectDailyConcept } from '../services/dailyConcept';
 import { todayKey } from '../services/dates';
-import { EMPTY_PROGRESS, loadProgress, saveProgress } from '../services/storage';
+import { localProgressRepository } from '../services/localProgressRepository';
+import { ProgressRepository } from '../services/progressRepository';
+import { EMPTY_PROGRESS } from '../services/storage';
 import { computeStreaks, StreakStats } from '../services/streak';
 
 export interface ProgressContextValue {
@@ -34,15 +36,18 @@ function eligibleConcepts(progress: ProgressState): Concept[] {
   return pool.length > 0 ? pool : CONCEPTS;
 }
 
-function toggleInList(list: string[], id: string): string[] {
-  return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+interface Props {
+  children: ReactNode;
+  /** Swappable for the HTTP-backed repository in Phase 3, and for tests. */
+  repository?: ProgressRepository;
 }
 
 /**
- * Single owner of the app's persisted learning state. All screens read from
- * this provider so Today, History, Stats, and Profile always agree.
+ * Single owner of the app's learning state. Screens read from this provider
+ * so Today, History, Stats, and Profile always agree; persistence is entirely
+ * the repository's business.
  */
-export function ProgressProvider({ children }: { children: ReactNode }) {
+export function ProgressProvider({ children, repository = localProgressRepository }: Props) {
   const [progress, setProgress] = useState<ProgressState>(EMPTY_PROGRESS);
   const [loading, setLoading] = useState(true);
 
@@ -51,72 +56,51 @@ export function ProgressProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      const stored = await loadProgress();
+      const stored = await repository.load();
       if (cancelled) return;
 
-      const concept = selectDailyConcept(eligibleConcepts(stored), stored, today);
-      const next: ProgressState =
-        concept && stored.assignment?.date !== today
-          ? { ...stored, assignment: { conceptId: concept.id, date: today } }
-          : stored;
+      // Pin today's concept on first open of the day so it can't change later.
+      const picked = selectDailyConcept(eligibleConcepts(stored), stored, today);
+      const next = picked ? await repository.setAssignment(picked.id, today) : stored;
+      if (cancelled) return;
 
       setProgress(next);
       setLoading(false);
-      if (next !== stored) {
-        saveProgress(next).catch(() => {});
-      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [today]);
-
-  const update = useCallback((updater: (prev: ProgressState) => ProgressState) => {
-    setProgress((prev) => {
-      const next = updater(prev);
-      if (next !== prev) saveProgress(next).catch(() => {});
-      return next;
-    });
-  }, []);
+  }, [repository, today]);
 
   // The day's assignment is pinned once made, even if the concept's topic is
   // unfollowed later that day — topic changes apply from the next assignment.
   const concept = selectDailyConcept(eligibleConcepts(progress), progress, today);
   const learnedToday = progress.learned.some((r) => r.date === today);
 
+  // Writes are fire-and-forget against the repository; a failure leaves the
+  // previous state on screen rather than showing a change that did not persist.
+  const apply = useCallback((run: Promise<ProgressState>) => {
+    run.then(setProgress).catch(() => {});
+  }, []);
+
   const markLearned = useCallback(() => {
     if (!concept) return;
-    update((prev) =>
-      prev.learned.some((r) => r.date === today)
-        ? prev
-        : { ...prev, learned: [...prev.learned, { conceptId: concept.id, date: today }] }
-    );
-  }, [concept, today, update]);
+    apply(repository.markLearned(concept.id, today));
+  }, [apply, concept, repository, today]);
 
   const toggleTopic = useCallback(
-    (category: Category) => {
-      update((prev) => ({
-        ...prev,
-        followedTopics: prev.followedTopics.includes(category)
-          ? prev.followedTopics.filter((c) => c !== category)
-          : [...prev.followedTopics, category],
-      }));
-    },
-    [update]
+    (category: Category) => apply(repository.toggleTopic(category)),
+    [apply, repository]
   );
 
   const toggleLike = useCallback(
-    (conceptId: string) => {
-      update((prev) => ({ ...prev, likes: toggleInList(prev.likes, conceptId) }));
-    },
-    [update]
+    (conceptId: string) => apply(repository.toggleLike(conceptId)),
+    [apply, repository]
   );
 
   const toggleBookmark = useCallback(
-    (conceptId: string) => {
-      update((prev) => ({ ...prev, bookmarks: toggleInList(prev.bookmarks, conceptId) }));
-    },
-    [update]
+    (conceptId: string) => apply(repository.toggleBookmark(conceptId)),
+    [apply, repository]
   );
 
   const value: ProgressContextValue = {

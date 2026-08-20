@@ -1,0 +1,17 @@
+# Environment / secrets — never commit real values, only .env.example
+.env
+.env.*
+!.env.example
+
+# Python (backend)
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# OS / editor
+.DS_Store
+*.swp

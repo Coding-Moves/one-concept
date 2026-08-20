@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SkeletonBlock } from '../components/Skeleton';
 import { StreakBadge } from '../components/StreakBadge';
 import { useProgress } from '../context/ProgressContext';
+import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
-import { colors, radius, spacing, typography } from '../theme';
+import { radius, spacing, ThemeColors, typography } from '../theme';
 import { Category } from '../types';
 
 interface CategoryProgress {
@@ -27,7 +29,7 @@ function computeCategoryProgress(learnedIds: Set<string>): CategoryProgress[] {
   return [...byCategory.values()];
 }
 
-function ProgressBar({ fraction }: { fraction: number }) {
+function ProgressBar({ fraction, styles }: { fraction: number; styles: Styles }) {
   return (
     <View style={styles.barTrack}>
       <View style={[styles.barFill, { width: `${Math.round(fraction * 100)}%` }]} />
@@ -37,6 +39,8 @@ function ProgressBar({ fraction }: { fraction: number }) {
 
 export function StatsScreen() {
   const { loading, progress, streaks } = useProgress();
+  const { colors } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   const learnedIds = new Set(progress.learned.map((r) => r.conceptId));
   const categories = computeCategoryProgress(learnedIds);
@@ -65,7 +69,10 @@ export function StatsScreen() {
                 {overall.learned} / {overall.total}
               </Text>
             </View>
-            <ProgressBar fraction={overall.total ? overall.learned / overall.total : 0} />
+            <ProgressBar
+              fraction={overall.total ? overall.learned / overall.total : 0}
+              styles={styles}
+            />
           </View>
 
           <Text style={styles.sectionLabel}>By category</Text>
@@ -79,7 +86,7 @@ export function StatsScreen() {
                     {c.learned} / {c.total}
                   </Text>
                 </View>
-                <ProgressBar fraction={c.total ? c.learned / c.total : 0} />
+                <ProgressBar fraction={c.total ? c.learned / c.total : 0} styles={styles} />
               </View>
             ))}
           </View>
@@ -89,81 +96,84 @@ export function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.lg,
-  },
-  header: {
-    gap: spacing.xs,
-  },
-  title: {
-    ...typography.title,
-    color: colors.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.textMuted,
-    marginBottom: -spacing.sm,
-  },
-  card: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    borderWidth: 1,
-    borderColor: colors.border,
-    padding: spacing.lg,
-    gap: spacing.md,
-  },
-  cardTitle: {
-    ...typography.heading,
-    fontSize: 17,
-    color: colors.text,
-  },
-  overallRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  overallCount: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: colors.primary,
-  },
-  categoryBlock: {
-    gap: spacing.sm,
-  },
-  categoryName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: colors.textSecondary,
-    flexShrink: 1,
-  },
-  categoryCount: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: colors.textMuted,
-  },
-  barTrack: {
-    height: 8,
-    borderRadius: radius.pill,
-    backgroundColor: colors.background,
-    overflow: 'hidden',
-  },
-  barFill: {
-    height: '100%',
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
-  },
-});
+type Styles = ReturnType<typeof createStyles>;
+
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xl,
+      gap: spacing.lg,
+    },
+    header: {
+      gap: spacing.xs,
+    },
+    title: {
+      ...typography.title,
+      color: colors.text,
+    },
+    subtitle: {
+      fontSize: 14,
+      color: colors.textMuted,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      color: colors.textMuted,
+      marginBottom: -spacing.sm,
+    },
+    card: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      borderWidth: 1,
+      borderColor: colors.border,
+      padding: spacing.lg,
+      gap: spacing.md,
+    },
+    cardTitle: {
+      ...typography.heading,
+      fontSize: 17,
+      color: colors.text,
+    },
+    overallRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+    },
+    overallCount: {
+      fontSize: 15,
+      fontWeight: '700',
+      color: colors.primary,
+    },
+    categoryBlock: {
+      gap: spacing.sm,
+    },
+    categoryName: {
+      fontSize: 14,
+      fontWeight: '600',
+      color: colors.textSecondary,
+      flexShrink: 1,
+    },
+    categoryCount: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textMuted,
+    },
+    barTrack: {
+      height: 8,
+      borderRadius: radius.pill,
+      backgroundColor: colors.background,
+      overflow: 'hidden',
+    },
+    barFill: {
+      height: '100%',
+      borderRadius: radius.pill,
+      backgroundColor: colors.primary,
+    },
+  });

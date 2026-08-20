@@ -1,19 +1,38 @@
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useMemo } from 'react';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConceptCard } from '../components/ConceptCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
 import { StreakBadge } from '../components/StreakBadge';
 import { useProgress } from '../context/ProgressContext';
-import { colors, radius, spacing, typography } from '../theme';
+import { useTheme } from '../context/ThemeContext';
+import { radius, spacing, ThemeColors, typography } from '../theme';
 
 export function TodayScreen() {
   const { loading, concept, learnedToday, streaks, markLearned } = useProgress();
+  const { colors, mode, toggle } = useTheme();
+  const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
-        <Text style={styles.appName}>One Concept</Text>
-        <Text style={styles.tagline}>One day. One concept. One small step forward.</Text>
+        <View style={styles.headerText}>
+          <Text style={styles.appName}>One Concept</Text>
+          <Text style={styles.tagline}>One day. One concept. One small step forward.</Text>
+        </View>
+        <Pressable
+          onPress={toggle}
+          style={({ pressed }) => [styles.themeButton, pressed && styles.themeButtonPressed]}
+          accessibilityRole="button"
+          accessibilityLabel={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+        >
+          <Ionicons
+            name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
+            size={20}
+            color={colors.textSecondary}
+          />
+        </Pressable>
       </View>
 
       {loading ? (
@@ -37,7 +56,8 @@ export function TodayScreen() {
 
           {learnedToday ? (
             <View style={styles.doneBox}>
-              <Text style={styles.doneText}>✓ Learned today — see you tomorrow!</Text>
+              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Text style={styles.doneText}>Learned today — see you tomorrow!</Text>
             </View>
           ) : (
             <PrimaryButton label="Mark as learned" onPress={markLearned} disabled={!concept} />
@@ -48,44 +68,68 @@ export function TodayScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: colors.background,
-  },
-  content: {
-    padding: spacing.lg,
-    paddingBottom: spacing.xl,
-    gap: spacing.lg,
-  },
-  header: {
-    gap: spacing.xs,
-  },
-  appName: {
-    ...typography.title,
-    color: colors.text,
-  },
-  tagline: {
-    fontSize: 14,
-    color: colors.textMuted,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontWeight: '700',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    color: colors.textMuted,
-    marginBottom: -spacing.sm,
-  },
-  doneBox: {
-    backgroundColor: colors.successSurface,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    alignItems: 'center',
-  },
-  doneText: {
-    color: colors.success,
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});
+const createStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
+    screen: {
+      flex: 1,
+      backgroundColor: colors.background,
+    },
+    content: {
+      padding: spacing.lg,
+      paddingBottom: spacing.xl,
+      gap: spacing.lg,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      justifyContent: 'space-between',
+      gap: spacing.md,
+    },
+    headerText: {
+      gap: spacing.xs,
+      flexShrink: 1,
+    },
+    appName: {
+      ...typography.title,
+      color: colors.text,
+    },
+    tagline: {
+      fontSize: 14,
+      color: colors.textMuted,
+    },
+    themeButton: {
+      width: 40,
+      height: 40,
+      borderRadius: radius.pill,
+      borderWidth: 1,
+      borderColor: colors.border,
+      backgroundColor: colors.surface,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    themeButtonPressed: {
+      opacity: 0.6,
+    },
+    sectionLabel: {
+      fontSize: 13,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
+      color: colors.textMuted,
+      marginBottom: -spacing.sm,
+    },
+    doneBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.successSurface,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+    },
+    doneText: {
+      color: colors.success,
+      fontSize: 16,
+      fontWeight: '600',
+    },
+  });

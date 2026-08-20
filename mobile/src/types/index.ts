@@ -16,6 +16,14 @@ export type Category =
   | 'Mathematics'
   | 'Linux & Systems';
 
+export const CATEGORIES: Category[] = [
+  'Artificial Intelligence',
+  'Software Engineering',
+  'Computer Science',
+  'Mathematics',
+  'Linux & Systems',
+];
+
 /** A concept the user has completed, keyed by local calendar day. */
 export interface LearnedRecord {
   conceptId: string;
@@ -30,8 +38,14 @@ export interface DailyAssignment {
   date: string;
 }
 
-/** Everything the app persists locally in Phase 1. */
+/** Everything the app persists locally. */
 export interface ProgressState {
   learned: LearnedRecord[];
   assignment: DailyAssignment | null;
+  /** Topics the user follows; daily concepts are drawn from these. */
+  followedTopics: Category[];
+  /** Concept ids the user liked. */
+  likes: string[];
+  /** Concept ids the user saved for later. */
+  bookmarks: string[];
 }

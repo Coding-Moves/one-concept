@@ -1,4 +1,22 @@
-export const colors = {
+export interface ThemeColors {
+  background: string;
+  surface: string;
+  text: string;
+  textSecondary: string;
+  textMuted: string;
+  primary: string;
+  primaryPressed: string;
+  onPrimary: string;
+  success: string;
+  successSurface: string;
+  streak: string;
+  border: string;
+  categoryChip: string;
+  categoryChipText: string;
+  skeleton: string;
+}
+
+export const lightColors: ThemeColors = {
   background: '#F7F8FA',
   surface: '#FFFFFF',
   text: '#1A1D21',
@@ -13,6 +31,25 @@ export const colors = {
   border: '#E4E7EC',
   categoryChip: '#EEF2FF',
   categoryChipText: '#3B4CCA',
+  skeleton: '#E4E7EC',
+};
+
+export const darkColors: ThemeColors = {
+  background: '#0F1115',
+  surface: '#181C23',
+  text: '#F2F4F7',
+  textSecondary: '#A8B0BB',
+  textMuted: '#6F7885',
+  primary: '#5B8CFF',
+  primaryPressed: '#3E6FE8',
+  onPrimary: '#FFFFFF',
+  success: '#3DD68C',
+  successSurface: '#122A1E',
+  streak: '#FF8A3D',
+  border: '#262C36',
+  categoryChip: '#1E2438',
+  categoryChipText: '#9DAFF7',
+  skeleton: '#262C36',
 };
 
 export const spacing = {
@@ -31,7 +68,9 @@ export const radius = {
 };
 
 export const typography = {
-  title: { fontSize: 28, fontWeight: '700' as const },
+  /** Display font for screen titles; loaded in App via expo-font.
+   *  No fontWeight here — Android would apply faux bold on top of the 700 font file. */
+  title: { fontSize: 28, fontFamily: 'SpaceGrotesk_700Bold' },
   heading: { fontSize: 22, fontWeight: '700' as const },
   body: { fontSize: 16, lineHeight: 24 },
   caption: { fontSize: 13 },

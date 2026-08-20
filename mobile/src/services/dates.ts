@@ -10,6 +10,17 @@ export function todayKey(): string {
   return toDateKey(new Date());
 }
 
+const MONTHS = [
+  'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+  'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
+];
+
+/** Human-readable form of a YYYY-MM-DD key, e.g. "Aug 20, 2026". */
+export function formatDateKey(dateKey: string): string {
+  const [y, m, d] = dateKey.split('-').map(Number);
+  return `${MONTHS[m - 1]} ${d}, ${y}`;
+}
+
 /** The date key for the day before the given key. */
 export function previousDateKey(dateKey: string): string {
   const [y, m, d] = dateKey.split('-').map(Number);

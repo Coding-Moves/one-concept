@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
 import { CONCEPTS } from '../data/concepts';
 import { Concept, ProgressState } from '../types';
 import { selectDailyConcept } from '../services/dailyConcept';
@@ -6,19 +13,23 @@ import { todayKey } from '../services/dates';
 import { EMPTY_PROGRESS, loadProgress, saveProgress } from '../services/storage';
 import { computeStreaks, StreakStats } from '../services/streak';
 
-export interface DailyLearning {
+export interface ProgressContextValue {
   loading: boolean;
+  progress: ProgressState;
+  /** Today's assigned concept. */
   concept: Concept | null;
   learnedToday: boolean;
   streaks: StreakStats;
   markLearned: () => void;
 }
 
+const ProgressContext = createContext<ProgressContextValue | null>(null);
+
 /**
- * The app's Phase 1 state: loads persisted progress, fixes today's concept,
- * and exposes the mark-as-learned action.
+ * Single owner of the app's persisted learning state. All screens read from
+ * this provider so Today, History, and Stats always agree.
  */
-export function useDailyLearning(): DailyLearning {
+export function ProgressProvider({ children }: { children: ReactNode }) {
   const [progress, setProgress] = useState<ProgressState>(EMPTY_PROGRESS);
   const [loading, setLoading] = useState(true);
 
@@ -63,11 +74,22 @@ export function useDailyLearning(): DailyLearning {
     });
   }, [concept, today]);
 
-  return {
+  const value: ProgressContextValue = {
     loading,
+    progress,
     concept,
     learnedToday,
     streaks: computeStreaks(progress.learned),
     markLearned,
   };
+
+  return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
+}
+
+export function useProgress(): ProgressContextValue {
+  const value = useContext(ProgressContext);
+  if (!value) {
+    throw new Error('useProgress must be used inside a ProgressProvider');
+  }
+  return value;
 }

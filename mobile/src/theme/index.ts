@@ -68,7 +68,9 @@ export const radius = {
 };
 
 export const typography = {
-  title: { fontSize: 28, fontWeight: '700' as const },
+  /** Display font for screen titles; loaded in App via expo-font.
+   *  No fontWeight here — Android would apply faux bold on top of the 700 font file. */
+  title: { fontSize: 28, fontFamily: 'SpaceGrotesk_700Bold' },
   heading: { fontSize: 22, fontWeight: '700' as const },
   body: { fontSize: 16, lineHeight: 24 },
   caption: { fontSize: 13 },

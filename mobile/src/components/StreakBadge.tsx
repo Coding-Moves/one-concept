@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { AnimatedFlame } from './AnimatedFlame';
 import { useTheme } from '../context/ThemeContext';
 import { radius, spacing, ThemeColors } from '../theme';
 import { StreakStats } from '../services/streak';
@@ -13,7 +14,11 @@ export function StreakBadge({ streaks }: { streaks: StreakStats }) {
     <View style={styles.row}>
       <View style={styles.stat}>
         <View style={styles.valueRow}>
-          <Ionicons name="flame" size={16} color={colors.streak} />
+          <AnimatedFlame
+            size={16}
+            color={streaks.current > 0 ? colors.streak : colors.textMuted}
+            active={streaks.current > 0}
+          />
           <Text style={styles.value}>{streaks.current}</Text>
         </View>
         <Text style={styles.label}>day streak</Text>

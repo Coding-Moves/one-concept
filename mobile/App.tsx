@@ -6,6 +6,7 @@ import {
   Theme,
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { SpaceGrotesk_700Bold, useFonts } from '@expo-google-fonts/space-grotesk';
 import { StatusBar } from 'expo-status-bar';
 import { ComponentProps } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -79,6 +80,12 @@ function ThemedApp() {
 }
 
 export default function App() {
+  const [fontsLoaded] = useFonts({ SpaceGrotesk_700Bold });
+
+  // Keep the splash visible until the display font is ready — titles must
+  // never flash in the fallback font.
+  if (!fontsLoaded) return null;
+
   return (
     <SafeAreaProvider>
       <ThemeProvider>

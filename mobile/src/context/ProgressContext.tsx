@@ -12,6 +12,8 @@ import { selectDailyConcept } from '../services/dailyConcept';
 import { todayKey } from '../services/dates';
 import { localProgressRepository } from '../services/localProgressRepository';
 import { ProgressRepository } from '../services/progressRepository';
+import { remoteProgressRepository } from '../services/remoteProgressRepository';
+import { useAuth } from './AuthContext';
 import { EMPTY_PROGRESS } from '../services/storage';
 import { computeStreaks, StreakStats } from '../services/streak';
 
@@ -38,7 +40,7 @@ function eligibleConcepts(progress: ProgressState): Concept[] {
 
 interface Props {
   children: ReactNode;
-  /** Swappable for the HTTP-backed repository in Phase 3, and for tests. */
+  /** Overridable for tests; otherwise chosen by whether the user is signed in. */
   repository?: ProgressRepository;
 }
 
@@ -47,19 +49,26 @@ interface Props {
  * so Today, History, Stats, and Profile always agree; persistence is entirely
  * the repository's business.
  */
-export function ProgressProvider({ children, repository = localProgressRepository }: Props) {
+export function ProgressProvider({ children, repository: override }: Props) {
+  const { session } = useAuth();
   const [progress, setProgress] = useState<ProgressState>(EMPTY_PROGRESS);
   const [loading, setLoading] = useState(true);
+
+  // Signed in, the server owns progress. Signed out, the device does — which
+  // keeps the app usable before an account exists.
+  const repository = override ?? (session ? remoteProgressRepository : localProgressRepository);
 
   const today = todayKey();
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setLoading(true);
       const stored = await repository.load();
       if (cancelled) return;
 
       // Pin today's concept on first open of the day so it can't change later.
+      // The remote repository ignores this — the server already decided.
       const picked = selectDailyConcept(eligibleConcepts(stored), stored, today);
       const next = picked ? await repository.setAssignment(picked.id, today) : stored;
       if (cancelled) return;
@@ -108,7 +117,9 @@ export function ProgressProvider({ children, repository = localProgressRepositor
     progress,
     concept,
     learnedToday,
-    streaks: computeStreaks(progress.learned),
+    // Prefer the server's numbers: they use the user's stored timezone rather
+    // than the device clock, so a wrong clock cannot invent a streak.
+    streaks: progress.stats ?? computeStreaks(progress.learned),
     markLearned,
     toggleTopic,
     toggleLike,

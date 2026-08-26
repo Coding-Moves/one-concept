@@ -1,11 +1,7 @@
-import { LearnedRecord } from '../types';
+import { LearnedRecord, StreakStats } from '../types';
 import { previousDateKey, todayKey } from './dates';
 
-export interface StreakStats {
-  current: number;
-  longest: number;
-  totalLearned: number;
-}
+export type { StreakStats };
 
 /**
  * Compute streak stats from learned history.

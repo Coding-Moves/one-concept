@@ -9,8 +9,8 @@ Mobile app  ──►  FastAPI  ──┬──►  Supabase (Postgres + Auth)
                             └──►  Gemini API
 ```
 
-Status: **Phase 2 — the API serves the daily concept.** Reads only; writes
-(complete, follow, like, save) arrive in Phase 4.
+Status: **Phase 4 — reads and writes.** Completion, follows, likes, and saves
+all go through the API; streaks are computed server-side.
 
 ## Layout
 
@@ -50,6 +50,13 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 | GET | `/health` | no | Liveness + a real query. Also the keep-alive ping target. |
 | GET | `/v1/topics` | yes | Active topics, concept counts, and whether you follow each. |
 | GET | `/v1/daily` | yes | Today's concept. Creates the assignment on first call, idempotent after. |
+| POST | `/v1/daily/complete` | yes | Mark today learned. Server sets the timestamp and the day it counts for. |
+| GET | `/v1/me/state` | yes | Everything the app renders: follows, history, likes, saves, streaks. One query. |
+| GET | `/v1/me/stats` | yes | Streaks alone, for other consumers. |
+| PUT | `/v1/me/topics` | yes | Replace the followed set (whole-list semantics, so retries are safe). |
+| PATCH | `/v1/me` | yes | Display name and timezone. Unknown zones are rejected. |
+| PUT/DELETE | `/v1/concepts/{slug}/like` | yes | Like / unlike. |
+| PUT/DELETE | `/v1/concepts/{slug}/save` | yes | Save / unsave. |
 
 `GET /v1/daily` returns `409` with `reason: "catalog_exhausted"` once a user has
 been assigned every published concept — it never repeats one. Phase 6 hooks
@@ -65,6 +72,24 @@ confusion attacks, both of which are covered by tests.
 
 `user_id` is taken from the verified token's `sub` claim and from nowhere else.
 No endpoint accepts a user id as a parameter.
+
+## Latency and database region
+
+Response time is dominated by round trips to the database, not by query cost.
+Measured against a Supabase project in `ap-northeast-1` from Europe, a single
+round trip is 160–1100 ms — so the code is written to minimise the *number* of
+statements rather than their complexity:
+
+- `/v1/me/state` is **one query**. It returns follows, history, likes, saves,
+  today's assignment, and streaks together, and bootstrapping only runs when
+  that query finds no profile.
+- Follow updates are one statement (a data-modifying CTE), not one per topic.
+- Connection pooling is on. Without it every request paid a fresh TCP + TLS +
+  auth handshake to the database region, which cost seconds.
+
+The remaining latency is geography. **Deploy the API in the same region as the
+database** — on Railway, pick the region closest to your Supabase project — and
+these round trips drop to single-digit milliseconds.
 
 ## Connection strings
 

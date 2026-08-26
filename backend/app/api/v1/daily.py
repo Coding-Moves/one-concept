@@ -4,7 +4,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
 from app.schemas.daily import ConceptOut, DailyExhaustedOut, DailyOut
+from app.schemas.me import CompletedOut, StreakOut
+from app.services.interactions import complete_today
 from app.services.selection import get_or_create_daily
+from app.services.streaks import compute_streaks, local_today
 from app.services.users import ensure_bootstrapped
 
 router = APIRouter(prefix="/daily", tags=["daily"])
@@ -50,4 +53,24 @@ async def get_daily(
             topic_slug=concept.topic_slug,
             topic_name=concept.topic_name,
         ),
+    )
+
+
+@router.post("/complete", response_model=CompletedOut)
+async def complete(
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> CompletedOut:
+    """Mark today's concept learned.
+
+    The completion timestamp and the day it counts towards both come from the
+    server, so a device with a wrong clock cannot manufacture a streak.
+    Repeating the call is a no-op rather than an error.
+    """
+    today = await local_today(db, user.id)
+    await complete_today(db, user.id, today)
+    return CompletedOut(
+        completed=True,
+        assigned_for=today,
+        stats=StreakOut(**vars(await compute_streaks(db, user.id, today))),
     )

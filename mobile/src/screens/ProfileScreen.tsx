@@ -5,6 +5,7 @@ import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { AnimatedFlame } from '../components/AnimatedFlame';
 import { CategoryChip } from '../components/CategoryChip';
+import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
@@ -21,6 +22,7 @@ export function ProfileScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileHome'>>();
   const { progress, streaks } = useProgress();
+  const { email, signOut } = useAuth();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -35,9 +37,8 @@ export function ProfileScreen() {
           <Ionicons name="person" size={26} color={colors.primary} />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.name}>Learner</Text>
-          <Text style={styles.subtitle}>Accounts arrive with the backend — everything
-            here is stored on this device.</Text>
+          <Text style={styles.name}>{email ? email.split('@')[0] : 'Learner'}</Text>
+          <Text style={styles.subtitle}>{email ?? 'Signed out'}</Text>
         </View>
       </View>
 
@@ -113,7 +114,18 @@ export function ProfileScreen() {
         </View>
       )}
 
-      <Text style={styles.version}>One Concept v0.1.0</Text>
+      <Pressable
+        onPress={signOut}
+        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+      >
+        <View style={styles.rowLeft}>
+          <Ionicons name="log-out-outline" size={20} color={colors.streak} />
+          <Text style={[styles.rowTitle, { color: colors.streak }]}>Sign out</Text>
+        </View>
+      </Pressable>
+
+      <Text style={styles.version}>One Concept v0.3.0</Text>
     </ScrollView>
   );
 }

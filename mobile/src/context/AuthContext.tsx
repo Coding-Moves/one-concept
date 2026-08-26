@@ -1,0 +1,109 @@
+import type { Session } from '@supabase/supabase-js';
+import {
+  createContext,
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from 'react';
+import { setTokenProvider } from '../api/client';
+import { supabase } from '../lib/supabase';
+
+export interface AuthContextValue {
+  loading: boolean;
+  session: Session | null;
+  email: string | null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
+  signOut: () => Promise<void>;
+}
+
+const AuthContext = createContext<AuthContextValue | null>(null);
+
+/** Supabase errors are readable, but a few are worth rewording for humans. */
+function describe(error: { message: string; status?: number }): string {
+  const message = error.message.toLowerCase();
+  if (message.includes('invalid login credentials')) {
+    return 'That email and password combination did not match an account.';
+  }
+  if (message.includes('already registered') || message.includes('already been registered')) {
+    return 'An account with that email already exists. Try signing in instead.';
+  }
+  if (message.includes('password should be')) {
+    return 'Passwords need to be at least 6 characters.';
+  }
+  if (message.includes('failed to fetch') || message.includes('network')) {
+    return 'Could not reach the server. Check your connection and try again.';
+  }
+  return error.message;
+}
+
+export function AuthProvider({ children }: { children: ReactNode }) {
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // The API client asks for a token per request; Supabase refreshes it in the
+    // background, so this always hands back a currently valid one.
+    setTokenProvider(async () => {
+      const { data } = await supabase.auth.getSession();
+      return data.session?.access_token ?? null;
+    });
+
+    let active = true;
+    supabase.auth.getSession().then(({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      setLoading(false);
+    });
+
+    const { data: subscription } = supabase.auth.onAuthStateChange((_event, next) => {
+      setSession(next);
+    });
+
+    return () => {
+      active = false;
+      subscription.subscription.unsubscribe();
+    };
+  }, []);
+
+  const signIn = useCallback(async (email: string, password: string) => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+    if (error) throw new Error(describe(error));
+  }, []);
+
+  const signUp = useCallback(async (email: string, password: string) => {
+    const { data, error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+    });
+    if (error) throw new Error(describe(error));
+    // With email confirmation switched on, sign-up returns a user but no session.
+    return { needsConfirmation: !data.session };
+  }, []);
+
+  const signOut = useCallback(async () => {
+    await supabase.auth.signOut();
+  }, []);
+
+  const value: AuthContextValue = {
+    loading,
+    session,
+    email: session?.user?.email ?? null,
+    signIn,
+    signUp,
+    signOut,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+export function useAuth(): AuthContextValue {
+  const value = useContext(AuthContext);
+  if (!value) throw new Error('useAuth must be used inside an AuthProvider');
+  return value;
+}

@@ -10,9 +10,12 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SpaceGrotesk_700Bold, useFonts } from '@expo-google-fonts/space-grotesk';
 import { StatusBar } from 'expo-status-bar';
 import { ComponentProps } from 'react';
+import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ProgressProvider } from './src/context/ProgressContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { AuthScreen } from './src/screens/AuthScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
 import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
@@ -45,6 +48,32 @@ function tabIcon(focusedName: IoniconName, name: IoniconName) {
 
 function ThemedApp() {
   const { colors, mode } = useTheme();
+  const { loading, session } = useAuth();
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          alignItems: 'center',
+          justifyContent: 'center',
+          backgroundColor: colors.background,
+        }}
+      >
+        <ActivityIndicator size="large" color={colors.primary} />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      </View>
+    );
+  }
+
+  if (!session) {
+    return (
+      <>
+        <AuthScreen />
+        <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
+      </>
+    );
+  }
 
   const base = mode === 'dark' ? DarkTheme : DefaultTheme;
   const navigationTheme: Theme = {
@@ -111,9 +140,11 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <ThemeProvider>
-        <ProgressProvider>
-          <ThemedApp />
-        </ProgressProvider>
+        <AuthProvider>
+          <ProgressProvider>
+            <ThemedApp />
+          </ProgressProvider>
+        </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>
   );

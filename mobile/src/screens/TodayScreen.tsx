@@ -8,12 +8,28 @@ import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
 import { StreakBadge } from '../components/StreakBadge';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
+import { useServerDaily } from '../hooks/useServerDaily';
+import { toConcept } from '../services/dailyApi';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 
 export function TodayScreen() {
-  const { loading, concept, learnedToday, streaks, markLearned } = useProgress();
+  const { loading: localLoading, concept: localConcept, learnedToday, streaks, markLearned } =
+    useProgress();
+  const server = useServerDaily();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+
+  const outcome = server.outcome;
+  // The backend decides the day's concept; the locally-picked one is the
+  // offline fallback until Phase 4 moves the rest of the state server-side.
+  const serverConcept =
+    outcome && outcome.status === 'ok' ? toConcept(outcome.payload) : null;
+  const concept = serverConcept ?? localConcept;
+  const loading = localLoading || server.loading;
+  const exhausted = outcome?.status === 'exhausted';
+  const offline = outcome?.status === 'ok' && outcome.stale;
+  const outsideTopics =
+    outcome?.status === 'ok' && outcome.payload.outside_followed_topics;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -48,6 +64,33 @@ export function TodayScreen() {
           <StreakBadge streaks={streaks} />
 
           <Text style={styles.sectionLabel}>Today’s concept</Text>
+
+          {offline ? (
+            <View style={styles.noteBox}>
+              <Ionicons name="cloud-offline-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.noteText}>
+                Showing your saved copy — we couldn’t reach the server.
+              </Text>
+            </View>
+          ) : null}
+
+          {outsideTopics ? (
+            <View style={styles.noteBox}>
+              <Ionicons name="sparkles-outline" size={16} color={colors.textMuted} />
+              <Text style={styles.noteText}>
+                You’ve read everything in your topics, so here’s one from further afield.
+              </Text>
+            </View>
+          ) : null}
+
+          {exhausted ? (
+            <View style={styles.noteBox}>
+              <Ionicons name="checkmark-done-outline" size={16} color={colors.success} />
+              <Text style={styles.noteText}>
+                You’ve learned every concept available. New ones are on the way.
+              </Text>
+            </View>
+          ) : null}
 
           {concept ? (
             <>
@@ -121,6 +164,23 @@ const createStyles = (colors: ThemeColors) =>
       textTransform: 'uppercase',
       color: colors.textMuted,
       marginBottom: -spacing.sm,
+    },
+    noteBox: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+      borderRadius: radius.md,
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm + 2,
+    },
+    noteText: {
+      flex: 1,
+      fontSize: 13,
+      color: colors.textMuted,
+      lineHeight: 18,
     },
     doneBox: {
       flexDirection: 'row',

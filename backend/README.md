@@ -9,20 +9,82 @@ Mobile app  ──►  FastAPI  ──┬──►  Supabase (Postgres + Auth)
                             └──►  Gemini API
 ```
 
-Status: **Phase 1 — database only.** The migrations below are complete and
-tested; the FastAPI application itself lands in Phase 2.
+Status: **Phase 2 — the API serves the daily concept.** Reads only; writes
+(complete, follow, like, save) arrive in Phase 4.
 
 ## Layout
 
 ```
 backend/
+├── app/
+│   ├── main.py              app factory, CORS, JWKS lifespan
+│   ├── config.py            settings; normalises the Supabase connection string
+│   ├── deps.py              get_current_user — identity comes only from the token
+│   ├── core/security.py     ES256 verification against the project JWKS
+│   ├── db/                  async engine + models mirroring the migrations
+│   ├── schemas/             request/response models
+│   ├── services/
+│   │   ├── selection.py     the daily concept algorithm
+│   │   └── users.py         profile bootstrap (safety net for the DB trigger)
+│   └── api/v1/              health, topics, daily
 ├── migrations/          # plain SQL, applied in filename order
-│   ├── 0001_schema.sql          tables, indexes, constraints, new-user trigger
-│   ├── 0002_rls.sql             row level security policies
-│   ├── 0003_seed_topics.sql     the five topics
-│   └── 0004_seed_concepts.sql   the 20 prototype concepts (generated)
+├── tests/               # 25 tests: token verification, selection, HTTP
+├── Dockerfile           # what Railway builds
 └── .env.example         # copy to .env — never commit the filled copy
 ```
+
+## Running locally
+
+```bash
+cd backend
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/python -m uvicorn app.main:app --reload --port 8000
+```
+
+`http://localhost:8000/docs` lists the endpoints (disabled in production).
+
+## Endpoints
+
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/health` | no | Liveness + a real query. Also the keep-alive ping target. |
+| GET | `/v1/topics` | yes | Active topics, concept counts, and whether you follow each. |
+| GET | `/v1/daily` | yes | Today's concept. Creates the assignment on first call, idempotent after. |
+
+`GET /v1/daily` returns `409` with `reason: "catalog_exhausted"` once a user has
+been assigned every published concept — it never repeats one. Phase 6 hooks
+Gemini generation in at that point.
+
+## Authentication
+
+The project signs tokens with **ES256**, so the API verifies them against the
+published JWKS and ignores the legacy shared secret. Keys are cached in process
+and refetched when an unseen key id appears, so rotation needs no redeploy.
+Pinning the algorithm is deliberate: it is what defeats `alg: none` and HS256
+confusion attacks, both of which are covered by tests.
+
+`user_id` is taken from the verified token's `sub` claim and from nowhere else.
+No endpoint accepts a user id as a parameter.
+
+## Connection strings
+
+Two are needed, and they are not interchangeable:
+
+- **`DATABASE_URL`** — transaction pooler (6543), used by the API. `config.py`
+  strips a `?pgbouncer=true` suffix (a Prisma convention that asyncpg rejects)
+  and disables prepared statements, which is what a transaction pooler requires.
+- **`DIRECT_URL`** — session pooler (5432), used for migrations and DDL.
+
+## Tests
+
+```bash
+.venv/bin/python -m pytest
+```
+
+Token tests run offline against a locally minted ES256 keypair. Selection tests
+run against a throwaway PostgreSQL started with podman and the project's own
+migration files, so constraints and races are exercised for real; they skip if
+podman is unavailable.
 
 ## Applying the migrations
 
@@ -64,8 +126,10 @@ seed counts, the new-user trigger, both unique constraints rejecting duplicates,
 query, the gaps-and-islands streak query across three scenarios (today complete,
 today pending, day missed), and RLS isolation between two users.
 
-## Deployment (Phase 2)
+## Deployment
 
-Target is **Railway**: the FastAPI container plus a cron worker for pool top-up
-and reminders. Secrets go in Railway's variable store — never in the image, never
-in git.
+**Railway**, from `backend/Dockerfile` (see `railway.json`). Set every variable
+from `.env.example` in Railway's variable store — never in the image, never in
+git. Point the health check at `/health`, and set `ENVIRONMENT=production` to
+disable `/docs`. A cron worker for pool top-up and reminders joins later, in
+Phases 6 and 7.

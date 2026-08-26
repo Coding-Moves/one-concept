@@ -19,6 +19,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
+from app.services.pool import generate_one
+
 
 @dataclass
 class ConceptPayload:
@@ -92,6 +95,40 @@ _INSERT = text("""
 """)
 
 
+_FOLLOWED_TOPIC_BY_STALENESS = text("""
+    select ut.topic_id
+      from public.user_topics ut
+      join public.topics t on t.id = ut.topic_id and t.is_active
+      left join (
+          select c.topic_id, max(a.assigned_for) as seen_on
+            from public.daily_assignments a
+            join public.concepts c on c.id = a.concept_id
+           where a.user_id = :uid
+           group by c.topic_id
+      ) ls on ls.topic_id = ut.topic_id
+     where ut.user_id = :uid
+       and exists (select 1 from public.concept_backlog b
+                    where b.topic_id = ut.topic_id and b.status = 'pending')
+     order by ls.seen_on asc nulls first
+     limit 1
+""")
+
+
+async def _generate_for_user(session: AsyncSession, user_id) -> uuid.UUID | None:
+    """Last-resort generation for a user whose followed pool has run dry."""
+    settings = get_settings()
+    if not (settings.generation_on_demand and settings.generation_enabled and settings.gemini_api_key):
+        return None
+
+    topic_id = (
+        await session.execute(_FOLLOWED_TOPIC_BY_STALENESS, {"uid": user_id})
+    ).scalar_one_or_none()
+    if topic_id is None:
+        return None
+
+    return await generate_one(session, settings.gemini_api_key, settings.gemini_model, topic_id)
+
+
 def _row_to_result(row, outside: bool) -> DailyResult:
     return DailyResult(
         status="ok",
@@ -131,6 +168,14 @@ async def get_or_create_daily(
     concept_id = (
         await session.execute(_CANDIDATE, {"uid": user_id, "ignore_follows": False})
     ).scalar_one_or_none()
+
+    if concept_id is None:
+        # The followed pool is dry. Try to write a new concept in one of the
+        # user's own topics before resorting to something off-topic — the
+        # background worker should normally have done this already, so this is
+        # the safety net rather than the common path.
+        concept_id = await _generate_for_user(session, user_id)
+
     if concept_id is None:
         outside = True
         concept_id = (
@@ -138,9 +183,9 @@ async def get_or_create_daily(
         ).scalar_one_or_none()
 
     if concept_id is None:
-        # Every published concept has been assigned to this user already.
-        # Phase 6 hooks generation in here; until then we say so honestly rather
-        # than repeating a concept.
+        # Genuinely nothing left: every published concept is already assigned to
+        # this user and generation could not add one. Say so rather than
+        # repeating a concept.
         return DailyResult(status="exhausted", assigned_for=today)
 
     try:

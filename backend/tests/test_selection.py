@@ -38,16 +38,23 @@ async def test_same_day_is_idempotent(session, user):
 
 
 async def test_never_repeats_and_reports_exhaustion(session, user):
-    """Twenty concepts means twenty distinct days, then an honest refusal."""
+    """Every published concept, one per day, then an honest refusal.
+
+    The catalog size is read from the database rather than hardcoded, because
+    generation can legitimately add concepts.
+    """
+    catalog = await session.scalar(
+        text("select count(*) from public.concepts where status = 'published'")
+    )
     seen = []
-    for offset in range(20):
+    for offset in range(catalog):
         result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
         assert result.status == "ok", f"day {offset} unexpectedly exhausted"
         seen.append(result.concept.id)
 
-    assert len(set(seen)) == 20, "the same concept was assigned twice"
+    assert len(set(seen)) == catalog, "the same concept was assigned twice"
 
-    beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=20))
+    beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=catalog))
     assert beyond.status == "exhausted"
     assert beyond.concept is None
 
@@ -64,7 +71,11 @@ async def test_only_draws_from_followed_topics(session, user):
     )
     await session.commit()
 
-    for offset in range(4):
+    available = await session.scalar(
+        text("""select count(*) from public.concepts c join public.topics t on t.id = c.topic_id
+                 where t.slug = 'mathematics' and c.status = 'published'""")
+    )
+    for offset in range(available):
         result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
         assert result.concept.topic_slug == "mathematics"
         assert result.outside_followed_topics is False
@@ -82,11 +93,16 @@ async def test_widens_beyond_followed_topics_when_pool_is_dry(session, user):
     )
     await session.commit()
 
-    for offset in range(4):
+    # Exhaust exactly the followed topic, however many concepts it holds.
+    available = await session.scalar(
+        text("""select count(*) from public.concepts c join public.topics t on t.id = c.topic_id
+                 where t.slug = 'mathematics' and c.status = 'published'""")
+    )
+    for offset in range(available):
         await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
 
     # The followed topic is spent; rather than repeat, widen and say so.
-    result = await get_or_create_daily(session, user, today=DAY + timedelta(days=4))
+    result = await get_or_create_daily(session, user, today=DAY + timedelta(days=available))
     assert result.status == "ok"
     assert result.concept.topic_slug != "mathematics"
     assert result.outside_followed_topics is True

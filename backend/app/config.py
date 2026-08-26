@@ -23,6 +23,15 @@ class Settings(BaseSettings):
     supabase_jwt_secret: str | None = None
     supabase_service_role_key: str | None = None
 
+    # Generation. The key lives here and only here — never in the app bundle.
+    gemini_api_key: str = ""
+    gemini_model: str = "gemini-2.0-flash"
+    generation_enabled: bool = False
+    min_pool_per_topic: int = 25
+    generation_daily_call_cap: int = 200
+    # Last-resort generation inside a request, when a user's pool is empty.
+    generation_on_demand: bool = True
+
     allowed_origins: str = "http://localhost:8081"
 
     @property

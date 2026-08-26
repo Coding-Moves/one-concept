@@ -9,8 +9,8 @@ Mobile app  ──►  FastAPI  ──┬──►  Supabase (Postgres + Auth)
                             └──►  Gemini API
 ```
 
-Status: **Phase 4 — reads and writes.** Completion, follows, likes, and saves
-all go through the API; streaks are computed server-side.
+Status: **Phase 6 — content engine.** Reads, writes, and Gemini generation of
+new concepts from a curated backlog.
 
 ## Layout
 
@@ -72,6 +72,58 @@ confusion attacks, both of which are covered by tests.
 
 `user_id` is taken from the verified token's `sub` claim and from nowhere else.
 No endpoint accepts a user id as a parameter.
+
+## Content generation
+
+Gemini writes lessons. It does **not** choose subjects.
+
+```
+curated backlog (150 titles)
+        ↓
+worker: is a topic below MIN_POOL_PER_TOPIC published concepts?
+        ↓
+Gemini writes {summary, example} for one backlogged title
+        ↓
+validate — length bounds, no boilerplate opener, no code fence,
+           example must not restate the summary
+        ↓
+INSERT INTO concepts (status='published', source='gemini',
+                      model, prompt_version)
+        ↓
+GET /v1/daily serves stored rows. It never calls Gemini on the happy path.
+```
+
+Curating titles up front is what makes deduplication trivial — a unique slug —
+and keeps the syllabus deliberate instead of drifting towards whatever the model
+finds popular. The catalog is global, so one generated lesson serves every user;
+that is the largest cost lever in the design.
+
+Run the worker:
+
+```bash
+python -m app.workers.pool_topup
+```
+
+On Railway, add this as a **cron job** on the same service (daily is plenty).
+It is safe to run concurrently: backlog items are claimed with
+`FOR UPDATE SKIP LOCKED`, so two workers never write the same title.
+
+### Safety rails
+
+| Control | Effect |
+|---|---|
+| `GENERATION_ENABLED` | Master switch. Nothing calls Gemini when false. |
+| `GENERATION_DAILY_CALL_CAP` | Hard ceiling per run, so a retry loop cannot burn the quota. |
+| `attempts < 3` | A title that keeps failing is retired rather than blocking the queue. |
+| Validation | Malformed output leaves the item pending; it never reaches a reader. |
+| `GENERATION_ON_DEMAND` | Last-resort in-request generation when one user's pool is dry. |
+
+### Fallback ladder in `/v1/daily`
+
+1. An unseen concept in a followed topic.
+2. Failing that, generate one in the user's least-recently-seen followed topic.
+3. Failing that, widen to the whole catalog and flag `outside_followed_topics`.
+4. Failing that, return `409 catalog_exhausted`. A concept is never repeated.
 
 ## Latency and database region
 

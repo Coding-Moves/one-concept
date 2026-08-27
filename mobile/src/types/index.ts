@@ -38,6 +38,12 @@ export interface DailyAssignment {
   date: string;
 }
 
+export interface StreakStats {
+  current: number;
+  longest: number;
+  totalLearned: number;
+}
+
 /** Everything the app persists locally. */
 export interface ProgressState {
   learned: LearnedRecord[];
@@ -48,4 +54,9 @@ export interface ProgressState {
   likes: string[];
   /** Concept ids the user saved for later. */
   bookmarks: string[];
+  /**
+   * Streaks as computed by the server, when the state came from the server.
+   * Absent for purely local state, where the client derives them instead.
+   */
+  stats?: StreakStats;
 }

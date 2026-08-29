@@ -2,10 +2,17 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "expo-web",
+      "name": "backend",
+      "runtimeExecutable": "/home/muawiya/Desktop/one-concept/backend/.venv/bin/python",
+      "runtimeArgs": ["-m", "uvicorn", "app.main:app", "--reload", "--port", "8000"],
+      "cwd": "/home/muawiya/Desktop/one-concept/backend",
+      "port": 8000
+    },
+    {
+      "name": "mobile-web",
       "runtimeExecutable": "npx",
       "runtimeArgs": ["expo", "start", "--web", "--port", "8081"],
-      "cwd": "mobile",
+      "cwd": "/home/muawiya/Desktop/one-concept/mobile",
       "port": 8081
     }
   ]

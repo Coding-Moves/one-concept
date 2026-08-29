@@ -2,6 +2,7 @@
   "expo": {
     "name": "One Concept",
     "slug": "one-concept",
+    "owner": "coding-moves",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,6 +11,7 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.codingmoves.oneconcept",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -18,12 +20,25 @@
       },
       "predictiveBackGestureEnabled": false
     },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "checkAutomatically": "ON_LOAD",
+      "fallbackToCacheTimeout": 0,
+      "url": "https://u.expo.dev/2ce53ebe-f549-4a33-affc-a50d8e80b483"
+    },
     "web": {
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-font",
       "expo-secure-store"
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "2ce53ebe-f549-4a33-affc-a50d8e80b483"
+      }
+    }
   }
 }

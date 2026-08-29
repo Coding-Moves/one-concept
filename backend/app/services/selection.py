@@ -20,6 +20,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
+from app.services.generation import RateLimitedError
 from app.services.pool import generate_one
 
 
@@ -126,7 +127,11 @@ async def _generate_for_user(session: AsyncSession, user_id) -> uuid.UUID | None
     if topic_id is None:
         return None
 
-    return await generate_one(session, settings.gemini_api_key, settings.gemini_model, topic_id)
+    try:
+        return await generate_one(session, settings.gemini_api_key, settings.gemini_model, topic_id)
+    except RateLimitedError:
+        # A throttled request must degrade to "nothing new today", not a 500.
+        return None
 
 
 def _row_to_result(row, outside: bool) -> DailyResult:

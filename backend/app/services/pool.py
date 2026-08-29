@@ -5,6 +5,7 @@ single biggest cost lever in the design. Topping up ahead of demand is what
 keeps Gemini off the request path.
 """
 
+import asyncio
 import logging
 import uuid
 from dataclasses import dataclass
@@ -12,9 +13,15 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.generation import GenerationError, generate_concept
+from app.services.generation import GenerationError, RateLimitedError, generate_concept
 
 log = logging.getLogger(__name__)
+
+# The free tier allows roughly ten requests a minute; pacing at this rate keeps
+# a full run inside the quota instead of tripping 429s and burning attempts.
+BACKOFF_START_SECONDS = 15.0
+BACKOFF_MAX_SECONDS = 120.0
+MAX_CONSECUTIVE_RATE_LIMITS = 5
 
 # Scalar subqueries, not joins: joining both concepts and backlog to topics
 # multiplies the rows and inflates every count by the size of the other table.
@@ -69,6 +76,14 @@ _FAIL = text("""
      where id = :backlog_id
 """)
 
+# A rate limit is our problem, not the title's: return it to the queue and
+# refund the attempt so throttling can never retire an item.
+_RELEASE = text("""
+    update public.concept_backlog
+       set status = 'pending', attempts = greatest(attempts - 1, 0)
+     where id = :backlog_id
+""")
+
 
 @dataclass
 class TopUpResult:
@@ -96,6 +111,10 @@ async def generate_one(
             api_key=api_key,
             model=model,
         )
+    except RateLimitedError:
+        await session.execute(_RELEASE, {"backlog_id": claimed.id})
+        await session.commit()
+        raise
     except GenerationError as exc:
         # Leave it pending for another attempt; give up after three so one bad
         # title cannot block the queue forever.
@@ -133,6 +152,7 @@ async def top_up(
     enabled: bool,
     minimum_per_topic: int,
     call_cap: int,
+    pace_seconds: float = 0.0,
 ) -> TopUpResult:
     """Bring every topic up to `minimum_per_topic` published concepts."""
     if not enabled:
@@ -141,20 +161,39 @@ async def top_up(
         return TopUpResult(0, 0, "no API key configured")
 
     generated = failed = calls = 0
+    backoff = BACKOFF_START_SECONDS
+    rate_limit_streak = 0
     for topic in (await session.execute(_POOL_COUNTS)).all():
         deficit = minimum_per_topic - topic.published
         if deficit <= 0:
             continue
-        wanted = min(deficit, topic.pending)
-        for _ in range(wanted):
+        remaining = min(deficit, topic.pending)
+        while remaining > 0:
             if calls >= call_cap:
                 # A hard ceiling so a retry loop cannot burn the daily quota.
                 log.warning("stopping: hit the daily call cap of %s", call_cap)
                 return TopUpResult(generated, failed, "daily call cap reached")
             calls += 1
-            if await generate_one(session, api_key, model, topic.id):
+            try:
+                concept_id = await generate_one(session, api_key, model, topic.id)
+            except RateLimitedError as exc:
+                rate_limit_streak += 1
+                if rate_limit_streak >= MAX_CONSECUTIVE_RATE_LIMITS:
+                    log.warning("stopping: %s consecutive rate limits", rate_limit_streak)
+                    return TopUpResult(generated, failed, "rate limited")
+                delay = max(exc.retry_after or 0.0, backoff)
+                log.warning("rate limited; retrying %s in %.0fs", topic.slug, delay)
+                await asyncio.sleep(delay)
+                backoff = min(backoff * 2, BACKOFF_MAX_SECONDS)
+                continue
+            rate_limit_streak = 0
+            backoff = BACKOFF_START_SECONDS
+            if concept_id:
                 generated += 1
             else:
                 failed += 1
+            remaining -= 1
+            if pace_seconds:
+                await asyncio.sleep(pace_seconds)
 
     return TopUpResult(generated, failed)

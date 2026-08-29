@@ -1,0 +1,53 @@
+# OTA-updates the production channel whenever mobile JS/UI/assets change on main.
+# Native changes (new native modules, app.json native config) need a new build
+# instead — see mobile/DEPLOYMENT.md.
+#
+# Requires the EXPO_TOKEN repository secret (Expo access token). Until it is
+# set, this workflow fails at the eas-update step and deploys nothing.
+name: EAS Update (OTA)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "mobile/**"
+      - "!mobile/**.md"
+  workflow_dispatch:
+    inputs:
+      channel:
+        description: "Update channel"
+        type: choice
+        default: production
+        options: [production, preview]
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Publish OTA update (production)
+        if: github.event_name == 'push' || github.event.inputs.channel == 'production'
+        run: eas update --channel production --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive
+
+      # Preview-profile APKs (sideloaded phones) listen on the preview channel;
+      # publishing there too keeps them in sync with production.
+      - name: Publish OTA update (preview)
+        if: github.event_name == 'push' || github.event.inputs.channel == 'preview'
+        run: eas update --channel preview --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive

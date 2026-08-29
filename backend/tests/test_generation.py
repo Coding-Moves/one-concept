@@ -11,8 +11,8 @@ import httpx
 import pytest
 from sqlalchemy import text
 
-from app.services import generation
-from app.services.generation import GenerationError, build_prompt, generate_concept, validate
+from app.services import generation, pool
+from app.services.generation import GenerationError, RateLimitedError, build_prompt, generate_concept, validate
 from app.services.pool import generate_one, top_up
 
 GOOD_SUMMARY = (
@@ -197,6 +197,67 @@ async def test_repeated_failures_retire_the_item(session, patch_httpx):
         "select status, attempts from public.concept_backlog where slug = 'cursed-title'"))).one()
     assert row.status == "failed", "a title that never works must stop blocking the queue"
     assert row.attempts == 3
+
+
+async def test_rate_limit_releases_the_claim_and_refunds_the_attempt(session, patch_httpx):
+    patch_httpx(_stub_transport({}, status=429))
+    pending_before = await session.scalar(
+        text("select count(*) from public.concept_backlog where status = 'pending'"))
+    attempts_before = await session.scalar(
+        text("select coalesce(sum(attempts), 0) from public.concept_backlog"))
+
+    with pytest.raises(RateLimitedError):
+        await generate_one(session, "test-key", "gemini-2.0-flash")
+
+    pending_after = await session.scalar(
+        text("select count(*) from public.concept_backlog where status = 'pending'"))
+    attempts_after = await session.scalar(
+        text("select coalesce(sum(attempts), 0) from public.concept_backlog"))
+    assert pending_after == pending_before, "the item returned to the queue"
+    assert attempts_after == attempts_before, "throttling must not spend an attempt"
+
+
+async def test_retry_delay_is_read_from_the_response():
+    response = httpx.Response(429, text='{"error": {"details": [{"retryDelay": "12s"}]}}')
+    assert generation._retry_after_seconds(response) == 12.0
+    response = httpx.Response(429, headers={"retry-after": "30"}, text="{}")
+    assert generation._retry_after_seconds(response) == 30.0
+    assert generation._retry_after_seconds(httpx.Response(429, text="{}")) is None
+
+
+async def test_top_up_backs_off_and_retries_after_a_rate_limit(session, patch_httpx, monkeypatch):
+    calls = {"n": 0}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        calls["n"] += 1
+        if calls["n"] == 1:
+            return httpx.Response(429, json={})
+        return httpx.Response(200, json=_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE))
+
+    patch_httpx(httpx.MockTransport(handler))
+    sleeps = []
+
+    async def fake_sleep(seconds):
+        sleeps.append(seconds)
+
+    monkeypatch.setattr(pool.asyncio, "sleep", fake_sleep)
+    result = await top_up(session, api_key="k", model="gemini-2.0-flash", enabled=True,
+                          minimum_per_topic=25, call_cap=2)
+    assert result.generated == 1, "the throttled call was retried, not counted as failed"
+    assert sleeps and sleeps[0] >= pool.BACKOFF_START_SECONDS
+
+
+async def test_top_up_gives_up_after_consecutive_rate_limits(session, patch_httpx, monkeypatch):
+    patch_httpx(_stub_transport({}, status=429))
+
+    async def fake_sleep(seconds):
+        pass
+
+    monkeypatch.setattr(pool.asyncio, "sleep", fake_sleep)
+    result = await top_up(session, api_key="k", model="gemini-2.0-flash", enabled=True,
+                          minimum_per_topic=25, call_cap=200)
+    assert result.generated == 0 and result.failed == 0
+    assert result.skipped_reason == "rate limited"
 
 
 async def test_top_up_respects_the_kill_switch(session):

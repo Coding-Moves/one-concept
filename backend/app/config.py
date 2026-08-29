@@ -25,10 +25,12 @@ class Settings(BaseSettings):
 
     # Generation. The key lives here and only here — never in the app bundle.
     gemini_api_key: str = ""
-    gemini_model: str = "gemini-2.0-flash"
+    gemini_model: str = "gemini-3.6-flash"
     generation_enabled: bool = False
     min_pool_per_topic: int = 25
     generation_daily_call_cap: int = 200
+    # Seconds between worker calls; the free tier allows ~10 requests a minute.
+    generation_pace_seconds: float = 6.0
     # Last-resort generation inside a request, when a user's pool is empty.
     generation_on_demand: bool = True
 

@@ -10,6 +10,7 @@ pool topped up — so nobody waits on a model to read their daily concept.
 
 import json
 import logging
+import re
 from dataclasses import dataclass
 
 import httpx
@@ -80,6 +81,26 @@ _RESPONSE_SCHEMA = {
 
 class GenerationError(RuntimeError):
     """Generation failed in a way worth recording against the backlog item."""
+
+
+class RateLimitedError(GenerationError):
+    """Gemini said slow down. Not the backlog item's fault — retry it later."""
+
+    def __init__(self, retry_after: float | None = None):
+        super().__init__("rate limited by Gemini")
+        self.retry_after = retry_after
+
+
+def _retry_after_seconds(response: httpx.Response) -> float | None:
+    header = response.headers.get("retry-after")
+    if header:
+        try:
+            return float(header)
+        except ValueError:
+            pass
+    # Google puts RetryInfo in the error body: "retryDelay": "12s".
+    match = re.search(r'"retryDelay":\s*"(\d+(?:\.\d+)?)s"', response.text)
+    return float(match.group(1)) if match else None
 
 
 @dataclass
@@ -164,7 +185,7 @@ async def generate_concept(
         raise GenerationError(f"request failed: {exc}") from exc
 
     if response.status_code == 429:
-        raise GenerationError("rate limited by Gemini")
+        raise RateLimitedError(_retry_after_seconds(response))
     if response.status_code >= 400:
         raise GenerationError(f"Gemini returned {response.status_code}: {response.text[:200]}")
 

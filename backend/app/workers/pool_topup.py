@@ -24,6 +24,7 @@ async def main() -> None:
             enabled=settings.generation_enabled,
             minimum_per_topic=settings.min_pool_per_topic,
             call_cap=settings.generation_daily_call_cap,
+            pace_seconds=settings.generation_pace_seconds,
         )
 
     if result.skipped_reason:

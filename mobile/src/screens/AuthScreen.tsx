@@ -84,7 +84,7 @@ export function AuthScreen() {
           <Text style={styles.title}>One Concept</Text>
           <Text style={styles.tagline}>
             {mode === 'signIn'
-              ? 'Sign in to pick up your streak.'
+              ? 'Welcome back — sign in to pick up your streak.'
               : 'Create an account to keep your streak across devices.'}
           </Text>
         </View>

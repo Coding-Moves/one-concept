@@ -1,0 +1,39 @@
+# Manually-triggered EAS Build for Android. Builds run on Expo's servers and
+# count against the EAS build quota, so this never fires automatically.
+#
+# Requires the EXPO_TOKEN repository secret (Expo access token).
+name: EAS Build (Android)
+
+on:
+  workflow_dispatch:
+    inputs:
+      profile:
+        description: "Build profile from eas.json"
+        type: choice
+        default: preview
+        options: [development, preview, production]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      - name: Build Android
+        run: eas build --platform android --profile ${{ github.event.inputs.profile }} --non-interactive --no-wait

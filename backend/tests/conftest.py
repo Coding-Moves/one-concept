@@ -5,6 +5,7 @@ against SQLite or a mock would prove nothing. These tests run against a real
 PostgreSQL started with podman, using the project's own migration files.
 """
 
+import os
 import shutil
 import subprocess
 import time
@@ -14,6 +15,13 @@ from pathlib import Path
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+
+# Environment variables beat the .env file in pydantic-settings, so this
+# insulates the suite from whatever the developer has configured locally.
+# With a real key and GENERATION_ENABLED=true in .env, selection would call
+# the actual Gemini API instead of reporting exhaustion.
+os.environ["GENERATION_ENABLED"] = "false"
+os.environ["GEMINI_API_KEY"] = ""
 
 CONTAINER = "one-concept-test-db"
 PORT = 55433

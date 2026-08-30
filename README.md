@@ -2,109 +2,28 @@
 
 **Learn one new concept every day.**
 
-## 📱 Install the app (Android)
+> One day. One concept. One small step forward.
 
-Current build: **v1.1.1** — daily reminders edition.
+One Concept sends you a single, carefully chosen technical concept each day —
+AI, software engineering, computer science, mathematics, Linux — written in
+two or three plain sentences with one concrete example. Read it in thirty
+seconds, mark it learned, keep your streak alive.
 
-**[Download the APK](https://expo.dev/artifacts/eas/dMX7ZhXJSP1dxP3nSucftZdAsQZaU0ONGLvFQpFChHI.apk)**
+## Install (Android)
 
-Open the link on your phone, install (allow "install unknown apps" if asked),
-sign in, and grant the notification permission. UI and content improvements
-arrive over the air automatically — this link only changes when a new native
-build ships, and it is updated here every time it does.
+Current build: **v1.1.1**
 
-One Concept is a simple AI-powered learning app built around a small but powerful idea: **learn something new every day**.
+**[Download the APK](https://expo.dev/artifacts/eas/dMX7ZhXJSP1dxP3nSucftZdAsQZaU0ONGLvFQpFChHI.apk)** —
+open on your phone, install, sign in, allow notifications. Updates arrive
+over the air; this link changes only when a new native build ships.
 
-Instead of trying to consume huge amounts of information at once, One Concept gives you one carefully selected concept each day from areas such as artificial intelligence, machine learning, software engineering, computer science, mathematics, Linux, systems, and other technology-related fields.
+## Features
 
-The goal is not to replace courses, books, or serious study. The goal is to create a daily habit of curiosity and continuous learning.
-
-## Why One Concept?
-
-There is an enormous amount of knowledge available today, especially in technology. It is easy to spend hours learning without remembering what you actually learned.
-
-One Concept takes a different approach:
-
-> **One day. One concept. One small step forward.**
-
-Each day, the app gives you a new concept that you can read, understand, and add to your knowledge.
-
-Over time, small daily lessons become a large collection of knowledge.
-
-## How It Works
-
-1. A new concept is selected for the day.
-2. AI helps generate a clear and useful explanation.
-3. The concept is saved to your personal learning history.
-4. You receive a notification reminding you to learn it.
-5. You open the app and read the concept.
-6. You mark it as learned.
-7. Your learning streak is updated.
-8. The next day brings another concept.
-
-The system keeps track of concepts you have already received so that your daily learning experience can continue to introduce new ideas rather than repeatedly showing the same content.
-
-## Learning Topics
-
-One Concept is designed to cover a wide range of technical subjects.
-
-### Artificial Intelligence
-
-* Artificial Intelligence
-* Machine Learning
-* Deep Learning
-* Generative AI
-* Large Language Models
-* Computer Vision
-* Natural Language Processing
-* Reinforcement Learning
-
-### Software Engineering
-
-* Software architecture
-* APIs
-* Databases
-* Testing
-* Design patterns
-* System design
-* CI/CD
-* DevOps
-* Version control
-* Distributed systems
-
-### Computer Science
-
-* Algorithms
-* Data structures
-* Operating systems
-* Computer networks
-* Compilers
-* Computer architecture
-* Distributed computing
-* Programming languages
-
-### Mathematics
-
-* Algebra
-* Calculus
-* Linear algebra
-* Probability
-* Statistics
-* Discrete mathematics
-* Mathematical foundations of AI
-
-### Linux & Systems
-
-* Linux
-* Linux kernel concepts
-* Shell
-* Processes
-* Filesystems
-* Networking
-* System administration
-* Open-source development
-
-More categories can be added as the project grows.
+- **One concept a day** — never repeated, drawn from the topics you follow
+- **Human-sounding lessons** — short, plain, concrete; validated before publishing
+- **Reminders that stop** — up to three a day, in your timezone, silent once you've learned
+- **Streaks and history** — your personal knowledge record, synced across devices
+- **Self-running** — content generates nightly; the app updates itself on every merge
 
 ## Core Idea: No Repeated Learning
 

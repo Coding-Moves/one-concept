@@ -15,7 +15,7 @@ import {
   putNotificationPrefs,
   registerForReminders,
 } from '../services/notifications';
-import { radius, spacing, ThemeColors, typography } from '../theme';
+import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -228,8 +228,9 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
+      ...shadows.card,
       padding: spacing.md,
       gap: spacing.xs,
       alignItems: 'flex-start',
@@ -248,10 +249,11 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      borderWidth: 1,
+      borderRadius: radius.lg,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       padding: spacing.md,
+      ...shadows.card,
     },
     rowPressed: {
       opacity: 0.7,
@@ -292,11 +294,12 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      borderWidth: 1,
+      borderRadius: radius.lg,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       padding: spacing.md,
       gap: spacing.md,
+      ...shadows.card,
     },
     savedText: {
       flexShrink: 1,

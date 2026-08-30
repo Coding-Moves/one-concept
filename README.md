@@ -35,24 +35,14 @@ over the air; this link changes only when a new native build ships.
 
 ## Contributing
 
-Contributions, ideas, bug reports, and discussions are welcome.
-
-Before making a large change, open an issue to discuss the idea and its direction.
-
-For development guidelines, see `CONTRIBUTING.md` when available.
+Issues, ideas, and pull requests are welcome — see
+[CONTRIBUTING.md](CONTRIBUTING.md). Open an issue before starting a large
+change.
 
 ## License
 
-This project is licensed under the terms specified in the repository's `LICENSE` file.
+[MIT](LICENSE)
 
 ---
 
-## The Goal
-
-One Concept is built around a simple belief:
-
 > **You don't need to learn everything today. You just need to learn something today.**
-
-One concept at a time.
-
-One day at a time.

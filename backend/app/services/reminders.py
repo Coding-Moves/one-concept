@@ -105,7 +105,15 @@ async def send_due_reminders(
             if got is None:
                 continue  # another worker beat us to this slot
             claimed.add(key)
-        messages.append({"to": row.expo_push_token, "title": TITLE, "body": BODY})
+        messages.append({
+            "to": row.expo_push_token,
+            "title": TITLE,
+            "body": BODY,
+            # Sound + heads-up banner, matching what people expect of a nudge.
+            "sound": "default",
+            "priority": "high",
+            "channelId": "reminders",
+        })
     await session.commit()
 
     if not messages:

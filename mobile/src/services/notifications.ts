@@ -50,9 +50,14 @@ export async function registerForReminders(): Promise<void> {
   if (status !== 'granted') return;
 
   if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
+    // A fresh channel id: Android freezes a channel's importance after first
+    // creation, so upgrading the old quiet 'default' channel in place is
+    // impossible — 'reminders' starts loud from day one.
+    await Notifications.setNotificationChannelAsync('reminders', {
       name: 'Daily reminders',
-      importance: Notifications.AndroidImportance.DEFAULT,
+      importance: Notifications.AndroidImportance.HIGH,
+      sound: 'default',
+      vibrationPattern: [0, 250, 250, 250],
     });
   }
 

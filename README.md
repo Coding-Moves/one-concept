@@ -32,7 +32,6 @@ over the air; this link changes only when a new native build ships.
 - [Backend](backend/README.md) — API endpoints, auth, running locally
 - [Deployment](mobile/DEPLOYMENT.md) — EAS builds, OTA updates, release runbook
 
-
 ## Contributing
 
 Issues, ideas, and pull requests are welcome — see

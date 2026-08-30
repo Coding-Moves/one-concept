@@ -29,6 +29,16 @@ Notifications.setNotificationHandler({
   }),
 });
 
+/**
+ * Keep the server's idea of "your day" aligned with the phone's clock.
+ * Reminder times and streak boundaries are computed in this zone.
+ */
+export async function syncTimezone(): Promise<void> {
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  if (!timezone) return;
+  await apiRequest<unknown>('/v1/me', { method: 'PATCH', body: { timezone } });
+}
+
 /** Ask permission (first run only) and register this handset's token. */
 export async function registerForReminders(): Promise<void> {
   if (!Device.isDevice) return; // emulators cannot receive pushes

@@ -2,6 +2,17 @@
 
 **Learn one new concept every day.**
 
+## 📱 Install the app (Android)
+
+Current build: **v1.1.0** — daily reminders edition.
+
+**[Download the APK](https://expo.dev/artifacts/eas/WatKxkWSTliNuC5JnWkEffkwhvj3bPGE44IhFEoaIUE.apk)**
+
+Open the link on your phone, install (allow "install unknown apps" if asked),
+sign in, and grant the notification permission. UI and content improvements
+arrive over the air automatically — this link only changes when a new native
+build ships, and it is updated here every time it does.
+
 One Concept is a simple AI-powered learning app built around a small but powerful idea: **learn something new every day**.
 
 Instead of trying to consume huge amounts of information at once, One Concept gives you one carefully selected concept each day from areas such as artificial intelligence, machine learning, software engineering, computer science, mathematics, Linux, systems, and other technology-related fields.

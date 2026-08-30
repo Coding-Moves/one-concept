@@ -4,9 +4,9 @@
 
 ## 📱 Install the app (Android)
 
-Current build: **v1.1.0** — daily reminders edition.
+Current build: **v1.1.1** — daily reminders edition.
 
-**[Download the APK](https://expo.dev/artifacts/eas/WatKxkWSTliNuC5JnWkEffkwhvj3bPGE44IhFEoaIUE.apk)**
+**[Download the APK](https://expo.dev/artifacts/eas/dMX7ZhXJSP1dxP3nSucftZdAsQZaU0ONGLvFQpFChHI.apk)**
 
 Open the link on your phone, install (allow "install unknown apps" if asked),
 sign in, and grant the notification permission. UI and content improvements

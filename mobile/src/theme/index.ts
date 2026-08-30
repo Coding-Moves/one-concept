@@ -17,39 +17,39 @@ export interface ThemeColors {
 }
 
 export const lightColors: ThemeColors = {
-  background: '#F7F8FA',
+  background: '#F4F5FB',
   surface: '#FFFFFF',
-  text: '#1A1D21',
-  textSecondary: '#5C6470',
-  textMuted: '#8A919C',
-  primary: '#2F6BFF',
-  primaryPressed: '#2456D6',
+  text: '#171923',
+  textSecondary: '#565D6D',
+  textMuted: '#8A91A0',
+  primary: '#6366F1',
+  primaryPressed: '#4F46E5',
   onPrimary: '#FFFFFF',
-  success: '#1F9D55',
-  successSurface: '#E7F6EE',
-  streak: '#E8590C',
-  border: '#E4E7EC',
-  categoryChip: '#EEF2FF',
-  categoryChipText: '#3B4CCA',
-  skeleton: '#E4E7EC',
+  success: '#16A34A',
+  successSurface: '#E9F8EF',
+  streak: '#F97316',
+  border: '#E9EBF4',
+  categoryChip: '#EEF0FF',
+  categoryChipText: '#4F46E5',
+  skeleton: '#E9EBF4',
 };
 
 export const darkColors: ThemeColors = {
-  background: '#0F1115',
-  surface: '#181C23',
-  text: '#F2F4F7',
-  textSecondary: '#A8B0BB',
-  textMuted: '#6F7885',
-  primary: '#5B8CFF',
-  primaryPressed: '#3E6FE8',
+  background: '#0A0C14',
+  surface: '#141828',
+  text: '#F1F3F9',
+  textSecondary: '#A6ADC0',
+  textMuted: '#6E7688',
+  primary: '#818CF8',
+  primaryPressed: '#6366F1',
   onPrimary: '#FFFFFF',
-  success: '#3DD68C',
-  successSurface: '#122A1E',
-  streak: '#FF8A3D',
-  border: '#262C36',
-  categoryChip: '#1E2438',
-  categoryChipText: '#9DAFF7',
-  skeleton: '#262C36',
+  success: '#34D399',
+  successSurface: '#10291F',
+  streak: '#FB923C',
+  border: '#20263D',
+  categoryChip: '#1D2242',
+  categoryChipText: '#A5B4FC',
+  skeleton: '#20263D',
 };
 
 export const spacing = {
@@ -61,10 +61,23 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 8,
-  md: 12,
+  sm: 10,
+  md: 14,
   lg: 20,
+  xl: 26,
   pill: 999,
+};
+
+/** Soft elevation for borderless cards. Invisible on dark backgrounds, where
+ *  the hairline border carries the separation instead. */
+export const shadows = {
+  card: {
+    shadowColor: '#101433',
+    shadowOpacity: 0.07,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 3,
+  },
 };
 
 export const typography = {

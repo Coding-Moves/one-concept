@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AnimatedFlame } from './AnimatedFlame';
 import { useTheme } from '../context/ThemeContext';
-import { radius, spacing, ThemeColors } from '../theme';
+import { radius, shadows, spacing, ThemeColors } from '../theme';
 import { StreakStats } from '../services/streak';
 
 export function StreakBadge({ streaks }: { streaks: StreakStats }) {
@@ -25,14 +25,14 @@ export function StreakBadge({ streaks }: { streaks: StreakStats }) {
       </View>
       <View style={styles.stat}>
         <View style={styles.valueRow}>
-          <Ionicons name="trophy-outline" size={15} color={colors.textMuted} />
+          <Ionicons name="trophy-outline" size={15} color={colors.categoryChipText} />
           <Text style={styles.value}>{streaks.longest}</Text>
         </View>
         <Text style={styles.label}>longest</Text>
       </View>
       <View style={styles.stat}>
         <View style={styles.valueRow}>
-          <Ionicons name="library-outline" size={15} color={colors.textMuted} />
+          <Ionicons name="library-outline" size={15} color={colors.categoryChipText} />
           <Text style={styles.value}>{streaks.totalLearned}</Text>
         </View>
         <Text style={styles.label}>learned</Text>
@@ -46,10 +46,11 @@ const createStyles = (colors: ThemeColors) =>
     row: {
       flexDirection: 'row',
       backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      borderWidth: 1,
+      borderRadius: radius.lg,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      paddingVertical: spacing.sm + 4,
+      paddingVertical: spacing.md,
+      ...shadows.card,
     },
     stat: {
       flex: 1,
@@ -62,12 +63,13 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.xs,
     },
     value: {
-      fontSize: 17,
-      fontWeight: '700',
+      fontSize: 19,
+      fontFamily: 'SpaceGrotesk_700Bold',
       color: colors.text,
     },
     label: {
-      fontSize: 12,
+      fontSize: 11.5,
+      letterSpacing: 0.3,
       color: colors.textMuted,
     },
   });

@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { radius, spacing, ThemeColors, typography } from '../theme';
+import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -186,7 +186,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     header: { gap: spacing.sm },
-    title: { ...typography.title, fontSize: 34, color: colors.text },
+    title: { ...typography.title, fontSize: 38, color: colors.text },
     tagline: { fontSize: 15, color: colors.textMuted, lineHeight: 22 },
     form: { gap: spacing.md },
     field: { gap: spacing.sm },
@@ -199,19 +199,20 @@ const createStyles = (colors: ThemeColors) =>
     },
     input: {
       backgroundColor: colors.surface,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
-      borderRadius: radius.md,
-      paddingHorizontal: spacing.md,
+      borderRadius: radius.lg,
+      paddingHorizontal: spacing.md + 2,
       paddingVertical: spacing.md,
       fontSize: 16,
       color: colors.text,
+      ...shadows.card,
     },
     banner: {
       flexDirection: 'row',
       alignItems: 'flex-start',
       gap: spacing.sm,
-      borderRadius: radius.md,
+      borderRadius: radius.lg,
       padding: spacing.md,
     },
     errorBanner: { backgroundColor: colors.categoryChip },

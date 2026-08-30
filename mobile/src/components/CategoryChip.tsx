@@ -26,7 +26,9 @@ const createStyles = (colors: ThemeColors) =>
     },
     label: {
       color: colors.categoryChipText,
-      fontSize: 13,
-      fontWeight: '600',
+      fontSize: 11.5,
+      fontWeight: '700',
+      letterSpacing: 1,
+      textTransform: 'uppercase',
     },
   });

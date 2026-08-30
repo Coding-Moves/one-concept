@@ -10,7 +10,7 @@ import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { useServerDaily } from '../hooks/useServerDaily';
 import { toConcept } from '../services/dailyApi';
-import { radius, spacing, ThemeColors, typography } from '../theme';
+import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export function TodayScreen() {
   const { loading: localLoading, concept: localConcept, learnedToday, streaks, markLearned } =
@@ -138,10 +138,12 @@ const createStyles = (colors: ThemeColors) =>
     },
     appName: {
       ...typography.title,
+      fontSize: 30,
       color: colors.text,
     },
     tagline: {
-      fontSize: 14,
+      fontSize: 13.5,
+      lineHeight: 19,
       color: colors.textMuted,
     },
     themeButton: {
@@ -158,11 +160,11 @@ const createStyles = (colors: ThemeColors) =>
       opacity: 0.6,
     },
     sectionLabel: {
-      fontSize: 13,
+      fontSize: 12,
       fontWeight: '700',
-      letterSpacing: 1,
+      letterSpacing: 1.4,
       textTransform: 'uppercase',
-      color: colors.textMuted,
+      color: colors.categoryChipText,
       marginBottom: -spacing.sm,
     },
     noteBox: {
@@ -170,11 +172,12 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: spacing.sm,
       backgroundColor: colors.surface,
-      borderWidth: 1,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       borderRadius: radius.md,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm + 2,
+      ...shadows.card,
     },
     noteText: {
       flex: 1,
@@ -188,8 +191,8 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       gap: spacing.sm,
       backgroundColor: colors.successSurface,
-      borderRadius: radius.md,
-      paddingVertical: spacing.md,
+      borderRadius: radius.pill,
+      paddingVertical: spacing.md + 2,
     },
     doneText: {
       color: colors.success,

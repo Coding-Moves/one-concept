@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "916737472780",
+    "project_id": "one-concept-48a7d",
+    "storage_bucket": "one-concept-48a7d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:916737472780:android:b60aae768145092112b129",
+        "android_client_info": {
+          "package_name": "com.codingmoves.oneconcept"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDehZ5i2g9I2eaBvsKg68ZcMwk4RUXyATk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

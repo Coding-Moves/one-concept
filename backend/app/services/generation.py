@@ -18,56 +18,57 @@ import httpx
 log = logging.getLogger(__name__)
 
 # Bump when the prompt changes so content can be found and regenerated later.
-PROMPT_VERSION = "2026-08-v1"
+PROMPT_VERSION = "2026-08-v2"
 
-SUMMARY_MIN, SUMMARY_MAX = 200, 900
-EXAMPLE_MIN, EXAMPLE_MAX = 40, 500
+SUMMARY_MIN, SUMMARY_MAX = 100, 420
+EXAMPLE_MIN, EXAMPLE_MAX = 40, 300
 
-_SYSTEM = """You write One Concept, a daily learning app for working \
-programmers and technically curious people.
+_SYSTEM = """You write One Concept, a daily learning app. Each lesson is read \
+in thirty seconds over morning coffee.
 
-House style, learned from the examples:
-- Explain one idea completely. No preamble, no "in this lesson", no sign-off.
-- Lead with what the thing IS, then why it matters in practice.
-- Concrete over abstract. Name real tools, real commands, real failure modes.
-- Confident and plain. No hype, no exclamation marks, no rhetorical questions.
-- British or American spelling is fine, but be consistent within a concept.
-- Never address the reader as "you guys", never use emoji.
+Voice: a sharp friend explaining something across the table. Not a textbook, \
+not a blog post, not documentation.
 
-The summary is 2-4 sentences a person can read in under a minute.
-The example is one concrete illustration that grounds the idea — a command, a \
-scenario, a comparison. It must add something the summary did not say."""
+Rules, in order of importance:
+- 2 to 3 short sentences for the summary. Never more.
+- Plain everyday words. If a simpler word exists, use it.
+- Say the interesting thing directly. Cut every sentence that merely sounds \
+informative.
+- BANNED words and moves: "leverage", "robust", "crucial", "facilitates", \
+"enables", "utilize", "furthermore", "in essence", "plays a vital role", \
+"in the world of", any sentence that starts by restating the title.
+- The example is ONE concrete moment a person can picture — a command they \
+might type, a thing that happened, a comparison to daily life. One or two \
+short sentences.
+- No preamble, no sign-off, no hype, no emoji, no rhetorical questions."""
 
-_EXAMPLES = """Here are three concepts in the exact voice to match.
+_EXAMPLES = """Here are three lessons in the exact voice to match.
 
 Title: Idempotency
-Summary: An operation is idempotent when performing it multiple times produces \
-the same final result as performing it once. This matters when designing \
-reliable APIs and distributed systems: if a network request times out, the \
-client can safely retry an idempotent operation without fear of double-charging \
-a card or creating duplicate records.
-Example: HTTP PUT is idempotent: setting a user's email to "a@b.com" twice \
-leaves the same state. POST is typically not: submitting an order twice creates \
-two orders, which is why payment APIs use idempotency keys.
+Summary: An operation is idempotent when doing it twice leaves things exactly \
+as if you did it once. That one property is what makes retries safe — if the \
+network dies mid-request, the client can just try again without breaking \
+anything.
+Example: Pressing an elevator button five times doesn't call five elevators. \
+Submitting an online order twice, though, buys two — which is why payment \
+systems work hard to be idempotent.
 
 Title: Overfitting
-Summary: A model overfits when it learns the noise and quirks of its training \
-data instead of the underlying pattern, so it scores well on data it has seen \
-and poorly on data it has not. It is the central failure mode of machine \
-learning, countered with more data, regularization, simpler models, and honest \
-held-out evaluation.
-Example: A student who memorizes past exam answers aces practice tests but \
-fails a new exam — they learned the answers, not the subject.
+Summary: A model overfits when it memorizes its training data instead of \
+learning the pattern behind it. It looks brilliant on data it has seen and \
+falls apart on anything new.
+Example: A student who memorizes last year's exam answers aces every practice \
+test — then fails the real exam, because they learned the answers, not the \
+subject.
 
 Title: File Descriptors
-Summary: On Linux, everything a process reads or writes — files, sockets, \
-pipes, terminals — is accessed through a file descriptor: a small integer \
-handle into a per-process table of open resources. This uniform interface is \
-why the same read() and write() calls work on a file, a network connection, or \
-your keyboard.
-Example: Every process starts with descriptor 0 (stdin), 1 (stdout), and 2 \
-(stderr). Redirecting output with "ls > out.txt" just makes descriptor 1 point \
-at the file instead of the terminal."""
+Summary: On Linux, everything a program reads or writes — files, network \
+connections, your keyboard — is handled through a file descriptor: a small \
+number that stands for an open resource. One simple interface, so the same \
+code can read from any of them.
+Example: Every program starts with three: 0 is input, 1 is output, 2 is \
+errors. Typing "ls > out.txt" just points number 1 at a file instead of your \
+screen."""
 
 _RESPONSE_SCHEMA = {
     "type": "object",
@@ -146,6 +147,11 @@ def validate(payload: dict, title: str) -> tuple[str, str]:
     for phrase in ("in this lesson", "as an ai", "i cannot", "here is", "sure,", "certainly,"):
         if lowered.startswith(phrase):
             raise GenerationError(f"summary opens with boilerplate: {phrase!r}")
+    # The tells of machine-flavoured filler; a lesson containing them gets rewritten.
+    for phrase in ("leverage", "crucial", "furthermore", "in the world of",
+                   "plays a vital role", "in essence", "facilitates"):
+        if phrase in lowered:
+            raise GenerationError(f"summary contains banned filler: {phrase!r}")
     if "```" in summary or "```" in example:
         raise GenerationError("response contained a code fence")
     if summary == example:

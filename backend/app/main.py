@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.health import router as health_router
+from app.api.v1.pages import router as pages_router
 from app.api.v1.router import api_router
 from app.config import get_settings
 from app.core.security import JwksCache
@@ -46,6 +47,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(health_router)
+    app.include_router(pages_router)
     app.include_router(api_router)
     return app
 

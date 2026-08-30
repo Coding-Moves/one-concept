@@ -82,8 +82,30 @@ export class RemoteProgressRepository implements ProgressRepository {
   }
 
   async markLearned(): Promise<ProgressState> {
-    await apiRequest('/v1/daily/complete', { method: 'POST' });
-    return this.load();
+    // The response already carries the day and fresh streaks — merging it
+    // saves a second round trip, which on a distant connection is the
+    // difference between an instant tick and a multi-second stall.
+    const done = await apiRequest<{
+      completed: boolean;
+      assigned_for: string;
+      stats: { current: number; longest: number; total_learned: number };
+    }>('/v1/daily/complete', { method: 'POST' });
+
+    const conceptId = this.cache.assignment?.conceptId;
+    const learned =
+      conceptId && !this.cache.learned.some((r) => r.date === done.assigned_for)
+        ? [...this.cache.learned, { conceptId, date: done.assigned_for }]
+        : this.cache.learned;
+
+    return this.remember({
+      ...this.cache,
+      learned,
+      stats: {
+        current: done.stats.current,
+        longest: done.stats.longest,
+        totalLearned: done.stats.total_learned,
+      },
+    });
   }
 
   async toggleTopic(category: Category): Promise<ProgressState> {
@@ -104,19 +126,34 @@ export class RemoteProgressRepository implements ProgressRepository {
     slug: string,
     kind: 'like' | 'save',
     currently: boolean
-  ): Promise<ProgressState> {
+  ): Promise<void> {
     await apiRequest(`/v1/concepts/${encodeURIComponent(slug)}/${kind}`, {
       method: currently ? 'DELETE' : 'PUT',
     });
-    return this.load();
   }
 
+  // A 2xx from a PUT/DELETE toggle confirms exactly the change we asked for,
+  // so the cache can be patched in place — no full-state reload.
   async toggleLike(conceptId: string): Promise<ProgressState> {
-    return this.toggle(conceptId, 'like', this.cache.likes.includes(conceptId));
+    const currently = this.cache.likes.includes(conceptId);
+    await this.toggle(conceptId, 'like', currently);
+    return this.remember({
+      ...this.cache,
+      likes: currently
+        ? this.cache.likes.filter((id) => id !== conceptId)
+        : [...this.cache.likes, conceptId],
+    });
   }
 
   async toggleBookmark(conceptId: string): Promise<ProgressState> {
-    return this.toggle(conceptId, 'save', this.cache.bookmarks.includes(conceptId));
+    const currently = this.cache.bookmarks.includes(conceptId);
+    await this.toggle(conceptId, 'save', currently);
+    return this.remember({
+      ...this.cache,
+      bookmarks: currently
+        ? this.cache.bookmarks.filter((id) => id !== conceptId)
+        : [...this.cache.bookmarks, conceptId],
+    });
   }
 }
 

@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -177,7 +178,7 @@ export function ProfileScreen() {
         </View>
       </Pressable>
 
-      <Text style={styles.version}>One Concept v0.3.0</Text>
+      <Text style={styles.version}>One Concept v{Constants.expoConfig?.version ?? '?'}</Text>
     </ScrollView>
   );
 }

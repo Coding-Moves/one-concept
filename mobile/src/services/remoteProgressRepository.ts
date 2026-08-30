@@ -82,8 +82,30 @@ export class RemoteProgressRepository implements ProgressRepository {
   }
 
   async markLearned(): Promise<ProgressState> {
-    await apiRequest('/v1/daily/complete', { method: 'POST' });
-    return this.load();
+    // The response already carries the day and fresh streaks — merging it
+    // saves a second round trip, which on a distant connection is the
+    // difference between an instant tick and a multi-second stall.
+    const done = await apiRequest<{
+      completed: boolean;
+      assigned_for: string;
+      stats: { current: number; longest: number; total_learned: number };
+    }>('/v1/daily/complete', { method: 'POST' });
+
+    const conceptId = this.cache.assignment?.conceptId;
+    const learned =
+      conceptId && !this.cache.learned.some((r) => r.date === done.assigned_for)
+        ? [...this.cache.learned, { conceptId, date: done.assigned_for }]
+        : this.cache.learned;
+
+    return this.remember({
+      ...this.cache,
+      learned,
+      stats: {
+        current: done.stats.current,
+        longest: done.stats.longest,
+        totalLearned: done.stats.total_learned,
+      },
+    });
   }
 
   async toggleTopic(category: Category): Promise<ProgressState> {

@@ -15,3 +15,6 @@ venv/
 # OS / editor
 .DS_Store
 *.swp
+
+# Firebase service-account keys are real secrets — never commit them
+*firebase-adminsdk*.json

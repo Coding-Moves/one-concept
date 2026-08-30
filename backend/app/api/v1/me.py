@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
 from app.schemas.me import LearnedOut, ProfileIn, StateOut, StreakOut, TopicsIn
+from app.schemas.notifications import NotificationPrefs, PushTokenIn
 from app.services.interactions import set_followed_topics
 from app.services.state import load_state
 from app.services.streaks import compute_streaks
@@ -61,6 +62,72 @@ async def put_topics(
 ) -> StateOut:
     await set_followed_topics(db, user.id, body.topics)
     return _to_state_out(await load_state(db, user.id))
+
+
+@router.post("/push-token", status_code=status.HTTP_204_NO_CONTENT)
+async def register_push_token(
+    body: PushTokenIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Register (or re-home) this handset's Expo push token.
+
+    Tokens are unique per handset, not per account: signing into a different
+    account on the same phone moves the token to its new owner, so reminders
+    follow the person actually holding the device.
+    """
+    await db.execute(
+        text("""
+            insert into public.device_tokens (user_id, expo_push_token, platform)
+            values (:uid, :token, :platform)
+            on conflict (expo_push_token)
+            do update set user_id = excluded.user_id,
+                          platform = coalesce(excluded.platform, device_tokens.platform),
+                          last_seen_at = now()
+        """),
+        {"uid": user.id, "token": body.expo_push_token, "platform": body.platform},
+    )
+    await db.commit()
+
+
+async def _load_prefs(db: AsyncSession, user_id) -> NotificationPrefs:
+    row = (await db.execute(
+        text("select enabled, reminder_times from public.notification_preferences where user_id = :uid"),
+        {"uid": user_id},
+    )).first()
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No preferences yet")
+    return NotificationPrefs(
+        enabled=row.enabled,
+        reminder_times=[t.strftime("%H:%M") for t in row.reminder_times],
+    )
+
+
+@router.get("/notifications", response_model=NotificationPrefs)
+async def get_notifications(
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> NotificationPrefs:
+    return await _load_prefs(db, user.id)
+
+
+@router.put("/notifications", response_model=NotificationPrefs)
+async def put_notifications(
+    body: NotificationPrefs,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> NotificationPrefs:
+    await db.execute(
+        text("""
+            update public.notification_preferences
+               set enabled = :enabled,
+                   reminder_times = cast(:times as time[])
+             where user_id = :uid
+        """),
+        {"enabled": body.enabled, "times": body.reminder_times, "uid": user.id},
+    )
+    await db.commit()
+    return await _load_prefs(db, user.id)
 
 
 @router.patch("", response_model=StateOut)

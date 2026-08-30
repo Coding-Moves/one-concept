@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { AnimatedFlame } from '../components/AnimatedFlame';
 import { CategoryChip } from '../components/CategoryChip';
@@ -9,6 +9,12 @@ import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
+import {
+  getNotificationPrefs,
+  NotificationPrefs,
+  putNotificationPrefs,
+  registerForReminders,
+} from '../services/notifications';
 import { radius, spacing, ThemeColors, typography } from '../theme';
 
 export type ProfileStackParamList = {
@@ -29,6 +35,30 @@ export function ProfileScreen() {
   const saved = progress.bookmarks
     .map((id) => CONCEPTS_BY_ID.get(id))
     .filter((c): c is NonNullable<typeof c> => !!c);
+
+  // Server-owned preference; absent until the first state fetch succeeds.
+  const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  useEffect(() => {
+    let active = true;
+    getNotificationPrefs()
+      .then((p) => active && setPrefs(p))
+      .catch(() => {}); // offline: hide the row rather than show a lie
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const toggleReminders = useCallback(async () => {
+    if (!prefs) return;
+    const next = { ...prefs, enabled: !prefs.enabled };
+    setPrefs(next); // optimistic; revert on failure
+    try {
+      setPrefs(await putNotificationPrefs(next));
+      if (next.enabled) registerForReminders().catch(() => {});
+    } catch {
+      setPrefs(prefs);
+    }
+  }, [prefs]);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -94,6 +124,28 @@ export function ProfileScreen() {
           thumbColor={colors.surface}
         />
       </View>
+
+      {prefs ? (
+        <View style={styles.rowCard}>
+          <View style={styles.rowLeft}>
+            <Ionicons name="notifications-outline" size={20} color={colors.text} />
+            <View>
+              <Text style={styles.rowTitle}>Daily reminders</Text>
+              <Text style={styles.rowSubtitle}>
+                {prefs.enabled
+                  ? `Until you finish: ${prefs.reminder_times.join(' · ')}`
+                  : 'Off — no nudges'}
+              </Text>
+            </View>
+          </View>
+          <Switch
+            value={prefs.enabled}
+            onValueChange={toggleReminders}
+            trackColor={{ true: colors.primary, false: colors.border }}
+            thumbColor={colors.surface}
+          />
+        </View>
+      ) : null}
 
       <Text style={styles.sectionLabel}>Saved concepts</Text>
       {saved.length === 0 ? (

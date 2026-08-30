@@ -5,7 +5,7 @@ can query in Python. Keep them in step by hand — there is no autogeneration.
 """
 
 import uuid
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 from sqlalchemy import (
     Boolean,
@@ -16,6 +16,7 @@ from sqlalchemy import (
     SmallInteger,
     String,
     Text,
+    Time,
     UniqueConstraint,
 )
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
@@ -102,3 +103,29 @@ class NotificationPreference(Base):
         PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
     )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class DeviceToken(Base):
+    __tablename__ = "device_tokens"
+
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False
+    )
+    expo_push_token: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    platform: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ReminderLog(Base):
+    """Mirror of migrations/0007_reminder_log.sql."""
+
+    __tablename__ = "reminder_log"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
+    )
+    local_date: Mapped[date] = mapped_column(Date, primary_key=True)
+    slot: Mapped[time] = mapped_column(Time, primary_key=True)
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

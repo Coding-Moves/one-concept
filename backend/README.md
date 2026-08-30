@@ -9,8 +9,9 @@ Mobile app  ──►  FastAPI  ──┬──►  Supabase (Postgres + Auth)
                             └──►  Gemini API
 ```
 
-Status: **Phase 6 — content engine.** Reads, writes, and Gemini generation of
-new concepts from a curated backlog.
+Status: **Phase 7 — reminders.** Reads, writes, Gemini generation from a
+curated backlog, and timezone-aware push reminders that stop once the day is
+learned.
 
 ## Layout
 

@@ -36,7 +36,7 @@ export function TodayScreen() {
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.appName}>One Concept</Text>
-          <Text style={styles.tagline}>One day. One concept. One small step forward.</Text>
+          <Text style={styles.tagline}>One day. One concept. One small step forward. 🚀</Text>
         </View>
         <Pressable
           onPress={toggle}

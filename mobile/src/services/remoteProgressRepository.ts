@@ -126,19 +126,34 @@ export class RemoteProgressRepository implements ProgressRepository {
     slug: string,
     kind: 'like' | 'save',
     currently: boolean
-  ): Promise<ProgressState> {
+  ): Promise<void> {
     await apiRequest(`/v1/concepts/${encodeURIComponent(slug)}/${kind}`, {
       method: currently ? 'DELETE' : 'PUT',
     });
-    return this.load();
   }
 
+  // A 2xx from a PUT/DELETE toggle confirms exactly the change we asked for,
+  // so the cache can be patched in place — no full-state reload.
   async toggleLike(conceptId: string): Promise<ProgressState> {
-    return this.toggle(conceptId, 'like', this.cache.likes.includes(conceptId));
+    const currently = this.cache.likes.includes(conceptId);
+    await this.toggle(conceptId, 'like', currently);
+    return this.remember({
+      ...this.cache,
+      likes: currently
+        ? this.cache.likes.filter((id) => id !== conceptId)
+        : [...this.cache.likes, conceptId],
+    });
   }
 
   async toggleBookmark(conceptId: string): Promise<ProgressState> {
-    return this.toggle(conceptId, 'save', this.cache.bookmarks.includes(conceptId));
+    const currently = this.cache.bookmarks.includes(conceptId);
+    await this.toggle(conceptId, 'save', currently);
+    return this.remember({
+      ...this.cache,
+      bookmarks: currently
+        ? this.cache.bookmarks.filter((id) => id !== conceptId)
+        : [...this.cache.bookmarks, conceptId],
+    });
   }
 }
 

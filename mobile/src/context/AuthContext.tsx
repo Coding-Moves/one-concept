@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { setTokenProvider } from '../api/client';
 import { supabase } from '../lib/supabase';
-import { registerForReminders } from '../services/notifications';
+import { registerForReminders, syncTimezone } from '../services/notifications';
 
 export interface AuthContextValue {
   loading: boolean;
@@ -58,12 +58,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setSession(data.session);
       setLoading(false);
       // Best-effort: reminders are a bonus, never a blocker for signing in.
-      if (data.session) registerForReminders().catch(() => {});
+      if (data.session) {
+        registerForReminders().catch(() => {});
+        syncTimezone().catch(() => {});
+      }
     });
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
-      if (event === 'SIGNED_IN' && next) registerForReminders().catch(() => {});
+      if (event === 'SIGNED_IN' && next) {
+        registerForReminders().catch(() => {});
+        syncTimezone().catch(() => {});
+      }
     });
 
     return () => {

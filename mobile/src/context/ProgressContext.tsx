@@ -86,29 +86,81 @@ export function ProgressProvider({ children, repository: override }: Props) {
   const concept = selectDailyConcept(eligibleConcepts(progress), progress, today);
   const learnedToday = progress.learned.some((r) => r.date === today);
 
-  // Writes are fire-and-forget against the repository; a failure leaves the
-  // previous state on screen rather than showing a change that did not persist.
-  const apply = useCallback((run: Promise<ProgressState>) => {
-    run.then(setProgress).catch(() => {});
-  }, []);
+  // Optimistic writes: the screen changes the moment the user acts, the
+  // repository confirms in the background, and a failure rolls the screen
+  // back to what the server last agreed to — never a change that silently
+  // did not persist.
+  const apply = useCallback(
+    (optimistic: ((prev: ProgressState) => ProgressState) | null, run: Promise<ProgressState>) => {
+      let before: ProgressState | null = null;
+      if (optimistic) {
+        setProgress((prev) => {
+          before = prev;
+          return optimistic(prev);
+        });
+      }
+      run.then(setProgress).catch(() => {
+        if (before) setProgress(before);
+      });
+    },
+    []
+  );
 
   const markLearned = useCallback(() => {
     if (!concept) return;
-    apply(repository.markLearned(concept.id, today));
+    apply(
+      (prev) => {
+        if (prev.learned.some((r) => r.date === today)) return prev;
+        const learned = [...prev.learned, { conceptId: concept.id, date: today }];
+        // A same-day completion always extends the current run by one; the
+        // server's timezone-correct numbers replace this a moment later.
+        const current = (prev.stats?.current ?? 0) + 1;
+        return {
+          ...prev,
+          learned,
+          stats: {
+            current,
+            longest: Math.max(prev.stats?.longest ?? 0, current),
+            totalLearned: (prev.stats?.totalLearned ?? prev.learned.length) + 1,
+          },
+        };
+      },
+      repository.markLearned(concept.id, today)
+    );
   }, [apply, concept, repository, today]);
 
   const toggleTopic = useCallback(
-    (category: Category) => apply(repository.toggleTopic(category)),
+    (category: Category) =>
+      apply(
+        (prev) => ({
+          ...prev,
+          followedTopics: prev.followedTopics.includes(category)
+            ? prev.followedTopics.filter((c) => c !== category)
+            : [...prev.followedTopics, category],
+        }),
+        repository.toggleTopic(category)
+      ),
     [apply, repository]
   );
 
+  const flip = (list: string[], id: string) =>
+    list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
+
   const toggleLike = useCallback(
-    (conceptId: string) => apply(repository.toggleLike(conceptId)),
+    (conceptId: string) =>
+      apply(
+        (prev) => ({ ...prev, likes: flip(prev.likes, conceptId) }),
+        repository.toggleLike(conceptId)
+      ),
     [apply, repository]
   );
 
   const toggleBookmark = useCallback(
-    (conceptId: string) => apply(repository.toggleBookmark(conceptId)),
+    (conceptId: string) =>
+      apply(
+        (prev) => ({ ...prev, bookmarks: flip(prev.bookmarks, conceptId) }),
+        repository.toggleBookmark(conceptId)
+      ),
     [apply, repository]
   );
 

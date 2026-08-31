@@ -65,6 +65,17 @@ export class RemoteProgressRepository implements ProgressRepository {
     return this.remember(toProgressState(payload));
   }
 
+  async loadCached(): Promise<ProgressState | null> {
+    const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
+    if (!raw) return null;
+    try {
+      this.cache = JSON.parse(raw) as ProgressState;
+      return this.cache;
+    } catch {
+      return null;
+    }
+  }
+
   async load(): Promise<ProgressState> {
     try {
       return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'));

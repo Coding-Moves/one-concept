@@ -8,18 +8,28 @@ from sqlalchemy.ext.asyncio import AsyncSession
 # or that were created through paths the trigger did not see.
 #
 # Kept to one round trip: it runs on every /v1/daily and /v1/me/state call.
+#
+# Topic follows are seeded ONLY when the profile insert actually creates a
+# row. Follows are the one user-curated, deletable set here — an unconditional
+# insert would resurrect every unfollow on every call, which is exactly what
+# it used to do (issue #29). Profile and prefs are single rows that users
+# cannot delete, so re-asserting them stays harmless.
 _BOOTSTRAP = text("""
-    with profile as (
+    with created as (
         insert into public.profiles (id, display_name)
         values (:uid, :display_name)
         on conflict (id) do nothing
+        returning id
     ), prefs as (
         insert into public.notification_preferences (user_id)
         values (:uid)
         on conflict (user_id) do nothing
     )
     insert into public.user_topics (user_id, topic_id)
-    select :uid, t.id from public.topics t where t.is_active
+    select p.id, t.id
+      from created p
+     cross join public.topics t
+     where t.is_active
     on conflict do nothing
 """)
 

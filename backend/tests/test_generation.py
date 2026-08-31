@@ -6,14 +6,18 @@ only produce by accident.
 """
 
 import json
+from datetime import timedelta
 
 import httpx
 import pytest
 from sqlalchemy import text
 
-from app.services import generation, pool
+from app.config import get_settings
+from app.services import generation, pool, selection
 from app.services.generation import GenerationError, RateLimitedError, build_prompt, generate_concept, validate
+from app.services.interactions import set_followed_topics
 from app.services.pool import generate_one, top_up
+from app.services.selection import get_or_create_daily
 
 GOOD_SUMMARY = (
     "A write-ahead log records an intended change to durable storage before the "
@@ -314,11 +318,7 @@ async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_
     """Issue #29 goal: with follows persisting, a user who has read every
     published lesson in their only topic gets an on-demand generated lesson
     from that same topic — never a silent widening to other topics."""
-    from app.services import selection
-    from app.services.interactions import set_followed_topics
-    from app.services.selection import get_or_create_daily
     from tests.test_selection import DAY
-    from datetime import timedelta
 
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
 

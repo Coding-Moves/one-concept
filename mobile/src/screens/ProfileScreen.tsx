@@ -74,8 +74,12 @@ export function ProfileScreen() {
           <Ionicons name="person" size={26} color={colors.primary} />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.name}>{email ? email.split('@')[0] : 'Learner'}</Text>
-          <Text style={styles.subtitle}>{email ?? 'Signed out'}</Text>
+          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+            {email ? email.split('@')[0] : 'Learner'}
+          </Text>
+          <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="middle">
+            {email ?? 'Signed out'}
+          </Text>
         </View>
       </View>
 

@@ -3,11 +3,15 @@ import uuid
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-# Mirrors the on_auth_user_created trigger. The trigger covers everyone who
-# signs up normally; this is the safety net for users that predate the schema,
-# or that were created through paths the trigger did not see.
+# Covers the same ground as the on_auth_user_created trigger — but do NOT
+# re-sync the two verbatim: the follows insert here is deliberately gated on
+# profile creation, which the trigger does not need (it only ever runs once).
+# The trigger covers everyone who signs up normally; this is the safety net
+# for users that predate the schema, or that were created through paths the
+# trigger did not see.
 #
-# Kept to one round trip: it runs on every /v1/daily and /v1/me/state call.
+# Kept to one round trip: it runs on every /v1/daily call (and on
+# /v1/me/state only when no profile exists yet).
 #
 # Topic follows are seeded ONLY when the profile insert actually creates a
 # row. Follows are the one user-curated, deletable set here — an unconditional

@@ -308,3 +308,52 @@ async def test_top_up_fills_only_topics_below_the_threshold(session, patch_httpx
                  where c.topic_id = tp.id and c.status = 'published') < :t
     """), {"t": threshold})).scalars().all()
     assert short == [], f"topics left below the threshold: {short}"
+
+
+async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_httpx, monkeypatch):
+    """Issue #29 goal: with follows persisting, a user who has read every
+    published lesson in their only topic gets an on-demand generated lesson
+    from that same topic — never a silent widening to other topics."""
+    from app.services import selection
+    from app.services.interactions import set_followed_topics
+    from app.services.selection import get_or_create_daily
+    from tests.test_selection import DAY
+    from datetime import timedelta
+
+    patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
+
+    class _Settings:
+        generation_on_demand = True
+        generation_enabled = True
+        gemini_api_key = "test-key"
+        gemini_model = "gemini-2.0-flash"
+
+    monkeypatch.setattr(selection, "get_settings", lambda: _Settings())
+
+    await set_followed_topics(session, user, ["linux-systems"])
+    await session.commit()
+
+    published = await session.scalar(text("""
+        select count(*) from public.concepts c
+          join public.topics t on t.id = c.topic_id
+         where t.slug = 'linux-systems' and c.status = 'published'
+    """))
+
+    # Drain the shelf: one lesson a day, all from the followed topic.
+    for offset in range(published):
+        result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
+        assert result.status == "ok"
+        assert result.concept.topic_slug == "linux-systems"
+        assert result.outside_followed_topics is False
+
+    # The shelf is dry — the next day must come from generation, same topic.
+    beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=published))
+    assert beyond.status == "ok"
+    assert beyond.concept.topic_slug == "linux-systems", "generation must stay in the followed topic"
+    assert beyond.outside_followed_topics is False
+
+    source = await session.scalar(
+        text("select source from public.concepts where slug = :s"),
+        {"s": beyond.concept.slug},
+    )
+    assert source == "gemini", "the new lesson was written on demand"

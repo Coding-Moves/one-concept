@@ -29,6 +29,10 @@ export interface LearnedRecord {
   conceptId: string;
   /** Local date in YYYY-MM-DD format. */
   date: string;
+  /** Server-supplied name; present for signed-in users. */
+  title?: string;
+  /** Server-supplied topic name; present for signed-in users. */
+  topicName?: string;
 }
 
 /** The concept assigned for a given day, fixed once chosen. */

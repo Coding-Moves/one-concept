@@ -12,7 +12,7 @@ interface StatePayload {
   timezone: string;
   today: string;
   followed_topics: string[];
-  learned: { concept_slug: string; learned_on: string }[];
+  learned: { concept_slug: string; learned_on: string; title?: string; topic_name?: string }[];
   likes: string[];
   bookmarks: string[];
   stats: { current: number; longest: number; total_learned: number };
@@ -24,6 +24,8 @@ function toProgressState(payload: StatePayload): ProgressState {
     learned: payload.learned.map((r) => ({
       conceptId: r.concept_slug,
       date: r.learned_on,
+      title: r.title || undefined,
+      topicName: r.topic_name || undefined,
     })),
     assignment: payload.assignment_slug
       ? { conceptId: payload.assignment_slug, date: payload.today }

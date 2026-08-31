@@ -322,13 +322,14 @@ async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_
 
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
 
-    class _Settings:
-        generation_on_demand = True
-        generation_enabled = True
-        gemini_api_key = "test-key"
-        gemini_model = "gemini-2.0-flash"
-
-    monkeypatch.setattr(selection, "get_settings", lambda: _Settings())
+    # A real Settings copy, so new fields selection reads are always present.
+    stub = get_settings().model_copy(update={
+        "generation_on_demand": True,
+        "generation_enabled": True,
+        "gemini_api_key": "test-key",
+        "gemini_model": "gemini-2.0-flash",
+    })
+    monkeypatch.setattr(selection, "get_settings", lambda: stub)
 
     await set_followed_topics(session, user, ["linux-systems"])
     await session.commit()

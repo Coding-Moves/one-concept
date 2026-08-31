@@ -11,6 +11,7 @@ import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
 import {
+  getCachedNotificationPrefs,
   getNotificationPrefs,
   NotificationPrefs,
   putNotificationPrefs,
@@ -41,9 +42,14 @@ export function ProfileScreen() {
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   useEffect(() => {
     let active = true;
+    // Cached copy first so the row is there instantly (and offline); the
+    // server answer replaces it when it arrives.
+    getCachedNotificationPrefs().then((p) => {
+      if (active && p) setPrefs((current) => current ?? p);
+    });
     getNotificationPrefs()
       .then((p) => active && setPrefs(p))
-      .catch(() => {}); // offline: hide the row rather than show a lie
+      .catch(() => {});
     return () => {
       active = false;
     };

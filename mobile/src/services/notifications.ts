@@ -7,6 +7,7 @@
  * broken app.
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Constants from 'expo-constants';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
@@ -75,10 +76,29 @@ export async function registerForReminders(): Promise<void> {
   });
 }
 
-export function getNotificationPrefs(): Promise<NotificationPrefs> {
-  return apiRequest<NotificationPrefs>('/v1/me/notifications');
+const PREFS_CACHE_KEY = 'one-concept/notification-prefs/v1';
+
+function rememberPrefs(prefs: NotificationPrefs): NotificationPrefs {
+  AsyncStorage.setItem(PREFS_CACHE_KEY, JSON.stringify(prefs)).catch(() => {});
+  return prefs;
 }
 
-export function putNotificationPrefs(prefs: NotificationPrefs): Promise<NotificationPrefs> {
-  return apiRequest<NotificationPrefs>('/v1/me/notifications', { method: 'PUT', body: prefs });
+/** Last known preferences from disk; keeps the settings row visible offline. */
+export async function getCachedNotificationPrefs(): Promise<NotificationPrefs | null> {
+  const raw = await AsyncStorage.getItem(PREFS_CACHE_KEY).catch(() => null);
+  try {
+    return raw ? (JSON.parse(raw) as NotificationPrefs) : null;
+  } catch {
+    return null;
+  }
+}
+
+export async function getNotificationPrefs(): Promise<NotificationPrefs> {
+  return rememberPrefs(await apiRequest<NotificationPrefs>('/v1/me/notifications'));
+}
+
+export async function putNotificationPrefs(prefs: NotificationPrefs): Promise<NotificationPrefs> {
+  return rememberPrefs(
+    await apiRequest<NotificationPrefs>('/v1/me/notifications', { method: 'PUT', body: prefs })
+  );
 }

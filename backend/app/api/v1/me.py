@@ -20,7 +20,11 @@ def _to_state_out(state) -> StateOut:
         timezone=state.timezone,
         today=state.today,
         followed_topics=state.followed_topics,
-        learned=[LearnedOut(concept_slug=r.concept_slug, learned_on=r.learned_on) for r in state.learned],
+        learned=[
+            LearnedOut(concept_slug=r.concept_slug, learned_on=r.learned_on,
+                       title=r.title, topic_name=r.topic_name)
+            for r in state.learned
+        ],
         likes=state.likes,
         bookmarks=state.bookmarks,
         stats=StreakOut(**vars(state.stats)),

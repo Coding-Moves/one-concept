@@ -66,11 +66,9 @@ export function TodayScreen() {
           <Text style={styles.sectionLabel}>Today’s concept</Text>
 
           {offline ? (
-            <View style={styles.noteBox}>
-              <Ionicons name="cloud-offline-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.noteText}>
-                Showing your saved copy — we couldn’t reach the server.
-              </Text>
+            <View style={styles.offlineRow}>
+              <Ionicons name="cloud-offline-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.offlineText}>Offline — showing your saved copy</Text>
             </View>
           ) : null}
 
@@ -166,6 +164,16 @@ const createStyles = (colors: ThemeColors) =>
       textTransform: 'uppercase',
       color: colors.categoryChipText,
       marginBottom: -spacing.sm,
+    },
+    offlineRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs + 2,
+      marginBottom: -spacing.sm,
+    },
+    offlineText: {
+      fontSize: 12.5,
+      color: colors.textMuted,
     },
     noteBox: {
       flexDirection: 'row',

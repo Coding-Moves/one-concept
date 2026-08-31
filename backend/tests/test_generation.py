@@ -6,14 +6,18 @@ only produce by accident.
 """
 
 import json
+from datetime import timedelta
 
 import httpx
 import pytest
 from sqlalchemy import text
 
-from app.services import generation, pool
+from app.config import get_settings
+from app.services import generation, pool, selection
 from app.services.generation import GenerationError, RateLimitedError, build_prompt, generate_concept, validate
+from app.services.interactions import set_followed_topics
 from app.services.pool import generate_one, top_up
+from app.services.selection import get_or_create_daily
 
 GOOD_SUMMARY = (
     "A write-ahead log records an intended change to durable storage before the "
@@ -308,3 +312,57 @@ async def test_top_up_fills_only_topics_below_the_threshold(session, patch_httpx
                  where c.topic_id = tp.id and c.status = 'published') < :t
     """), {"t": threshold})).scalars().all()
     assert short == [], f"topics left below the threshold: {short}"
+
+
+async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_httpx, monkeypatch):
+    """Issue #29 goal: with follows persisting, a user who has read every
+    published lesson in their only topic gets an on-demand generated lesson
+    from that same topic — never a silent widening to other topics."""
+    from tests.test_selection import DAY
+
+    patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
+
+    # A real Settings copy, so new fields selection reads are always present.
+    stub = get_settings().model_copy(update={
+        "generation_on_demand": True,
+        "generation_enabled": True,
+        "gemini_api_key": "test-key",
+        "gemini_model": "gemini-2.0-flash",
+    })
+    monkeypatch.setattr(selection, "get_settings", lambda: stub)
+
+    await set_followed_topics(session, user, ["linux-systems"])
+    # A dedicated pending backlog row, so this test cannot flake when earlier
+    # top-up tests happen to have drained the shared linux-systems backlog.
+    await session.execute(text("""
+        insert into public.concept_backlog (topic_id, slug, title, status)
+        select t.id, 'test-ondemand-linux', 'Test On-Demand Linux', 'pending'
+          from public.topics t where t.slug = 'linux-systems'
+        on conflict (slug) do nothing
+    """))
+    await session.commit()
+
+    published = await session.scalar(text("""
+        select count(*) from public.concepts c
+          join public.topics t on t.id = c.topic_id
+         where t.slug = 'linux-systems' and c.status = 'published'
+    """))
+
+    # Drain the shelf: one lesson a day, all from the followed topic.
+    for offset in range(published):
+        result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
+        assert result.status == "ok"
+        assert result.concept.topic_slug == "linux-systems"
+        assert result.outside_followed_topics is False
+
+    # The shelf is dry — the next day must come from generation, same topic.
+    beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=published))
+    assert beyond.status == "ok"
+    assert beyond.concept.topic_slug == "linux-systems", "generation must stay in the followed topic"
+    assert beyond.outside_followed_topics is False
+
+    source = await session.scalar(
+        text("select source from public.concepts where slug = :s"),
+        {"s": beyond.concept.slug},
+    )
+    assert source == "gemini", "the new lesson was written on demand"

@@ -151,3 +151,28 @@ async def test_bootstrap_creates_everything_when_the_trigger_did_not(session):
     follows = await session.scalar(
         text("select count(*) from public.user_topics where user_id = :u"), {"u": user_id})
     assert (profiles, prefs, follows) == (1, 1, 5)
+
+
+async def test_bootstrap_does_not_resurrect_unfollowed_topics(session, user):
+    """Issue #29: /v1/daily runs the bootstrap on every call.
+
+    A user's unfollow is a deletion, so an unconditional topic seed used to
+    quietly re-follow everything each morning. The seed must fire only when
+    the profile itself is newly created.
+    """
+    await set_followed_topics(session, user, ["linux-systems"])
+    await session.commit()
+
+    # What every GET /v1/daily does before selecting a concept.
+    from app.services.users import ensure_bootstrapped
+
+    await ensure_bootstrapped(session, user, f"{user}@example.invalid")
+    await session.commit()
+
+    slugs = (await session.execute(
+        text("""select t.slug from public.user_topics ut
+                join public.topics t on t.id = ut.topic_id
+               where ut.user_id = :u"""),
+        {"u": user},
+    )).scalars().all()
+    assert slugs == ["linux-systems"], "the bootstrap must never undo an unfollow"

@@ -201,10 +201,15 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.successSurface,
       borderRadius: radius.pill,
       paddingVertical: spacing.md + 2,
+      // Room for the pill's curve — without this, long text pushed the icon
+      // out through the rounded corner.
+      paddingHorizontal: spacing.lg,
     },
     doneText: {
       color: colors.success,
       fontSize: 16,
       fontWeight: '600',
+      flexShrink: 1,
+      textAlign: 'center',
     },
   });

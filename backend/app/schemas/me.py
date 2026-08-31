@@ -12,6 +12,10 @@ class StreakOut(BaseModel):
 class LearnedOut(BaseModel):
     concept_slug: str
     learned_on: date
+    # What the history screen renders; the client no longer needs a local
+    # catalog to give a learned lesson its name.
+    title: str = ""
+    topic_name: str = ""
 
 
 class StateOut(BaseModel):

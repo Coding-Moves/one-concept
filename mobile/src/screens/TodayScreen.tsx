@@ -66,11 +66,9 @@ export function TodayScreen() {
           <Text style={styles.sectionLabel}>Today’s concept</Text>
 
           {offline ? (
-            <View style={styles.noteBox}>
-              <Ionicons name="cloud-offline-outline" size={16} color={colors.textMuted} />
-              <Text style={styles.noteText}>
-                Showing your saved copy — we couldn’t reach the server.
-              </Text>
+            <View style={styles.offlineRow}>
+              <Ionicons name="cloud-offline-outline" size={13} color={colors.textMuted} />
+              <Text style={styles.offlineText}>Offline — showing your saved copy</Text>
             </View>
           ) : null}
 
@@ -167,6 +165,16 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.categoryChipText,
       marginBottom: -spacing.sm,
     },
+    offlineRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs + 2,
+      marginBottom: -spacing.sm,
+    },
+    offlineText: {
+      fontSize: 12.5,
+      color: colors.textMuted,
+    },
     noteBox: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -193,10 +201,15 @@ const createStyles = (colors: ThemeColors) =>
       backgroundColor: colors.successSurface,
       borderRadius: radius.pill,
       paddingVertical: spacing.md + 2,
+      // Room for the pill's curve — without this, long text pushed the icon
+      // out through the rounded corner.
+      paddingHorizontal: spacing.lg,
     },
     doneText: {
       color: colors.success,
       fontSize: 16,
       fontWeight: '600',
+      flexShrink: 1,
+      textAlign: 'center',
     },
   });

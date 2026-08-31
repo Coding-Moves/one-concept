@@ -11,6 +11,7 @@ import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
 import {
+  getCachedNotificationPrefs,
   getNotificationPrefs,
   NotificationPrefs,
   putNotificationPrefs,
@@ -41,9 +42,14 @@ export function ProfileScreen() {
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   useEffect(() => {
     let active = true;
+    // Cached copy first so the row is there instantly (and offline); the
+    // server answer replaces it when it arrives.
+    getCachedNotificationPrefs().then((p) => {
+      if (active && p) setPrefs((current) => current ?? p);
+    });
     getNotificationPrefs()
       .then((p) => active && setPrefs(p))
-      .catch(() => {}); // offline: hide the row rather than show a lie
+      .catch(() => {});
     return () => {
       active = false;
     };
@@ -68,8 +74,12 @@ export function ProfileScreen() {
           <Ionicons name="person" size={26} color={colors.primary} />
         </View>
         <View style={styles.headerText}>
-          <Text style={styles.name}>{email ? email.split('@')[0] : 'Learner'}</Text>
-          <Text style={styles.subtitle}>{email ?? 'Signed out'}</Text>
+          <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
+            {email ? email.split('@')[0] : 'Learner'}
+          </Text>
+          <Text style={styles.subtitle} numberOfLines={1} ellipsizeMode="middle">
+            {email ?? 'Signed out'}
+          </Text>
         </View>
       </View>
 

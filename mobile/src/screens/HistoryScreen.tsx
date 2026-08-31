@@ -7,19 +7,26 @@ import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
 import { formatDateKey } from '../services/dates';
-import { radius, spacing, ThemeColors, typography } from '../theme';
-import { LearnedRecord } from '../types';
+import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { Category, LearnedRecord } from '../types';
 
 const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
 
+function prettify(slug: string): string {
+  return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
 function HistoryRow({ record, styles }: { record: LearnedRecord; styles: Styles }) {
-  const concept = CONCEPTS_BY_ID.get(record.conceptId);
-  if (!concept) return null;
+  // Server records carry their own names; the bundled catalog is only the
+  // signed-out fallback, and a prettified slug beats a silently missing row.
+  const local = CONCEPTS_BY_ID.get(record.conceptId);
+  const title = record.title ?? local?.title ?? prettify(record.conceptId);
+  const category = (record.topicName as Category | undefined) ?? local?.category;
   return (
     <View style={styles.row}>
       <View style={styles.rowText}>
-        <Text style={styles.rowTitle}>{concept.title}</Text>
-        <CategoryChip category={concept.category} />
+        <Text style={styles.rowTitle}>{title}</Text>
+        {category ? <CategoryChip category={category} /> : null}
       </View>
       <Text style={styles.rowDate}>{formatDateKey(record.date)}</Text>
     </View>
@@ -101,11 +108,12 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       justifyContent: 'space-between',
       backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      borderWidth: 1,
+      borderRadius: radius.lg,
+      borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
       padding: spacing.md,
       gap: spacing.md,
+      ...shadows.card,
     },
     rowText: {
       gap: spacing.sm,

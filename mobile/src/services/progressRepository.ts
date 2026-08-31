@@ -13,6 +13,10 @@ import { Category, ProgressState } from '../types';
 export interface ProgressRepository {
   load(): Promise<ProgressState>;
 
+  /** Last known state without touching the network, or null if none exists.
+   *  Lets the UI paint instantly while load() revalidates in the background. */
+  loadCached?(): Promise<ProgressState | null>;
+
   /** Pin the concept assigned for a day. Server-side this becomes GET /v1/daily. */
   setAssignment(conceptId: string, date: string): Promise<ProgressState>;
 

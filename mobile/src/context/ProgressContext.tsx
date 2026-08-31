@@ -56,7 +56,8 @@ export function ProgressProvider({ children, repository: override }: Props) {
 
   // Signed in, the server owns progress. Signed out, the device does — which
   // keeps the app usable before an account exists.
-  const repository = override ?? (session ? remoteProgressRepository : localProgressRepository);
+  const repository: ProgressRepository =
+    override ?? (session ? remoteProgressRepository : localProgressRepository);
 
   const today = todayKey();
 
@@ -64,6 +65,16 @@ export function ProgressProvider({ children, repository: override }: Props) {
     let cancelled = false;
     (async () => {
       setLoading(true);
+
+      // Paint from the last known state immediately — on a slow connection
+      // the difference between this and waiting on the network is the whole
+      // perceived speed of the app. The fresh load replaces it silently.
+      const cached = await repository.loadCached?.();
+      if (cached && !cancelled) {
+        setProgress(cached);
+        setLoading(false);
+      }
+
       const stored = await repository.load();
       if (cancelled) return;
 

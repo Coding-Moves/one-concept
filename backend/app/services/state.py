@@ -20,6 +20,8 @@ from app.services.streaks import StreakStats
 class LearnedRecord:
     concept_slug: str
     learned_on: date
+    title: str = ""
+    topic_name: str = ""
 
 
 @dataclass
@@ -47,14 +49,16 @@ _STATE = text("""
          where ut.user_id = :uid and t.is_active
     ),
     learned_rows as (
-        select c.slug, a.assigned_for
+        select c.slug, c.title, t.name as topic_name, a.assigned_for
           from public.daily_assignments a
           join public.concepts c on c.id = a.concept_id
+          join public.topics t on t.id = c.topic_id
          where a.user_id = :uid and a.completed_at is not null
     ),
     learned as (
-        select coalesce(json_agg(json_build_object('slug', slug, 'on', assigned_for)
-                                 order by assigned_for desc), '[]'::json) as v
+        select coalesce(json_agg(json_build_object(
+                   'slug', slug, 'title', title, 'topic', topic_name, 'on', assigned_for)
+                   order by assigned_for desc), '[]'::json) as v
           from learned_rows
     ),
     interactions as (
@@ -106,7 +110,12 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID) -> UserState | N
         today=row.today,
         followed_topics=list(row.followed_topics),
         learned=[
-            LearnedRecord(concept_slug=r["slug"], learned_on=date.fromisoformat(r["on"]))
+            LearnedRecord(
+                concept_slug=r["slug"],
+                learned_on=date.fromisoformat(r["on"]),
+                title=r.get("title", ""),
+                topic_name=r.get("topic", ""),
+            )
             for r in row.learned
         ],
         likes=list(row.likes),

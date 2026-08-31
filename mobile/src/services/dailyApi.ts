@@ -44,6 +44,13 @@ export type DailyOutcome =
   | { status: 'exhausted' }
   | { status: 'unavailable' };
 
+/** Yesterday's (or earlier today's) concept from disk — paints instantly
+ *  while the network answer replaces it. */
+export async function readDailyCache(): Promise<DailyOutcome | null> {
+  const cached = await readCache();
+  return cached ? { status: 'ok', payload: cached, stale: true } : null;
+}
+
 async function readCache(): Promise<DailyPayload | null> {
   try {
     const raw = await AsyncStorage.getItem(CACHE_KEY);

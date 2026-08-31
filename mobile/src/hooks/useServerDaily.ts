@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { DailyOutcome, fetchDaily } from '../services/dailyApi';
+import { DailyOutcome, fetchDaily, readDailyCache } from '../services/dailyApi';
 
 export interface ServerDaily {
   loading: boolean;
@@ -24,8 +24,19 @@ export function useServerDaily(): ServerDaily {
 
     let cancelled = false;
     setLoading(true);
+
+    // Cached concept first: the screen renders immediately, and the network
+    // result replaces it (clearing the stale flag) whenever it arrives.
+    let settled = false;
+    readDailyCache().then((cached) => {
+      if (cancelled || settled || !cached) return;
+      setOutcome(cached);
+      setLoading(false);
+    });
+
     fetchDaily().then((result) => {
       if (cancelled) return;
+      settled = true;
       setOutcome(result);
       setLoading(false);
     });

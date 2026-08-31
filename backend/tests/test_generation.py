@@ -332,6 +332,14 @@ async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_
     monkeypatch.setattr(selection, "get_settings", lambda: stub)
 
     await set_followed_topics(session, user, ["linux-systems"])
+    # A dedicated pending backlog row, so this test cannot flake when earlier
+    # top-up tests happen to have drained the shared linux-systems backlog.
+    await session.execute(text("""
+        insert into public.concept_backlog (topic_id, slug, title, status)
+        select t.id, 'test-ondemand-linux', 'Test On-Demand Linux', 'pending'
+          from public.topics t where t.slug = 'linux-systems'
+        on conflict (slug) do nothing
+    """))
     await session.commit()
 
     published = await session.scalar(text("""

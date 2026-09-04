@@ -36,7 +36,7 @@ module.exports = {
       },
       predictiveBackGestureEnabled: false,
     },
-    runtimeVersion: '1.1.1',
+    runtimeVersion: '1.2.0',
     updates: {
       checkAutomatically: 'ON_LOAD',
       fallbackToCacheTimeout: 0,

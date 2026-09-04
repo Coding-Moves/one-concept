@@ -12,11 +12,14 @@ export interface Topics {
 
 export function useTopics(): Topics {
   const { session } = useAuth();
+  // Key on the user id, not the session object: supabase hands a fresh object
+  // on every token refresh, which would otherwise refetch the list hourly.
+  const userId = session?.user?.id ?? null;
   const [topics, setTopics] = useState<ServerTopic[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!session) {
+    if (!userId) {
       setTopics([]);
       setLoading(false);
       return;
@@ -37,7 +40,7 @@ export function useTopics(): Topics {
     return () => {
       cancelled = true;
     };
-  }, [session]);
+  }, [userId]);
 
   const toggle = useCallback(
     (slug: string) => {

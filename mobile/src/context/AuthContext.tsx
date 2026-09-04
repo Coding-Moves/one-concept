@@ -9,7 +9,12 @@ import {
 } from 'react';
 import { setTokenProvider } from '../api/client';
 import { supabase } from '../lib/supabase';
-import { registerForReminders, syncTimezone } from '../services/notifications';
+import { clearAccountCaches } from '../services/accountCaches';
+import {
+  deregisterForReminders,
+  registerForReminders,
+  syncTimezone,
+} from '../services/notifications';
 
 export interface AuthContextValue {
   loading: boolean;
@@ -61,6 +66,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         registerForReminders().catch(() => {});
         syncTimezone().catch(() => {});
+      } else {
+        // Signed out at startup: account caches have no business existing.
+        // Covers sessions that vanished without a SIGNED_OUT ever firing
+        // (cleared or corrupted auth storage across a restart).
+        clearAccountCaches().catch(() => {});
       }
     });
 
@@ -69,6 +79,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' && next) {
         registerForReminders().catch(() => {});
         syncTimezone().catch(() => {});
+      }
+      if (event === 'SIGNED_OUT') {
+        // Account data must not outlive the account on a shared device. The
+        // event covers every sign-out path — the button, an expired refresh
+        // token, a revoked session — not just our own signOut() call.
+        clearAccountCaches().catch(() => {});
       }
     });
 
@@ -97,7 +113,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    // Deregister the push token first — it is an authenticated call, so it
+    // must happen while the session is still valid. Best-effort: reminders
+    // stopping matters less than the sign-out itself succeeding.
+    await deregisterForReminders().catch(() => {});
+    // Global sign-out revokes the session server-side, but it needs the
+    // network — and a user handing over a shared device must end up signed
+    // out either way. Fall back to a local sign-out, which clears the device
+    // session and fires SIGNED_OUT (and the cache wipe) without a connection.
+    const { error } = await supabase.auth.signOut();
+    if (error) await supabase.auth.signOut({ scope: 'local' });
   }, []);
 
   const value: AuthContextValue = {

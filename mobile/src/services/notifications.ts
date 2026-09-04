@@ -74,7 +74,12 @@ export async function registerForReminders(): Promise<void> {
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
     },
   });
+  // Remembered so sign-out can deregister without asking Expo again. Not in
+  // clearAccountCaches: deregistration consumes it, then removes it itself.
+  AsyncStorage.setItem(REGISTERED_TOKEN_KEY, token).catch(() => {});
 }
+
+const REGISTERED_TOKEN_KEY = 'one-concept/push-token/v1';
 
 const PREFS_CACHE_KEY = 'one-concept/notification-prefs/v1';
 
@@ -101,4 +106,25 @@ export async function putNotificationPrefs(prefs: NotificationPrefs): Promise<No
   return rememberPrefs(
     await apiRequest<NotificationPrefs>('/v1/me/notifications', { method: 'PUT', body: prefs })
   );
+}
+
+/**
+ * Tell the server to stop sending this account's reminders to this handset.
+ * Must run BEFORE the session is revoked — it is an authenticated call.
+ * Best-effort: offline, the registration stays and the server's dead-token
+ * cleanup or the next account's re-registration takes over.
+ */
+export async function deregisterForReminders(): Promise<void> {
+  const token = await AsyncStorage.getItem(REGISTERED_TOKEN_KEY).catch(() => null);
+  if (!token) return;
+  await apiRequest<void>('/v1/me/push-token', {
+    method: 'DELETE',
+    body: { expo_push_token: token },
+  });
+  await AsyncStorage.removeItem(REGISTERED_TOKEN_KEY).catch(() => {});
+}
+
+/** Called on sign-out; reminder times are account data, not device data. */
+export async function clearNotificationPrefsCache(): Promise<void> {
+  await AsyncStorage.removeItem(PREFS_CACHE_KEY).catch(() => {});
 }

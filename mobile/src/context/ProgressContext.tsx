@@ -65,6 +65,10 @@ export function ProgressProvider({ children, repository: override }: Props) {
     let cancelled = false;
     (async () => {
       setLoading(true);
+      // The repository just swapped (sign-in or sign-out). The old account's
+      // state must not stay on screen while the new source loads — wiping the
+      // caches below is not enough when the leak lives in React state.
+      setProgress(EMPTY_PROGRESS);
 
       // Paint from the last known state immediately — on a slow connection
       // the difference between this and waiting on the network is the whole

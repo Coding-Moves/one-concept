@@ -102,8 +102,17 @@ export function ProgressProvider({ children, repository: override }: Props) {
 
   // The day's assignment is pinned once made, even if the concept's topic is
   // unfollowed later that day — topic changes apply from the next assignment.
-  const concept = selectDailyConcept(eligibleConcepts(progress), progress, today);
-  const learnedToday = progress.learned.some((r) => r.date === today);
+  // Memoised so a parent re-render (e.g. an hourly token refresh handing down a
+  // new session object) does not rebuild these and, through them, the context
+  // value — which would re-render every screen for no user-visible change.
+  const concept = useMemo(
+    () => selectDailyConcept(eligibleConcepts(progress), progress, today),
+    [progress, today]
+  );
+  const learnedToday = useMemo(
+    () => progress.learned.some((r) => r.date === today),
+    [progress.learned, today]
+  );
 
   // A set for O(1) membership, rebuilt only when the learned list changes.
   const learnedIds = useMemo(
@@ -190,20 +199,39 @@ export function ProgressProvider({ children, repository: override }: Props) {
     [apply, repository]
   );
 
-  const value: ProgressContextValue = {
-    loading,
-    progress,
-    concept,
-    learnedToday,
-    hasLearned,
-    // Prefer the server's numbers: they use the user's stored timezone rather
-    // than the device clock, so a wrong clock cannot invent a streak.
-    streaks: progress.stats ?? computeStreaks(progress.learned),
-    markLearned,
-    toggleTopic,
-    toggleLike,
-    toggleBookmark,
-  };
+  // Prefer the server's numbers: they use the user's stored timezone rather
+  // than the device clock, so a wrong clock cannot invent a streak.
+  const streaks = useMemo(
+    () => progress.stats ?? computeStreaks(progress.learned),
+    [progress.stats, progress.learned]
+  );
+
+  const value = useMemo<ProgressContextValue>(
+    () => ({
+      loading,
+      progress,
+      concept,
+      learnedToday,
+      hasLearned,
+      streaks,
+      markLearned,
+      toggleTopic,
+      toggleLike,
+      toggleBookmark,
+    }),
+    [
+      loading,
+      progress,
+      concept,
+      learnedToday,
+      hasLearned,
+      streaks,
+      markLearned,
+      toggleTopic,
+      toggleLike,
+      toggleBookmark,
+    ]
+  );
 
   return <ProgressContext.Provider value={value}>{children}</ProgressContext.Provider>;
 }

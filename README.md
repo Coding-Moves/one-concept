@@ -11,11 +11,12 @@ seconds, mark it learned, keep your streak alive.
 
 ## Install (Android)
 
-Current build: **v1.1.1**
+Current build: **v1.2.0**
 
-**[Download the APK](https://expo.dev/artifacts/eas/dMX7ZhXJSP1dxP3nSucftZdAsQZaU0ONGLvFQpFChHI.apk)** —
-open on your phone, install, sign in, allow notifications. Updates arrive
-over the air; this link changes only when a new native build ships.
+**[Download the APK](https://expo.dev/accounts/coding-moves/projects/one-concept/builds/ec240f05-501e-4a89-b29b-94887fcc064f)** —
+open the build page on your phone and tap Install, then sign in and allow
+notifications. Updates arrive over the air; this link changes only when a new
+native build ships.
 
 ## Features
 

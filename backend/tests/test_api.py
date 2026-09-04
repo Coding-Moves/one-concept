@@ -5,6 +5,7 @@ import uuid
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
 
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
@@ -104,8 +105,6 @@ async def test_daily_exhaustion_is_a_409_not_a_500(client, sessionmaker_for_test
     The service layer was covered, but the HTTP layer silently 500'd on the
     response_model mismatch — so this test goes through the real route.
     """
-    from sqlalchemy import text
-
     # Assign every published concept to this user on distinct past days.
     async with sessionmaker_for_test() as s:
         await s.execute(text("""

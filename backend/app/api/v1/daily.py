@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, Response, status
+from fastapi import APIRouter, Depends, status
+from fastapi.encoders import jsonable_encoder
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -19,7 +21,6 @@ router = APIRouter(prefix="/daily", tags=["daily"])
     responses={200: {"model": DailyOut}, 409: {"model": DailyExhaustedOut}},
 )
 async def get_daily(
-    response: Response,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -34,8 +35,14 @@ async def get_daily(
     result = await get_or_create_daily(db, user.id)
 
     if result.status == "exhausted":
-        response.status_code = status.HTTP_409_CONFLICT
-        return DailyExhaustedOut(assigned_for=result.assigned_for)
+        # The exhausted body has a different shape than DailyOut, so it must
+        # go out as a Response object: a plain return here would be validated
+        # against response_model regardless of the status code and turn this
+        # into a 500 (issue #30). `responses` above documents it in OpenAPI.
+        return JSONResponse(
+            status_code=status.HTTP_409_CONFLICT,
+            content=jsonable_encoder(DailyExhaustedOut(assigned_for=result.assigned_for)),
+        )
 
     concept = result.concept
     return DailyOut(

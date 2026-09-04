@@ -176,13 +176,21 @@ async def patch_profile(
 ) -> StateOut:
     if body.timezone is not None:
         # Reject unknown zones here: a bad value would silently shift every
-        # future day boundary and streak for this user.
-        valid = await db.scalar(text("select now() at time zone :tz is not null"), {"tz": body.timezone})
-        if not valid:
+        # future day boundary and streak for this user. Look the name up in
+        # pg_timezone_names — `now() at time zone :tz` RAISES on an unknown
+        # zone (a 500 that also aborts the display_name write in this request)
+        # and silently ACCEPTS POSIX junk like 'FOO5'. Matching is
+        # case-insensitive (as Postgres zone lookups are) and returns the
+        # catalogue's canonical spelling, which is what we store.
+        canonical = await db.scalar(
+            text("select name from pg_timezone_names where lower(name) = lower(:tz) limit 1"),
+            {"tz": body.timezone},
+        )
+        if canonical is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Unknown timezone")
         await db.execute(
             text("update public.profiles set timezone = :tz where id = :uid"),
-            {"tz": body.timezone, "uid": user.id},
+            {"tz": canonical, "uid": user.id},
         )
     if body.display_name is not None:
         await db.execute(

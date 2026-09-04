@@ -39,23 +39,27 @@ export function useTopics(): Topics {
     };
   }, [session]);
 
-  const toggle = useCallback((slug: string) => {
-    let nextFollowed: string[] = [];
-    setTopics((prev) => {
-      const next = prev.map((t) =>
+  const toggle = useCallback(
+    (slug: string) => {
+      // Compute the next list synchronously from current state — never read a
+      // value assigned inside a setState updater, which React may not have run
+      // yet (that would PUT an empty list and unfollow everything).
+      const next = topics.map((t) =>
         t.slug === slug ? { ...t, following: !t.following } : t
       );
-      nextFollowed = next.filter((t) => t.following).map((t) => t.slug);
-      return next;
-    });
-    // Fire-and-forget; on failure reload the server's truth so the pill can
-    // never lie about what was actually saved.
-    setFollowedTopics(nextFollowed).catch(() => {
-      fetchTopics()
-        .then(setTopics)
-        .catch(() => {});
-    });
-  }, []);
+      setTopics(next);
+
+      const followed = next.filter((t) => t.following).map((t) => t.slug);
+      // Fire-and-forget; on failure reload the server's truth so the pill can
+      // never lie about what was actually saved.
+      setFollowedTopics(followed).catch(() => {
+        fetchTopics()
+          .then(setTopics)
+          .catch(() => {});
+      });
+    },
+    [topics]
+  );
 
   return { loading, topics, toggle };
 }

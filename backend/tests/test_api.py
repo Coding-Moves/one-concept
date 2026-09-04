@@ -96,3 +96,30 @@ async def test_no_endpoint_accepts_a_user_id(client, user):
     mine = (await client.get("/v1/daily")).json()
     spoofed = (await client.get(f"/v1/daily?user_id={other}")).json()
     assert mine["concept"]["id"] == spoofed["concept"]["id"]
+
+
+async def test_daily_exhaustion_is_a_409_not_a_500(client, sessionmaker_for_test, user):
+    """Issue #30: the exhausted body must actually reach the client.
+
+    The service layer was covered, but the HTTP layer silently 500'd on the
+    response_model mismatch — so this test goes through the real route.
+    """
+    from sqlalchemy import text
+
+    # Assign every published concept to this user on distinct past days.
+    async with sessionmaker_for_test() as s:
+        await s.execute(text("""
+            insert into public.daily_assignments (id, user_id, concept_id, assigned_for)
+            select gen_random_uuid(), :u, c.id,
+                   date '2000-01-01' + (row_number() over (order by c.id))::int
+              from public.concepts c
+             where c.status = 'published'
+        """), {"u": user})
+        await s.commit()
+
+    response = await client.get("/v1/daily")
+
+    assert response.status_code == 409, response.text
+    body = response.json()
+    assert body["reason"] == "catalog_exhausted"
+    assert body["assigned_for"], "the day the refusal applies to must be present"

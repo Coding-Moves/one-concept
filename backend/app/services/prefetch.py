@@ -13,6 +13,8 @@ import asyncio
 import logging
 import uuid
 
+from sqlalchemy import text
+
 from app.config import get_settings
 from app.db.session import SessionLocal
 from app.services.generation import RateLimitedError
@@ -20,10 +22,18 @@ from app.services.pool import generate_one
 
 log = logging.getLogger(__name__)
 
+_PUBLISHED_IN_TOPIC = text("""
+    select count(*)::int
+      from public.concepts
+     where topic_id = :topic_id and status = 'published'
+""")
+
 # Start topping a topic up once a user's unread published concepts in it fall to
-# this many; generate at most this many fresh lessons per triggered run.
+# this many; a run generates until the topic reaches TARGET_PUBLISHED, capped by
+# PREFETCH_BATCH lessons so one trigger can't run away.
 LOW_WATERMARK = 5
 PREFETCH_BATCH = 5
+TARGET_PUBLISHED = LOW_WATERMARK + PREFETCH_BATCH
 
 # Topics with a prefetch in flight *in this process*, so a burst of requests for
 # the same topic spawns one job rather than one per request. Across processes,
@@ -64,6 +74,15 @@ async def _run(topic_id: uuid.UUID) -> None:
         # response returns, long before this finishes.
         async with SessionLocal() as session:
             for _ in range(PREFETCH_BATCH):
+                # Re-check against a shared target each iteration so a prefetch
+                # in another process (its lessons land in the same catalog) can
+                # satisfy the topic and let this one stop early — bounding the
+                # overshoot when several instances trigger at once.
+                published = await session.scalar(
+                    _PUBLISHED_IN_TOPIC, {"topic_id": topic_id}
+                )
+                if published is not None and published >= TARGET_PUBLISHED:
+                    break
                 try:
                     concept_id = await generate_one(
                         session, settings.gemini_api_key, settings.gemini_model, topic_id

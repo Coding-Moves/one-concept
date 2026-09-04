@@ -1,7 +1,8 @@
-# Merging a release PR into main cuts a versioned release: the tag and the
-# GitHub Release are created from the app version in mobile/app.json, with
-# auto-generated notes. A merge that did not bump the version fails loudly
-# rather than passing green with nothing released.
+# Merging a release PR into main cuts a versioned release. The production OTA
+# publishes FIRST; the tag and GitHub Release are created only if that publish
+# succeeds, so a Release can never claim a version that never reached phones.
+# (Railway deploys the backend independently on the same push — see
+# mobile/DEPLOYMENT.md; it is not gated here.)
 name: Release
 
 on:
@@ -17,7 +18,38 @@ permissions:
   contents: write
 
 jobs:
+  ota:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      # Production first, then preview so preview devices are never left
+      # behind a production release. --environment bundles the EXPO_PUBLIC_*
+      # values; without it the update ships empty config and crashes.
+      - name: Publish production OTA
+        run: eas update --channel production --environment production --message "${{ github.event.head_commit.message || 'release' }}" --non-interactive
+
+      - name: Publish preview OTA
+        run: eas update --channel preview --environment preview --message "${{ github.event.head_commit.message || 'release' }}" --non-interactive
+
   release:
+    needs: ota
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -48,3 +80,13 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "One Concept $TAG" \
             --generate-notes
+
+          # Prepend the install path: OTA-only releases attach no APK, so point
+          # readers at the current binary rather than leaving them stranded.
+          body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body)
+          {
+            echo "**Install:** download the current APK from the [README](../blob/main/README.md#-install-the-app-android). This release reaches installed apps over the air — no reinstall unless a native change shipped."
+            echo
+            echo "$body"
+          } > release-notes.md
+          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file release-notes.md

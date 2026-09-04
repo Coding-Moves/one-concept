@@ -9,12 +9,12 @@ reaches installed phones without a reinstall.
 - **Channels** — every build is pinned to a channel (`development`, `preview`,
   `production` in [eas.json](eas.json)). `eas update --channel X` publishes only
   to builds from channel X, so production phones never receive preview code.
-- **Runtime version** — `runtimeVersion.policy: "appVersion"` in
-  [app.json](app.json). An update is only delivered to builds whose `version`
-  matches the one it was published against. **Bump `expo.version` whenever you
-  add/remove a native module or change native config, then rebuild** — that is
-  what stops an OTA update from landing on a binary that lacks the native code
-  it needs.
+- **Runtime version** — pinned explicitly in [app.json](app.json), decoupled
+  from the marketing `version` (which release PRs bump freely). An update is
+  only delivered to builds with the same `runtimeVersion`. **Bump
+  `runtimeVersion` by hand whenever you add/remove a native module or change
+  native config, then build and distribute a new APK** — that is what stops an
+  OTA update from landing on a binary that lacks the native code it needs.
 - **Environment variables** — `mobile/.env` is gitignored and never reaches EAS
   servers. Builds read `EXPO_PUBLIC_*` from EAS environment variables (one set
   per environment: development / preview / production). Manage them with

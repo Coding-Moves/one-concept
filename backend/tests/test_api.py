@@ -215,3 +215,89 @@ async def test_bodyless_deregistration_fails_closed(client, sessionmaker_for_tes
                 text("delete from public.device_tokens where expo_push_token like 'ExponentPushToken[bodyless-%'"))
             await s.execute(text("delete from auth.users where id = :o"), {"o": other})
             await s.commit()
+
+
+async def test_complete_after_midnight_reports_yesterday_via_the_endpoint(
+    client, sessionmaker_for_test, user
+):
+    """Issue #33 at the HTTP layer: with only yesterday's assignment present,
+    POST /v1/daily/complete must succeed and report the day it counted for."""
+    async with sessionmaker_for_test() as s:
+        # assigned_for = the endpoint's local_today (UTC) minus one day.
+        yesterday = await s.scalar(text("select (now() at time zone 'UTC')::date - 1"))
+        await s.execute(text("""
+            insert into public.daily_assignments (id, user_id, concept_id, assigned_for)
+            select gen_random_uuid(), :u, c.id, :d
+              from public.concepts c where c.status = 'published' limit 1
+        """), {"u": user, "d": yesterday})
+        await s.commit()
+
+    response = await client.post("/v1/daily/complete")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["completed"] is True
+    assert body["assigned_for"] == str(yesterday), "counts for the day it was assigned, not the new day"
+
+    async with sessionmaker_for_test() as s:
+        done = await s.scalar(
+            text("""select count(*) from public.daily_assignments
+                     where user_id = :u and assigned_for = :d and completed_at is not null"""),
+            {"u": user, "d": yesterday},
+        )
+    assert done == 1
+
+
+async def test_patch_unknown_timezone_is_a_400_not_a_500(client, sessionmaker_for_test, user):
+    """Issue #36: an unknown zone must be a clean 400, and a display_name sent
+    in the same request must not be half-applied."""
+    response = await client.patch(
+        "/v1/me", json={"timezone": "America/Nowhere", "display_name": "Should Not Stick"}
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == "Unknown timezone"
+
+    async with sessionmaker_for_test() as s:
+        row = (await s.execute(
+            text("select timezone, display_name from public.profiles where id = :u"), {"u": user}
+        )).one()
+    assert row.timezone == "UTC", "an invalid request leaves the timezone unchanged"
+    assert row.display_name != "Should Not Stick", "the whole PATCH is rejected atomically"
+
+
+async def test_patch_posix_style_timezone_is_rejected(client):
+    """POSIX strings like 'FOO5' are accepted by AT TIME ZONE but are not real
+    IANA zones — the catalogue check rejects them where the old one let them
+    through silently."""
+    response = await client.patch("/v1/me", json={"timezone": "FOO5"})
+    assert response.status_code == 400, response.text
+
+
+async def test_patch_valid_timezone_and_name_apply_together(client, sessionmaker_for_test, user):
+    response = await client.patch(
+        "/v1/me", json={"timezone": "Asia/Karachi", "display_name": "Muawiya"}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["timezone"] == "Asia/Karachi"
+    assert body["display_name"] == "Muawiya"
+
+    async with sessionmaker_for_test() as s:
+        row = (await s.execute(
+            text("select timezone, display_name from public.profiles where id = :u"), {"u": user}
+        )).one()
+    assert (row.timezone, row.display_name) == ("Asia/Karachi", "Muawiya")
+
+
+async def test_patch_lowercase_timezone_is_accepted_and_normalized(client, sessionmaker_for_test, user):
+    """Postgres zone lookups are case-insensitive; a valid but lowercase zone
+    must be accepted and stored in its canonical spelling, not 400'd."""
+    response = await client.patch("/v1/me", json={"timezone": "asia/karachi"})
+    assert response.status_code == 200, response.text
+    assert response.json()["timezone"] == "Asia/Karachi"
+
+    async with sessionmaker_for_test() as s:
+        stored = await s.scalar(
+            text("select timezone from public.profiles where id = :u"), {"u": user}
+        )
+    assert stored == "Asia/Karachi", "the canonical name is stored, not the input casing"

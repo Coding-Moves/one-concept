@@ -41,9 +41,28 @@ _POOL_COUNTS = text("""
 # open transaction across the (multi-second) Gemini round trip — a separate
 # topic-name SELECT afterwards would keep a connection pinned on the transaction
 # pooler for the whole generation.
+# How long a row may sit 'generating' before a later run assumes the worker that
+# claimed it died and reclaims it. Comfortably longer than any real generation
+# (a few seconds plus rate-limit backoff), short enough that a stranded title
+# rejoins the pool within a day's worth of runs.
+STALE_CLAIM_MINUTES = 30
+
+# Reclaim rows abandoned mid-generation by a crashed/killed worker: back to
+# 'pending' so _CLAIM can pick them up again. The attempt already spent stands,
+# so a title that repeatedly strands the worker is still eventually retired
+# rather than looping forever.
+_REAP_STALE = text("""
+    update public.concept_backlog
+       set status = 'pending', claimed_at = null
+     where status = 'generating'
+       and claimed_at is not null
+       and claimed_at < now() - make_interval(mins => :max_minutes)
+    returning id
+""")
+
 _CLAIM = text("""
     update public.concept_backlog b
-       set status = 'generating', attempts = b.attempts + 1
+       set status = 'generating', attempts = b.attempts + 1, claimed_at = now()
       from public.topics t
      where b.id = (
          select b2.id from public.concept_backlog b2
@@ -69,7 +88,14 @@ _PUBLISH = text("""
         on conflict (slug) do nothing
         returning id
     )
-    update public.concept_backlog set status = 'done', last_error = null
+    update public.concept_backlog
+       -- Mark done ONLY when a concept was actually inserted. A slug collision
+       -- makes the insert a no-op; marking the row done anyway would retire the
+       -- title having burned a Gemini call without ever publishing (issue #37).
+       set status = case when exists (select 1 from inserted) then 'done' else 'failed' end,
+           last_error = case when exists (select 1 from inserted) then null
+                             else 'slug already exists; nothing published' end,
+           claimed_at = null
      where id = :backlog_id
     returning (select id from inserted) as concept_id
 """)
@@ -77,7 +103,7 @@ _PUBLISH = text("""
 _FAIL = text("""
     update public.concept_backlog
        set status = case when attempts >= 3 then 'failed' else 'pending' end,
-           last_error = :error
+           last_error = :error, claimed_at = null
      where id = :backlog_id
 """)
 
@@ -85,7 +111,7 @@ _FAIL = text("""
 # refund the attempt so throttling can never retire an item.
 _RELEASE = text("""
     update public.concept_backlog
-       set status = 'pending', attempts = greatest(attempts - 1, 0)
+       set status = 'pending', attempts = greatest(attempts - 1, 0), claimed_at = null
      where id = :backlog_id
 """)
 
@@ -145,7 +171,12 @@ async def generate_one(
         )
     ).scalar_one_or_none()
     await session.commit()
-    log.info("published %s", claimed.slug)
+    if concept_id is not None:
+        log.info("published %s", claimed.slug)
+    else:
+        # The insert was a no-op (slug already exists); _PUBLISH marked the row
+        # failed rather than done, so the title is flagged, not silently retired.
+        log.warning("not published (slug %s already exists)", claimed.slug)
     return concept_id
 
 
@@ -164,6 +195,13 @@ async def top_up(
         return TopUpResult(0, 0, "generation disabled")
     if not api_key:
         return TopUpResult(0, 0, "no API key configured")
+
+    # Start every run by reclaiming rows a previous worker abandoned mid-flight,
+    # so a crash cannot permanently lose a title from the pool (issue #37).
+    reaped = (await session.execute(_REAP_STALE, {"max_minutes": STALE_CLAIM_MINUTES})).all()
+    await session.commit()
+    if reaped:
+        log.warning("reclaimed %s stale 'generating' backlog rows", len(reaped))
 
     generated = failed = calls = 0
     backoff = BACKOFF_START_SECONDS

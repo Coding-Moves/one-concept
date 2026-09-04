@@ -233,12 +233,15 @@ async def test_stale_generating_rows_are_reclaimed(session):
         values ('test-reap', 'Reap Topic', false, 98)
         returning id
     """))).scalar_one()
-    # One stranded (claimed long ago) and one legitimately in flight (just now).
+    # Three cases: claimed long ago (stale), claimed with no timestamp at all
+    # (a row stranded before migration 0008 existed), and one legitimately in
+    # flight right now.
     await session.execute(text(f"""
         insert into public.concept_backlog (topic_id, slug, title, status, claimed_at)
         values
           (:tid, 'stranded', 'Stranded', 'generating',
            now() - make_interval(mins => {pool.STALE_CLAIM_MINUTES + 5})),
+          (:tid, 'pre-migration', 'Pre Migration', 'generating', null),
           (:tid, 'in-flight', 'In Flight', 'generating', now())
     """), {"tid": topic_id})
     await session.commit()
@@ -249,9 +252,10 @@ async def test_stale_generating_rows_are_reclaimed(session):
 
     rows = dict((await session.execute(text("""
         select slug, status from public.concept_backlog
-         where slug in ('stranded', 'in-flight')
+         where slug in ('stranded', 'pre-migration', 'in-flight')
     """))).all())
     assert rows["stranded"] == "pending", "the abandoned claim must be reclaimed"
+    assert rows["pre-migration"] == "pending", "a NULL-claimed leftover is stale too"
     assert rows["in-flight"] == "generating", "a fresh claim must be left alone"
 
 

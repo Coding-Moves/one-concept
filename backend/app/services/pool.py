@@ -51,12 +51,18 @@ STALE_CLAIM_MINUTES = 30
 # 'pending' so _CLAIM can pick them up again. The attempt already spent stands,
 # so a title that repeatedly strands the worker is still eventually retired
 # rather than looping forever.
+#
+# A NULL claimed_at on a 'generating' row is also stale: the new _CLAIM always
+# stamps claimed_at in the same statement it sets 'generating', so the only way
+# a generating row has no timestamp is that it was stranded before migration
+# 0008 added the column. Those are exactly the rows #37 is about, so reap them
+# too rather than leaving them stuck forever.
 _REAP_STALE = text("""
     update public.concept_backlog
        set status = 'pending', claimed_at = null
      where status = 'generating'
-       and claimed_at is not null
-       and claimed_at < now() - make_interval(mins => :max_minutes)
+       and (claimed_at is null
+            or claimed_at < now() - make_interval(mins => :max_minutes))
     returning id
 """)
 

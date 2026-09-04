@@ -146,31 +146,36 @@ async def test_push_token_deregistration_is_scoped_to_the_caller(client, session
         """), {"mine": user, "theirs": other})
         await s.commit()
 
-    # Own token: deleted.
-    response = await client.request(
-        "DELETE", "/v1/me/push-token",
-        json={"expo_push_token": "ExponentPushToken[dereg-mine]"},
-    )
-    assert response.status_code == 204
+    try:
+        # Own token: deleted.
+        response = await client.request(
+            "DELETE", "/v1/me/push-token",
+            json={"expo_push_token": "ExponentPushToken[dereg-mine]"},
+        )
+        assert response.status_code == 204
 
-    # Someone else's token: the request succeeds but must delete nothing.
-    response = await client.request(
-        "DELETE", "/v1/me/push-token",
-        json={"expo_push_token": "ExponentPushToken[dereg-theirs]"},
-    )
-    assert response.status_code == 204
+        # Someone else's token: the request succeeds but must delete nothing.
+        response = await client.request(
+            "DELETE", "/v1/me/push-token",
+            json={"expo_push_token": "ExponentPushToken[dereg-theirs]"},
+        )
+        assert response.status_code == 204
 
-    async with sessionmaker_for_test() as s:
-        mine = await s.scalar(text(
-            "select count(*) from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-mine]'"))
-        theirs = await s.scalar(text(
-            "select count(*) from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-theirs]'"))
-    assert mine == 0, "the caller's own registration is removed"
-    assert theirs == 1, "another user's registration must be untouchable"
-
-    # Leave nothing behind: a surviving token would make the other user due
-    # for reminders in later tests that share this session-scoped database.
-    async with sessionmaker_for_test() as s:
-        await s.execute(
-            text("delete from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-theirs]'"))
-        await s.commit()
+        async with sessionmaker_for_test() as s:
+            mine = await s.scalar(text(
+                "select count(*) from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-mine]'"))
+            theirs = await s.scalar(text(
+                "select count(*) from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-theirs]'"))
+        assert mine == 0, "the caller's own registration is removed"
+        assert theirs == 1, "another user's registration must be untouchable"
+    finally:
+        # Unconditional: a leaked token (or its trigger-created user, whose
+        # default prefs make them due at 08:05) would poison later reminder
+        # tests in this session-scoped database even when THIS test fails.
+        async with sessionmaker_for_test() as s:
+            await s.execute(
+                text("delete from public.device_tokens where expo_push_token = any(:t)"),
+                {"t": ["ExponentPushToken[dereg-mine]", "ExponentPushToken[dereg-theirs]"]},
+            )
+            await s.execute(text("delete from auth.users where id = :o"), {"o": other})
+            await s.commit()

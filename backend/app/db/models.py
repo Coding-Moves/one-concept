@@ -17,6 +17,7 @@ from sqlalchemy import (
     Time,
     UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.dialects.postgresql import UUID as PgUUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -61,6 +62,9 @@ class Concept(Base):
     difficulty: Mapped[int | None] = mapped_column(SmallInteger)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="published")
     source: Mapped[str] = mapped_column(Text, nullable=False, default="seed")
+    # Provenance of a generated lesson (null for seeded rows).
+    model: Mapped[str | None] = mapped_column(Text)
+    prompt_version: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
@@ -94,6 +98,20 @@ class DailyAssignment(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class ConceptInteraction(Base):
+    __tablename__ = "concept_interactions"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
+    )
+    concept_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("concepts.id"), primary_key=True
+    )
+    liked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    saved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class NotificationPreference(Base):
     __tablename__ = "notification_preferences"
 
@@ -101,6 +119,8 @@ class NotificationPreference(Base):
         PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
     )
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    reminder_times: Mapped[list[time]] = mapped_column(ARRAY(Time), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class DeviceToken(Base):
@@ -114,6 +134,31 @@ class DeviceToken(Base):
     platform: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     last_seen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class ConceptBacklog(Base):
+    """Mirror of migrations/0005_concept_backlog.sql — the curated syllabus.
+
+    Gemini writes lessons; it does not choose subjects. Titles are curated here
+    ahead of time; the pool worker claims a pending row, generates, and marks it
+    done.
+    """
+
+    __tablename__ = "concept_backlog"
+
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    topic_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("topics.id"), nullable=False
+    )
+    slug: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
+    title: Mapped[str] = mapped_column(Text, nullable=False)
+    angle: Mapped[str | None] = mapped_column(Text)
+    difficulty: Mapped[int | None] = mapped_column(SmallInteger)
+    status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
+    attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+    last_error: Mapped[str | None] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
 
 class ReminderLog(Base):

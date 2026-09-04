@@ -138,3 +138,85 @@ async def test_dead_tokens_are_dropped(session, user, capture_push):
         text("select count(*) from public.device_tokens where user_id = :u"), {"u": user}
     )
     assert remaining == 0, "an uninstalled handset must stop receiving pushes"
+
+
+async def test_slot_just_after_midnight_fires(session, user, capture_push):
+    """Issue #32: time-of-day arithmetic wrapped at midnight, so a 00:05 slot
+    checked at 00:10 fell into an empty range and never fired."""
+    sent = capture_push()
+    await _register_token(session, user, token="ExponentPushToken[midnight-1]")
+    await session.execute(
+        text("update public.notification_preferences set reminder_times = '{00:05}' where user_id = :u"),
+        {"u": user},
+    )
+    await session.commit()
+
+    result = await send_due_reminders(
+        session, window_minutes=15, at=datetime(2026, 1, 15, 0, 10, tzinfo=timezone.utc)
+    )
+    assert result.sent == 1, "a slot five minutes past midnight must fire"
+    assert len(sent) == 1
+
+    logged = (await session.execute(
+        text("select local_date, slot from public.reminder_log where user_id = :u"), {"u": user}
+    )).one()
+    assert str(logged.local_date) == "2026-01-15"
+
+    # Retire this token: the shared session DB means this user would also be
+    # due at the next test's midnight clock and inflate its counts.
+    await session.execute(
+        text("delete from public.device_tokens where expo_push_token = 'ExponentPushToken[midnight-1]'"))
+    await session.commit()
+
+
+async def test_slot_before_midnight_caught_by_the_next_run(session, user, capture_push):
+    """A 23:58 slot picked up by the 00:05 run belongs to yesterday: it must
+    fire once, and be logged against the day it was scheduled for."""
+    capture_push()
+    await _register_token(session, user, token="ExponentPushToken[midnight-2]")
+    await session.execute(
+        text("update public.notification_preferences set reminder_times = '{23:58}' where user_id = :u"),
+        {"u": user},
+    )
+    await session.commit()
+
+    just_past_midnight = datetime(2026, 1, 16, 0, 5, tzinfo=timezone.utc)
+    first = await send_due_reminders(session, window_minutes=15, at=just_past_midnight)
+    assert first.sent == 1, "yesterday's late slot is still within the window"
+
+    logged = (await session.execute(
+        text("select local_date from public.reminder_log where user_id = :u"), {"u": user}
+    )).one()
+    assert str(logged.local_date) == "2026-01-15", "claimed against the scheduled day, not the new one"
+
+    again = await send_due_reminders(session, window_minutes=15, at=just_past_midnight)
+    assert again.sent == 0, "the occurrence fires exactly once"
+
+    await session.execute(
+        text("delete from public.device_tokens where expo_push_token = 'ExponentPushToken[midnight-2]'"))
+    await session.commit()
+
+
+async def test_completion_on_the_scheduled_day_silences_the_cross_midnight_slot(
+    session, user, capture_push
+):
+    capture_push()
+    await _register_token(session, user, token="ExponentPushToken[midnight-3]")
+    await session.execute(
+        text("update public.notification_preferences set reminder_times = '{23:58}' where user_id = :u"),
+        {"u": user},
+    )
+    await session.commit()
+
+    scheduled_day = datetime(2026, 1, 15, tzinfo=timezone.utc).date()
+    await get_or_create_daily(session, user, today=scheduled_day)
+    await complete_today(session, user, scheduled_day)
+
+    result = await send_due_reminders(
+        session, window_minutes=15, at=datetime(2026, 1, 16, 0, 5, tzinfo=timezone.utc)
+    )
+    assert result.sent == 0, "a finished day stays quiet even across midnight"
+
+    await session.execute(
+        text("delete from public.device_tokens where expo_push_token = 'ExponentPushToken[midnight-3]'"))
+    await session.commit()

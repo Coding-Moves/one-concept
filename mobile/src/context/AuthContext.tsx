@@ -5,6 +5,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { setTokenProvider } from '../api/client';
@@ -125,14 +126,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) await supabase.auth.signOut({ scope: 'local' });
   }, []);
 
-  const value: AuthContextValue = {
-    loading,
-    session,
-    email: session?.user?.email ?? null,
-    signIn,
-    signUp,
-    signOut,
-  };
+  // Memoised so consumers only re-render when something they read actually
+  // changes. signIn/signUp/signOut are stable (useCallback), so the object is
+  // rebuilt only on a real loading or session change — not on every parent render.
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      loading,
+      session,
+      email: session?.user?.email ?? null,
+      signIn,
+      signUp,
+      signOut,
+    }),
+    [loading, session, signIn, signUp, signOut]
+  );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

@@ -96,23 +96,35 @@ async def register_push_token(
 
 @router.delete("/push-token", status_code=status.HTTP_204_NO_CONTENT)
 async def deregister_push_token(
-    body: PushTokenIn,
+    body: PushTokenIn | None = None,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Stop reminders following an account off a handset it no longer holds.
 
     Called on sign-out, while the session is still valid. Scoped to the
-    caller's own registration: you cannot deregister someone else's device
+    caller's own registrations: you cannot deregister someone else's device
     by guessing their token.
+
+    The body is optional on purpose: DELETE bodies have no defined HTTP
+    semantics and an intermediary may strip them. With no token we fail
+    CLOSED and drop every registration the caller has — a signed-out user
+    briefly losing reminders on a second device (fixed by its next app open)
+    beats a silent 422 that leaves reminders following a surrendered handset.
     """
-    await db.execute(
-        text("""
-            delete from public.device_tokens
-             where expo_push_token = :token and user_id = :uid
-        """),
-        {"token": body.expo_push_token, "uid": user.id},
-    )
+    if body is None:
+        await db.execute(
+            text("delete from public.device_tokens where user_id = :uid"),
+            {"uid": user.id},
+        )
+    else:
+        await db.execute(
+            text("""
+                delete from public.device_tokens
+                 where expo_push_token = :token and user_id = :uid
+            """),
+            {"token": body.expo_push_token, "uid": user.id},
+        )
     await db.commit()
 
 

@@ -28,13 +28,21 @@ jobs:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
 
+      # eas resolves the project from the installed app config, so the deps must
+      # be present just as the build job installs them.
+      - run: npm ci
+
       - name: Resolve artifact URL (self-polls until the build finishes)
         env:
           BID: ${{ github.event.inputs.build_id }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
           for _ in $(seq 1 40); do
-            eas build:list --platform android --limit 30 --json --non-interactive > builds.json
+            if ! eas build:list --platform android --limit 30 --json --non-interactive \
+                 > builds.json 2> list-err.txt; then
+              echo "build:list failed (will retry):"; cat list-err.txt
+              sleep 30; continue
+            fi
             status=$(jq -r --arg id "$BID" '.[] | select(.id==$id) | .status' builds.json)
             url=$(jq -r --arg id "$BID" \
               '.[] | select(.id==$id) | (.artifacts.buildUrl // .artifacts.applicationArchiveUrl // "")' builds.json)

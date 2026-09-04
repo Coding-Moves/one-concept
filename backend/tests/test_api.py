@@ -1,6 +1,7 @@
 """HTTP-level tests: auth gating, response shape, and status codes."""
 
 import uuid
+from datetime import date
 
 import pytest
 import pytest_asyncio
@@ -121,4 +122,6 @@ async def test_daily_exhaustion_is_a_409_not_a_500(client, sessionmaker_for_test
     assert response.status_code == 409, response.text
     body = response.json()
     assert body["reason"] == "catalog_exhausted"
-    assert body["assigned_for"], "the day the refusal applies to must be present"
+    # The client contract is an ISO date string — a datetime or epoch would
+    # be truthy too, so parse it rather than merely checking presence.
+    date.fromisoformat(body["assigned_for"])

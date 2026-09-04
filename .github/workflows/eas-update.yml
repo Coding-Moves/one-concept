@@ -17,10 +17,10 @@ on:
   workflow_dispatch:
     inputs:
       channel:
-        description: "Update channel"
+        description: "Update channel (manual runs only)"
         type: choice
-        default: production
-        options: [production, preview]
+        default: preview
+        options: [preview, production]
 
 jobs:
   update:
@@ -47,9 +47,15 @@ jobs:
       # --environment pulls the EXPO_PUBLIC_* variables from EAS into the
       # bundle; without it the update ships with empty config and crashes.
       - name: Publish OTA update (production)
-        if: github.ref == 'refs/heads/main' || github.event.inputs.channel == 'production'
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'production')
         run: eas update --channel production --environment production --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive
 
+      # A push to either branch refreshes preview (so a release never leaves
+      # preview devices behind); a manual run publishes only the chosen channel.
       - name: Publish OTA update (preview)
-        if: github.ref == 'refs/heads/develop' || github.ref == 'refs/heads/main' || github.event.inputs.channel == 'preview'
+        if: >-
+          (github.event_name == 'push') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'preview')
         run: eas update --channel preview --environment preview --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive

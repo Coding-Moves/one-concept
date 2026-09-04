@@ -38,10 +38,13 @@ Rejected output is retried later, never shown to a user.
 ## Reminders
 
 Up to three reminder times per user, interpreted in the user's own timezone.
-A worker runs every 15 minutes on Railway, claims each due (user, slot) pair
-in a log table before pushing — so a crash or overlapping run can miss a
-nudge but never send a duplicate — and stops for the day the moment the
-user marks the concept learned. Delivery is Expo push over FCM.
+A worker runs every 15 minutes on Railway, claims each due (user, day, slot)
+occurrence in a log table before pushing — so a crash or overlapping run can
+miss a nudge but never send a duplicate — and stops the moment the user marks
+the concept learned. Due-ness is computed on full timestamps: a slot shortly
+before midnight caught by the first run after it still fires, and is claimed
+against the day it was scheduled for — so a reminder_log row dated
+"yesterday" is expected, not a bug. Delivery is Expo push over FCM.
 
 ## Streaks and history
 

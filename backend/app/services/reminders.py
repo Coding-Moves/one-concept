@@ -27,36 +27,58 @@ BODY = "Today's concept is waiting. A minute now keeps the streak alive."
 
 # One row per (user, slot, token) that is due right now. The window matches
 # the worker's cron cadence: a slot fires once, in the run that first sees it.
+#
+# The comparison happens on full timestamps, never bare times: time-of-day
+# arithmetic wraps modulo 24h, which made every slot within `window` minutes
+# after local midnight an empty range (issue #32). Each slot is considered as
+# two occurrences — today's and yesterday's — so a 23:58 slot caught by the
+# 00:05 run is still delivered, and is logged and completion-checked against
+# the day it was scheduled for.
 _DUE = text("""
     with clock as (
         select coalesce(cast(:at as timestamptz), now()) as t
     ),
     candidates as (
         select p.id as user_id,
-               (clock.t at time zone p.timezone)::date as local_date,
-               (clock.t at time zone p.timezone)::time as local_time,
+               (clock.t at time zone p.timezone) as local_now,
                np.reminder_times
           from public.profiles p
           join public.notification_preferences np on np.user_id = p.id
          cross join clock
          where np.enabled
+    ),
+    occurrences as (
+        select c.user_id, c.local_now, s.slot,
+               d.day as local_date,
+               d.day + s.slot as slot_at
+          from candidates c
+         cross join lateral unnest(c.reminder_times) as s(slot)
+         cross join lateral (values
+             (c.local_now::date), (c.local_now::date - 1)) as d(day)
     )
-    select c.user_id, c.local_date, s.slot, dt.expo_push_token
-      from candidates c
-     cross join lateral unnest(c.reminder_times) as s(slot)
-      join public.device_tokens dt on dt.user_id = c.user_id
-     where s.slot <= c.local_time
-       and s.slot > c.local_time - make_interval(mins => :window)
+    select o.user_id, o.local_date, o.slot, dt.expo_push_token
+      from occurrences o
+      join public.device_tokens dt on dt.user_id = o.user_id
+     where o.slot_at <= o.local_now
+       and o.slot_at > o.local_now - make_interval(mins => :window)
        and not exists (
            select 1 from public.daily_assignments da
-            where da.user_id = c.user_id
-              and da.assigned_for = c.local_date
+            where da.user_id = o.user_id
+              and da.assigned_for = o.local_date
+              and da.completed_at is not null)
+       and not exists (
+           -- A finished CURRENT day also silences yesterday's late slot: the
+           -- push says "today's concept is waiting", and past midnight the
+           -- only lesson it can lead to is today's.
+           select 1 from public.daily_assignments da
+            where da.user_id = o.user_id
+              and da.assigned_for = o.local_now::date
               and da.completed_at is not null)
        and not exists (
            select 1 from public.reminder_log rl
-            where rl.user_id = c.user_id
-              and rl.local_date = c.local_date
-              and rl.slot = s.slot)
+            where rl.user_id = o.user_id
+              and rl.local_date = o.local_date
+              and rl.slot = o.slot)
 """)
 
 _CLAIM = text("""
@@ -89,6 +111,10 @@ async def send_due_reminders(
     at: datetime | None = None,
 ) -> ReminderResult:
     """One pass: claim every due (user, slot), then push to their devices."""
+    if not 0 < window_minutes < 1440:
+        # At a day or more, a slot's today- and yesterday-occurrences both fit
+        # the window under different dates and every user is double-pushed.
+        raise ValueError("window_minutes must be between 1 and 1439")
     rows = (await session.execute(_DUE, {"window": window_minutes, "at": at})).all()
 
     # Claim per (user, slot); a user with two devices gets both pushes from

@@ -125,3 +125,45 @@ async def test_daily_exhaustion_is_a_409_not_a_500(client, sessionmaker_for_test
     # The client contract is an ISO date string — a datetime or epoch would
     # be truthy too, so parse it rather than merely checking presence.
     date.fromisoformat(body["assigned_for"])
+
+
+async def test_push_token_deregistration_is_scoped_to_the_caller(client, sessionmaker_for_test, user):
+    """Issue #48: sign-out deregisters this handset — and only this handset.
+
+    Deleting by token string alone would let anyone with a leaked token
+    silence another user's reminders.
+    """
+    other = uuid.uuid4()
+    async with sessionmaker_for_test() as s:
+        await s.execute(
+            text("insert into auth.users (id, email) values (:id, :e)"),
+            {"id": other, "e": f"{other}@example.invalid"},
+        )
+        await s.execute(text("""
+            insert into public.device_tokens (user_id, expo_push_token, platform)
+            values (:mine, 'ExponentPushToken[dereg-mine]', 'android'),
+                   (:theirs, 'ExponentPushToken[dereg-theirs]', 'android')
+        """), {"mine": user, "theirs": other})
+        await s.commit()
+
+    # Own token: deleted.
+    response = await client.request(
+        "DELETE", "/v1/me/push-token",
+        json={"expo_push_token": "ExponentPushToken[dereg-mine]"},
+    )
+    assert response.status_code == 204
+
+    # Someone else's token: the request succeeds but must delete nothing.
+    response = await client.request(
+        "DELETE", "/v1/me/push-token",
+        json={"expo_push_token": "ExponentPushToken[dereg-theirs]"},
+    )
+    assert response.status_code == 204
+
+    async with sessionmaker_for_test() as s:
+        mine = await s.scalar(text(
+            "select count(*) from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-mine]'"))
+        theirs = await s.scalar(text(
+            "select count(*) from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-theirs]'"))
+    assert mine == 0, "the caller's own registration is removed"
+    assert theirs == 1, "another user's registration must be untouchable"

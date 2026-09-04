@@ -1,0 +1,35 @@
+# Closes stale AUTOMATED issues only. Scoped by label to the audit workflow's
+# own issues, so it never touches human-filed issues or Dependabot PRs. An
+# audit issue that keeps reappearing means the finding is unfixed; letting it
+# go stale after long inactivity keeps the tracker honest without nagging.
+name: Stale cleanup
+
+on:
+  schedule:
+    - cron: "0 1 * * *" # daily 01:00 UTC
+  workflow_dispatch:
+
+permissions:
+  issues: write
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/stale@v9
+        with:
+          only-labels: "automated-issue"
+          days-before-stale: 30
+          days-before-close: 7
+          stale-issue-label: "stale"
+          stale-issue-message: >-
+            No activity for 30 days. If this automated finding is still
+            relevant it will be reopened by the next audit; otherwise it will
+            close in 7 days.
+          close-issue-message: >-
+            Closing after 30+7 days of inactivity. A recurring finding will be
+            re-filed by the audit workflow.
+          # PRs are out of scope — Dependabot manages its own, and this repo
+          # opens no automated fix PRs.
+          days-before-pr-stale: -1
+          days-before-pr-close: -1

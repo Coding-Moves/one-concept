@@ -107,7 +107,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     return this.cache;
   }
 
-  async markLearned(): Promise<ProgressState> {
+  async markLearned(conceptId: string): Promise<ProgressState> {
     const epoch = this.epoch;
     // The response already carries the day and fresh streaks — merging it
     // saves a second round trip, which on a distant connection is the
@@ -118,11 +118,13 @@ export class RemoteProgressRepository implements ProgressRepository {
       stats: { current: number; longest: number; total_learned: number };
     }>('/v1/daily/complete', { method: 'POST' });
 
-    const conceptId = this.cache.assignment?.conceptId;
-    const learned =
-      conceptId && !this.cache.learned.some((r) => r.date === done.assigned_for)
-        ? [...this.cache.learned, { conceptId, date: done.assigned_for }]
-        : this.cache.learned;
+    // Use the concept id the caller passed, not this.cache.assignment: the
+    // cached assignment is null whenever /v1/me/state resolved before /v1/daily
+    // created the day's row, which used to drop today's learned record entirely
+    // — the button re-armed even though the POST succeeded (issue #38).
+    const learned = this.cache.learned.some((r) => r.date === done.assigned_for)
+      ? this.cache.learned
+      : [...this.cache.learned, { conceptId, date: done.assigned_for }];
 
     return this.remember({
       ...this.cache,

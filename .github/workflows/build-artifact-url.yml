@@ -54,6 +54,8 @@ jobs:
             fi
             if [ "$status" = "ERRORED" ] || [ "$status" = "CANCELED" ]; then
               echo "::error::build $BID ended as $status" >&2
+              echo "---- build object ----"
+              jq --arg id "$BID" '.[] | select(.id==$id) | {status, error, buildProfile: .buildProfile, appVersion: .appVersion, runtimeVersion: .runtimeVersion}' builds.json
               exit 1
             fi
             sleep 30

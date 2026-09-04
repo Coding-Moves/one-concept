@@ -62,6 +62,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (data.session) {
         registerForReminders().catch(() => {});
         syncTimezone().catch(() => {});
+      } else {
+        // Signed out at startup: account caches have no business existing.
+        // Covers sessions that vanished without a SIGNED_OUT ever firing
+        // (cleared or corrupted auth storage across a restart).
+        clearAccountCaches().catch(() => {});
       }
     });
 

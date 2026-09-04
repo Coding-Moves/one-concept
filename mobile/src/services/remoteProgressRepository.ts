@@ -65,6 +65,11 @@ export class RemoteProgressRepository implements ProgressRepository {
     return this.remember(toProgressState(payload));
   }
 
+  /** Drop the in-memory state; the module singleton outlives a sign-out. */
+  forget(): void {
+    this.cache = EMPTY_PROGRESS;
+  }
+
   async loadCached(): Promise<ProgressState | null> {
     const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
     if (!raw) return null;
@@ -172,6 +177,9 @@ export class RemoteProgressRepository implements ProgressRepository {
 
 export const remoteProgressRepository = new RemoteProgressRepository();
 
+/** Forget everything: the disk cache AND the singleton's in-memory copy.
+ *  Called on sign-out so the next account can never see this one's data. */
 export async function clearServerStateCache(): Promise<void> {
+  remoteProgressRepository.forget();
   await AsyncStorage.removeItem(CACHE_KEY).catch(() => {});
 }

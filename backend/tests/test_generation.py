@@ -223,6 +223,69 @@ async def test_rate_limit_releases_the_claim_and_refunds_the_attempt(session, pa
 async def test_retry_delay_is_read_from_the_response():
     response = httpx.Response(429, text='{"error": {"details": [{"retryDelay": "12s"}]}}')
     assert generation._retry_after_seconds(response) == 12.0
+
+
+async def test_stale_generating_rows_are_reclaimed(session):
+    """Issue #37: a row abandoned mid-generation by a crashed worker must not be
+    stuck in 'generating' forever — a later run reclaims it to 'pending'."""
+    topic_id = (await session.execute(text("""
+        insert into public.topics (slug, name, is_active, sort_order)
+        values ('test-reap', 'Reap Topic', false, 98)
+        returning id
+    """))).scalar_one()
+    # One stranded (claimed long ago) and one legitimately in flight (just now).
+    await session.execute(text(f"""
+        insert into public.concept_backlog (topic_id, slug, title, status, claimed_at)
+        values
+          (:tid, 'stranded', 'Stranded', 'generating',
+           now() - make_interval(mins => {pool.STALE_CLAIM_MINUTES + 5})),
+          (:tid, 'in-flight', 'In Flight', 'generating', now())
+    """), {"tid": topic_id})
+    await session.commit()
+
+    # minimum_per_topic=0 → no generation happens; only the reaper runs.
+    await top_up(session, api_key="k", model="m", enabled=True,
+                 minimum_per_topic=0, call_cap=100)
+
+    rows = dict((await session.execute(text("""
+        select slug, status from public.concept_backlog
+         where slug in ('stranded', 'in-flight')
+    """))).all())
+    assert rows["stranded"] == "pending", "the abandoned claim must be reclaimed"
+    assert rows["in-flight"] == "generating", "a fresh claim must be left alone"
+
+
+async def test_slug_collision_does_not_mark_the_backlog_done(session, patch_httpx):
+    """Issue #37: if the concept slug already exists the insert is a no-op, so the
+    backlog row must be flagged failed — not marked done, which would retire the
+    title having burned a Gemini call without publishing anything."""
+    patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
+    topic_id = (await session.execute(text("""
+        insert into public.topics (slug, name, is_active, sort_order)
+        values ('test-collision', 'Collision Topic', false, 97)
+        returning id
+    """))).scalar_one()
+    # A published concept already owns the slug the backlog row will generate.
+    await session.execute(text("""
+        insert into public.concepts (topic_id, slug, title, summary, status, source)
+        values (:tid, 'dup-slug', 'Existing', 'x', 'published', 'seed')
+    """), {"tid": topic_id})
+    await session.execute(text("""
+        insert into public.concept_backlog (topic_id, slug, title, status)
+        values (:tid, 'dup-slug', 'Duplicate', 'pending')
+    """), {"tid": topic_id})
+    await session.commit()
+
+    concept_id = await generate_one(session, "test-key", "gemini-2.0-flash", topic_id)
+    assert concept_id is None, "nothing was inserted, so no concept id is returned"
+
+    row = (await session.execute(text(
+        "select status from public.concept_backlog where slug = 'dup-slug'"))).one()
+    assert row.status == "failed", "a slug collision must not be recorded as done"
+    # The pre-existing concept is untouched — exactly one row owns the slug.
+    count = await session.scalar(
+        text("select count(*) from public.concepts where slug = 'dup-slug'"))
+    assert count == 1
     response = httpx.Response(429, headers={"retry-after": "30"}, text="{}")
     assert generation._retry_after_seconds(response) == 30.0
     assert generation._retry_after_seconds(httpx.Response(429, text="{}")) is None

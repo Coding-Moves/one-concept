@@ -36,23 +36,28 @@ _POOL_COUNTS = text("""
      order by published asc
 """)
 
-# Claim one item so two workers cannot generate the same title.
+# Claim one item so two workers cannot generate the same title. The topic name
+# is joined into RETURNING here so the caller can commit immediately and hold no
+# open transaction across the (multi-second) Gemini round trip — a separate
+# topic-name SELECT afterwards would keep a connection pinned on the transaction
+# pooler for the whole generation.
 _CLAIM = text("""
-    update public.concept_backlog
-       set status = 'generating', attempts = attempts + 1
-     where id = (
-         select b.id from public.concept_backlog b
-          where b.status = 'pending'
-            and (cast(:topic_id as uuid) is null or b.topic_id = cast(:topic_id as uuid))
-            and b.attempts < 3
-          order by b.created_at
+    update public.concept_backlog b
+       set status = 'generating', attempts = b.attempts + 1
+      from public.topics t
+     where b.id = (
+         select b2.id from public.concept_backlog b2
+          where b2.status = 'pending'
+            and (cast(:topic_id as uuid) is null or b2.topic_id = cast(:topic_id as uuid))
+            and b2.attempts < 3
+          order by b2.created_at
           for update skip locked
           limit 1
      )
-    returning id, slug, title, angle, difficulty, topic_id
+       and t.id = b.topic_id
+    returning b.id, b.slug, b.title, b.angle, b.difficulty, b.topic_id,
+              t.name as topic_name
 """)
-
-_TOPIC_NAME = text("select name from public.topics where id = :tid")
 
 _PUBLISH = text("""
     with inserted as (
@@ -101,12 +106,12 @@ async def generate_one(
     if claimed is None:
         return None
 
-    topic_name = (await session.execute(_TOPIC_NAME, {"tid": claimed.topic_id})).scalar_one()
-
+    # After the commit above no transaction is open, so nothing is pinned on the
+    # pooler while Gemini works — the topic name rode along on the claim.
     try:
         result = await generate_concept(
             title=claimed.title,
-            topic_name=topic_name,
+            topic_name=claimed.topic_name,
             angle=claimed.angle,
             api_key=api_key,
             model=model,

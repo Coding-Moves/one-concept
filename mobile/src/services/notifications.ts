@@ -74,7 +74,12 @@ export async function registerForReminders(): Promise<void> {
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
     },
   });
+  // Remembered so sign-out can deregister without asking Expo again. Not in
+  // clearAccountCaches: deregistration consumes it, then removes it itself.
+  AsyncStorage.setItem(REGISTERED_TOKEN_KEY, token).catch(() => {});
 }
+
+const REGISTERED_TOKEN_KEY = 'one-concept/push-token/v1';
 
 const PREFS_CACHE_KEY = 'one-concept/notification-prefs/v1';
 

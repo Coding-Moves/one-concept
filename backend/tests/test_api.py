@@ -167,3 +167,10 @@ async def test_push_token_deregistration_is_scoped_to_the_caller(client, session
             "select count(*) from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-theirs]'"))
     assert mine == 0, "the caller's own registration is removed"
     assert theirs == 1, "another user's registration must be untouchable"
+
+    # Leave nothing behind: a surviving token would make the other user due
+    # for reminders in later tests that share this session-scoped database.
+    async with sessionmaker_for_test() as s:
+        await s.execute(
+            text("delete from public.device_tokens where expo_push_token = 'ExponentPushToken[dereg-theirs]'"))
+        await s.commit()

@@ -2,7 +2,7 @@
 
 import uuid
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date
 
 from fastapi import HTTPException, status
 from sqlalchemy import text
@@ -54,21 +54,22 @@ _COMPLETE = text("""
           order by assigned_for desc
           limit 1
      )
-    returning assigned_for, completed_at
+    returning assigned_for
 """)
 
 
 @dataclass
 class Completion:
+    # The day the completion counts towards — today's normally, yesterday's
+    # when the grace window catches a just-past-midnight tap.
     assigned_for: date
-    completed_at: datetime
 
 
 async def complete_today(session: AsyncSession, user_id: uuid.UUID, today) -> Completion:
     """Mark the current (or just-past-midnight) concept learned.
 
-    The timestamp is the server's, not the client's, and the returned
-    `assigned_for` is the day the completion counts towards.
+    The completion timestamp is the server's, not the client's; the returned
+    `assigned_for` is the day it counts towards.
     """
     row = (await session.execute(_COMPLETE, {"uid": user_id, "today": today})).first()
     if row is None:
@@ -77,7 +78,7 @@ async def complete_today(session: AsyncSession, user_id: uuid.UUID, today) -> Co
             detail="No concept has been assigned recently. Fetch /v1/daily first.",
         )
     await session.commit()
-    return Completion(assigned_for=row.assigned_for, completed_at=row.completed_at)
+    return Completion(assigned_for=row.assigned_for)
 
 
 async def set_followed_topics(

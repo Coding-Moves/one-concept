@@ -157,6 +157,9 @@ class ConceptBacklog(Base):
     status: Mapped[str] = mapped_column(Text, nullable=False, default="pending")
     attempts: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
     last_error: Mapped[str | None] = mapped_column(Text)
+    # When the current 'generating' claim was made; null when not claimed. A
+    # reaper resets rows stuck 'generating' past a deadline (0008 / issue #37).
+    claimed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 

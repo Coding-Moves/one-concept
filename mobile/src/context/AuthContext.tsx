@@ -9,13 +9,8 @@ import {
 } from 'react';
 import { setTokenProvider } from '../api/client';
 import { supabase } from '../lib/supabase';
-import { clearDailyCache } from '../services/dailyApi';
-import {
-  clearNotificationPrefsCache,
-  registerForReminders,
-  syncTimezone,
-} from '../services/notifications';
-import { clearServerStateCache } from '../services/remoteProgressRepository';
+import { clearAccountCaches } from '../services/accountCaches';
+import { registerForReminders, syncTimezone } from '../services/notifications';
 
 export interface AuthContextValue {
   loading: boolean;
@@ -80,9 +75,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Account data must not outlive the account on a shared device. The
         // event covers every sign-out path — the button, an expired refresh
         // token, a revoked session — not just our own signOut() call.
-        clearServerStateCache().catch(() => {});
-        clearDailyCache().catch(() => {});
-        clearNotificationPrefsCache().catch(() => {});
+        clearAccountCaches().catch(() => {});
       }
     });
 

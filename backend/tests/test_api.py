@@ -246,3 +246,44 @@ async def test_complete_after_midnight_reports_yesterday_via_the_endpoint(
             {"u": user, "d": yesterday},
         )
     assert done == 1
+
+
+async def test_patch_unknown_timezone_is_a_400_not_a_500(client, sessionmaker_for_test, user):
+    """Issue #36: an unknown zone must be a clean 400, and a display_name sent
+    in the same request must not be half-applied."""
+    response = await client.patch(
+        "/v1/me", json={"timezone": "America/Nowhere", "display_name": "Should Not Stick"}
+    )
+    assert response.status_code == 400, response.text
+    assert response.json()["detail"] == "Unknown timezone"
+
+    async with sessionmaker_for_test() as s:
+        row = (await s.execute(
+            text("select timezone, display_name from public.profiles where id = :u"), {"u": user}
+        )).one()
+    assert row.timezone == "UTC", "an invalid request leaves the timezone unchanged"
+    assert row.display_name != "Should Not Stick", "the whole PATCH is rejected atomically"
+
+
+async def test_patch_posix_style_timezone_is_rejected(client):
+    """POSIX strings like 'FOO5' are accepted by AT TIME ZONE but are not real
+    IANA zones — the catalogue check rejects them where the old one let them
+    through silently."""
+    response = await client.patch("/v1/me", json={"timezone": "FOO5"})
+    assert response.status_code == 400, response.text
+
+
+async def test_patch_valid_timezone_and_name_apply_together(client, sessionmaker_for_test, user):
+    response = await client.patch(
+        "/v1/me", json={"timezone": "Asia/Karachi", "display_name": "Muawiya"}
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["timezone"] == "Asia/Karachi"
+    assert body["display_name"] == "Muawiya"
+
+    async with sessionmaker_for_test() as s:
+        row = (await s.execute(
+            text("select timezone, display_name from public.profiles where id = :u"), {"u": user}
+        )).one()
+    assert (row.timezone, row.display_name) == ("Asia/Karachi", "Muawiya")

@@ -1,0 +1,25 @@
+# Weekly dependency update PRs. Dependabot deduplicates its own PRs and, with
+# Dependabot security updates enabled (Settings -> Code security), also opens
+# PRs for advisories. It owns ALL dependency-bump PRs — the audit workflow only
+# detects and files issues, so the two never both open update PRs.
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "backend"]
+
+  - package-ecosystem: "npm"
+    directory: "/mobile"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    labels: ["dependencies", "mobile"]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    labels: ["dependencies", "ci"]

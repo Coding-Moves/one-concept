@@ -14,7 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime
 
 import httpx
-from sqlalchemy import text
+from sqlalchemy import bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 log = logging.getLogger(__name__)
@@ -25,8 +25,8 @@ BATCH_SIZE = 100
 TITLE = "One Concept"
 BODY = "Today's concept is waiting. A minute now keeps the streak alive."
 
-# One row per (user, slot, token) that is due right now. The window matches
-# the worker's cron cadence: a slot fires once, in the run that first sees it.
+# Claim every due (user, slot) in a single statement. The window matches the
+# worker's cron cadence: a slot fires once, in the run that first sees it.
 #
 # The comparison happens on full timestamps, never bare times: time-of-day
 # arithmetic wraps modulo 24h, which made every slot within `window` minutes
@@ -34,7 +34,12 @@ BODY = "Today's concept is waiting. A minute now keeps the streak alive."
 # two occurrences — today's and yesterday's — so a 23:58 slot caught by the
 # 00:05 run is still delivered, and is logged and completion-checked against
 # the day it was scheduled for.
-_DUE = text("""
+#
+# The INSERT .. SELECT claims all due slots at once and RETURNS the ones this
+# run actually won: `on conflict do nothing` both silences an already-sent slot
+# and settles the race with an overlapping worker, so a separate not-exists
+# check and the old per-row INSERT loop are both unnecessary (issue #41).
+_CLAIM_DUE = text("""
     with clock as (
         select coalesce(cast(:at as timestamptz), now()) as t
     ),
@@ -55,38 +60,42 @@ _DUE = text("""
          cross join lateral unnest(c.reminder_times) as s(slot)
          cross join lateral (values
              (c.local_now::date), (c.local_now::date - 1)) as d(day)
+    ),
+    due as (
+        select distinct o.user_id, o.local_date, o.slot
+          from occurrences o
+         where o.slot_at <= o.local_now
+           and o.slot_at > o.local_now - make_interval(mins => :window)
+           -- Only bother claiming for users with a handset to push to.
+           and exists (
+               select 1 from public.device_tokens dt where dt.user_id = o.user_id)
+           and not exists (
+               select 1 from public.daily_assignments da
+                where da.user_id = o.user_id
+                  and da.assigned_for = o.local_date
+                  and da.completed_at is not null)
+           and not exists (
+               -- A finished CURRENT day also silences yesterday's late slot: the
+               -- push says "today's concept is waiting", and past midnight the
+               -- only lesson it can lead to is today's.
+               select 1 from public.daily_assignments da
+                where da.user_id = o.user_id
+                  and da.assigned_for = o.local_now::date
+                  and da.completed_at is not null)
     )
-    select o.user_id, o.local_date, o.slot, dt.expo_push_token
-      from occurrences o
-      join public.device_tokens dt on dt.user_id = o.user_id
-     where o.slot_at <= o.local_now
-       and o.slot_at > o.local_now - make_interval(mins => :window)
-       and not exists (
-           select 1 from public.daily_assignments da
-            where da.user_id = o.user_id
-              and da.assigned_for = o.local_date
-              and da.completed_at is not null)
-       and not exists (
-           -- A finished CURRENT day also silences yesterday's late slot: the
-           -- push says "today's concept is waiting", and past midnight the
-           -- only lesson it can lead to is today's.
-           select 1 from public.daily_assignments da
-            where da.user_id = o.user_id
-              and da.assigned_for = o.local_now::date
-              and da.completed_at is not null)
-       and not exists (
-           select 1 from public.reminder_log rl
-            where rl.user_id = o.user_id
-              and rl.local_date = o.local_date
-              and rl.slot = o.slot)
+    insert into public.reminder_log (user_id, local_date, slot)
+    select user_id, local_date, slot from due
+    on conflict do nothing
+    returning user_id, local_date, slot
 """)
 
-_CLAIM = text("""
-    insert into public.reminder_log (user_id, local_date, slot)
-    values (:user_id, :local_date, :slot)
-    on conflict do nothing
-    returning user_id
-""")
+# Tokens for the users we just claimed, so each claimed slot fans out to every
+# handset that user has registered.
+_TOKENS = text("""
+    select user_id, expo_push_token
+      from public.device_tokens
+     where user_id in :user_ids
+""").bindparams(bindparam("user_ids", expanding=True))
 
 _DROP_TOKEN = text("delete from public.device_tokens where expo_push_token = :token")
 
@@ -115,32 +124,34 @@ async def send_due_reminders(
         # At a day or more, a slot's today- and yesterday-occurrences both fit
         # the window under different dates and every user is double-pushed.
         raise ValueError("window_minutes must be between 1 and 1439")
-    rows = (await session.execute(_DUE, {"window": window_minutes, "at": at})).all()
 
-    # Claim per (user, slot); a user with two devices gets both pushes from
-    # the single claim.
-    messages: list[dict] = []
-    claimed: set[tuple] = set()
-    for row in rows:
-        key = (row.user_id, row.local_date, row.slot)
-        if key not in claimed:
-            got = (await session.execute(
-                _CLAIM,
-                {"user_id": row.user_id, "local_date": row.local_date, "slot": row.slot},
-            )).first()
-            if got is None:
-                continue  # another worker beat us to this slot
-            claimed.add(key)
-        messages.append({
-            "to": row.expo_push_token,
+    # One statement claims every due slot and returns the ones we won.
+    claimed = (
+        await session.execute(_CLAIM_DUE, {"window": window_minutes, "at": at})
+    ).all()
+    await session.commit()
+    if not claimed:
+        return ReminderResult(0, 0)
+
+    # Fan each claimed slot out to every handset the user has registered.
+    user_ids = list({row.user_id for row in claimed})
+    tokens_by_user: dict = {}
+    for tok in (await session.execute(_TOKENS, {"user_ids": user_ids})).all():
+        tokens_by_user.setdefault(tok.user_id, []).append(tok.expo_push_token)
+
+    messages: list[dict] = [
+        {
+            "to": token,
             "title": TITLE,
             "body": BODY,
             # Sound + heads-up banner, matching what people expect of a nudge.
             "sound": "default",
             "priority": "high",
             "channelId": "reminders",
-        })
-    await session.commit()
+        }
+        for row in claimed
+        for token in tokens_by_user.get(row.user_id, [])
+    ]
 
     if not messages:
         return ReminderResult(0, 0)

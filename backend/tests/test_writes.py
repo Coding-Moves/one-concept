@@ -176,3 +176,60 @@ async def test_bootstrap_does_not_resurrect_unfollowed_topics(session, user):
         {"u": user},
     )).scalars().all()
     assert slugs == ["linux-systems"], "the bootstrap must never undo an unfollow"
+
+
+async def test_completing_after_midnight_finishes_yesterdays_concept(session, user):
+    """Issue #33: read at 23:58 (assigned for DAY), tap learned at 00:01 the
+    next day. There is no assignment for the new day yet, so completion must
+    fall back to DAY, count for DAY, and keep the streak intact."""
+    await get_or_create_daily(session, user, today=DAY)
+
+    # The endpoint passes the *new* local day; the concept read was DAY's.
+    completion = await complete_today(session, user, DAY + timedelta(days=1))
+    assert completion.assigned_for == DAY, "the completion counts for the day it was assigned"
+
+    done = await session.scalar(
+        text("""select count(*) from public.daily_assignments
+                 where user_id = :u and assigned_for = :d and completed_at is not null"""),
+        {"u": user, "d": DAY},
+    )
+    assert done == 1
+
+    # Streaks are computed as of the new day; DAY's completion is still current.
+    stats = await compute_streaks(session, user, DAY + timedelta(days=1))
+    assert stats.current == 1
+
+
+async def test_a_missed_older_day_cannot_be_back_completed(session, user):
+    """The grace window is one day: an assignment from two days ago must not be
+    silently completable, which would let a user repair a long-broken streak."""
+    await get_or_create_daily(session, user, today=DAY)
+
+    # Two days later, with no assignment in the {today, yesterday} window.
+    with pytest.raises(HTTPException) as exc:
+        await complete_today(session, user, DAY + timedelta(days=2))
+    assert exc.value.status_code == 404
+
+    still_open = await session.scalar(
+        text("""select count(*) from public.daily_assignments
+                 where user_id = :u and assigned_for = :d and completed_at is null"""),
+        {"u": user, "d": DAY},
+    )
+    assert still_open == 1, "the older assignment stays incomplete"
+
+
+async def test_completing_prefers_today_over_yesterday(session, user):
+    """With both days assigned and uncompleted, completion targets today —
+    yesterday stays missed rather than being silently finished."""
+    await get_or_create_daily(session, user, today=DAY)
+    await get_or_create_daily(session, user, today=DAY + timedelta(days=1))
+
+    completion = await complete_today(session, user, DAY + timedelta(days=1))
+    assert completion.assigned_for == DAY + timedelta(days=1)
+
+    yesterday_open = await session.scalar(
+        text("""select count(*) from public.daily_assignments
+                 where user_id = :u and assigned_for = :d and completed_at is null"""),
+        {"u": user, "d": DAY},
+    )
+    assert yesterday_open == 1, "yesterday's missed day is not back-completed"

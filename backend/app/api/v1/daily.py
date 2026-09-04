@@ -68,16 +68,20 @@ async def complete(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> CompletedOut:
-    """Mark today's concept learned.
+    """Mark the day's concept learned.
 
-    The completion timestamp and the day it counts towards both come from the
-    server, so a device with a wrong clock cannot manufacture a streak.
-    Repeating the call is a no-op rather than an error.
+    Normally today's; within a one-day grace it also completes yesterday's,
+    so a concept read at 23:58 and marked at 00:01 still counts (issue #33).
+    The timestamp and the day it counts towards both come from the server, so
+    a device with a wrong clock cannot manufacture a streak. Repeating the
+    call is a no-op rather than an error.
     """
     today = await local_today(db, user.id)
-    await complete_today(db, user.id, today)
+    completion = await complete_today(db, user.id, today)
+    # assigned_for is the day it counts towards (yesterday's, just past
+    # midnight); streaks still use today to decide whether the run is current.
     return CompletedOut(
         completed=True,
-        assigned_for=today,
+        assigned_for=completion.assigned_for,
         stats=StreakOut(**vars(await compute_streaks(db, user.id, today))),
     )

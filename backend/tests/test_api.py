@@ -215,3 +215,34 @@ async def test_bodyless_deregistration_fails_closed(client, sessionmaker_for_tes
                 text("delete from public.device_tokens where expo_push_token like 'ExponentPushToken[bodyless-%'"))
             await s.execute(text("delete from auth.users where id = :o"), {"o": other})
             await s.commit()
+
+
+async def test_complete_after_midnight_reports_yesterday_via_the_endpoint(
+    client, sessionmaker_for_test, user
+):
+    """Issue #33 at the HTTP layer: with only yesterday's assignment present,
+    POST /v1/daily/complete must succeed and report the day it counted for."""
+    async with sessionmaker_for_test() as s:
+        # assigned_for = the endpoint's local_today (UTC) minus one day.
+        yesterday = await s.scalar(text("select (now() at time zone 'UTC')::date - 1"))
+        await s.execute(text("""
+            insert into public.daily_assignments (id, user_id, concept_id, assigned_for)
+            select gen_random_uuid(), :u, c.id, :d
+              from public.concepts c where c.status = 'published' limit 1
+        """), {"u": user, "d": yesterday})
+        await s.commit()
+
+    response = await client.post("/v1/daily/complete")
+
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["completed"] is True
+    assert body["assigned_for"] == str(yesterday), "counts for the day it was assigned, not the new day"
+
+    async with sessionmaker_for_test() as s:
+        done = await s.scalar(
+            text("""select count(*) from public.daily_assignments
+                     where user_id = :u and assigned_for = :d and completed_at is not null"""),
+            {"u": user, "d": yesterday},
+        )
+    assert done == 1

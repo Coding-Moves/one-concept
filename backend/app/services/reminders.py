@@ -103,6 +103,10 @@ async def send_due_reminders(
     at: datetime | None = None,
 ) -> ReminderResult:
     """One pass: claim every due (user, slot), then push to their devices."""
+    if not 0 < window_minutes < 1440:
+        # At a day or more, a slot's today- and yesterday-occurrences both fit
+        # the window under different dates and every user is double-pushed.
+        raise ValueError("window_minutes must be between 1 and 1439")
     rows = (await session.execute(_DUE, {"window": window_minutes, "at": at})).all()
 
     # Claim per (user, slot); a user with two devices gets both pushes from

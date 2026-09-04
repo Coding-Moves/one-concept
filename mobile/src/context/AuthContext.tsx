@@ -10,7 +10,11 @@ import {
 import { setTokenProvider } from '../api/client';
 import { supabase } from '../lib/supabase';
 import { clearAccountCaches } from '../services/accountCaches';
-import { registerForReminders, syncTimezone } from '../services/notifications';
+import {
+  deregisterForReminders,
+  registerForReminders,
+  syncTimezone,
+} from '../services/notifications';
 
 export interface AuthContextValue {
   loading: boolean;
@@ -109,6 +113,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    // Deregister the push token first — it is an authenticated call, so it
+    // must happen while the session is still valid. Best-effort: reminders
+    // stopping matters less than the sign-out itself succeeding.
+    await deregisterForReminders().catch(() => {});
     // Global sign-out revokes the session server-side, but it needs the
     // network — and a user handing over a shared device must end up signed
     // out either way. Fall back to a local sign-out, which clears the device

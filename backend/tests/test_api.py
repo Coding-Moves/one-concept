@@ -179,3 +179,39 @@ async def test_push_token_deregistration_is_scoped_to_the_caller(client, session
             )
             await s.execute(text("delete from auth.users where id = :o"), {"o": other})
             await s.commit()
+
+
+async def test_bodyless_deregistration_fails_closed(client, sessionmaker_for_test, user):
+    """A stripped DELETE body must drop all of the caller's registrations —
+    never 422 into a silent no-op that leaves reminders following the account."""
+    other = uuid.uuid4()
+    try:
+        async with sessionmaker_for_test() as s:
+            await s.execute(
+                text("insert into auth.users (id, email) values (:id, :e)"),
+                {"id": other, "e": f"{other}@example.invalid"},
+            )
+            await s.execute(text("""
+                insert into public.device_tokens (user_id, expo_push_token, platform)
+                values (:mine, 'ExponentPushToken[bodyless-a]', 'android'),
+                       (:mine, 'ExponentPushToken[bodyless-b]', 'android'),
+                       (:theirs, 'ExponentPushToken[bodyless-c]', 'android')
+            """), {"mine": user, "theirs": other})
+            await s.commit()
+
+        response = await client.request("DELETE", "/v1/me/push-token")
+        assert response.status_code == 204, response.text
+
+        async with sessionmaker_for_test() as s:
+            mine = await s.scalar(text(
+                "select count(*) from public.device_tokens where user_id = :u"), {"u": user})
+            theirs = await s.scalar(text(
+                "select count(*) from public.device_tokens where user_id = :u"), {"u": other})
+        assert mine == 0, "all of the caller's registrations are dropped"
+        assert theirs == 1, "other accounts' registrations are untouched"
+    finally:
+        async with sessionmaker_for_test() as s:
+            await s.execute(
+                text("delete from public.device_tokens where expo_push_token like 'ExponentPushToken[bodyless-%'"))
+            await s.execute(text("delete from auth.users where id = :o"), {"o": other})
+            await s.commit()

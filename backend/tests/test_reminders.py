@@ -220,3 +220,29 @@ async def test_completion_on_the_scheduled_day_silences_the_cross_midnight_slot(
     await session.execute(
         text("delete from public.device_tokens where expo_push_token = 'ExponentPushToken[midnight-3]'"))
     await session.commit()
+
+
+async def test_completing_the_new_day_silences_yesterdays_late_slot(session, user, capture_push):
+    """Finishing today's lesson at 00:02 must stop yesterday's 23:58 nudge at
+    00:05 — past midnight, the push could only lead to a lesson already done."""
+    capture_push()
+    try:
+        await _register_token(session, user, token="ExponentPushToken[midnight-4]")
+        await session.execute(
+            text("update public.notification_preferences set reminder_times = '{23:58}' where user_id = :u"),
+            {"u": user},
+        )
+        await session.commit()
+
+        new_day = datetime(2026, 1, 16, tzinfo=timezone.utc).date()
+        await get_or_create_daily(session, user, today=new_day)
+        await complete_today(session, user, new_day)
+
+        result = await send_due_reminders(
+            session, window_minutes=15, at=datetime(2026, 1, 16, 0, 5, tzinfo=timezone.utc)
+        )
+        assert result.sent == 0, "a finished current day silences yesterday's late slot"
+    finally:
+        await session.execute(
+            text("delete from public.device_tokens where expo_push_token = 'ExponentPushToken[midnight-4]'"))
+        await session.commit()

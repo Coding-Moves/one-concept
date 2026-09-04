@@ -67,6 +67,14 @@ _DUE = text("""
               and da.assigned_for = o.local_date
               and da.completed_at is not null)
        and not exists (
+           -- A finished CURRENT day also silences yesterday's late slot: the
+           -- push says "today's concept is waiting", and past midnight the
+           -- only lesson it can lead to is today's.
+           select 1 from public.daily_assignments da
+            where da.user_id = o.user_id
+              and da.assigned_for = o.local_now::date
+              and da.completed_at is not null)
+       and not exists (
            select 1 from public.reminder_log rl
             where rl.user_id = o.user_id
               and rl.local_date = o.local_date

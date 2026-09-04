@@ -56,6 +56,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 | GET | `/v1/me/stats` | yes | Streaks alone, for other consumers. |
 | PUT | `/v1/me/topics` | yes | Replace the followed set (whole-list semantics, so retries are safe). |
 | PATCH | `/v1/me` | yes | Display name and timezone. Unknown zones are rejected. |
+| GET/PUT | `/v1/me/notifications` | yes | Reminder preferences: enabled flag and 1–3 daily times. |
+| POST | `/v1/me/push-token` | yes | Register (or re-home) this handset's Expo push token. |
+| DELETE | `/v1/me/push-token` | yes | Deregister on sign-out; scoped to the caller's own registration. |
 | PUT/DELETE | `/v1/concepts/{slug}/like` | yes | Like / unlike. |
 | PUT/DELETE | `/v1/concepts/{slug}/save` | yes | Save / unsave. |
 

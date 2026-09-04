@@ -5,6 +5,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 import { CONCEPTS } from '../data/concepts';
@@ -122,20 +123,36 @@ export function ProgressProvider({ children, repository: override }: Props) {
   const hasLearned = useCallback((conceptId: string) => learnedIds.has(conceptId), [learnedIds]);
 
   // Optimistic writes: the screen changes the moment the user acts, the
-  // repository confirms in the background, and a failure rolls the screen
-  // back to what the server last agreed to — never a change that silently
-  // did not persist.
+  // repository confirms in the background, and a failure rolls the screen back
+  // to what the server last agreed to — never a change that silently did not
+  // persist.
+  //
+  // Mutations are serialised on this promise chain. Two overlapping writes used
+  // to clobber each other: each captured a whole-state snapshot, so rolling the
+  // first back restored a state that predated the second (erasing it), and the
+  // success path replaced the whole state last-write-wins regardless of order.
+  // Running one at a time means each mutation captures `before` as the *settled*
+  // result of the previous one, so both its optimistic update and its rollback
+  // compose correctly, and the server snapshot it applies is the latest.
+  const chain = useRef<Promise<void>>(Promise.resolve());
   const apply = useCallback(
-    (optimistic: ((prev: ProgressState) => ProgressState) | null, run: Promise<ProgressState>) => {
-      let before: ProgressState | null = null;
-      if (optimistic) {
-        setProgress((prev) => {
-          before = prev;
-          return optimistic(prev);
-        });
-      }
-      run.then(setProgress).catch(() => {
-        if (before) setProgress(before);
+    (
+      optimistic: ((prev: ProgressState) => ProgressState) | null,
+      run: () => Promise<ProgressState>
+    ) => {
+      chain.current = chain.current.then(async () => {
+        let before: ProgressState | null = null;
+        if (optimistic) {
+          setProgress((prev) => {
+            before = prev;
+            return optimistic(prev);
+          });
+        }
+        try {
+          setProgress(await run());
+        } catch {
+          if (before) setProgress(before);
+        }
       });
     },
     []
@@ -160,7 +177,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
           },
         };
       },
-      repository.markLearned(concept.id, today)
+      () => repository.markLearned(concept.id, today)
     );
   }, [apply, concept, repository, today]);
 
@@ -173,7 +190,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
             ? prev.followedTopics.filter((c) => c !== category)
             : [...prev.followedTopics, category],
         }),
-        repository.toggleTopic(category)
+        () => repository.toggleTopic(category)
       ),
     [apply, repository]
   );
@@ -185,7 +202,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
     (conceptId: string) =>
       apply(
         (prev) => ({ ...prev, likes: flip(prev.likes, conceptId) }),
-        repository.toggleLike(conceptId)
+        () => repository.toggleLike(conceptId)
       ),
     [apply, repository]
   );
@@ -194,7 +211,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
     (conceptId: string) =>
       apply(
         (prev) => ({ ...prev, bookmarks: flip(prev.bookmarks, conceptId) }),
-        repository.toggleBookmark(conceptId)
+        () => repository.toggleBookmark(conceptId)
       ),
     [apply, repository]
   );

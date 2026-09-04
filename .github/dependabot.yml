@@ -17,6 +17,29 @@ updates:
       interval: "weekly"
     open-pull-requests-limit: 10
     labels: ["dependencies", "mobile"]
+    # Expo SDK owns the versions of these packages; their minor/major bumps must
+    # come from a deliberate SDK upgrade, not Dependabot. Accepting them piecemeal
+    # is what broke the v1.3.0 build (async-storage 2->3, react-native 0.86->0.87
+    # merged ahead of the SDK). Allow patch bumps only for the SDK-managed set.
+    ignore:
+      - dependency-name: "expo"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "expo-*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@expo/*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react-native"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react-native-*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@react-native-async-storage/async-storage"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "@react-native/*"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+      - dependency-name: "react-dom"
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
 
   - package-ecosystem: "github-actions"
     directory: "/"

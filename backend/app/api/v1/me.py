@@ -94,6 +94,28 @@ async def register_push_token(
     await db.commit()
 
 
+@router.delete("/push-token", status_code=status.HTTP_204_NO_CONTENT)
+async def deregister_push_token(
+    body: PushTokenIn,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> None:
+    """Stop reminders following an account off a handset it no longer holds.
+
+    Called on sign-out, while the session is still valid. Scoped to the
+    caller's own registration: you cannot deregister someone else's device
+    by guessing their token.
+    """
+    await db.execute(
+        text("""
+            delete from public.device_tokens
+             where expo_push_token = :token and user_id = :uid
+        """),
+        {"token": body.expo_push_token, "uid": user.id},
+    )
+    await db.commit()
+
+
 async def _load_prefs(db: AsyncSession, user_id) -> NotificationPrefs:
     row = (await db.execute(
         text("select enabled, reminder_times from public.notification_preferences where user_id = :uid"),

@@ -1,5 +1,7 @@
-# OTA-updates the production channel whenever mobile JS/UI/assets change on main.
-# Native changes (new native modules, app.json native config) need a new build
+# OTA updates follow the branch model: merging mobile changes to develop
+# publishes to the preview channel (preview-profile builds — the developer's
+# own device), and a release merged to main publishes to production. Native
+# changes (new native modules, app.json native config) need a new build
 # instead — see mobile/DEPLOYMENT.md.
 #
 # Requires the EXPO_TOKEN repository secret (Expo access token). Until it is
@@ -8,17 +10,17 @@ name: EAS Update (OTA)
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - "mobile/**"
       - "!mobile/**.md"
   workflow_dispatch:
     inputs:
       channel:
-        description: "Update channel"
+        description: "Update channel (manual runs only)"
         type: choice
-        default: production
-        options: [production, preview]
+        default: preview
+        options: [preview, production]
 
 jobs:
   update:
@@ -45,11 +47,15 @@ jobs:
       # --environment pulls the EXPO_PUBLIC_* variables from EAS into the
       # bundle; without it the update ships with empty config and crashes.
       - name: Publish OTA update (production)
-        if: github.event_name == 'push' || github.event.inputs.channel == 'production'
+        if: >-
+          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'production')
         run: eas update --channel production --environment production --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive
 
-      # Preview-profile APKs (sideloaded phones) listen on the preview channel;
-      # publishing there too keeps them in sync with production.
+      # A push to either branch refreshes preview (so a release never leaves
+      # preview devices behind); a manual run publishes only the chosen channel.
       - name: Publish OTA update (preview)
-        if: github.event_name == 'push' || github.event.inputs.channel == 'preview'
+        if: >-
+          (github.event_name == 'push') ||
+          (github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'preview')
         run: eas update --channel preview --environment preview --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive

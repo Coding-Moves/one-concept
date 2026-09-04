@@ -1,0 +1,50 @@
+# Merging a release PR into main cuts a versioned release: the tag and the
+# GitHub Release are created from the app version in mobile/app.json, with
+# auto-generated notes. A merge that did not bump the version fails loudly
+# rather than passing green with nothing released.
+name: Release
+
+on:
+  push:
+    branches: [main]
+
+# One release at a time: two quick merges must not race the tag check.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read the version
+        id: version
+        run: echo "v=$(python3 -c "import json; print(json.load(open('mobile/app.json'))['expo']['version'])")" >> "$GITHUB_OUTPUT"
+
+      - name: Create the tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Passed through the environment, never interpolated into the script,
+          # so a version string can never inject shell.
+          VERSION: ${{ steps.version.outputs.v }}
+        run: |
+          set -euo pipefail
+          TAG="v${VERSION}"
+
+          # A git tag already at this version means the release PR did not bump
+          # mobile/app.json — fail so the omission is visible, not silent.
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "::error::Tag ${TAG} already exists — bump expo.version in the release PR." >&2
+            exit 1
+          fi
+
+          gh release create "$TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "One Concept $TAG" \
+            --generate-notes

@@ -6,12 +6,24 @@ Thanks for your interest in contributing! We welcome issues, bug reports, featur
 - Search existing issues first to avoid duplicates.
 - When opening a new issue, include a short title, a description of the problem or feature, steps to reproduce (if applicable), and the expected behavior.
 
+## Branch model and releases
+
+- **`develop`** is the default branch. All feature and fix PRs target it.
+- **`main`** is production. Only release PRs (develop → main) merge into it.
+- Merging a release PR tags the commit and publishes a GitHub Release named
+  after the app version in `mobile/app.json` — bump that version as part of
+  the release PR. Backend deploys and the production OTA update follow the
+  merge automatically; develop merges update the preview channel only.
+- A native mobile change (new native module, icons, `app.json` native config)
+  additionally needs a new APK build and a manual `runtimeVersion` bump — see
+  `mobile/DEPLOYMENT.md`.
+
 ## Contributing code
 1. Fork the repository.
 2. Create a descriptive branch: `fix/short-description` or `feat/short-description`.
 3. Make small, focused changes and add tests where appropriate.
 4. Run the project's tests and linters (if present) before committing.
-5. Open a pull request against the `main` branch with a clear description of what you changed and why.
+5. Open a pull request against the `develop` branch with a clear description of what you changed and why.
 
 ## Coding style
 - This repository primarily uses TypeScript and Python. Please follow the project's existing style.

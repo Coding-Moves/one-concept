@@ -9,7 +9,7 @@ reaches installed phones without a reinstall.
 - **Channels** — every build is pinned to a channel (`development`, `preview`,
   `production` in [eas.json](eas.json)). `eas update --channel X` publishes only
   to builds from channel X, so production phones never receive preview code.
-- **Runtime version** — pinned explicitly in [app.json](app.json), decoupled
+- **Runtime version** — pinned explicitly in [app.config.js](app.config.js), decoupled
   from the marketing `version` (which release PRs bump freely). An update is
   only delivered to builds with the same `runtimeVersion`. **Bump
   `runtimeVersion` by hand whenever you add/remove a native module or change
@@ -26,10 +26,15 @@ reaches installed phones without a reinstall.
 cd mobile
 npm i -g eas-cli        # or use npx eas-cli
 eas login
-eas init                # links Coding-Moves/one-concept to an EAS project,
-                        # writes the real projectId into app.json
-eas update:configure    # writes updates.url (https://u.expo.dev/<projectId>)
+eas init                # links the project and reports the projectId
+eas update:configure    # reports updates.url (https://u.expo.dev/<projectId>)
 ```
+
+Config lives in a dynamic `app.config.js` (there is no `app.json`), which the
+EAS CLI cannot write to. `eas init` / `eas update:configure` therefore print
+the `projectId` and `updates.url` for you to paste into `app.config.js` by
+hand rather than editing a file. (This project's values are already set — this
+section is only for standing up a brand-new EAS project.)
 
 Then create the environment variables for each environment (values from
 `.env.example`; the Supabase anon key is public by design, but the production
@@ -64,11 +69,11 @@ npm run update:preview           # eas update --channel preview
 
 Installed apps fetch the update on next launch (`checkAutomatically: ON_LOAD`).
 
-## Native change (new native dependency, plugin, icons, app.json native config)
+## Native change (new native dependency, plugin, icons, native app config)
 
 OTA cannot ship native code. Instead:
 
-1. Bump `expo.version` in [app.json](app.json) (e.g. 1.0.0 → 1.1.0).
+1. Bump `expo.version` in [app.config.js](app.config.js) (e.g. 1.0.0 → 1.1.0), and set `runtimeVersion` to match the new build.
 2. `eas build --platform android --profile production` (and/or `preview`).
 3. Reinstall the new binary on devices; subsequent OTA updates target the new
    runtime version.

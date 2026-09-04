@@ -11,10 +11,10 @@ Thanks for your interest in contributing! We welcome issues, bug reports, featur
 - **`develop`** is the default branch. All feature and fix PRs target it.
 - **`main`** is production. Only release PRs (develop → main) merge into it.
 - Merging a release PR tags the commit and publishes a GitHub Release named
-  after the app version in `mobile/app.json` — bump that version as part of
+  after the app version in `mobile/app.config.js` — bump that version as part of
   the release PR. Backend deploys and the production OTA update follow the
   merge automatically; develop merges update the preview channel only.
-- A native mobile change (new native module, icons, `app.json` native config)
+- A native mobile change (new native module, icons, native app config)
   additionally needs a new APK build and a manual `runtimeVersion` bump — see
   `mobile/DEPLOYMENT.md`.
 

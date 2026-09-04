@@ -54,25 +54,32 @@ function toProgressState(payload: StatePayload): ProgressState {
  */
 export class RemoteProgressRepository implements ProgressRepository {
   private cache: ProgressState = EMPTY_PROGRESS;
+  // Bumped by forget(). An operation captures the epoch when it starts; if a
+  // wipe happened while its request was in flight, its late result must not
+  // be re-persisted — that would resurrect the signed-out account's data.
+  private epoch = 0;
 
-  private async remember(state: ProgressState): Promise<ProgressState> {
+  private async remember(state: ProgressState, epoch: number): Promise<ProgressState> {
+    if (epoch !== this.epoch) return state;
     this.cache = state;
     AsyncStorage.setItem(CACHE_KEY, JSON.stringify(state)).catch(() => {});
     return state;
   }
 
-  private async fromState(payload: StatePayload): Promise<ProgressState> {
-    return this.remember(toProgressState(payload));
+  private async fromState(payload: StatePayload, epoch: number): Promise<ProgressState> {
+    return this.remember(toProgressState(payload), epoch);
   }
 
   /** Drop the in-memory state; the module singleton outlives a sign-out. */
   forget(): void {
+    this.epoch += 1;
     this.cache = EMPTY_PROGRESS;
   }
 
   async loadCached(): Promise<ProgressState | null> {
+    const epoch = this.epoch;
     const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
-    if (!raw) return null;
+    if (!raw || epoch !== this.epoch) return null;
     try {
       this.cache = JSON.parse(raw) as ProgressState;
       return this.cache;
@@ -82,11 +89,12 @@ export class RemoteProgressRepository implements ProgressRepository {
   }
 
   async load(): Promise<ProgressState> {
+    const epoch = this.epoch;
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'));
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
     } catch {
       const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
-      if (raw) {
+      if (raw && epoch === this.epoch) {
         this.cache = JSON.parse(raw) as ProgressState;
         return this.cache;
       }
@@ -100,6 +108,7 @@ export class RemoteProgressRepository implements ProgressRepository {
   }
 
   async markLearned(): Promise<ProgressState> {
+    const epoch = this.epoch;
     // The response already carries the day and fresh streaks — merging it
     // saves a second round trip, which on a distant connection is the
     // difference between an instant tick and a multi-second stall.
@@ -123,10 +132,11 @@ export class RemoteProgressRepository implements ProgressRepository {
         longest: done.stats.longest,
         totalLearned: done.stats.total_learned,
       },
-    });
+    }, epoch);
   }
 
   async toggleTopic(category: Category): Promise<ProgressState> {
+    const epoch = this.epoch;
     const following = this.cache.followedTopics.includes(category);
     const next = following
       ? this.cache.followedTopics.filter((c) => c !== category)
@@ -137,7 +147,7 @@ export class RemoteProgressRepository implements ProgressRepository {
       method: 'PUT',
       body: { topics: next.map(toSlug) },
     });
-    return this.fromState(payload);
+    return this.fromState(payload, epoch);
   }
 
   private async toggle(
@@ -153,6 +163,7 @@ export class RemoteProgressRepository implements ProgressRepository {
   // A 2xx from a PUT/DELETE toggle confirms exactly the change we asked for,
   // so the cache can be patched in place — no full-state reload.
   async toggleLike(conceptId: string): Promise<ProgressState> {
+    const epoch = this.epoch;
     const currently = this.cache.likes.includes(conceptId);
     await this.toggle(conceptId, 'like', currently);
     return this.remember({
@@ -160,10 +171,11 @@ export class RemoteProgressRepository implements ProgressRepository {
       likes: currently
         ? this.cache.likes.filter((id) => id !== conceptId)
         : [...this.cache.likes, conceptId],
-    });
+    }, epoch);
   }
 
   async toggleBookmark(conceptId: string): Promise<ProgressState> {
+    const epoch = this.epoch;
     const currently = this.cache.bookmarks.includes(conceptId);
     await this.toggle(conceptId, 'save', currently);
     return this.remember({
@@ -171,7 +183,7 @@ export class RemoteProgressRepository implements ProgressRepository {
       bookmarks: currently
         ? this.cache.bookmarks.filter((id) => id !== conceptId)
         : [...this.cache.bookmarks, conceptId],
-    });
+    }, epoch);
   }
 }
 

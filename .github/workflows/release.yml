@@ -1,7 +1,8 @@
-# Merging a release PR into main cuts a versioned release: the tag and the
-# GitHub Release are created from the app version in mobile/app.json, with
-# auto-generated notes. A merge that did not bump the version fails loudly
-# rather than passing green with nothing released.
+# Merging a release PR into main cuts a versioned release. The production OTA
+# publishes FIRST; the tag and GitHub Release are created only if that publish
+# succeeds, so a Release can never claim a version that never reached phones.
+# (Railway deploys the backend independently on the same push — see
+# mobile/DEPLOYMENT.md; it is not gated here.)
 name: Release
 
 on:
@@ -17,7 +18,42 @@ permissions:
   contents: write
 
 jobs:
+  ota:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+
+      # Production first, then preview so preview devices are never left
+      # behind a production release. --environment bundles the EXPO_PUBLIC_*
+      # values; without it the update ships empty config and crashes.
+      - name: Publish production OTA
+        env:
+          MSG: ${{ github.event.head_commit.message || 'release' }}
+        run: eas update --channel production --environment production --message "$MSG" --non-interactive
+
+      - name: Publish preview OTA
+        env:
+          MSG: ${{ github.event.head_commit.message || 'release' }}
+        run: eas update --channel preview --environment preview --message "$MSG" --non-interactive
+
   release:
+    needs: ota
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -43,8 +79,20 @@ jobs:
             exit 1
           fi
 
+          # Generate the notes WITHOUT creating anything, prepend the install
+          # path (OTA-only releases attach no APK), then create the release in
+          # one mutating call — so the ls-remote guard above makes the whole
+          # step safely re-runnable after a transient failure.
+          notes=$(gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" --jq .body)
+          {
+            echo "**Install:** download the current APK from the \"Install the app\" section of the README. This release reaches installed apps over the air — no reinstall unless a native change shipped."
+            echo
+            echo "$notes"
+          } > release-notes.md
+
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "One Concept $TAG" \
-            --generate-notes
+            --notes-file release-notes.md

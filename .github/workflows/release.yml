@@ -43,10 +43,14 @@ jobs:
       # behind a production release. --environment bundles the EXPO_PUBLIC_*
       # values; without it the update ships empty config and crashes.
       - name: Publish production OTA
-        run: eas update --channel production --environment production --message "${{ github.event.head_commit.message || 'release' }}" --non-interactive
+        env:
+          MSG: ${{ github.event.head_commit.message || 'release' }}
+        run: eas update --channel production --environment production --message "$MSG" --non-interactive
 
       - name: Publish preview OTA
-        run: eas update --channel preview --environment preview --message "${{ github.event.head_commit.message || 'release' }}" --non-interactive
+        env:
+          MSG: ${{ github.event.head_commit.message || 'release' }}
+        run: eas update --channel preview --environment preview --message "$MSG" --non-interactive
 
   release:
     needs: ota
@@ -75,18 +79,20 @@ jobs:
             exit 1
           fi
 
+          # Generate the notes WITHOUT creating anything, prepend the install
+          # path (OTA-only releases attach no APK), then create the release in
+          # one mutating call — so the ls-remote guard above makes the whole
+          # step safely re-runnable after a transient failure.
+          notes=$(gh api "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="$TAG" -f target_commitish="$GITHUB_SHA" --jq .body)
+          {
+            echo "**Install:** download the current APK from the \"Install the app\" section of the README. This release reaches installed apps over the air — no reinstall unless a native change shipped."
+            echo
+            echo "$notes"
+          } > release-notes.md
+
           gh release create "$TAG" \
             --repo "$GITHUB_REPOSITORY" \
             --target "$GITHUB_SHA" \
             --title "One Concept $TAG" \
-            --generate-notes
-
-          # Prepend the install path: OTA-only releases attach no APK, so point
-          # readers at the current binary rather than leaving them stranded.
-          body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body)
-          {
-            echo "**Install:** download the current APK from the \"Install the app\" section of the README. This release reaches installed apps over the air — no reinstall unless a native change shipped."
-            echo
-            echo "$body"
-          } > release-notes.md
-          gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --notes-file release-notes.md
+            --notes-file release-notes.md

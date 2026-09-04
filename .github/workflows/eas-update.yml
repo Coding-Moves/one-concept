@@ -48,7 +48,9 @@ jobs:
       # bundle; without it the update ships with empty config and crashes.
       - name: Publish OTA update (production)
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'production'
-        run: eas update --channel production --environment production --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive
+        env:
+          MSG: ${{ github.event.head_commit.message || 'manual dispatch' }}
+        run: eas update --channel production --environment production --message "$MSG" --non-interactive
 
       # A push to develop refreshes preview; a manual run publishes only the
       # chosen channel.
@@ -56,4 +58,6 @@ jobs:
         if: >-
           (github.event_name == 'push') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'preview')
-        run: eas update --channel preview --environment preview --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive
+        env:
+          MSG: ${{ github.event.head_commit.message || 'manual dispatch' }}
+        run: eas update --channel preview --environment preview --message "$MSG" --non-interactive

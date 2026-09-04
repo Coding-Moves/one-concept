@@ -1,0 +1,159 @@
+# Weekly (and on release to main) security + code-quality audit.
+#
+# Detect-only by design: it NEVER changes code or opens fix PRs — Dependabot
+# owns dependency-update PRs, so the two cannot collide or double-notify. When
+# a scan finds something, it files a single deduplicated issue (one open per
+# concern) and closes nothing; actual fixes go through normal PRs.
+#
+# Every scan runs regardless of the others' results (each captures its own
+# status instead of failing the job), so one clean report never hides another.
+#
+# No secrets required — GITHUB_TOKEN with the permissions below is enough.
+name: Security & Code Audit
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # Mondays 00:00 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Prepare report directory
+        run: mkdir -p reports
+
+      # --- backend: dependency vulnerabilities ---------------------------------
+      - name: pip-audit (backend dependencies)
+        id: pip_audit
+        run: |
+          python -m pip install --quiet pip-audit
+          if pip-audit -r backend/requirements.txt -r backend/requirements-dev.txt \
+               > reports/pip-audit.txt 2>&1; then
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=findings" >> "$GITHUB_OUTPUT"
+          fi
+          cat reports/pip-audit.txt
+
+      # --- backend: real-bug lint (pyflakes + syntax; high signal, not style) --
+      - name: ruff (backend lint)
+        id: ruff
+        run: |
+          python -m pip install --quiet ruff
+          if ruff check --select F,E9 backend > reports/ruff.txt 2>&1; then
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=findings" >> "$GITHUB_OUTPUT"
+          fi
+          cat reports/ruff.txt
+
+      # --- mobile: dependency vulnerabilities ----------------------------------
+      - name: npm audit (mobile dependencies)
+        id: npm_audit
+        working-directory: mobile
+        run: |
+          if npm audit --audit-level=high > ../reports/npm-audit.txt 2>&1; then
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=findings" >> "$GITHUB_OUTPUT"
+          fi
+          cat ../reports/npm-audit.txt
+
+      # --- mobile: type errors -------------------------------------------------
+      - name: tsc (mobile typecheck)
+        id: tsc
+        working-directory: mobile
+        run: |
+          npm ci
+          if npx tsc --noEmit > ../reports/tsc.txt 2>&1; then
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=findings" >> "$GITHUB_OUTPUT"
+          fi
+          cat ../reports/tsc.txt
+
+      # --- file ONE deduplicated security issue --------------------------------
+      - name: File security findings
+        if: steps.pip_audit.outputs.status == 'findings' || steps.npm_audit.outputs.status == 'findings'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" \
+                   --label automated-issue --label security --state open \
+                   --json number --jq 'length')
+          if [ "$open" -gt 0 ]; then
+            echo "A security audit issue is already open — not duplicating."
+            exit 0
+          fi
+          {
+            echo "The weekly audit found dependency vulnerabilities. Fix via the"
+            echo "relevant Dependabot PR or a manual bump, then close this issue."
+            echo
+            echo "### pip-audit (backend)"
+            echo '```'
+            head -c 8000 reports/pip-audit.txt
+            echo '```'
+            echo "### npm audit (mobile, high+)"
+            echo '```'
+            head -c 8000 reports/npm-audit.txt
+            echo '```'
+          } > security-body.md
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Security audit: vulnerable dependencies" \
+            --label automated-issue --label security \
+            --body-file security-body.md
+
+      # --- file ONE deduplicated code-quality issue ----------------------------
+      - name: File code-quality findings
+        if: steps.ruff.outputs.status == 'findings' || steps.tsc.outputs.status == 'findings'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" \
+                   --label automated-issue --label code-quality --state open \
+                   --json number --jq 'length')
+          if [ "$open" -gt 0 ]; then
+            echo "A code-quality audit issue is already open — not duplicating."
+            exit 0
+          fi
+          {
+            echo "The weekly audit found lint or type problems."
+            echo
+            echo "### ruff (backend, pyflakes + syntax)"
+            echo '```'
+            head -c 8000 reports/ruff.txt
+            echo '```'
+            echo "### tsc (mobile)"
+            echo '```'
+            head -c 8000 reports/tsc.txt
+            echo '```'
+          } > quality-body.md
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Code quality: lint / type findings" \
+            --label automated-issue --label code-quality \
+            --body-file quality-body.md

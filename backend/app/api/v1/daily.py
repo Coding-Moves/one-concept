@@ -75,9 +75,11 @@ async def complete(
     Repeating the call is a no-op rather than an error.
     """
     today = await local_today(db, user.id)
-    await complete_today(db, user.id, today)
+    completion = await complete_today(db, user.id, today)
+    # assigned_for is the day it counts towards (yesterday's, just past
+    # midnight); streaks still use today to decide whether the run is current.
     return CompletedOut(
         completed=True,
-        assigned_for=today,
+        assigned_for=completion.assigned_for,
         stats=StreakOut(**vars(await compute_streaks(db, user.id, today))),
     )

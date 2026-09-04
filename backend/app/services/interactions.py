@@ -1,6 +1,8 @@
 """Likes, saves, completion, and topic follows — every write the app makes."""
 
 import uuid
+from dataclasses import dataclass
+from datetime import date, datetime
 
 from fastapi import HTTPException, status
 from sqlalchemy import text
@@ -35,24 +37,47 @@ async def set_interaction(
     await session.commit()
 
 
+# Complete the most recent assignment from today or yesterday. The one-day
+# grace covers the midnight crossing: a concept read at 23:58 and marked at
+# 00:01 has no assignment for the new day yet, so a strict `= today` match
+# updated zero rows and the day's streak broke (issue #33). The window stops
+# at yesterday, so a genuinely missed older day cannot be back-completed to
+# repair a streak. `coalesce` keeps completion idempotent, and the actual
+# `assigned_for` is returned so the caller reports the day it counts for.
 _COMPLETE = text("""
     update public.daily_assignments
        set completed_at = coalesce(completed_at, now())
-     where user_id = :uid and assigned_for = :today
-    returning completed_at
+     where id = (
+         select id from public.daily_assignments
+          where user_id = :uid
+            and assigned_for in (cast(:today as date), cast(:today as date) - 1)
+          order by assigned_for desc
+          limit 1
+     )
+    returning assigned_for, completed_at
 """)
 
 
-async def complete_today(session: AsyncSession, user_id: uuid.UUID, today) -> str:
-    """Mark today's concept learned. The timestamp is the server's, not the client's."""
-    completed = (await session.execute(_COMPLETE, {"uid": user_id, "today": today})).scalar_one_or_none()
-    if completed is None:
+@dataclass
+class Completion:
+    assigned_for: date
+    completed_at: datetime
+
+
+async def complete_today(session: AsyncSession, user_id: uuid.UUID, today) -> Completion:
+    """Mark the current (or just-past-midnight) concept learned.
+
+    The timestamp is the server's, not the client's, and the returned
+    `assigned_for` is the day the completion counts towards.
+    """
+    row = (await session.execute(_COMPLETE, {"uid": user_id, "today": today})).first()
+    if row is None:
         raise HTTPException(
             status.HTTP_404_NOT_FOUND,
-            detail="No concept has been assigned for today yet. Fetch /v1/daily first.",
+            detail="No concept has been assigned recently. Fetch /v1/daily first.",
         )
     await session.commit()
-    return completed
+    return Completion(assigned_for=row.assigned_for, completed_at=row.completed_at)
 
 
 async def set_followed_topics(

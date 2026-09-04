@@ -12,7 +12,6 @@ import httpx
 import pytest
 from sqlalchemy import text
 
-from app.config import get_settings
 from app.services import generation, pool, selection
 from app.services.generation import GenerationError, RateLimitedError, build_prompt, generate_concept, validate
 from app.services.interactions import set_followed_topics
@@ -314,26 +313,24 @@ async def test_top_up_fills_only_topics_below_the_threshold(session, patch_httpx
     assert short == [], f"topics left below the threshold: {short}"
 
 
-async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_httpx, monkeypatch):
-    """Issue #29 goal: with follows persisting, a user who has read every
-    published lesson in their only topic gets an on-demand generated lesson
-    from that same topic — never a silent widening to other topics."""
+async def test_dry_followed_topic_schedules_prefetch_not_inline_generation(
+    session, user, monkeypatch
+):
+    """Issue #43: the request never calls Gemini inline. When a followed topic
+    runs dry, selection schedules a background prefetch for it and serves today
+    from the wider catalog (or reports exhaustion) — it does not block on a
+    2–4 s generation. (This supersedes the synchronous on-demand path from #29:
+    the pool is meant to refill ahead of demand, not on the request thread.)"""
     from tests.test_selection import DAY
 
-    patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
-
-    # A real Settings copy, so new fields selection reads are always present.
-    stub = get_settings().model_copy(update={
-        "generation_on_demand": True,
-        "generation_enabled": True,
-        "gemini_api_key": "test-key",
-        "gemini_model": "gemini-2.0-flash",
-    })
-    monkeypatch.setattr(selection, "get_settings", lambda: stub)
+    # Record prefetch requests instead of spawning a real background task, so the
+    # test asserts intent without a detached generation running past its end.
+    prefetched: list = []
+    monkeypatch.setattr(selection, "request_prefetch", lambda tid: prefetched.append(tid))
 
     await set_followed_topics(session, user, ["linux-systems"])
-    # A dedicated pending backlog row, so this test cannot flake when earlier
-    # top-up tests happen to have drained the shared linux-systems backlog.
+    # A pending backlog row means the dry-topic branch has a topic to prefetch,
+    # regardless of what earlier tests left in the shared backlog.
     await session.execute(text("""
         insert into public.concept_backlog (topic_id, slug, title, status)
         select t.id, 'test-ondemand-linux', 'Test On-Demand Linux', 'pending'
@@ -348,21 +345,23 @@ async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_
          where t.slug = 'linux-systems' and c.status = 'published'
     """))
 
-    # Drain the shelf: one lesson a day, all from the followed topic.
+    # Drain the followed shelf: one lesson a day, all from the followed topic.
     for offset in range(published):
         result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
         assert result.status == "ok"
         assert result.concept.topic_slug == "linux-systems"
         assert result.outside_followed_topics is False
 
-    # The shelf is dry — the next day must come from generation, same topic.
-    beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=published))
-    assert beyond.status == "ok"
-    assert beyond.concept.topic_slug == "linux-systems", "generation must stay in the followed topic"
-    assert beyond.outside_followed_topics is False
-
-    source = await session.scalar(
-        text("select source from public.concepts where slug = :s"),
-        {"s": beyond.concept.slug},
+    linux_topic_id = await session.scalar(
+        text("select id from public.topics where slug = 'linux-systems'")
     )
-    assert source == "gemini", "the new lesson was written on demand"
+
+    # The day past the shelf: no inline generation. Selection widens to the
+    # catalog for today (flagged) or reports exhaustion, and has asked to
+    # prefetch linux-systems ahead of demand.
+    beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=published))
+    if beyond.status == "ok":
+        assert beyond.outside_followed_topics is True, "a dry topic widens, never generates inline"
+    else:
+        assert beyond.status == "exhausted"
+    assert linux_topic_id in prefetched, "selection must schedule a prefetch for the dry topic"

@@ -9,6 +9,10 @@ The rules, in order:
      user following five topics gets a visibly varied week instead of whichever
      topic happens to hold the most content.
   4. Persist, tolerating the race where two devices ask at the same moment.
+
+Generation never happens on this path. When a followed topic is running low, or
+has just run dry, selection asks the prefetch service to top it up in the
+background; the request itself only ever reads already-published rows (#43).
 """
 
 import uuid
@@ -19,9 +23,7 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import get_settings
-from app.services.generation import RateLimitedError
-from app.services.pool import generate_one
+from app.services.prefetch import LOW_WATERMARK, request_prefetch
 
 
 @dataclass
@@ -115,23 +117,20 @@ _FOLLOWED_TOPIC_BY_STALENESS = text("""
 """)
 
 
-async def _generate_for_user(session: AsyncSession, user_id) -> uuid.UUID | None:
-    """Last-resort generation for a user whose followed pool has run dry."""
-    settings = get_settings()
-    if not (settings.generation_on_demand and settings.generation_enabled and settings.gemini_api_key):
-        return None
-
-    topic_id = (
-        await session.execute(_FOLLOWED_TOPIC_BY_STALENESS, {"uid": user_id})
-    ).scalar_one_or_none()
-    if topic_id is None:
-        return None
-
-    try:
-        return await generate_one(session, settings.gemini_api_key, settings.gemini_model, topic_id)
-    except RateLimitedError:
-        # A throttled request must degrade to "nothing new today", not a 500.
-        return None
+# Published concepts still unread by this user in the topic of the concept we
+# just assigned. When this is low we prefetch that topic ahead of demand, so the
+# pool refills before it ever runs dry — no generation on the request path.
+_TOPIC_UNREAD = text("""
+    with target as (select topic_id from public.concepts where id = :cid)
+    select (select topic_id from target) as topic_id,
+           (select count(*)
+              from public.concepts c
+             where c.status = 'published'
+               and c.topic_id = (select topic_id from target)
+               and not exists (
+                   select 1 from public.daily_assignments a
+                    where a.user_id = :uid and a.concept_id = c.id))::int as unread
+""")
 
 
 def _row_to_result(row, outside: bool) -> DailyResult:
@@ -175,13 +174,15 @@ async def get_or_create_daily(
     ).scalar_one_or_none()
 
     if concept_id is None:
-        # The followed pool is dry. Try to write a new concept in one of the
-        # user's own topics before resorting to something off-topic — the
-        # background worker should normally have done this already, so this is
-        # the safety net rather than the common path.
-        concept_id = await _generate_for_user(session, user_id)
+        # The followed pool is dry. Kick off a background top-up for the user's
+        # stalest followed topic so coming days are covered, then widen to the
+        # whole catalog for today — never block the response on Gemini (#43).
+        stale_topic = (
+            await session.execute(_FOLLOWED_TOPIC_BY_STALENESS, {"uid": user_id})
+        ).scalar_one_or_none()
+        if stale_topic is not None:
+            request_prefetch(stale_topic)
 
-    if concept_id is None:
         outside = True
         concept_id = (
             await session.execute(_CANDIDATE, {"uid": user_id, "ignore_follows": True})
@@ -210,6 +211,15 @@ async def get_or_create_daily(
         if row:
             return _row_to_result(row, outside=False)
         return DailyResult(status="exhausted", assigned_for=today)
+
+    # Nearing the end of a followed topic? Top it up ahead of demand so the pool
+    # refills before it ever runs dry — a fire-and-forget task, not a wait (#43).
+    if not outside:
+        watermark = (
+            await session.execute(_TOPIC_UNREAD, {"uid": user_id, "cid": concept_id})
+        ).first()
+        if watermark and watermark.topic_id is not None and watermark.unread <= LOW_WATERMARK:
+            request_prefetch(watermark.topic_id)
 
     row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).one()
     return _row_to_result(row, outside=outside)

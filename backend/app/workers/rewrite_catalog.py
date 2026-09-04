@@ -47,6 +47,11 @@ async def main() -> None:
 
     async with SessionLocal() as session:
         todo = (await session.execute(_TODO, {"pv": PROMPT_VERSION})).all()
+        # Close the read transaction before the paced generation loop begins:
+        # otherwise this initial SELECT's transaction stays open across every
+        # Gemini call, pace sleep, and rate-limit backoff below, pinning a server
+        # connection on the transaction pooler for the entire (long) run.
+        await session.commit()
         log.info("%s lessons to rewrite with prompt %s", len(todo), PROMPT_VERSION)
 
         rewritten = failed = 0

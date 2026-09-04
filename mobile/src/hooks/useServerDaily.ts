@@ -11,12 +11,17 @@ export interface ServerDaily {
 /** Today's concept as decided by the backend, for signed-in users. */
 export function useServerDaily(): ServerDaily {
   const { session } = useAuth();
+  // Key the effect on the user id, not the session object: supabase hands back
+  // a brand-new session object on every TOKEN_REFRESHED (roughly hourly, and on
+  // every foreground), which would otherwise refetch /v1/daily each time even
+  // though the signed-in user has not changed.
+  const userId = session?.user?.id ?? null;
   const [outcome, setOutcome] = useState<DailyOutcome | null>(null);
   const [loading, setLoading] = useState(true);
   const [nonce, setNonce] = useState(0);
 
   useEffect(() => {
-    if (!session) {
+    if (!userId) {
       setOutcome(null);
       setLoading(false);
       return;
@@ -43,7 +48,7 @@ export function useServerDaily(): ServerDaily {
     return () => {
       cancelled = true;
     };
-  }, [session, nonce]);
+  }, [userId, nonce]);
 
   const refresh = useCallback(() => setNonce((n) => n + 1), []);
 

@@ -177,10 +177,15 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_schema.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_rls.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_seed_topics.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_seed_concepts.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_concept_backlog.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0006_seed_backlog.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0007_reminder_log.sql
 ```
 
-Each file is wrapped in a transaction, and the seeds are idempotent — re-running
-them updates rows in place rather than duplicating.
+Applying only through `0004` leaves a schema with no generation backlog and no
+reminder log — the pool worker and the reminders worker both need the later
+files. Each file is wrapped in a transaction, and the seeds are idempotent —
+re-running them updates rows in place rather than duplicating.
 
 ## What the schema guarantees
 
@@ -212,5 +217,5 @@ today pending, day missed), and RLS isolation between two users.
 **Railway**, from `backend/Dockerfile` (see `railway.json`). Set every variable
 from `.env.example` in Railway's variable store — never in the image, never in
 git. Point the health check at `/health`, and set `ENVIRONMENT=production` to
-disable `/docs`. A cron worker for pool top-up and reminders joins later, in
-Phases 6 and 7.
+disable both `/docs` and `/openapi.json` (the raw schema). A cron worker for
+pool top-up and reminders joins later, in Phases 6 and 7.

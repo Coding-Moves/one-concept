@@ -85,7 +85,7 @@ jobs:
           # readers at the current binary rather than leaving them stranded.
           body=$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json body -q .body)
           {
-            echo "**Install:** download the current APK from the [README](../blob/main/README.md#-install-the-app-android). This release reaches installed apps over the air — no reinstall unless a native change shipped."
+            echo "**Install:** download the current APK from the \"Install the app\" section of the README. This release reaches installed apps over the air — no reinstall unless a native change shipped."
             echo
             echo "$body"
           } > release-notes.md

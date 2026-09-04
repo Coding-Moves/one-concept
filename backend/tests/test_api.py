@@ -287,3 +287,17 @@ async def test_patch_valid_timezone_and_name_apply_together(client, sessionmaker
             text("select timezone, display_name from public.profiles where id = :u"), {"u": user}
         )).one()
     assert (row.timezone, row.display_name) == ("Asia/Karachi", "Muawiya")
+
+
+async def test_patch_lowercase_timezone_is_accepted_and_normalized(client, sessionmaker_for_test, user):
+    """Postgres zone lookups are case-insensitive; a valid but lowercase zone
+    must be accepted and stored in its canonical spelling, not 400'd."""
+    response = await client.patch("/v1/me", json={"timezone": "asia/karachi"})
+    assert response.status_code == 200, response.text
+    assert response.json()["timezone"] == "Asia/Karachi"
+
+    async with sessionmaker_for_test() as s:
+        stored = await s.scalar(
+            text("select timezone from public.profiles where id = :u"), {"u": user}
+        )
+    assert stored == "Asia/Karachi", "the canonical name is stored, not the input casing"

@@ -102,3 +102,8 @@ export async function putNotificationPrefs(prefs: NotificationPrefs): Promise<No
     await apiRequest<NotificationPrefs>('/v1/me/notifications', { method: 'PUT', body: prefs })
   );
 }
+
+/** Called on sign-out; reminder times are account data, not device data. */
+export async function clearNotificationPrefsCache(): Promise<void> {
+  await AsyncStorage.removeItem(PREFS_CACHE_KEY).catch(() => {});
+}

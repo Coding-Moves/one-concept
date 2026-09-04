@@ -109,7 +109,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await supabase.auth.signOut();
+    // Global sign-out revokes the session server-side, but it needs the
+    // network — and a user handing over a shared device must end up signed
+    // out either way. Fall back to a local sign-out, which clears the device
+    // session and fires SIGNED_OUT (and the cache wipe) without a connection.
+    const { error } = await supabase.auth.signOut();
+    if (error) await supabase.auth.signOut({ scope: 'local' });
   }, []);
 
   const value: AuthContextValue = {

@@ -58,6 +58,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Explicit node (the ota job has its own) so the version read below does
+      # not silently depend on whatever the runner image preinstalls.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
       - name: Read the version
         id: version
         run: echo "v=$(node -p "require('./mobile/app.config.js').expo.version")" >> "$GITHUB_OUTPUT"
@@ -70,6 +76,14 @@ jobs:
           VERSION: ${{ steps.version.outputs.v }}
         run: |
           set -euo pipefail
+
+          # A blank or non-semver version means the read failed (e.g. someone
+          # made app.config.js a dynamic function export) — fail loudly rather
+          # than tag "vundefined" or cut a release nobody can find.
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$ ]]; then
+            echo "::error::Could not read a valid version from mobile/app.config.js (got '${VERSION}')." >&2
+            exit 1
+          fi
           TAG="v${VERSION}"
 
           # A git tag already at this version means the release PR did not bump

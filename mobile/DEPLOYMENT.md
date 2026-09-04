@@ -26,10 +26,15 @@ reaches installed phones without a reinstall.
 cd mobile
 npm i -g eas-cli        # or use npx eas-cli
 eas login
-eas init                # links Coding-Moves/one-concept to an EAS project,
-                        # writes the real projectId into the Expo config
-eas update:configure    # writes updates.url (https://u.expo.dev/<projectId>)
+eas init                # links the project and reports the projectId
+eas update:configure    # reports updates.url (https://u.expo.dev/<projectId>)
 ```
+
+Config lives in a dynamic `app.config.js` (there is no `app.json`), which the
+EAS CLI cannot write to. `eas init` / `eas update:configure` therefore print
+the `projectId` and `updates.url` for you to paste into `app.config.js` by
+hand rather than editing a file. (This project's values are already set — this
+section is only for standing up a brand-new EAS project.)
 
 Then create the environment variables for each environment (values from
 `.env.example`; the Supabase anon key is public by design, but the production

@@ -1,0 +1,54 @@
+# Ops helper: print the downloadable artifact URL for an EAS build. This is a
+# metadata query (eas build:list) — it starts no build and uses no build quota.
+# Needs the EXPO_TOKEN secret because the project's builds are not public.
+name: Build artifact URL
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_id:
+        description: "EAS build id to resolve"
+        required: true
+
+jobs:
+  resolve:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Resolve artifact URL (self-polls until the build finishes)
+        env:
+          BID: ${{ github.event.inputs.build_id }}
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 40); do
+            eas build:list --platform android --limit 30 --json --non-interactive > builds.json
+            status=$(jq -r --arg id "$BID" '.[] | select(.id==$id) | .status' builds.json)
+            url=$(jq -r --arg id "$BID" \
+              '.[] | select(.id==$id) | (.artifacts.buildUrl // .artifacts.applicationArchiveUrl // "")' builds.json)
+            echo "status=$status"
+            if [ "$status" = "FINISHED" ] && [ -n "$url" ] && [ "$url" != "null" ]; then
+              # A unique marker so the caller can grep exactly one line out of the log.
+              echo "ARTIFACT_URL>>>${url}<<<"
+              exit 0
+            fi
+            if [ "$status" = "ERRORED" ] || [ "$status" = "CANCELED" ]; then
+              echo "::error::build $BID ended as $status" >&2
+              exit 1
+            fi
+            sleep 30
+          done
+          echo "::error::timed out waiting for build $BID to finish" >&2
+          exit 1

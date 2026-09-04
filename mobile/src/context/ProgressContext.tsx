@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useState,
 } from 'react';
 import { CONCEPTS } from '../data/concepts';
@@ -23,6 +24,9 @@ export interface ProgressContextValue {
   /** Today's assigned concept. */
   concept: Concept | null;
   learnedToday: boolean;
+  /** Whether a specific concept has ever been completed, by id — independent
+   *  of which day it counts for, so it survives a cross-midnight completion. */
+  hasLearned: (conceptId: string) => boolean;
   streaks: StreakStats;
   markLearned: () => void;
   toggleTopic: (category: Category) => void;
@@ -100,6 +104,13 @@ export function ProgressProvider({ children, repository: override }: Props) {
   // unfollowed later that day — topic changes apply from the next assignment.
   const concept = selectDailyConcept(eligibleConcepts(progress), progress, today);
   const learnedToday = progress.learned.some((r) => r.date === today);
+
+  // A set for O(1) membership, rebuilt only when the learned list changes.
+  const learnedIds = useMemo(
+    () => new Set(progress.learned.map((r) => r.conceptId)),
+    [progress.learned]
+  );
+  const hasLearned = useCallback((conceptId: string) => learnedIds.has(conceptId), [learnedIds]);
 
   // Optimistic writes: the screen changes the moment the user acts, the
   // repository confirms in the background, and a failure rolls the screen
@@ -184,6 +195,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
     progress,
     concept,
     learnedToday,
+    hasLearned,
     // Prefer the server's numbers: they use the user's stored timezone rather
     // than the device clock, so a wrong clock cannot invent a streak.
     streaks: progress.stats ?? computeStreaks(progress.learned),

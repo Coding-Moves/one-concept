@@ -13,7 +13,7 @@ import { toConcept } from '../services/dailyApi';
 import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export function TodayScreen() {
-  const { loading: localLoading, concept: localConcept, learnedToday, streaks, markLearned } =
+  const { loading: localLoading, concept: localConcept, hasLearned, learnedToday, streaks, markLearned } =
     useProgress();
   const server = useServerDaily();
   const { colors, mode, toggle } = useTheme();
@@ -25,6 +25,15 @@ export function TodayScreen() {
   const serverConcept =
     outcome && outcome.status === 'ok' ? toConcept(outcome.payload) : null;
   const concept = serverConcept ?? localConcept;
+
+  // The shown concept is done if today's date is marked (the instant
+  // optimistic signal) OR the *server* concept is in the learned set — the
+  // latter survives a cross-midnight completion the server counts against
+  // yesterday, so the button does not wrongly re-arm (issue #53). Only the
+  // server concept qualifies: the local fallback (selectDailyConcept) can
+  // recycle an already-learned concept once the bundled pool is exhausted,
+  // and that must still show the button.
+  const done = learnedToday || (!!serverConcept && hasLearned(serverConcept.id));
   const loading = localLoading || server.loading;
   const exhausted = outcome?.status === 'exhausted';
   const offline = outcome?.status === 'ok' && outcome.stale;
@@ -99,7 +108,7 @@ export function TodayScreen() {
             <Text style={styles.tagline}>No concepts available.</Text>
           )}
 
-          {learnedToday ? (
+          {done ? (
             <View style={styles.doneBox}>
               <Ionicons name="checkmark-circle" size={20} color={colors.success} />
               <Text style={styles.doneText}>Learned today — see you tomorrow!</Text>

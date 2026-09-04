@@ -9,7 +9,13 @@ import {
 } from 'react';
 import { setTokenProvider } from '../api/client';
 import { supabase } from '../lib/supabase';
-import { registerForReminders, syncTimezone } from '../services/notifications';
+import { clearDailyCache } from '../services/dailyApi';
+import {
+  clearNotificationPrefsCache,
+  registerForReminders,
+  syncTimezone,
+} from '../services/notifications';
+import { clearServerStateCache } from '../services/remoteProgressRepository';
 
 export interface AuthContextValue {
   loading: boolean;
@@ -69,6 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (event === 'SIGNED_IN' && next) {
         registerForReminders().catch(() => {});
         syncTimezone().catch(() => {});
+      }
+      if (event === 'SIGNED_OUT') {
+        // Account data must not outlive the account on a shared device. The
+        // event covers every sign-out path — the button, an expired refresh
+        // token, a revoked session — not just our own signOut() call.
+        clearServerStateCache().catch(() => {});
+        clearDailyCache().catch(() => {});
+        clearNotificationPrefsCache().catch(() => {});
       }
     });
 

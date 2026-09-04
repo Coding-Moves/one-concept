@@ -176,8 +176,15 @@ async def patch_profile(
 ) -> StateOut:
     if body.timezone is not None:
         # Reject unknown zones here: a bad value would silently shift every
-        # future day boundary and streak for this user.
-        valid = await db.scalar(text("select now() at time zone :tz is not null"), {"tz": body.timezone})
+        # future day boundary and streak for this user. Check membership in
+        # pg_timezone_names — `now() at time zone :tz` RAISES on an unknown
+        # zone (a 500 that also aborts the display_name write in this request)
+        # and silently ACCEPTS POSIX junk like 'FOO5'; the catalogue lookup
+        # returns a plain boolean and rejects both.
+        valid = await db.scalar(
+            text("select exists(select 1 from pg_timezone_names where name = :tz)"),
+            {"tz": body.timezone},
+        )
         if not valid:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Unknown timezone")
         await db.execute(

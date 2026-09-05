@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FollowPill } from '../components/FollowPill';
 import { useTheme } from '../context/ThemeContext';
 import { useTopics } from '../hooks/useTopics';
-import { radius, spacing, ThemeColors, typography } from '../theme';
+import { spacing, ThemeColors, typography } from '../theme';
 
 export function PersonalizationScreen() {
   const navigation = useNavigation();
@@ -25,17 +25,6 @@ export function PersonalizationScreen() {
         >
           <Ionicons name="close" size={24} color={colors.text} />
         </Pressable>
-      </View>
-
-      <View style={styles.alertsCard}>
-        <View style={styles.alertsLeft}>
-          <Ionicons name="notifications-outline" size={22} color={colors.text} />
-          <View>
-            <Text style={styles.alertsTitle}>Alerts</Text>
-            <Text style={styles.alertsSubtitle}>Daily reminders arrive in Phase 3</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </View>
 
       <Text style={styles.sectionTitle}>Topics for you</Text>
@@ -93,32 +82,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     closeButton: {
       padding: spacing.xs,
-    },
-    alertsCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.surface,
-      borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: spacing.md,
-      marginBottom: spacing.xl,
-    },
-    alertsLeft: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.md,
-    },
-    alertsTitle: {
-      fontSize: 16,
-      fontWeight: '700',
-      color: colors.text,
-    },
-    alertsSubtitle: {
-      fontSize: 12,
-      color: colors.textMuted,
-      marginTop: 2,
     },
     sectionTitle: {
       ...typography.title,

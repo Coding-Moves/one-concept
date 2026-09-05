@@ -11,11 +11,15 @@ seconds, mark it learned, keep your streak alive.
 
 ## Install (Android)
 
-Current build: **v1.2.0**
+**[Download the APK](https://github.com/Coding-Moves/one-concept/releases/download/apk-latest/one-concept.apk)** —
+open on your phone, install, sign in, allow notifications.
 
-**[Download the APK](https://expo.dev/artifacts/eas/VQ0ww4bQVJx7t_mgSFQSnRSzLLmxWQ0CH19x24mBa30.apk)** —
-open on your phone, install, sign in, allow notifications. Updates arrive
-over the air; this link changes only when a new native build ships.
+This is the production build: it updates **only on a release to `main`**, over the
+air, so day-to-day work on `develop` never touches an installed app. The link is
+stable — it always serves the current installable APK. You only reinstall from it
+when a release is **native** (a `runtimeVersion` change); a JS-only release
+arrives over the air with no reinstall. The `Release APK` workflow keeps this
+link's build current automatically.
 
 ## Features
 

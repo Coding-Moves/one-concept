@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FollowPill } from '../components/FollowPill';
 import { useTheme } from '../context/ThemeContext';
 import { useTopics } from '../hooks/useTopics';
-import { spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, spacing, ThemeColors, typography } from '../theme';
 
 export function PersonalizationScreen() {
   const navigation = useNavigation();
@@ -23,7 +23,7 @@ export function PersonalizationScreen() {
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="close" size={scaleIcon(24)} color={colors.text} />
         </Pressable>
       </View>
 
@@ -77,7 +77,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     title: {
       ...typography.title,
-      fontSize: 24,
+      fontSize: scaleFont(24),
       color: colors.text,
     },
     closeButton: {
@@ -85,14 +85,14 @@ const createStyles = (colors: ThemeColors) =>
     },
     sectionTitle: {
       ...typography.title,
-      fontSize: 22,
+      fontSize: scaleFont(22),
       color: colors.text,
       marginBottom: spacing.xs,
     },
     sectionHint: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       color: colors.textMuted,
-      lineHeight: 19,
+      lineHeight: scaleFont(19),
       marginBottom: spacing.lg,
     },
     list: {
@@ -115,12 +115,12 @@ const createStyles = (colors: ThemeColors) =>
       gap: 2,
     },
     topicName: {
-      fontSize: 17,
+      fontSize: scaleFont(17),
       fontWeight: '600',
       color: colors.text,
     },
     topicMeta: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       color: colors.textMuted,
     },
   });

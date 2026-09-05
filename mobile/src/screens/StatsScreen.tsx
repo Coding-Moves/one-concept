@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useTopics } from '../hooks/useTopics';
 import { CONCEPTS } from '../data/concepts';
 import { ServerTopic } from '../services/topicsApi';
-import { radius, spacing, ThemeColors, typography } from '../theme';
+import { scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { LearnedRecord } from '../types';
 
 interface CategoryProgress {
@@ -161,11 +161,11 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text,
     },
     subtitle: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       color: colors.textMuted,
     },
     sectionLabel: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       fontWeight: '700',
       letterSpacing: 1,
       textTransform: 'uppercase',
@@ -182,7 +182,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     cardTitle: {
       ...typography.heading,
-      fontSize: 17,
+      fontSize: scaleFont(17),
       color: colors.text,
     },
     overallRow: {
@@ -191,7 +191,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
     },
     overallCount: {
-      fontSize: 15,
+      fontSize: scaleFont(15),
       fontWeight: '700',
       color: colors.primary,
     },
@@ -199,13 +199,13 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
     },
     categoryName: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       fontWeight: '600',
       color: colors.textSecondary,
       flexShrink: 1,
     },
     categoryCount: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       fontWeight: '600',
       color: colors.textMuted,
     },

@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { setTokenProvider } from '../api/client';
+import { API_BASE_URL, setTokenProvider } from '../api/client';
 import { supabase } from '../lib/supabase';
 import { clearAccountCaches } from '../services/accountCaches';
 import {
@@ -23,6 +23,7 @@ export interface AuthContextValue {
   email: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<{ needsConfirmation: boolean }>;
+  resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -113,6 +114,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { needsConfirmation: !data.session };
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    // Sends a recovery link to /reset-password (a backend web page), where the
+    // user sets a new password. Supabase returns success whether or not the
+    // email is registered, so the UI must stay deliberately neutral — never
+    // confirm an account exists.
+    //
+    // Only pass redirectTo when we have an absolute base URL. An empty
+    // API_BASE_URL would make it the relative '/reset-password', which is not a
+    // valid redirect — better to fall back to the project's Site URL.
+    const options = API_BASE_URL
+      ? { redirectTo: `${API_BASE_URL}/reset-password` }
+      : undefined;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), options);
+    if (error) throw new Error(describe(error));
+  }, []);
+
   const signOut = useCallback(async () => {
     // Deregister the push token first — it is an authenticated call, so it
     // must happen while the session is still valid. Best-effort: reminders
@@ -136,9 +153,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: session?.user?.email ?? null,
       signIn,
       signUp,
+      resetPassword,
       signOut,
     }),
-    [loading, session, signIn, signUp, signOut]
+    [loading, session, signIn, signUp, resetPassword, signOut]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

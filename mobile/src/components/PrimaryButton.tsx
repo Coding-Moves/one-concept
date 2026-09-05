@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { radius, shadows, spacing, ThemeColors } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 
 interface Props {
   label: string;
@@ -50,7 +50,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     label: {
       color: colors.onPrimary,
-      fontSize: 16,
+      fontSize: scaleFont(16),
       fontWeight: '700',
       letterSpacing: 0.2,
     },

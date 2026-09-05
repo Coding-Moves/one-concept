@@ -21,10 +21,12 @@ import { useWhatsNew } from './src/hooks/useWhatsNew';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { AboutScreen } from './src/screens/AboutScreen';
+import { ConceptDetailScreen } from './src/screens/ConceptDetailScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
 import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { RootStackParamList } from './src/navigation';
 
 // Hold the native splash up until we're ready to paint, instead of hiding it
 // automatically and flashing a blank screen while the font loads (issue #93).
@@ -33,6 +35,7 @@ SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
+const RootStack = createNativeStackNavigator<RootStackParamList>();
 
 function ProfileStackScreen() {
   return (
@@ -106,45 +109,61 @@ function ThemedApp() {
   return (
     <>
       <NavigationContainer theme={navigationTheme}>
-        <Tab.Navigator
-          screenOptions={{
-            headerShown: false,
-            tabBarActiveTintColor: colors.primary,
-            tabBarInactiveTintColor: colors.textMuted,
-            tabBarStyle: {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-            },
-            tabBarLabelStyle: { fontWeight: '600' },
-          }}
-        >
-          <Tab.Screen
-            name="Today"
-            component={TodayScreen}
-            options={{ tabBarIcon: tabIcon('sunny', 'sunny-outline') }}
+        <RootStack.Navigator screenOptions={{ headerShown: false }}>
+          <RootStack.Screen name="Tabs" component={Tabs} />
+          <RootStack.Screen
+            name="ConceptDetail"
+            component={ConceptDetailScreen}
+            options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
-          <Tab.Screen
-            name="History"
-            component={HistoryScreen}
-            options={{ tabBarIcon: tabIcon('library', 'library-outline') }}
-          />
-          <Tab.Screen
-            name="Stats"
-            component={StatsScreen}
-            options={{ tabBarIcon: tabIcon('stats-chart', 'stats-chart-outline') }}
-          />
-          <Tab.Screen
-            name="Profile"
-            component={ProfileStackScreen}
-            options={{ tabBarIcon: tabIcon('person', 'person-outline') }}
-          />
-        </Tab.Navigator>
+        </RootStack.Navigator>
       </NavigationContainer>
       {whatsNew.entry && (
         <WhatsNewCard entry={whatsNew.entry} onDismiss={whatsNew.dismiss} />
       )}
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
     </>
+  );
+}
+
+/** The bottom tabs — nested under the root stack so a concept-detail modal can
+ *  be presented above them from any tab. */
+function Tabs() {
+  const { colors } = useTheme();
+  return (
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: colors.primary,
+        tabBarInactiveTintColor: colors.textMuted,
+        tabBarStyle: {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+        },
+        tabBarLabelStyle: { fontWeight: '600' },
+      }}
+    >
+      <Tab.Screen
+        name="Today"
+        component={TodayScreen}
+        options={{ tabBarIcon: tabIcon('sunny', 'sunny-outline') }}
+      />
+      <Tab.Screen
+        name="History"
+        component={HistoryScreen}
+        options={{ tabBarIcon: tabIcon('library', 'library-outline') }}
+      />
+      <Tab.Screen
+        name="Stats"
+        component={StatsScreen}
+        options={{ tabBarIcon: tabIcon('stats-chart', 'stats-chart-outline') }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileStackScreen}
+        options={{ tabBarIcon: tabIcon('person', 'person-outline') }}
+      />
+    </Tab.Navigator>
   );
 }
 

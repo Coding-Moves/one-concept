@@ -32,7 +32,12 @@ jobs:
       run:
         working-directory: mobile
     steps:
+      # Build from the RELEASED commit, never the default branch. On a release
+      # event that's the tag; on a manual run it's main (the latest release) —
+      # so a bootstrap/rebuild can never ship unreleased develop code.
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.release.tag_name || 'main' }}
 
       - name: Read the shipped runtimeVersion
         id: rv

@@ -361,3 +361,14 @@ async def test_like_count_counts_other_users_only(client, sessionmaker_for_test)
     assert saved_entry["like_count"] == 1
     learned_entry = next(r for r in state["learned"] if r["concept_slug"] == slug)
     assert learned_entry["like_count"] == 1
+
+
+async def test_state_folds_in_todays_concept(client, sessionmaker_for_test, user):
+    """Issue #102: GET /v1/me/state returns today's concept (one startup round
+    trip) and creates the day's assignment on first call, like GET /v1/daily."""
+    state = (await client.get("/v1/me/state")).json()
+    assert state["daily"] is not None, "state must fold in today's concept"
+    assert state["daily"]["concept"]["slug"], "the folded concept has a slug"
+    # The assignment was created by this call — the daily endpoint now agrees.
+    daily = (await client.get("/v1/daily")).json()
+    assert daily["concept"]["slug"] == state["daily"]["concept"]["slug"]

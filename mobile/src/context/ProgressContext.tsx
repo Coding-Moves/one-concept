@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react';
 import { CONCEPTS } from '../data/concepts';
-import { Category, Concept, ProgressState } from '../types';
+import { Category, Concept, DailyOutcome, ProgressState } from '../types';
 import { selectDailyConcept } from '../services/dailyConcept';
 import { todayKey } from '../services/dates';
 import { localProgressRepository } from '../services/localProgressRepository';
@@ -22,8 +22,10 @@ import { computeStreaks, StreakStats } from '../services/streak';
 export interface ProgressContextValue {
   loading: boolean;
   progress: ProgressState;
-  /** Today's assigned concept. */
+  /** Today's assigned concept (local selection; the offline/demo fallback). */
   concept: Concept | null;
+  /** Today's concept as decided by the server, folded into the state (#102). */
+  serverDaily: DailyOutcome | null;
   learnedToday: boolean;
   /** Whether a specific concept has ever been completed, by id — independent
    *  of which day it counts for, so it survives a cross-midnight completion. */
@@ -254,11 +256,14 @@ export function ProgressProvider({ children, repository: override }: Props) {
     [progress.stats, progress.learned]
   );
 
+  const serverDaily = progress.serverDaily ?? null;
+
   const value = useMemo<ProgressContextValue>(
     () => ({
       loading,
       progress,
       concept,
+      serverDaily,
       learnedToday,
       hasLearned,
       streaks,
@@ -271,6 +276,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
       loading,
       progress,
       concept,
+      serverDaily,
       learnedToday,
       hasLearned,
       streaks,

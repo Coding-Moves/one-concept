@@ -4,14 +4,38 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
+from app.schemas.daily import ConceptOut, DailyOut
 from app.schemas.me import LearnedOut, ProfileIn, SavedConceptOut, StateOut, StreakOut, TopicsIn
 from app.schemas.notifications import NotificationPrefs, PushTokenIn
 from app.services.interactions import set_followed_topics
+from app.services.selection import DailyResult, get_or_create_daily
 from app.services.state import load_state
 from app.services.streaks import compute_streaks
 from app.services.users import ensure_bootstrapped
 
 router = APIRouter(prefix="/me", tags=["me"])
+
+
+def _daily_out_or_none(result: DailyResult) -> DailyOut | None:
+    """Map the daily result to DailyOut, or None when the catalog is exhausted.
+
+    Exhaustion is surfaced as a null `daily` in the state payload rather than a
+    409 — the state request must still return the rest of the app's data.
+    """
+    if result.status != "ok" or result.concept is None:
+        return None
+    c = result.concept
+    return DailyOut(
+        assigned_for=result.assigned_for,
+        assigned_at=result.assigned_at,
+        completed_at=result.completed_at,
+        learned=result.completed_at is not None,
+        outside_followed_topics=result.outside_followed_topics,
+        concept=ConceptOut(
+            id=c.id, slug=c.slug, title=c.title, summary=c.summary, example=c.example,
+            topic_slug=c.topic_slug, topic_name=c.topic_name, like_count=c.like_count,
+        ),
+    )
 
 
 def _to_state_out(state) -> StateOut:
@@ -52,7 +76,11 @@ async def get_state(
         await ensure_bootstrapped(db, user.id, user.email)
         await db.commit()
         state = await load_state(db, user.id)
-    return _to_state_out(state)
+    out = _to_state_out(state)
+    # Fold today's concept in so the app needs one startup round trip (#102).
+    # Same create-on-first-call behaviour as GET /v1/daily.
+    out.daily = _daily_out_or_none(await get_or_create_daily(db, user.id))
+    return out
 
 
 @router.get("/stats", response_model=StreakOut)

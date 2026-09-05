@@ -114,7 +114,11 @@ export function TodayScreen() {
               <Text style={styles.doneText}>Learned today — see you tomorrow!</Text>
             </View>
           ) : (
-            <PrimaryButton label="Mark as learned" onPress={markLearned} disabled={!concept} />
+            <PrimaryButton
+              label="Mark as learned"
+              onPress={() => markLearned(concept ?? undefined)}
+              disabled={!concept}
+            />
           )}
         </>
       )}

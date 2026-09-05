@@ -9,7 +9,7 @@ import { StreakBadge } from '../components/StreakBadge';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { toConcept } from '../services/dailyApi';
-import { scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export function TodayScreen() {
   const {
@@ -60,7 +60,7 @@ export function TodayScreen() {
         >
           <Ionicons
             name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
-            size={20}
+            size={scaleIcon(20)}
             color={colors.textSecondary}
           />
         </Pressable>
@@ -81,14 +81,14 @@ export function TodayScreen() {
 
           {offline ? (
             <View style={styles.offlineRow}>
-              <Ionicons name="cloud-offline-outline" size={13} color={colors.textMuted} />
+              <Ionicons name="cloud-offline-outline" size={scaleIcon(13)} color={colors.textMuted} />
               <Text style={styles.offlineText}>Offline — showing your saved copy</Text>
             </View>
           ) : null}
 
           {outsideTopics ? (
             <View style={styles.noteBox}>
-              <Ionicons name="sparkles-outline" size={16} color={colors.textMuted} />
+              <Ionicons name="sparkles-outline" size={scaleIcon(16)} color={colors.textMuted} />
               <Text style={styles.noteText}>
                 You’ve read everything in your topics, so here’s one from further afield.
               </Text>
@@ -97,7 +97,7 @@ export function TodayScreen() {
 
           {exhausted ? (
             <View style={styles.noteBox}>
-              <Ionicons name="checkmark-done-outline" size={16} color={colors.success} />
+              <Ionicons name="checkmark-done-outline" size={scaleIcon(16)} color={colors.success} />
               <Text style={styles.noteText}>
                 You’ve learned every concept available. New ones are on the way.
               </Text>
@@ -115,7 +115,7 @@ export function TodayScreen() {
 
           {done ? (
             <View style={styles.doneBox}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
+              <Ionicons name="checkmark-circle" size={scaleIcon(20)} color={colors.success} />
               <Text style={styles.doneText}>Learned today — see you tomorrow!</Text>
             </View>
           ) : (

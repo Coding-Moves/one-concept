@@ -5,7 +5,7 @@ import Constants from 'expo-constants';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
 const HOW_IT_WORKS = [
@@ -30,13 +30,13 @@ export function AboutScreen() {
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="close" size={scaleIcon(24)} color={colors.text} />
         </Pressable>
       </View>
 
       <View style={styles.hero}>
         <View style={styles.badge}>
-          <Ionicons name="bulb" size={30} color={colors.primary} />
+          <Ionicons name="bulb" size={scaleIcon(30)} color={colors.primary} />
         </View>
         <Text style={styles.appName}>One Concept</Text>
         <Text style={styles.version}>Version {version}</Text>
@@ -51,7 +51,7 @@ export function AboutScreen() {
       <View style={styles.list}>
         {HOW_IT_WORKS.map((line, i) => (
           <View key={i} style={styles.item}>
-            <Ionicons name="checkmark-circle" size={18} color={colors.success} style={styles.itemIcon} />
+            <Ionicons name="checkmark-circle" size={scaleIcon(18)} color={colors.success} style={styles.itemIcon} />
             <Text style={styles.itemText}>{line}</Text>
           </View>
         ))}

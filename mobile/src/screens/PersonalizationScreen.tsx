@@ -5,7 +5,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FollowPill } from '../components/FollowPill';
 import { useTheme } from '../context/ThemeContext';
 import { useTopics } from '../hooks/useTopics';
-import { scaleFont, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, spacing, ThemeColors, typography } from '../theme';
 
 export function PersonalizationScreen() {
   const navigation = useNavigation();
@@ -23,7 +23,7 @@ export function PersonalizationScreen() {
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="close" size={scaleIcon(24)} color={colors.text} />
         </Pressable>
       </View>
 

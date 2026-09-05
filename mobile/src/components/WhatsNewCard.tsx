@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { WhatsNewEntry } from '../data/whatsNew';
-import { scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 interface Props {
   entry: WhatsNewEntry;
@@ -61,11 +61,11 @@ export function WhatsNewCard({ entry, onDismiss }: Props) {
               accessibilityLabel="Close"
               hitSlop={8}
             >
-              <Ionicons name="close" size={22} color={colors.textMuted} />
+              <Ionicons name="close" size={scaleIcon(22)} color={colors.textMuted} />
             </Pressable>
 
             <View style={styles.badge}>
-              <Ionicons name="sparkles" size={20} color={colors.primary} />
+              <Ionicons name="sparkles" size={scaleIcon(20)} color={colors.primary} />
             </View>
 
             <Text style={styles.title}>What's new</Text>
@@ -76,7 +76,7 @@ export function WhatsNewCard({ entry, onDismiss }: Props) {
                 <View key={i} style={styles.item}>
                   <Ionicons
                     name="checkmark-circle"
-                    size={18}
+                    size={scaleIcon(18)}
                     color={colors.success}
                     style={styles.itemIcon}
                   />

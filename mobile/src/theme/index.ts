@@ -5,6 +5,8 @@
  */
 export const FONT_SCALE = 0.9;
 export const scaleFont = (n: number): number => Math.round(n * FONT_SCALE * 2) / 2;
+/** Same scale for icon glyphs, rounded to whole pixels so they stay crisp. */
+export const scaleIcon = (n: number): number => Math.round(n * FONT_SCALE);
 
 export interface ThemeColors {
   background: string;

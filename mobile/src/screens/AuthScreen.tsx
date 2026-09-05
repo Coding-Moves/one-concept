@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -98,7 +98,7 @@ export function AuthScreen() {
         >
           <Ionicons
             name={themeMode === 'dark' ? 'sunny-outline' : 'moon-outline'}
-            size={20}
+            size={scaleIcon(20)}
             color={colors.textSecondary}
           />
         </Pressable>
@@ -156,14 +156,14 @@ export function AuthScreen() {
 
           {error ? (
             <View style={[styles.banner, styles.errorBanner]}>
-              <Ionicons name="alert-circle-outline" size={18} color={colors.streak} />
+              <Ionicons name="alert-circle-outline" size={scaleIcon(18)} color={colors.streak} />
               <Text style={[styles.bannerText, { color: colors.streak }]}>{error}</Text>
             </View>
           ) : null}
 
           {notice ? (
             <View style={[styles.banner, styles.noticeBanner]}>
-              <Ionicons name="mail-outline" size={18} color={colors.success} />
+              <Ionicons name="mail-outline" size={scaleIcon(18)} color={colors.success} />
               <Text style={[styles.bannerText, { color: colors.success }]}>{notice}</Text>
             </View>
           ) : null}

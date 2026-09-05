@@ -3,7 +3,7 @@ import { useMemo, useRef } from 'react';
 import { Animated, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { scaleFont, radius, spacing, ThemeColors } from '../theme';
+import { scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 
 function usePop() {
@@ -59,7 +59,7 @@ export function ConceptActions({ concept }: { concept: Concept }) {
         <Animated.View style={{ transform: [{ scale: like.scale }] }}>
           <Ionicons
             name={liked ? 'heart' : 'heart-outline'}
-            size={22}
+            size={scaleIcon(22)}
             color={liked ? colors.like : colors.textSecondary}
           />
         </Animated.View>
@@ -80,7 +80,7 @@ export function ConceptActions({ concept }: { concept: Concept }) {
         <Animated.View style={{ transform: [{ scale: save.scale }] }}>
           <Ionicons
             name={saved ? 'bookmark' : 'bookmark-outline'}
-            size={20}
+            size={scaleIcon(20)}
             color={saved ? colors.primary : colors.textSecondary}
           />
         </Animated.View>
@@ -94,7 +94,7 @@ export function ConceptActions({ concept }: { concept: Concept }) {
         accessibilityRole="button"
         accessibilityLabel="Share"
       >
-        <Ionicons name="share-social-outline" size={20} color={colors.textSecondary} />
+        <Ionicons name="share-social-outline" size={scaleIcon(20)} color={colors.textSecondary} />
       </Pressable>
     </View>
   );

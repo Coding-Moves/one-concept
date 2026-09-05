@@ -8,7 +8,7 @@ import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
 import { formatDateKey } from '../services/dates';
-import { scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 import { Category, LearnedRecord } from '../types';
 
 const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
@@ -78,7 +78,7 @@ export function HistoryScreen() {
             </View>
           ) : (
             <View style={styles.empty}>
-              <Ionicons name="library-outline" size={40} color={colors.textMuted} />
+              <Ionicons name="library-outline" size={scaleIcon(40)} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>Nothing here yet</Text>
               <Text style={styles.emptyText}>
                 Learn today’s concept and it will show up here.

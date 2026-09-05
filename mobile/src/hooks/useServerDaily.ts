@@ -31,11 +31,18 @@ export function useServerDaily(): ServerDaily {
     setLoading(true);
 
     // Cached concept first: the screen renders immediately, and the network
-    // result replaces it (clearing the stale flag) whenever it arrives.
+    // result replaces it whenever it arrives.
+    //
+    // The preview is NOT flagged stale, even though it comes from the cache: the
+    // fetch below is still in flight, so we are not offline — we're loading.
+    // `stale` only means "offline" once the fetch has actually failed and fallen
+    // back to cache (fetchDaily sets it then). Painting the preview as stale is
+    // what flashed the "Offline — showing your saved copy" banner during a
+    // normal online load (issue #92).
     let settled = false;
     readDailyCache().then((cached) => {
       if (cancelled || settled || !cached) return;
-      setOutcome(cached);
+      setOutcome(cached.status === 'ok' ? { ...cached, stale: false } : cached);
       setLoading(false);
     });
 

@@ -5,13 +5,11 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
 import { useTheme } from '../context/ThemeContext';
-import { CONCEPTS } from '../data/concepts';
+import { CONCEPTS_BY_ID } from '../data/concepts';
 import { fetchConcept } from '../services/conceptApi';
 import { RootStackParamList } from '../navigation';
 import { scaleFont, scaleIcon, spacing, ThemeColors, typography } from '../theme';
 import { Concept } from '../types';
-
-const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
 
 type Status = 'loading' | 'ready' | 'error';
 

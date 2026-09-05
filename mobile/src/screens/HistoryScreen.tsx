@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -8,13 +9,11 @@ import { LikeCount } from '../components/LikeCount';
 import { SkeletonRow } from '../components/Skeleton';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { CONCEPTS } from '../data/concepts';
+import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
 import { formatDateKey } from '../services/dates';
 import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 import { Category, LearnedRecord } from '../types';
-
-const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
 
 // Keep the feed focused on recent activity (issue #124).
 const HISTORY_LIMIT = 10;
@@ -63,7 +62,15 @@ export function HistoryScreen() {
   const { loading, progress } = useProgress();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  // Composite: History is a tab screen that reaches up to the root stack's
+  // concept-detail modal (#124).
+  const navigation =
+    useNavigation<
+      CompositeNavigationProp<
+        BottomTabNavigationProp<ParamListBase>,
+        NativeStackNavigationProp<RootStackParamList>
+      >
+    >();
 
   // Newest first, capped at the last HISTORY_LIMIT to keep the feed focused.
   const records = [...progress.learned]

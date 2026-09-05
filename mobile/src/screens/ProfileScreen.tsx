@@ -10,7 +10,7 @@ import { LikeCount } from '../components/LikeCount';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { CONCEPTS } from '../data/concepts';
+import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
 import {
   getCachedNotificationPrefs,
@@ -26,8 +26,6 @@ export type ProfileStackParamList = {
   Personalization: undefined;
   About: undefined;
 };
-
-const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
 
 export function ProfileScreen() {
   // Composite: navigate within the Profile stack (Personalization, About) and

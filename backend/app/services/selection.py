@@ -35,6 +35,9 @@ class ConceptPayload:
     example: str | None
     topic_slug: str
     topic_name: str
+    # Likes from OTHER users; the client adds the viewer's own like on top, so a
+    # like/unlike is an instant +/-1 with no server round trip to see it.
+    like_count: int = 0
 
 
 @dataclass
@@ -56,7 +59,10 @@ _TODAY = text("""
 _EXISTING = text("""
     select a.assigned_for, a.assigned_at, a.completed_at,
            c.id, c.slug, c.title, c.summary, c.example,
-           t.slug as topic_slug, t.name as topic_name
+           t.slug as topic_slug, t.name as topic_name,
+           (select count(*) from public.concept_interactions ci
+             where ci.concept_id = c.id and ci.liked_at is not null
+               and ci.user_id <> :uid)::int as like_count
       from public.daily_assignments a
       join public.concepts c on c.id = a.concept_id
       join public.topics  t on t.id = c.topic_id
@@ -147,6 +153,7 @@ def _row_to_result(row, outside: bool) -> DailyResult:
             example=row.example,
             topic_slug=row.topic_slug,
             topic_name=row.topic_name,
+            like_count=row.like_count,
         ),
         outside_followed_topics=outside,
     )

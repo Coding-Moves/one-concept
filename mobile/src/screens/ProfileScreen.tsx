@@ -34,9 +34,20 @@ export function ProfileScreen() {
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const saved = progress.bookmarks
-    .map((id) => CONCEPTS_BY_ID.get(id))
-    .filter((c): c is NonNullable<typeof c> => !!c);
+  // Server-backed state carries saved concepts with their titles/topics; the
+  // signed-out demo resolves bookmarked ids against the bundled catalog. Mapping
+  // signed-in bookmarks through the 20-concept demo is exactly what hid saved
+  // lessons from the 125+ server catalog (issue #90).
+  const saved = progress.savedConcepts
+    ? progress.savedConcepts.map((s) => ({
+        id: s.conceptId,
+        title: s.title,
+        topicName: s.topicName,
+      }))
+    : progress.bookmarks
+        .map((id) => CONCEPTS_BY_ID.get(id))
+        .filter((c): c is NonNullable<typeof c> => !!c)
+        .map((c) => ({ id: c.id, title: c.title, topicName: c.category as string }));
 
   // Server-owned preference; absent until the first state fetch succeeds.
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -169,7 +180,7 @@ export function ProfileScreen() {
             <View key={c.id} style={styles.savedRow}>
               <View style={styles.savedText}>
                 <Text style={styles.savedTitle}>{c.title}</Text>
-                <CategoryChip category={c.category} />
+                {c.topicName ? <CategoryChip category={c.topicName} /> : null}
               </View>
               <Ionicons name="bookmark" size={16} color={colors.primary} />
             </View>

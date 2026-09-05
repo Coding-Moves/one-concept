@@ -186,11 +186,22 @@ export class RemoteProgressRepository implements ProgressRepository {
     const epoch = this.epoch;
     const currently = this.cache.bookmarks.includes(conceptId);
     await this.toggle(conceptId, 'save', currently);
-    // Reload the full state rather than patching in place: the saved list needs
-    // each concept's title/topic, which the toggle endpoint doesn't return. The
-    // optimistic update in ProgressContext already flips the card + count
-    // instantly, so this refresh only fills in the saved list a moment later.
-    return this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+    // The save/unsave has already persisted. Refresh the full state so the saved
+    // list (which needs each concept's title/topic) reflects it — but if that
+    // refresh fails, do NOT throw: a succeeded toggle must never be rolled back
+    // by the UI. Fall back to patching in place; the saved list catches up on
+    // the next successful load.
+    try {
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+    } catch {
+      const bookmarks = currently
+        ? this.cache.bookmarks.filter((id) => id !== conceptId)
+        : [...this.cache.bookmarks, conceptId];
+      const savedConcepts = currently
+        ? (this.cache.savedConcepts ?? []).filter((s) => s.conceptId !== conceptId)
+        : this.cache.savedConcepts;
+      return this.remember({ ...this.cache, bookmarks, savedConcepts }, epoch);
+    }
   }
 }
 

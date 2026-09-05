@@ -1,26 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ApiError, apiRequest, isApiConfigured } from '../api/client';
-import { Category, Concept } from '../types';
+import { Category, Concept, DailyPayload } from '../types';
 
 const CACHE_KEY = 'one-concept/daily-cache/v1';
-
-export interface DailyPayload {
-  assigned_for: string;
-  assigned_at: string;
-  completed_at: string | null;
-  learned: boolean;
-  outside_followed_topics: boolean;
-  concept: {
-    id: string;
-    slug: string;
-    title: string;
-    summary: string;
-    example: string | null;
-    topic_slug: string;
-    topic_name: string;
-    like_count?: number;
-  };
-}
 
 /**
  * Map the server payload onto the app's Concept type.
@@ -41,54 +22,9 @@ export function toConcept(payload: DailyPayload): Concept {
   };
 }
 
-export type DailyOutcome =
-  | { status: 'ok'; payload: DailyPayload; stale: boolean }
-  | { status: 'exhausted' }
-  | { status: 'unavailable' };
-
-/** Yesterday's (or earlier today's) concept from disk — paints instantly
- *  while the network answer replaces it. */
-export async function readDailyCache(): Promise<DailyOutcome | null> {
-  const cached = await readCache();
-  return cached ? { status: 'ok', payload: cached, stale: true } : null;
-}
-
-async function readCache(): Promise<DailyPayload | null> {
-  try {
-    const raw = await AsyncStorage.getItem(CACHE_KEY);
-    return raw ? (JSON.parse(raw) as DailyPayload) : null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Fetch today's concept, falling back to the last one we saw.
- *
- * Reading the day's concept must work on a train with no signal, so a network
- * failure returns the cached payload marked stale rather than an error.
- */
-export async function fetchDaily(): Promise<DailyOutcome> {
-  if (!isApiConfigured()) {
-    const cached = await readCache();
-    return cached ? { status: 'ok', payload: cached, stale: true } : { status: 'unavailable' };
-  }
-
-  try {
-    const payload = await apiRequest<DailyPayload>('/v1/daily');
-    await AsyncStorage.setItem(CACHE_KEY, JSON.stringify(payload)).catch(() => {});
-    return { status: 'ok', payload, stale: false };
-  } catch (error) {
-    // 409 means the catalog is genuinely exhausted for this user — not a failure
-    // to reach the server, and not something a cached concept should paper over.
-    if (error instanceof ApiError && error.status === 409) {
-      return { status: 'exhausted' };
-    }
-    const cached = await readCache();
-    return cached ? { status: 'ok', payload: cached, stale: true } : { status: 'unavailable' };
-  }
-}
-
+/** Clear the legacy standalone daily cache. Today's concept now rides on the
+ *  server-state cache (folded into /v1/me/state, #102); this only removes any
+ *  leftover from older app versions. Still called on sign-out. */
 export async function clearDailyCache(): Promise<void> {
   await AsyncStorage.removeItem(CACHE_KEY).catch(() => {});
 }

@@ -87,9 +87,20 @@ jobs:
         id: build
         if: steps.decide.outputs.build == 'true'
         run: |
-          set -euo pipefail
-          eas build --platform android --profile production-apk --environment production \
-            --non-interactive --wait --json > build.json
+          # The profile already sets environment/channel; don't pass --environment
+          # (mirrors the working eas-build.yml). Capture both streams so a build
+          # error is actually printed instead of being hidden by --json.
+          set +e
+          eas build --platform android --profile production-apk \
+            --non-interactive --wait --json > build.json 2> build.err
+          code=$?
+          set -e
+          if [ "$code" -ne 0 ]; then
+            echo "::error::eas build failed (exit $code)"
+            echo "----- stderr -----"; cat build.err
+            echo "----- stdout -----"; cat build.json
+            exit 1
+          fi
           url=$(jq -r '.[0].artifacts.buildUrl // .[0].artifacts.applicationArchiveUrl // empty' build.json)
           if [ -z "$url" ]; then
             echo "::error::could not resolve the built APK URL"; cat build.json; exit 1

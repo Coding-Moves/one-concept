@@ -23,7 +23,7 @@ export function AuthScreen() {
   const insets = useSafeAreaInsets();
   const { colors, mode: themeMode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-  const { signIn, signUp } = useAuth();
+  const { signIn, signUp, resetPassword } = useAuth();
 
   const [mode, setMode] = useState<Mode>('signIn');
   const [email, setEmail] = useState('');
@@ -50,6 +50,29 @@ export function AuthScreen() {
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const forgotPassword = async () => {
+    const trimmed = email.trim();
+    if (trimmed.length <= 3 || !trimmed.includes('@')) {
+      setNotice(null);
+      setError('Enter your email above first, then tap “Forgot password?”.');
+      return;
+    }
+    setError(null);
+    setNotice(null);
+    setBusy(true);
+    try {
+      await resetPassword(trimmed);
+      // Deliberately neutral: never reveal whether an account exists.
+      setNotice(
+        'If an account exists for that email, a password reset link is on its way. Check your inbox (and spam).'
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not send the reset email. Try again.');
     } finally {
       setBusy(false);
     }
@@ -119,6 +142,16 @@ export function AuthScreen() {
               secureTextEntry
               editable={!busy}
             />
+            {mode === 'signIn' ? (
+              <Pressable
+                onPress={forgotPassword}
+                disabled={busy}
+                accessibilityRole="button"
+                style={styles.forgot}
+              >
+                <Text style={styles.forgotText}>Forgot password?</Text>
+              </Pressable>
+            ) : null}
           </View>
 
           {error ? (
@@ -225,5 +258,11 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: 14,
       fontWeight: '600',
       paddingVertical: spacing.sm,
+    },
+    forgot: { alignSelf: 'flex-end', paddingTop: spacing.xs },
+    forgotText: {
+      color: colors.primary,
+      fontSize: 13,
+      fontWeight: '600',
     },
   });

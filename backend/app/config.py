@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     # Present for legacy HS256 projects; this project signs with ES256 via JWKS.
     supabase_jwt_secret: str | None = None
     supabase_service_role_key: str | None = None
+    # Public anon key. Safe to expose — it's already shipped in the mobile
+    # bundle. The /reset-password landing page uses it (client-side) to call
+    # Supabase's auth REST endpoint; the page is inert without it.
+    supabase_anon_key: str | None = None
 
     # Generation. The key lives here and only here — never in the app bundle.
     gemini_api_key: str = ""

@@ -119,9 +119,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // user sets a new password. Supabase returns success whether or not the
     // email is registered, so the UI must stay deliberately neutral — never
     // confirm an account exists.
-    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${API_BASE_URL}/reset-password`,
-    });
+    //
+    // Only pass redirectTo when we have an absolute base URL. An empty
+    // API_BASE_URL would make it the relative '/reset-password', which is not a
+    // valid redirect — better to fall back to the project's Site URL.
+    const options = API_BASE_URL
+      ? { redirectTo: `${API_BASE_URL}/reset-password` }
+      : undefined;
+    const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), options);
     if (error) throw new Error(describe(error));
   }, []);
 

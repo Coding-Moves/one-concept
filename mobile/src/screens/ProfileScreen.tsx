@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { useNavigation } from '@react-navigation/native';
+import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
@@ -10,7 +10,8 @@ import { LikeCount } from '../components/LikeCount';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { CONCEPTS } from '../data/concepts';
+import { CONCEPTS_BY_ID } from '../data/concepts';
+import { RootStackParamList } from '../navigation';
 import {
   getCachedNotificationPrefs,
   getNotificationPrefs,
@@ -26,11 +27,16 @@ export type ProfileStackParamList = {
   About: undefined;
 };
 
-const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
-
 export function ProfileScreen() {
+  // Composite: navigate within the Profile stack (Personalization, About) and
+  // up to the root stack's concept-detail modal (#124).
   const navigation =
-    useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileHome'>>();
+    useNavigation<
+      CompositeNavigationProp<
+        NativeStackNavigationProp<ProfileStackParamList, 'ProfileHome'>,
+        NativeStackNavigationProp<RootStackParamList>
+      >
+    >();
   const { progress, streaks } = useProgress();
   const { email, signOut } = useAuth();
   const { colors, mode, toggle } = useTheme();
@@ -202,7 +208,15 @@ export function ProfileScreen() {
       ) : (
         <View style={styles.savedList}>
           {saved.map((c) => (
-            <View key={c.id} style={styles.savedRow}>
+            <Pressable
+              key={c.id}
+              onPress={() =>
+                navigation.navigate('ConceptDetail', { conceptId: c.id, title: c.title })
+              }
+              style={({ pressed }) => [styles.savedRow, pressed && styles.rowPressed]}
+              accessibilityRole="button"
+              accessibilityLabel={`Open ${c.title}`}
+            >
               <View style={styles.savedText}>
                 <Text style={styles.savedTitle}>{c.title}</Text>
                 <View style={styles.savedMeta}>
@@ -211,7 +225,7 @@ export function ProfileScreen() {
                 </View>
               </View>
               <Ionicons name="bookmark" size={scaleIcon(16)} color={colors.primary} />
-            </View>
+            </Pressable>
           ))}
         </View>
       )}

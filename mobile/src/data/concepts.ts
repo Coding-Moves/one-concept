@@ -186,3 +186,7 @@ export const CONCEPTS: Concept[] = [
       '"systemctl status nginx" shows whether the web server is running and its recent logs; "systemctl enable nginx" makes it start on every boot; Restart=on-failure brings it back if it crashes.',
   },
 ];
+
+/** id -> concept lookup for the bundled catalog (signed-out demo + offline
+ *  fallback). Defined once here rather than rebuilt in each screen. */
+export const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));

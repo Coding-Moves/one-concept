@@ -1,17 +1,22 @@
 import { Ionicons } from '@expo/vector-icons';
+import { CompositeNavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
+import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CategoryChip } from '../components/CategoryChip';
 import { LikeCount } from '../components/LikeCount';
 import { SkeletonRow } from '../components/Skeleton';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { CONCEPTS } from '../data/concepts';
+import { CONCEPTS_BY_ID } from '../data/concepts';
+import { RootStackParamList } from '../navigation';
 import { formatDateKey } from '../services/dates';
 import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 import { Category, LearnedRecord } from '../types';
 
-const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
+// Keep the feed focused on recent activity (issue #124).
+const HISTORY_LIMIT = 10;
 
 function prettify(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -21,10 +26,12 @@ function HistoryRow({
   record,
   liked,
   styles,
+  onOpen,
 }: {
   record: LearnedRecord;
   liked: boolean;
   styles: Styles;
+  onOpen: (conceptId: string, title: string) => void;
 }) {
   // Server records carry their own names; the bundled catalog is only the
   // signed-out fallback, and a prettified slug beats a silently missing row.
@@ -33,7 +40,12 @@ function HistoryRow({
   const category = (record.topicName as Category | undefined) ?? local?.category;
   const likeTotal = (record.likeCount ?? 0) + (liked ? 1 : 0);
   return (
-    <View style={styles.row}>
+    <Pressable
+      onPress={() => onOpen(record.conceptId, title)}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      accessibilityRole="button"
+      accessibilityLabel={`Open ${title}`}
+    >
       <View style={styles.rowText}>
         <Text style={styles.rowTitle}>{title}</Text>
         {/* Category and likes each get their own row, so the heart never
@@ -42,7 +54,7 @@ function HistoryRow({
         <LikeCount count={likeTotal} />
       </View>
       <Text style={styles.rowDate}>{formatDateKey(record.date)}</Text>
-    </View>
+    </Pressable>
   );
 }
 
@@ -50,9 +62,24 @@ export function HistoryScreen() {
   const { loading, progress } = useProgress();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  // Composite: History is a tab screen that reaches up to the root stack's
+  // concept-detail modal (#124).
+  const navigation =
+    useNavigation<
+      CompositeNavigationProp<
+        BottomTabNavigationProp<ParamListBase>,
+        NativeStackNavigationProp<RootStackParamList>
+      >
+    >();
 
-  const records = [...progress.learned].sort((a, b) => (a.date < b.date ? 1 : -1));
+  // Newest first, capped at the last HISTORY_LIMIT to keep the feed focused.
+  const records = [...progress.learned]
+    .sort((a, b) => (a.date < b.date ? 1 : -1))
+    .slice(0, HISTORY_LIMIT);
   const likedIds = useMemo(() => new Set(progress.likes), [progress.likes]);
+
+  const open = (conceptId: string, title: string) =>
+    navigation.navigate('ConceptDetail', { conceptId, title });
 
   return (
     <View style={styles.screen}>
@@ -60,13 +87,18 @@ export function HistoryScreen() {
         data={loading ? [] : records}
         keyExtractor={(r) => `${r.date}-${r.conceptId}`}
         renderItem={({ item }) => (
-          <HistoryRow record={item} liked={likedIds.has(item.conceptId)} styles={styles} />
+          <HistoryRow
+            record={item}
+            liked={likedIds.has(item.conceptId)}
+            styles={styles}
+            onOpen={open}
+          />
         )}
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={styles.title}>History</Text>
-            <Text style={styles.subtitle}>Everything you’ve learned so far.</Text>
+            <Text style={styles.subtitle}>Your last {HISTORY_LIMIT} concepts.</Text>
           </View>
         }
         ListEmptyComponent={
@@ -131,6 +163,7 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.md,
       ...shadows.card,
     },
+    rowPressed: { opacity: 0.7 },
     rowText: {
       gap: spacing.sm,
       flexShrink: 1,

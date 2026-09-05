@@ -1,16 +1,47 @@
 """Write endpoints: completion, streaks, follows, likes, saves."""
 
+import uuid
 from datetime import timedelta
 
 import pytest
 from fastapi import HTTPException
 from sqlalchemy import text
 
+from app.services.concepts import get_concept_out
 from app.services.interactions import complete_today, set_followed_topics, set_interaction
 from app.services.selection import get_or_create_daily
 from app.services.state import load_state
 from app.services.streaks import compute_streaks
 from tests.test_selection import DAY
+
+
+async def _make_user(session) -> uuid.UUID:
+    """A second bootstrapped user (the auth.users insert fires the profile trigger)."""
+    uid = uuid.uuid4()
+    await session.execute(
+        text("insert into auth.users (id, email) values (:id, :email)"),
+        {"id": uid, "email": f"{uid}@example.invalid"},
+    )
+    await session.commit()
+    return uid
+
+
+async def test_get_concept_returns_body_and_only_others_likes(session, user):
+    other = await _make_user(session)
+    # Another user likes it, and so does the viewer — the returned count must
+    # exclude the viewer's own like (the client adds it back).
+    await set_interaction(session, other, "hash-tables", "liked_at", True)
+    await set_interaction(session, user, "hash-tables", "liked_at", True)
+
+    concept = await get_concept_out(session, user, "hash-tables")
+    assert concept is not None
+    assert concept.slug == "hash-tables"
+    assert concept.title and concept.summary and concept.topic_name
+    assert concept.like_count == 1, "only other users' likes, not the viewer's own"
+
+
+async def test_get_concept_unknown_slug_returns_none(session, user):
+    assert await get_concept_out(session, user, "not-a-real-concept") is None
 
 
 async def _assign_and_complete(session, user, day):

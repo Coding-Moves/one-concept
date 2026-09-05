@@ -319,3 +319,45 @@ async def test_saved_concepts_carry_title_and_topic(client):
     assert entry is not None, "the saved concept must appear in state.saved"
     assert entry["title"], "saved concept carries its title"
     assert entry["topic_name"], "saved concept carries its topic"
+
+
+async def test_like_count_counts_other_users_only(client, sessionmaker_for_test):
+    """Issue #95: a concept's public like_count counts OTHER users' likes and
+    excludes the viewer (the client adds the viewer's own like on top). The count
+    also rides along on the /me/state learned and saved lists."""
+    import uuid as _uuid
+
+    daily = (await client.get("/v1/daily")).json()
+    slug = daily["concept"]["slug"]
+    assert daily["concept"]["like_count"] == 0
+
+    # The viewer's own like never counts toward the number shown.
+    assert (await client.put(f"/v1/concepts/{slug}/like")).status_code < 300
+    assert (await client.get("/v1/daily")).json()["concept"]["like_count"] == 0
+
+    # Another user's like does count.
+    other = _uuid.uuid4()
+    async with sessionmaker_for_test() as s:
+        await s.execute(
+            text("insert into auth.users (id, email) values (:id, :e)"),
+            {"id": other, "e": f"{other}@example.invalid"},
+        )
+        await s.execute(
+            text("""
+                insert into public.concept_interactions (user_id, concept_id, liked_at)
+                select :u, c.id, now() from public.concepts c where c.slug = :slug
+            """),
+            {"u": other, "slug": slug},
+        )
+        await s.commit()
+
+    assert (await client.get("/v1/daily")).json()["concept"]["like_count"] == 1
+
+    # And the count appears on the saved and learned lists too.
+    await client.put(f"/v1/concepts/{slug}/save")
+    await client.post("/v1/daily/complete")
+    state = (await client.get("/v1/me/state")).json()
+    saved_entry = next(s for s in state["saved"] if s["concept_slug"] == slug)
+    assert saved_entry["like_count"] == 1
+    learned_entry = next(r for r in state["learned"] if r["concept_slug"] == slug)
+    assert learned_entry["like_count"] == 1

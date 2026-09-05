@@ -6,8 +6,14 @@ import Constants from 'expo-constants';
  * The current version is read from the running app (`expo.version` in
  * app.config.js, via expo-constants) — the single source of truth — so it can
  * never drift from what's shipped. Each release, add an entry here whose
- * `version` matches the new `expo.version`, with plain, user-facing highlights.
- * A version with no matching entry simply shows no card.
+ * `version` matches the new `expo.version`. A version with no matching entry
+ * simply shows no card.
+ *
+ * CONTENT POLICY (issue #97): list ONLY new user-facing FEATURES. Do NOT list
+ * bug fixes, memory/leak or performance fixes, UI/UX tweaks, or things removed —
+ * the card celebrates what's genuinely new, not the changelog. Keep each line
+ * plain, meaningful, and short; a few bullets at most. If a release has no new
+ * feature, leave its highlights empty (or add no entry) and no card appears.
  */
 export interface WhatsNewEntry {
   version: string;
@@ -16,11 +22,9 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    version: '1.3.0',
+    version: '1.4.0',
     highlights: [
-      'Your daily concept opens instantly — the next lessons are prepared ahead of time, so you never wait.',
-      'Stats and progress now count against the full library, so your numbers and streaks are accurate.',
-      'Smoother, more reliable reminders and syncing across your devices.',
+      'See how loved a concept is — every card now shows how many people have liked it.',
     ],
   },
 ];

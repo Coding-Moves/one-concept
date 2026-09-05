@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useRef } from 'react';
-import { Animated, Pressable, Share, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { radius, spacing, ThemeColors } from '../theme';
@@ -28,6 +28,9 @@ export function ConceptActions({ concept }: { concept: Concept }) {
 
   const liked = progress.likes.includes(concept.id);
   const saved = progress.bookmarks.includes(concept.id);
+  // Others' likes (from the server) plus the viewer's own, optimistically — so
+  // the number ticks up/down the instant you tap (issue #95). Hidden at zero.
+  const likeTotal = (concept.likeCount ?? 0) + (liked ? 1 : 0);
   const like = usePop();
   const save = usePop();
 
@@ -49,7 +52,7 @@ export function ConceptActions({ concept }: { concept: Concept }) {
           toggleLike(concept.id);
           like.pop();
         }}
-        style={styles.action}
+        style={[styles.action, styles.likeAction]}
         accessibilityRole="button"
         accessibilityLabel={liked ? 'Unlike' : 'Like'}
       >
@@ -60,6 +63,7 @@ export function ConceptActions({ concept }: { concept: Concept }) {
             color={liked ? colors.streak : colors.textSecondary}
           />
         </Animated.View>
+        {likeTotal > 0 ? <Text style={styles.likeCount}>{likeTotal}</Text> : null}
       </Pressable>
 
       <View style={styles.divider} />
@@ -111,6 +115,16 @@ const createStyles = (colors: ThemeColors) =>
     action: {
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm + 2,
+    },
+    likeAction: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.xs + 2,
+    },
+    likeCount: {
+      fontSize: 13,
+      fontWeight: '600',
+      color: colors.textSecondary,
     },
     divider: {
       width: 1,

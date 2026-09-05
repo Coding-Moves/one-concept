@@ -10,6 +10,8 @@ export interface ThemeColors {
   success: string;
   successSurface: string;
   streak: string;
+  /** The Like heart — deliberately rose, not the streak's orange flame (#114). */
+  like: string;
   border: string;
   categoryChip: string;
   categoryChipText: string;
@@ -28,6 +30,7 @@ export const lightColors: ThemeColors = {
   success: '#16A34A',
   successSurface: '#E9F8EF',
   streak: '#F97316',
+  like: '#E11D48',
   border: '#E9EBF4',
   categoryChip: '#EEF0FF',
   categoryChipText: '#4F46E5',
@@ -46,6 +49,7 @@ export const darkColors: ThemeColors = {
   success: '#34D399',
   successSurface: '#10291F',
   streak: '#FB923C',
+  like: '#FB7185',
   border: '#20263D',
   categoryChip: '#1D2242',
   categoryChipText: '#A5B4FC',

@@ -5,8 +5,9 @@ import { useTheme } from '../context/ThemeContext';
 import { ThemeColors } from '../theme';
 
 /**
- * A small "🔥 N" badge showing how many people liked a concept. Renders nothing
+ * A small "♥ N" badge showing how many people liked a concept. Renders nothing
  * when the count is zero, so a card with no likes shows no number (issue #95).
+ * Uses the heart/like colour, distinct from the streak flame (issue #114).
  */
 export function LikeCount({ count }: { count: number }) {
   const { colors } = useTheme();
@@ -14,7 +15,7 @@ export function LikeCount({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <View style={styles.row}>
-      <Ionicons name="flame" size={13} color={colors.streak} />
+      <Ionicons name="heart" size={13} color={colors.like} />
       <Text style={styles.text}>{count}</Text>
     </View>
   );

@@ -36,10 +36,10 @@ function HistoryRow({
     <View style={styles.row}>
       <View style={styles.rowText}>
         <Text style={styles.rowTitle}>{title}</Text>
-        <View style={styles.metaRow}>
-          {category ? <CategoryChip category={category} /> : null}
-          <LikeCount count={likeTotal} />
-        </View>
+        {/* Category and likes each get their own row, so the heart never
+            wraps to a different line depending on chip width (issue #121). */}
+        {category ? <CategoryChip category={category} /> : null}
+        <LikeCount count={likeTotal} />
       </View>
       <Text style={styles.rowDate}>{formatDateKey(record.date)}</Text>
     </View>
@@ -134,12 +134,7 @@ const createStyles = (colors: ThemeColors) =>
     rowText: {
       gap: spacing.sm,
       flexShrink: 1,
-    },
-    metaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      flexWrap: 'wrap',
+      alignItems: 'flex-start',
     },
     rowTitle: {
       fontSize: 16,

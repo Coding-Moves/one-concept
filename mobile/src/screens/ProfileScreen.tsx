@@ -23,6 +23,7 @@ import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
 export type ProfileStackParamList = {
   ProfileHome: undefined;
   Personalization: undefined;
+  About: undefined;
 };
 
 const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
@@ -134,6 +135,21 @@ export function ProfileScreen() {
             <Text style={styles.rowSubtitle}>
               Following {progress.followedTopics.length} of 5 topics
             </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </Pressable>
+
+      <Pressable
+        onPress={() => navigation.navigate('About')}
+        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+      >
+        <View style={styles.rowLeft}>
+          <Ionicons name="information-circle-outline" size={20} color={colors.text} />
+          <View>
+            <Text style={styles.rowTitle}>About</Text>
+            <Text style={styles.rowSubtitle}>Version, what this app is, and how it works</Text>
           </View>
         </View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />

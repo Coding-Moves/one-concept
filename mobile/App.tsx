@@ -20,6 +20,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { useWhatsNew } from './src/hooks/useWhatsNew';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
+import { AboutScreen } from './src/screens/AboutScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
 import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
@@ -40,6 +41,11 @@ function ProfileStackScreen() {
       <ProfileStack.Screen
         name="Personalization"
         component={PersonalizationScreen}
+        options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+      />
+      <ProfileStack.Screen
+        name="About"
+        component={AboutScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
     </ProfileStack.Navigator>

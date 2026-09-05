@@ -2,6 +2,8 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
+from app.schemas.daily import DailyOut
+
 
 class StreakOut(BaseModel):
     current: int
@@ -37,6 +39,10 @@ class StateOut(BaseModel):
     saved: list[SavedConceptOut] = Field(default_factory=list)
     stats: StreakOut
     assignment_slug: str | None = None
+    # Today's concept, folded in so the app needs a single round trip at startup
+    # (issue #102). Null when the catalog is exhausted for this user. This GET
+    # creates the day's assignment on first call, exactly like GET /v1/daily.
+    daily: DailyOut | None = None
 
 
 class TopicsIn(BaseModel):

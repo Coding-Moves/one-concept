@@ -16,6 +16,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write # to dispatch the Release APK workflow
 
 jobs:
   ota:
@@ -110,3 +111,13 @@ jobs:
             --target "$GITHUB_SHA" \
             --title "One Concept $TAG" \
             --notes-file release-notes.md
+
+      - name: Build & publish the production APK
+        # Dispatch the Release APK workflow explicitly. It can't listen for the
+        # release we just created — GitHub suppresses events raised by
+        # GITHUB_TOKEN — but workflow_dispatch is exempt, so this reliably
+        # triggers it on every release. It native-gates itself (builds only when
+        # runtimeVersion changed) and publishes the stable apk-latest link.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run release-apk.yml --repo "$GITHUB_REPOSITORY" --ref main

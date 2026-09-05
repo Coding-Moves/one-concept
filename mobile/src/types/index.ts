@@ -49,6 +49,31 @@ export interface SavedConcept {
   likeCount?: number;
 }
 
+/** Today's concept as the server sends it (folded into /v1/me/state, #102). */
+export interface DailyPayload {
+  assigned_for: string;
+  assigned_at: string;
+  completed_at: string | null;
+  learned: boolean;
+  outside_followed_topics: boolean;
+  concept: {
+    id: string;
+    slug: string;
+    title: string;
+    summary: string;
+    example: string | null;
+    topic_slug: string;
+    topic_name: string;
+    like_count?: number;
+  };
+}
+
+/** The server's daily result: today's concept, exhausted, or unavailable. */
+export type DailyOutcome =
+  | { status: 'ok'; payload: DailyPayload; stale: boolean }
+  | { status: 'exhausted' }
+  | { status: 'unavailable' };
+
 /** The concept assigned for a given day, fixed once chosen. */
 export interface DailyAssignment {
   conceptId: string;
@@ -83,4 +108,10 @@ export interface ProgressState {
    * Absent for purely local state, where the client derives them instead.
    */
   stats?: StreakStats;
+  /**
+   * Today's concept, folded into the server state so startup needs one request
+   * (#102). Present only for server-backed state; the signed-out demo picks the
+   * concept locally instead.
+   */
+  serverDaily?: DailyOutcome;
 }

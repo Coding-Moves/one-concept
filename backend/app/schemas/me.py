@@ -13,6 +13,7 @@ class SavedConceptOut(BaseModel):
     concept_slug: str
     title: str = ""
     topic_name: str = ""
+    like_count: int = 0
 
 
 class LearnedOut(BaseModel):
@@ -22,6 +23,7 @@ class LearnedOut(BaseModel):
     # catalog to give a learned lesson its name.
     title: str = ""
     topic_name: str = ""
+    like_count: int = 0
 
 
 class StateOut(BaseModel):

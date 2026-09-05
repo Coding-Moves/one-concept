@@ -22,13 +22,14 @@ def _to_state_out(state) -> StateOut:
         followed_topics=state.followed_topics,
         learned=[
             LearnedOut(concept_slug=r.concept_slug, learned_on=r.learned_on,
-                       title=r.title, topic_name=r.topic_name)
+                       title=r.title, topic_name=r.topic_name, like_count=r.like_count)
             for r in state.learned
         ],
         likes=state.likes,
         bookmarks=state.bookmarks,
         saved=[
-            SavedConceptOut(concept_slug=s.concept_slug, title=s.title, topic_name=s.topic_name)
+            SavedConceptOut(concept_slug=s.concept_slug, title=s.title,
+                            topic_name=s.topic_name, like_count=s.like_count)
             for s in state.saved
         ],
         stats=StreakOut(**vars(state.stats)),

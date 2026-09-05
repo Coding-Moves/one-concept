@@ -22,6 +22,7 @@ class LearnedRecord:
     learned_on: date
     title: str = ""
     topic_name: str = ""
+    like_count: int = 0
 
 
 @dataclass
@@ -29,6 +30,7 @@ class SavedConcept:
     concept_slug: str
     title: str = ""
     topic_name: str = ""
+    like_count: int = 0
 
 
 @dataclass
@@ -60,7 +62,7 @@ _STATE = text("""
          where ut.user_id = :uid and t.is_active
     ),
     learned_rows as (
-        select c.slug, c.title, t.name as topic_name, a.assigned_for
+        select c.id as concept_id, c.slug, c.title, t.name as topic_name, a.assigned_for
           from public.daily_assignments a
           join public.concepts c on c.id = a.concept_id
           join public.topics t on t.id = c.topic_id
@@ -68,7 +70,10 @@ _STATE = text("""
     ),
     learned as (
         select coalesce(json_agg(json_build_object(
-                   'slug', slug, 'title', title, 'topic', topic_name, 'on', assigned_for)
+                   'slug', slug, 'title', title, 'topic', topic_name, 'on', assigned_for,
+                   'likes', (select count(*) from public.concept_interactions ci
+                              where ci.concept_id = learned_rows.concept_id
+                                and ci.liked_at is not null and ci.user_id <> :uid)::int)
                    order by assigned_for desc), '[]'::json) as v
           from learned_rows
     ),
@@ -82,7 +87,10 @@ _STATE = text("""
     ),
     saved as (
         select coalesce(json_agg(json_build_object(
-                   'slug', c.slug, 'title', c.title, 'topic', t.name)
+                   'slug', c.slug, 'title', c.title, 'topic', t.name,
+                   'likes', (select count(*) from public.concept_interactions ci
+                              where ci.concept_id = c.id
+                                and ci.liked_at is not null and ci.user_id <> :uid)::int)
                    order by i.saved_at desc) filter (where i.saved_at is not null),
                  '[]'::json) as v
           from public.concept_interactions i
@@ -137,6 +145,7 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID) -> UserState | N
                 learned_on=date.fromisoformat(r["on"]),
                 title=r.get("title", ""),
                 topic_name=r.get("topic", ""),
+                like_count=r.get("likes", 0),
             )
             for r in row.learned
         ],
@@ -147,6 +156,7 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID) -> UserState | N
                 concept_slug=s["slug"],
                 title=s.get("title", ""),
                 topic_name=s.get("topic", ""),
+                like_count=s.get("likes", 0),
             )
             for s in row.saved
         ],

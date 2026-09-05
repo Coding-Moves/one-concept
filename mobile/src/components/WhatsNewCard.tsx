@@ -38,8 +38,9 @@ export function WhatsNewCard({ entry, onDismiss }: Props) {
     }).start();
   }, [progress]);
 
+  // Only the slide is animated here; the Modal's animationType="fade" already
+  // handles the opacity, so animating opacity again would double it up.
   const cardStyle = {
-    opacity: progress,
     transform: [
       {
         translateY: progress.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }),

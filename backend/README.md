@@ -181,6 +181,7 @@ psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_concept_backlog.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0006_seed_backlog.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0007_reminder_log.sql
 psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0008_backlog_claimed_at.sql
+psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0009_like_count_index.sql
 ```
 
 Applying only through `0004` leaves a schema with no generation backlog and no

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { CategoryChip } from '../components/CategoryChip';
+import { LikeCount } from '../components/LikeCount';
 import { SkeletonRow } from '../components/Skeleton';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
@@ -16,17 +17,29 @@ function prettify(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function HistoryRow({ record, styles }: { record: LearnedRecord; styles: Styles }) {
+function HistoryRow({
+  record,
+  liked,
+  styles,
+}: {
+  record: LearnedRecord;
+  liked: boolean;
+  styles: Styles;
+}) {
   // Server records carry their own names; the bundled catalog is only the
   // signed-out fallback, and a prettified slug beats a silently missing row.
   const local = CONCEPTS_BY_ID.get(record.conceptId);
   const title = record.title ?? local?.title ?? prettify(record.conceptId);
   const category = (record.topicName as Category | undefined) ?? local?.category;
+  const likeTotal = (record.likeCount ?? 0) + (liked ? 1 : 0);
   return (
     <View style={styles.row}>
       <View style={styles.rowText}>
         <Text style={styles.rowTitle}>{title}</Text>
-        {category ? <CategoryChip category={category} /> : null}
+        <View style={styles.metaRow}>
+          {category ? <CategoryChip category={category} /> : null}
+          <LikeCount count={likeTotal} />
+        </View>
       </View>
       <Text style={styles.rowDate}>{formatDateKey(record.date)}</Text>
     </View>
@@ -39,13 +52,16 @@ export function HistoryScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const records = [...progress.learned].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const likedIds = useMemo(() => new Set(progress.likes), [progress.likes]);
 
   return (
     <View style={styles.screen}>
       <FlatList
         data={loading ? [] : records}
         keyExtractor={(r) => `${r.date}-${r.conceptId}`}
-        renderItem={({ item }) => <HistoryRow record={item} styles={styles} />}
+        renderItem={({ item }) => (
+          <HistoryRow record={item} liked={likedIds.has(item.conceptId)} styles={styles} />
+        )}
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View style={styles.header}>
@@ -118,6 +134,12 @@ const createStyles = (colors: ThemeColors) =>
     rowText: {
       gap: spacing.sm,
       flexShrink: 1,
+    },
+    metaRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      flexWrap: 'wrap',
     },
     rowTitle: {
       fontSize: 16,

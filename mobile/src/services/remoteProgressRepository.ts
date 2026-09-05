@@ -12,10 +12,16 @@ interface StatePayload {
   timezone: string;
   today: string;
   followed_topics: string[];
-  learned: { concept_slug: string; learned_on: string; title?: string; topic_name?: string }[];
+  learned: {
+    concept_slug: string;
+    learned_on: string;
+    title?: string;
+    topic_name?: string;
+    like_count?: number;
+  }[];
   likes: string[];
   bookmarks: string[];
-  saved?: { concept_slug: string; title?: string; topic_name?: string }[];
+  saved?: { concept_slug: string; title?: string; topic_name?: string; like_count?: number }[];
   stats: { current: number; longest: number; total_learned: number };
   assignment_slug: string | null;
 }
@@ -27,6 +33,7 @@ function toProgressState(payload: StatePayload): ProgressState {
       date: r.learned_on,
       title: r.title || undefined,
       topicName: r.topic_name || undefined,
+      likeCount: r.like_count ?? 0,
     })),
     assignment: payload.assignment_slug
       ? { conceptId: payload.assignment_slug, date: payload.today }
@@ -40,6 +47,7 @@ function toProgressState(payload: StatePayload): ProgressState {
       conceptId: s.concept_slug,
       title: s.title || '',
       topicName: s.topic_name || '',
+      likeCount: s.like_count ?? 0,
     })),
     // Server-computed, so the day boundary comes from the user's stored
     // timezone rather than whatever the device clock happens to say.

@@ -18,6 +18,7 @@ export interface DailyPayload {
     example: string | null;
     topic_slug: string;
     topic_name: string;
+    like_count?: number;
   };
 }
 
@@ -36,6 +37,7 @@ export function toConcept(payload: DailyPayload): Concept {
     category: payload.concept.topic_name as Category,
     summary: payload.concept.summary,
     example: payload.concept.example ?? undefined,
+    likeCount: payload.concept.like_count ?? 0,
   };
 }
 

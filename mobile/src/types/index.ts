@@ -7,6 +7,8 @@ export interface Concept {
   summary: string;
   /** Optional concrete example that grounds the concept. */
   example?: string;
+  /** Likes from other users; the viewer's own like is added on top for display. */
+  likeCount?: number;
 }
 
 export type Category =
@@ -33,6 +35,8 @@ export interface LearnedRecord {
   title?: string;
   /** Server-supplied topic name; present for signed-in users. */
   topicName?: string;
+  /** Likes from other users on this concept. */
+  likeCount?: number;
 }
 
 /** A concept the user bookmarked, with the details needed to render it. */
@@ -41,6 +45,8 @@ export interface SavedConcept {
   title: string;
   /** Server-supplied topic name; the app's Category labels match these. */
   topicName: string;
+  /** Likes from other users on this concept. */
+  likeCount?: number;
 }
 
 /** The concept assigned for a given day, fixed once chosen. */

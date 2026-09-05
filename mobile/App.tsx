@@ -12,9 +12,11 @@ import { StatusBar } from 'expo-status-bar';
 import { ComponentProps } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ProgressProvider } from './src/context/ProgressContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
+import { useWhatsNew } from './src/hooks/useWhatsNew';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
@@ -49,6 +51,7 @@ function tabIcon(focusedName: IoniconName, name: IoniconName) {
 function ThemedApp() {
   const { colors, mode } = useTheme();
   const { loading, session } = useAuth();
+  const whatsNew = useWhatsNew();
 
   if (loading) {
     return (
@@ -125,6 +128,9 @@ function ThemedApp() {
           />
         </Tab.Navigator>
       </NavigationContainer>
+      {whatsNew.entry && (
+        <WhatsNewCard entry={whatsNew.entry} onDismiss={whatsNew.dismiss} />
+      )}
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
     </>
   );

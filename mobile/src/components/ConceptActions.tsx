@@ -58,9 +58,9 @@ export function ConceptActions({ concept }: { concept: Concept }) {
       >
         <Animated.View style={{ transform: [{ scale: like.scale }] }}>
           <Ionicons
-            name={liked ? 'flame' : 'flame-outline'}
+            name={liked ? 'heart' : 'heart-outline'}
             size={22}
-            color={liked ? colors.streak : colors.textSecondary}
+            color={liked ? colors.like : colors.textSecondary}
           />
         </Animated.View>
         {likeTotal > 0 ? <Text style={styles.likeCount}>{likeTotal}</Text> : null}

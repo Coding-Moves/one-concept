@@ -8,8 +8,9 @@ import {
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SpaceGrotesk_700Bold, useFonts } from '@expo-google-fonts/space-grotesk';
+import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { ComponentProps } from 'react';
+import { ComponentProps, useCallback, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
@@ -23,6 +24,11 @@ import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
 import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
+
+// Hold the native splash up until we're ready to paint, instead of hiding it
+// automatically and flashing a blank screen while the font loads (issue #93).
+// Best-effort: if it's already hidden, ignore the error.
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 const Tab = createBottomTabNavigator();
 const ProfileStack = createNativeStackNavigator<ProfileStackParamList>();
@@ -137,21 +143,37 @@ function ThemedApp() {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ SpaceGrotesk_700Bold });
+  const [fontsLoaded, fontError] = useFonts({ SpaceGrotesk_700Bold });
+  // Proceed even if the font fails to load: falling back to the system font is
+  // far better than hanging on the splash forever (preventAutoHideAsync would
+  // otherwise never be undone).
+  const ready = fontsLoaded || !!fontError;
 
-  // Keep the splash visible until the display font is ready — titles must
-  // never flash in the fallback font.
-  if (!fontsLoaded) return null;
+  // Hide the native splash once the first frame has actually laid out, so it
+  // hands straight over to real UI with no blank frame. Guard with a ref so
+  // later layout passes (rotation, keyboard) don't call hideAsync again.
+  const splashHidden = useRef(false);
+  const onLayoutRootView = useCallback(() => {
+    if (splashHidden.current) return;
+    splashHidden.current = true;
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
+
+  // The native splash stays up (preventAutoHideAsync above) until we're ready —
+  // titles never flash in the fallback font, and there's no blank flash.
+  if (!ready) return null;
 
   return (
-    <SafeAreaProvider>
-      <ThemeProvider>
-        <AuthProvider>
-          <ProgressProvider>
-            <ThemedApp />
-          </ProgressProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </SafeAreaProvider>
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <SafeAreaProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <ProgressProvider>
+              <ThemedApp />
+            </ProgressProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </SafeAreaProvider>
+    </View>
   );
 }

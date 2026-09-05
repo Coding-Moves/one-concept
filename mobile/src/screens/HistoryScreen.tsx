@@ -52,7 +52,7 @@ export function HistoryScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const records = [...progress.learned].sort((a, b) => (a.date < b.date ? 1 : -1));
-  const likedIds = new Set(progress.likes);
+  const likedIds = useMemo(() => new Set(progress.likes), [progress.likes]);
 
   return (
     <View style={styles.screen}>

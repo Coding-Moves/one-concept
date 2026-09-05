@@ -39,7 +39,7 @@ export function ProfileScreen() {
   // signed-out demo resolves bookmarked ids against the bundled catalog. Mapping
   // signed-in bookmarks through the 20-concept demo is exactly what hid saved
   // lessons from the 125+ server catalog (issue #90).
-  const likedIds = new Set(progress.likes);
+  const likedIds = useMemo(() => new Set(progress.likes), [progress.likes]);
   const saved = progress.savedConcepts
     ? progress.savedConcepts.map((s) => ({
         id: s.conceptId,

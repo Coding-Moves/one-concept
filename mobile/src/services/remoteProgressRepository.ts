@@ -15,6 +15,7 @@ interface StatePayload {
   learned: { concept_slug: string; learned_on: string; title?: string; topic_name?: string }[];
   likes: string[];
   bookmarks: string[];
+  saved?: { concept_slug: string; title?: string; topic_name?: string }[];
   stats: { current: number; longest: number; total_learned: number };
   assignment_slug: string | null;
 }
@@ -35,6 +36,11 @@ function toProgressState(payload: StatePayload): ProgressState {
       .filter((c): c is Category => c !== null),
     likes: payload.likes,
     bookmarks: payload.bookmarks,
+    savedConcepts: (payload.saved ?? []).map((s) => ({
+      conceptId: s.concept_slug,
+      title: s.title || '',
+      topicName: s.topic_name || '',
+    })),
     // Server-computed, so the day boundary comes from the user's stored
     // timezone rather than whatever the device clock happens to say.
     stats: {
@@ -180,12 +186,11 @@ export class RemoteProgressRepository implements ProgressRepository {
     const epoch = this.epoch;
     const currently = this.cache.bookmarks.includes(conceptId);
     await this.toggle(conceptId, 'save', currently);
-    return this.remember({
-      ...this.cache,
-      bookmarks: currently
-        ? this.cache.bookmarks.filter((id) => id !== conceptId)
-        : [...this.cache.bookmarks, conceptId],
-    }, epoch);
+    // Reload the full state rather than patching in place: the saved list needs
+    // each concept's title/topic, which the toggle endpoint doesn't return. The
+    // optimistic update in ProgressContext already flips the card + count
+    // instantly, so this refresh only fills in the saved list a moment later.
+    return this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
   }
 }
 

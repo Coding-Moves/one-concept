@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { radius, spacing, ThemeColors, typography } from '../theme';
+import { ProfileStackParamList } from './ProfileScreen';
 
 const HOW_IT_WORKS = [
   'Each day you get one concept, drawn from the topics you follow.',
@@ -13,7 +15,7 @@ const HOW_IT_WORKS = [
 ];
 
 export function AboutScreen() {
-  const navigation = useNavigation();
+  const navigation = useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'About'>>();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const version = Constants.expoConfig?.version ?? '?';

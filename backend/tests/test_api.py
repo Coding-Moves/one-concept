@@ -301,3 +301,21 @@ async def test_patch_lowercase_timezone_is_accepted_and_normalized(client, sessi
             text("select timezone from public.profiles where id = :u"), {"u": user}
         )
     assert stored == "Asia/Karachi", "the canonical name is stored, not the input casing"
+
+
+async def test_saved_concepts_carry_title_and_topic(client):
+    """Issue #90: /v1/me/state must return saved concepts WITH their title and
+    topic, so the Profile can render the saved list without the bundled demo
+    catalog. `bookmarks` still carries the bare slug for membership/count."""
+    daily = (await client.get("/v1/daily")).json()
+    slug = daily["concept"]["slug"]
+
+    saved = await client.put(f"/v1/concepts/{slug}/save")
+    assert saved.status_code < 300
+
+    state = (await client.get("/v1/me/state")).json()
+    assert slug in state["bookmarks"], "slug still tracked for membership/count"
+    entry = next((s for s in state["saved"] if s["concept_slug"] == slug), None)
+    assert entry is not None, "the saved concept must appear in state.saved"
+    assert entry["title"], "saved concept carries its title"
+    assert entry["topic_name"], "saved concept carries its topic"

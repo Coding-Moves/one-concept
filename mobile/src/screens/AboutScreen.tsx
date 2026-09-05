@@ -3,7 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import Constants from 'expo-constants';
 import { useMemo } from 'react';
-import { Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { scaleIcon, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
@@ -19,9 +19,15 @@ const GITHUB_DEV = 'https://github.com/Muawiya-contact';
 const ISSUES_URL = 'https://github.com/Coding-Moves/one-concept/issues/new';
 const FEEDBACK_EMAIL = 'contactmuawia@gmail.com';
 
-/** Best-effort open; a device with no handler (rare) simply does nothing. */
-function openURL(url: string) {
-  Linking.openURL(url).catch(() => {});
+/**
+ * Open a URL, falling back to an alert if nothing can handle it — most likely
+ * a mailto: on a device with no mail app. The fallback shows the destination
+ * (email or link) so the tap is never a dead end.
+ */
+function openURL(url: string, fallback: string) {
+  Linking.openURL(url).catch(() => {
+    Alert.alert("Couldn't open that", fallback);
+  });
 }
 
 export function AboutScreen() {
@@ -32,7 +38,7 @@ export function AboutScreen() {
 
   const contact = () => {
     const subject = encodeURIComponent(`One Concept App Feedback (v${version})`);
-    openURL(`mailto:${FEEDBACK_EMAIL}?subject=${subject}`);
+    openURL(`mailto:${FEEDBACK_EMAIL}?subject=${subject}`, `Reach us at ${FEEDBACK_EMAIL}`);
   };
 
   return (
@@ -85,7 +91,7 @@ export function AboutScreen() {
           <Ionicons name="chevron-forward" size={scaleIcon(18)} color={colors.textMuted} />
         </Pressable>
         <Pressable
-          onPress={() => openURL(ISSUES_URL)}
+          onPress={() => openURL(ISSUES_URL, ISSUES_URL)}
           style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
           accessibilityRole="link"
           accessibilityLabel="Report an issue on GitHub"
@@ -99,13 +105,13 @@ export function AboutScreen() {
       <View style={styles.footer}>
         <Text style={styles.footerText}>
           Built with ❤️ by{' '}
-          <Text style={styles.link} onPress={() => openURL(GITHUB_ORG)} accessibilityRole="link">
+          <Text style={styles.link} onPress={() => openURL(GITHUB_ORG, GITHUB_ORG)} accessibilityRole="link">
             Coding Moves
           </Text>
         </Text>
         <Text style={styles.footerSub}>
           Developed by{' '}
-          <Text style={styles.link} onPress={() => openURL(GITHUB_DEV)} accessibilityRole="link">
+          <Text style={styles.link} onPress={() => openURL(GITHUB_DEV, GITHUB_DEV)} accessibilityRole="link">
             @Muawiya-contact
           </Text>
         </Text>

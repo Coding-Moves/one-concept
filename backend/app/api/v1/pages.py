@@ -118,15 +118,19 @@ _RESET_PASSWORD = """<!doctype html>
       intro.classList.add('hidden');
     }
 
-    // Recovery session arrives in the URL fragment (implicit flow).
-    var params = new URLSearchParams(location.hash.slice(1));
-    var accessToken = params.get('access_token');
-    var type = params.get('type');
-    var linkError = params.get('error_description');
+    // Recovery session arrives in the URL fragment (implicit flow). Supabase
+    // can report a failure in either the fragment or the query string, so
+    // check both and surface the real reason instead of the generic message.
+    var hashParams = new URLSearchParams(location.hash.slice(1));
+    var queryParams = new URLSearchParams(location.search.slice(1));
+    var accessToken = hashParams.get('access_token');
+    var type = hashParams.get('type');
+    var linkError = hashParams.get('error_description') || queryParams.get('error_description')
+                 || hashParams.get('error') || queryParams.get('error');
 
     if (linkError) {
       disableForm();
-      fail(linkError.replace(/\\+/g, ' '));
+      fail(linkError);
     } else if (!accessToken || type !== 'recovery') {
       disableForm();
       fail('This reset link is invalid or has expired. Open the One Concept app and request a new link.');
@@ -172,18 +176,29 @@ _RESET_PASSWORD = """<!doctype html>
 </html>"""
 
 
-_RESET_UNCONFIGURED = _CONFIRMED.replace(
-    "<title>One Concept — email confirmed</title>",
-    "<title>One Concept — reset password</title>",
-).replace(
-    "<h1>Email confirmed ✓</h1>",
-    "<h1>Reset unavailable</h1>",
-).replace(
-    "<p>You're all set. Open the <strong>One Concept</strong> app on your\n"
-    "       phone and sign in to get today's concept.</p>",
-    "<p>Password reset isn't configured on the server yet. "
-    "Please try again later.</p>",
-)
+_RESET_UNCONFIGURED = """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>One Concept — reset password</title>
+  <style>
+    body { margin: 0; min-height: 100vh; display: grid; place-items: center;
+           background: #0f1115; color: #e8eaf0;
+           font: 18px/1.6 system-ui, sans-serif; }
+    main { text-align: center; padding: 2rem; }
+    h1 { font-size: 1.6rem; margin-bottom: 0.5rem; }
+    p { color: #9aa1b0; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Reset unavailable</h1>
+    <p>Password reset isn't configured on the server yet. Please try again
+       later.</p>
+  </main>
+</body>
+</html>"""
 
 
 @router.get("/reset-password", response_class=HTMLResponse, include_in_schema=False)

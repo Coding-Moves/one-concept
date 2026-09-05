@@ -1,0 +1,105 @@
+# Keeps a single, sideloadable, production-channel APK at a STABLE link so the
+# installed app only ever changes on a release to main:
+#
+#   https://github.com/<owner>/<repo>/releases/download/apk-latest/one-concept.apk
+#
+# On each release, this rebuilds the APK ONLY when the release is native (the
+# runtimeVersion changed). A JS-only release is delivered to the existing APK
+# over the air on the production channel (see release.yml), so no new binary is
+# needed and no EAS build is spent. The README points at the link above and
+# never has to be edited — publishing a release asset needs contents:write only,
+# so it never has to push to the protected main/develop branches.
+#
+# Requires the EXPO_TOKEN repository secret.
+name: Release APK
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: # manual bootstrap / rebuild
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-apk
+  cancel-in-progress: false
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Read the shipped runtimeVersion
+        id: rv
+        run: echo "value=$(node -p "require('./app.config.js').expo.runtimeVersion")" >> "$GITHUB_OUTPUT"
+
+      - name: Read the runtimeVersion already published as apk-latest
+        id: published
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prev=$(gh release view apk-latest --repo "$GITHUB_REPOSITORY" --json body --jq '.body' 2>/dev/null \
+                 | sed -n 's/.*runtimeVersion: \([0-9][0-9.]*\).*/\1/p' | head -1)
+          echo "value=$prev" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether to rebuild
+        id: decide
+        run: |
+          if [ "${{ steps.rv.outputs.value }}" != "${{ steps.published.outputs.value }}" ]; then
+            echo "build=true" >> "$GITHUB_OUTPUT"
+            echo "Native release (runtimeVersion ${{ steps.published.outputs.value }} -> ${{ steps.rv.outputs.value }}): building a new APK."
+          else
+            echo "build=false" >> "$GITHUB_OUTPUT"
+            echo "runtimeVersion unchanged (${{ steps.rv.outputs.value }}): JS-only release, the existing APK stands and updates over the air."
+          fi
+
+      - uses: actions/setup-node@v7
+        if: steps.decide.outputs.build == 'true'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - uses: expo/expo-github-action@v9
+        if: steps.decide.outputs.build == 'true'
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - run: npm ci
+        if: steps.decide.outputs.build == 'true'
+
+      - name: Build the production APK and resolve its URL
+        id: build
+        if: steps.decide.outputs.build == 'true'
+        run: |
+          set -euo pipefail
+          eas build --platform android --profile production-apk --environment production \
+            --non-interactive --wait --json > build.json
+          url=$(jq -r '.[0].artifacts.buildUrl // .[0].artifacts.applicationArchiveUrl // empty' build.json)
+          if [ -z "$url" ]; then
+            echo "::error::could not resolve the built APK URL"; cat build.json; exit 1
+          fi
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+
+      - name: Publish the APK to the stable apk-latest release
+        if: steps.decide.outputs.build == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RV: ${{ steps.rv.outputs.value }}
+        run: |
+          set -euo pipefail
+          curl -fL -o one-concept.apk "${{ steps.build.outputs.url }}"
+          notes="Sideload build for the current native runtime. runtimeVersion: ${RV}. JS updates arrive over the air on release; reinstall from here only when a native release changes this."
+          if gh release view apk-latest --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload apk-latest one-concept.apk --repo "$GITHUB_REPOSITORY" --clobber
+            gh release edit apk-latest --repo "$GITHUB_REPOSITORY" --notes "$notes"
+          else
+            gh release create apk-latest one-concept.apk --repo "$GITHUB_REPOSITORY" \
+              --prerelease --title "Latest installable APK" --notes "$notes"
+          fi

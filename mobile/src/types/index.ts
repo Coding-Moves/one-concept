@@ -7,6 +7,8 @@ export interface Concept {
   summary: string;
   /** Optional concrete example that grounds the concept. */
   example?: string;
+  /** Likes from other users; the viewer's own like is added on top for display. */
+  likeCount?: number;
 }
 
 export type Category =
@@ -33,6 +35,18 @@ export interface LearnedRecord {
   title?: string;
   /** Server-supplied topic name; present for signed-in users. */
   topicName?: string;
+  /** Likes from other users on this concept. */
+  likeCount?: number;
+}
+
+/** A concept the user bookmarked, with the details needed to render it. */
+export interface SavedConcept {
+  conceptId: string;
+  title: string;
+  /** Server-supplied topic name; the app's Category labels match these. */
+  topicName: string;
+  /** Likes from other users on this concept. */
+  likeCount?: number;
 }
 
 /** The concept assigned for a given day, fixed once chosen. */
@@ -58,6 +72,12 @@ export interface ProgressState {
   likes: string[];
   /** Concept ids the user saved for later. */
   bookmarks: string[];
+  /**
+   * Saved concepts with their titles/topics, for the Profile "Saved concepts"
+   * list. Present only for server-backed state; absent for the signed-out demo,
+   * which resolves saved items against the bundled catalog instead.
+   */
+  savedConcepts?: SavedConcept[];
   /**
    * Streaks as computed by the server, when the state came from the server.
    * Absent for purely local state, where the client derives them instead.

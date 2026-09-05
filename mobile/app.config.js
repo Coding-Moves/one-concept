@@ -18,7 +18,7 @@ module.exports = {
     name: 'One Concept',
     slug: 'one-concept',
     owner: 'coding-moves',
-    version: '1.3.0',
+    version: '1.4.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -36,7 +36,7 @@ module.exports = {
       },
       predictiveBackGestureEnabled: false,
     },
-    runtimeVersion: '1.2.0',
+    runtimeVersion: '1.3.0',
     updates: {
       checkAutomatically: 'ON_LOAD',
       fallbackToCacheTimeout: 0,
@@ -45,7 +45,7 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: ['expo-font', 'expo-secure-store'],
+    plugins: ['expo-font', 'expo-secure-store', 'expo-splash-screen'],
     extra: {
       eas: {
         projectId: '2ce53ebe-f549-4a33-affc-a50d8e80b483',

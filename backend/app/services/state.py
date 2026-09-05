@@ -22,6 +22,15 @@ class LearnedRecord:
     learned_on: date
     title: str = ""
     topic_name: str = ""
+    like_count: int = 0
+
+
+@dataclass
+class SavedConcept:
+    concept_slug: str
+    title: str = ""
+    topic_name: str = ""
+    like_count: int = 0
 
 
 @dataclass
@@ -32,6 +41,10 @@ class UserState:
     learned: list[LearnedRecord]
     likes: list[str]
     bookmarks: list[str]
+    # Saved concepts WITH their titles/topics, so the Profile can render the
+    # saved list without the bundled demo catalog (which only covers a signed-out
+    # user's 20 concepts). `bookmarks` stays as bare slugs for membership counts.
+    saved: list[SavedConcept]
     stats: StreakStats
     assignment_slug: str | None = None
     display_name: str | None = None
@@ -49,7 +62,7 @@ _STATE = text("""
          where ut.user_id = :uid and t.is_active
     ),
     learned_rows as (
-        select c.slug, c.title, t.name as topic_name, a.assigned_for
+        select c.id as concept_id, c.slug, c.title, t.name as topic_name, a.assigned_for
           from public.daily_assignments a
           join public.concepts c on c.id = a.concept_id
           join public.topics t on t.id = c.topic_id
@@ -57,7 +70,10 @@ _STATE = text("""
     ),
     learned as (
         select coalesce(json_agg(json_build_object(
-                   'slug', slug, 'title', title, 'topic', topic_name, 'on', assigned_for)
+                   'slug', slug, 'title', title, 'topic', topic_name, 'on', assigned_for,
+                   'likes', (select count(*) from public.concept_interactions ci
+                              where ci.concept_id = learned_rows.concept_id
+                                and ci.liked_at is not null and ci.user_id <> :uid)::int)
                    order by assigned_for desc), '[]'::json) as v
           from learned_rows
     ),
@@ -67,6 +83,19 @@ _STATE = text("""
           coalesce(json_agg(c.slug) filter (where i.saved_at is not null), '[]'::json) as saves
           from public.concept_interactions i
           join public.concepts c on c.id = i.concept_id
+         where i.user_id = :uid
+    ),
+    saved as (
+        select coalesce(json_agg(json_build_object(
+                   'slug', c.slug, 'title', c.title, 'topic', t.name,
+                   'likes', (select count(*) from public.concept_interactions ci
+                              where ci.concept_id = c.id
+                                and ci.liked_at is not null and ci.user_id <> :uid)::int)
+                   order by i.saved_at desc) filter (where i.saved_at is not null),
+                 '[]'::json) as v
+          from public.concept_interactions i
+          join public.concepts c on c.id = i.concept_id
+          join public.topics t on t.id = c.topic_id
          where i.user_id = :uid
     ),
     assignment as (
@@ -87,13 +116,14 @@ _STATE = text("""
       learned.v       as learned,
       interactions.likes,
       interactions.saves,
+      saved.v         as saved,
       (select slug from assignment) as assignment_slug,
       coalesce((select len from runs
                  where ends_on in (prof.today, prof.today - 1)
                  order by ends_on desc limit 1), 0) as current_streak,
       coalesce((select max(len) from runs), 0)      as longest_streak,
       (select count(*)::int from days)              as total_learned
-      from prof, followed, learned, interactions
+      from prof, followed, learned, interactions, saved
 """)
 
 
@@ -115,11 +145,21 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID) -> UserState | N
                 learned_on=date.fromisoformat(r["on"]),
                 title=r.get("title", ""),
                 topic_name=r.get("topic", ""),
+                like_count=r.get("likes", 0),
             )
             for r in row.learned
         ],
         likes=list(row.likes),
         bookmarks=list(row.saves),
+        saved=[
+            SavedConcept(
+                concept_slug=s["slug"],
+                title=s.get("title", ""),
+                topic_name=s.get("topic", ""),
+                like_count=s.get("likes", 0),
+            )
+            for s in row.saved
+        ],
         stats=StreakStats(
             current=row.current_streak,
             longest=row.longest_streak,

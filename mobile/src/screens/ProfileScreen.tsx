@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { AnimatedFlame } from '../components/AnimatedFlame';
 import { CategoryChip } from '../components/CategoryChip';
+import { LikeCount } from '../components/LikeCount';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
@@ -34,9 +35,28 @@ export function ProfileScreen() {
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const saved = progress.bookmarks
-    .map((id) => CONCEPTS_BY_ID.get(id))
-    .filter((c): c is NonNullable<typeof c> => !!c);
+  // Server-backed state carries saved concepts with their titles/topics; the
+  // signed-out demo resolves bookmarked ids against the bundled catalog. Mapping
+  // signed-in bookmarks through the 20-concept demo is exactly what hid saved
+  // lessons from the 125+ server catalog (issue #90).
+  const likedIds = useMemo(() => new Set(progress.likes), [progress.likes]);
+  const saved = progress.savedConcepts
+    ? progress.savedConcepts.map((s) => ({
+        id: s.conceptId,
+        title: s.title,
+        topicName: s.topicName,
+        // Others' likes plus the viewer's own, so the number matches the card.
+        likes: (s.likeCount ?? 0) + (likedIds.has(s.conceptId) ? 1 : 0),
+      }))
+    : progress.bookmarks
+        .map((id) => CONCEPTS_BY_ID.get(id))
+        .filter((c): c is NonNullable<typeof c> => !!c)
+        .map((c) => ({
+          id: c.id,
+          title: c.title,
+          topicName: c.category as string,
+          likes: likedIds.has(c.id) ? 1 : 0,
+        }));
 
   // Server-owned preference; absent until the first state fetch succeeds.
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -169,7 +189,10 @@ export function ProfileScreen() {
             <View key={c.id} style={styles.savedRow}>
               <View style={styles.savedText}>
                 <Text style={styles.savedTitle}>{c.title}</Text>
-                <CategoryChip category={c.category} />
+                <View style={styles.savedMeta}>
+                  {c.topicName ? <CategoryChip category={c.topicName} /> : null}
+                  <LikeCount count={c.likes} />
+                </View>
               </View>
               <Ionicons name="bookmark" size={16} color={colors.primary} />
             </View>
@@ -315,6 +338,12 @@ const createStyles = (colors: ThemeColors) =>
     savedText: {
       flexShrink: 1,
       gap: spacing.sm,
+    },
+    savedMeta: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: spacing.sm,
+      flexWrap: 'wrap',
     },
     savedTitle: {
       fontSize: 15,

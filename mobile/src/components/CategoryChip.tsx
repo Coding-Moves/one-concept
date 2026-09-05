@@ -2,9 +2,10 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { radius, spacing, ThemeColors } from '../theme';
-import { Category } from '../types';
 
-export function CategoryChip({ category }: { category: Category }) {
+// Accepts any label string: the app's Category values and the server's topic
+// names (which match those values) both render the same way.
+export function CategoryChip({ category }: { category: string }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 

@@ -9,6 +9,13 @@ class StreakOut(BaseModel):
     total_learned: int
 
 
+class SavedConceptOut(BaseModel):
+    concept_slug: str
+    title: str = ""
+    topic_name: str = ""
+    like_count: int = 0
+
+
 class LearnedOut(BaseModel):
     concept_slug: str
     learned_on: date
@@ -16,6 +23,7 @@ class LearnedOut(BaseModel):
     # catalog to give a learned lesson its name.
     title: str = ""
     topic_name: str = ""
+    like_count: int = 0
 
 
 class StateOut(BaseModel):
@@ -26,6 +34,7 @@ class StateOut(BaseModel):
     learned: list[LearnedOut]
     likes: list[str]
     bookmarks: list[str]
+    saved: list[SavedConceptOut] = Field(default_factory=list)
     stats: StreakOut
     assignment_slug: str | None = None
 

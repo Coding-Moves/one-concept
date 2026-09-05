@@ -29,7 +29,10 @@ export interface ProgressContextValue {
    *  of which day it counts for, so it survives a cross-midnight completion. */
   hasLearned: (conceptId: string) => boolean;
   streaks: StreakStats;
-  markLearned: () => void;
+  /** Mark the day learned. Pass the concept actually shown (the server's, when
+   *  signed in) so the recorded concept, title, and topic match it; falls back
+   *  to the locally-selected concept when omitted. */
+  markLearned: (target?: Concept) => void;
   toggleTopic: (category: Category) => void;
   toggleLike: (conceptId: string) => void;
   toggleBookmark: (conceptId: string) => void;
@@ -122,48 +125,62 @@ export function ProgressProvider({ children, repository: override }: Props) {
   );
   const hasLearned = useCallback((conceptId: string) => learnedIds.has(conceptId), [learnedIds]);
 
-  // Optimistic writes: the screen changes the moment the user acts, the
-  // repository confirms in the background, and a failure rolls the screen back
-  // to what the server last agreed to — never a change that silently did not
-  // persist.
+  // Optimistic writes: the screen changes the *instant* the user acts, the
+  // repository confirms in the background, and a failure rolls back just that
+  // change — never a write that silently did not persist.
   //
-  // Mutations are serialised on this promise chain. Two overlapping writes used
-  // to clobber each other: each captured a whole-state snapshot, so rolling the
-  // first back restored a state that predated the second (erasing it), and the
-  // success path replaced the whole state last-write-wins regardless of order.
-  // Running one at a time means each mutation captures `before` as the *settled*
-  // result of the previous one, so both its optimistic update and its rollback
-  // compose correctly, and the server snapshot it applies is the latest.
+  // The optimistic update is applied immediately (not queued), so tapping Like
+  // flips the icon at once even while a previous mutation is still in flight
+  // (issue #95). The network runs are still serialised on a promise chain so
+  // overlapping writes can't race server-side, and the whole-state server
+  // snapshot is only applied when nothing else is pending — otherwise it would
+  // momentarily wipe a later tap's optimistic change (a flicker). On failure we
+  // undo just this change functionally, on top of the latest state, so a
+  // concurrent change is never lost (the clobber #39 originally fixed).
   const chain = useRef<Promise<void>>(Promise.resolve());
+  const pending = useRef(0);
   const apply = useCallback(
     (
       optimistic: ((prev: ProgressState) => ProgressState) | null,
-      run: () => Promise<ProgressState>
+      run: () => Promise<ProgressState>,
+      undo?: (prev: ProgressState) => ProgressState
     ) => {
+      if (optimistic) setProgress(optimistic);
+      pending.current += 1;
       chain.current = chain.current.then(async () => {
-        let before: ProgressState | null = null;
-        if (optimistic) {
-          setProgress((prev) => {
-            before = prev;
-            return optimistic(prev);
-          });
-        }
         try {
-          setProgress(await run());
+          const next = await run();
+          pending.current -= 1;
+          if (pending.current === 0) setProgress(next);
         } catch {
-          if (before) setProgress(before);
+          pending.current -= 1;
+          if (undo) setProgress(undo);
         }
       });
     },
     []
   );
 
-  const markLearned = useCallback(() => {
-    if (!concept) return;
+  const markLearned = useCallback((target?: Concept) => {
+    // Prefer the concept the screen actually showed (the server's, when signed
+    // in) so the learned record matches it; fall back to the local pick.
+    const learnedConcept = target ?? concept;
+    if (!learnedConcept) return;
     apply(
       (prev) => {
         if (prev.learned.some((r) => r.date === today)) return prev;
-        const learned = [...prev.learned, { conceptId: concept.id, date: today }];
+        const learned = [
+          ...prev.learned,
+          {
+            conceptId: learnedConcept.id,
+            date: today,
+            // Carry the title/topic so the History row is right immediately and
+            // survives a reload failure — otherwise the fallback would store a
+            // titleless record for the wrong (locally-picked) concept.
+            title: learnedConcept.title,
+            topicName: learnedConcept.category,
+          },
+        ];
         // A same-day completion always extends the current run by one; the
         // server's timezone-correct numbers replace this a moment later.
         const current = (prev.stats?.current ?? 0) + 1;
@@ -177,21 +194,33 @@ export function ProgressProvider({ children, repository: override }: Props) {
           },
         };
       },
-      () => repository.markLearned(concept.id, today)
+      () => repository.markLearned(learnedConcept.id, today),
+      // On failure, remove just today's record; the stats revert is approximate
+      // (longest can't be reconstructed) and the next state load corrects it.
+      (prev) => ({
+        ...prev,
+        learned: prev.learned.filter((r) => r.date !== today),
+        stats: prev.stats
+          ? {
+              current: Math.max(0, prev.stats.current - 1),
+              longest: prev.stats.longest,
+              totalLearned: Math.max(0, prev.stats.totalLearned - 1),
+            }
+          : prev.stats,
+      })
     );
   }, [apply, concept, repository, today]);
 
   const toggleTopic = useCallback(
-    (category: Category) =>
-      apply(
-        (prev) => ({
-          ...prev,
-          followedTopics: prev.followedTopics.includes(category)
-            ? prev.followedTopics.filter((c) => c !== category)
-            : [...prev.followedTopics, category],
-        }),
-        () => repository.toggleTopic(category)
-      ),
+    (category: Category) => {
+      const toggle = (prev: ProgressState) => ({
+        ...prev,
+        followedTopics: prev.followedTopics.includes(category)
+          ? prev.followedTopics.filter((c) => c !== category)
+          : [...prev.followedTopics, category],
+      });
+      apply(toggle, () => repository.toggleTopic(category), toggle);
+    },
     [apply, repository]
   );
 
@@ -199,20 +228,22 @@ export function ProgressProvider({ children, repository: override }: Props) {
     list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
 
   const toggleLike = useCallback(
-    (conceptId: string) =>
-      apply(
-        (prev) => ({ ...prev, likes: flip(prev.likes, conceptId) }),
-        () => repository.toggleLike(conceptId)
-      ),
+    (conceptId: string) => {
+      // A flip is its own inverse, so the same updater serves as optimistic and undo.
+      const toggle = (prev: ProgressState) => ({ ...prev, likes: flip(prev.likes, conceptId) });
+      apply(toggle, () => repository.toggleLike(conceptId), toggle);
+    },
     [apply, repository]
   );
 
   const toggleBookmark = useCallback(
-    (conceptId: string) =>
-      apply(
-        (prev) => ({ ...prev, bookmarks: flip(prev.bookmarks, conceptId) }),
-        () => repository.toggleBookmark(conceptId)
-      ),
+    (conceptId: string) => {
+      const toggle = (prev: ProgressState) => ({
+        ...prev,
+        bookmarks: flip(prev.bookmarks, conceptId),
+      });
+      apply(toggle, () => repository.toggleBookmark(conceptId), toggle);
+    },
     [apply, repository]
   );
 

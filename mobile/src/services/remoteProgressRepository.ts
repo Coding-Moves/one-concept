@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiRequest } from '../api/client';
-import { Category, ProgressState } from '../types';
+import { Category, DailyPayload, ProgressState } from '../types';
 import { ProgressRepository } from './progressRepository';
 import { EMPTY_PROGRESS } from './storage';
 import { toCategory, toSlug } from './topics';
@@ -24,6 +24,7 @@ interface StatePayload {
   saved?: { concept_slug: string; title?: string; topic_name?: string; like_count?: number }[];
   stats: { current: number; longest: number; total_learned: number };
   assignment_slug: string | null;
+  daily?: DailyPayload | null;
 }
 
 function toProgressState(payload: StatePayload): ProgressState {
@@ -56,6 +57,11 @@ function toProgressState(payload: StatePayload): ProgressState {
       longest: payload.stats.longest,
       totalLearned: payload.stats.total_learned,
     },
+    // Today's concept, folded in (#102). A fresh fetch is never "stale"; the
+    // offline flag is set only when load() falls back to cache after a failure.
+    serverDaily: payload.daily
+      ? { status: 'ok', payload: payload.daily, stale: false }
+      : { status: 'exhausted' },
   };
 }
 
@@ -109,8 +115,17 @@ export class RemoteProgressRepository implements ProgressRepository {
     } catch {
       const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
       if (raw && epoch === this.epoch) {
-        this.cache = JSON.parse(raw) as ProgressState;
-        return this.cache;
+        const cached = JSON.parse(raw) as ProgressState;
+        // Genuinely offline: the fetch failed and we're serving the saved copy,
+        // so flag the daily stale — that's what drives the "Offline" banner. The
+        // cache-first preview (loadCached) leaves it not-stale, so the banner
+        // still doesn't flash during a normal load (#92).
+        const offline: ProgressState =
+          cached.serverDaily?.status === 'ok'
+            ? { ...cached, serverDaily: { ...cached.serverDaily, stale: true } }
+            : cached;
+        this.cache = offline;
+        return offline;
       }
       return EMPTY_PROGRESS;
     }

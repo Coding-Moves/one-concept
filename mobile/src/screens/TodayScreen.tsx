@@ -8,18 +8,23 @@ import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
 import { StreakBadge } from '../components/StreakBadge';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { useServerDaily } from '../hooks/useServerDaily';
 import { toConcept } from '../services/dailyApi';
 import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export function TodayScreen() {
-  const { loading: localLoading, concept: localConcept, hasLearned, learnedToday, streaks, markLearned } =
-    useProgress();
-  const server = useServerDaily();
+  const {
+    loading: localLoading,
+    concept: localConcept,
+    serverDaily,
+    hasLearned,
+    learnedToday,
+    streaks,
+    markLearned,
+  } = useProgress();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  const outcome = server.outcome;
+  const outcome = serverDaily;
   // The backend decides the day's concept; the locally-picked one is the
   // offline fallback until Phase 4 moves the rest of the state server-side.
   const serverConcept =
@@ -34,7 +39,7 @@ export function TodayScreen() {
   // recycle an already-learned concept once the bundled pool is exhausted,
   // and that must still show the button.
   const done = learnedToday || (!!serverConcept && hasLearned(serverConcept.id));
-  const loading = localLoading || server.loading;
+  const loading = localLoading;
   const exhausted = outcome?.status === 'exhausted';
   const offline = outcome?.status === 'ok' && outcome.stale;
   const outsideTopics =

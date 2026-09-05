@@ -35,6 +35,14 @@ export interface LearnedRecord {
   topicName?: string;
 }
 
+/** A concept the user bookmarked, with the details needed to render it. */
+export interface SavedConcept {
+  conceptId: string;
+  title: string;
+  /** Server-supplied topic name; the app's Category labels match these. */
+  topicName: string;
+}
+
 /** The concept assigned for a given day, fixed once chosen. */
 export interface DailyAssignment {
   conceptId: string;
@@ -58,6 +66,12 @@ export interface ProgressState {
   likes: string[];
   /** Concept ids the user saved for later. */
   bookmarks: string[];
+  /**
+   * Saved concepts with their titles/topics, for the Profile "Saved concepts"
+   * list. Present only for server-backed state; absent for the signed-out demo,
+   * which resolves saved items against the bundled catalog instead.
+   */
+  savedConcepts?: SavedConcept[];
   /**
    * Streaks as computed by the server, when the state came from the server.
    * Absent for purely local state, where the client derives them instead.

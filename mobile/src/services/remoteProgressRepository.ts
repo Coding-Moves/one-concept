@@ -15,6 +15,7 @@ interface StatePayload {
   learned: { concept_slug: string; learned_on: string; title?: string; topic_name?: string }[];
   likes: string[];
   bookmarks: string[];
+  saved?: { concept_slug: string; title?: string; topic_name?: string }[];
   stats: { current: number; longest: number; total_learned: number };
   assignment_slug: string | null;
 }
@@ -35,6 +36,11 @@ function toProgressState(payload: StatePayload): ProgressState {
       .filter((c): c is Category => c !== null),
     likes: payload.likes,
     bookmarks: payload.bookmarks,
+    savedConcepts: (payload.saved ?? []).map((s) => ({
+      conceptId: s.concept_slug,
+      title: s.title || '',
+      topicName: s.topic_name || '',
+    })),
     // Server-computed, so the day boundary comes from the user's stored
     // timezone rather than whatever the device clock happens to say.
     stats: {
@@ -180,12 +186,22 @@ export class RemoteProgressRepository implements ProgressRepository {
     const epoch = this.epoch;
     const currently = this.cache.bookmarks.includes(conceptId);
     await this.toggle(conceptId, 'save', currently);
-    return this.remember({
-      ...this.cache,
-      bookmarks: currently
+    // The save/unsave has already persisted. Refresh the full state so the saved
+    // list (which needs each concept's title/topic) reflects it — but if that
+    // refresh fails, do NOT throw: a succeeded toggle must never be rolled back
+    // by the UI. Fall back to patching in place; the saved list catches up on
+    // the next successful load.
+    try {
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+    } catch {
+      const bookmarks = currently
         ? this.cache.bookmarks.filter((id) => id !== conceptId)
-        : [...this.cache.bookmarks, conceptId],
-    }, epoch);
+        : [...this.cache.bookmarks, conceptId];
+      const savedConcepts = currently
+        ? (this.cache.savedConcepts ?? []).filter((s) => s.conceptId !== conceptId)
+        : this.cache.savedConcepts;
+      return this.remember({ ...this.cache, bookmarks, savedConcepts }, epoch);
+    }
   }
 }
 

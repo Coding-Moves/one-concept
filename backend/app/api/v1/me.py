@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
-from app.schemas.me import LearnedOut, ProfileIn, StateOut, StreakOut, TopicsIn
+from app.schemas.me import LearnedOut, ProfileIn, SavedConceptOut, StateOut, StreakOut, TopicsIn
 from app.schemas.notifications import NotificationPrefs, PushTokenIn
 from app.services.interactions import set_followed_topics
 from app.services.state import load_state
@@ -27,6 +27,10 @@ def _to_state_out(state) -> StateOut:
         ],
         likes=state.likes,
         bookmarks=state.bookmarks,
+        saved=[
+            SavedConceptOut(concept_slug=s.concept_slug, title=s.title, topic_name=s.topic_name)
+            for s in state.saved
+        ],
         stats=StreakOut(**vars(state.stats)),
         assignment_slug=state.assignment_slug,
     )

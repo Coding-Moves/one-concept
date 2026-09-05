@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.4.1',
+    highlights: [
+      'New About screen — tap About on your profile to see the app version and what One Concept is all about.',
+    ],
+  },
+  {
     version: '1.4.0',
     highlights: [
       'See how loved a concept is — every card now shows how many people have liked it.',

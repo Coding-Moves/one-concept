@@ -25,6 +25,13 @@ class LearnedRecord:
 
 
 @dataclass
+class SavedConcept:
+    concept_slug: str
+    title: str = ""
+    topic_name: str = ""
+
+
+@dataclass
 class UserState:
     timezone: str
     today: date
@@ -32,6 +39,10 @@ class UserState:
     learned: list[LearnedRecord]
     likes: list[str]
     bookmarks: list[str]
+    # Saved concepts WITH their titles/topics, so the Profile can render the
+    # saved list without the bundled demo catalog (which only covers a signed-out
+    # user's 20 concepts). `bookmarks` stays as bare slugs for membership counts.
+    saved: list[SavedConcept]
     stats: StreakStats
     assignment_slug: str | None = None
     display_name: str | None = None
@@ -69,6 +80,16 @@ _STATE = text("""
           join public.concepts c on c.id = i.concept_id
          where i.user_id = :uid
     ),
+    saved as (
+        select coalesce(json_agg(json_build_object(
+                   'slug', c.slug, 'title', c.title, 'topic', t.name)
+                   order by i.saved_at desc) filter (where i.saved_at is not null),
+                 '[]'::json) as v
+          from public.concept_interactions i
+          join public.concepts c on c.id = i.concept_id
+          join public.topics t on t.id = c.topic_id
+         where i.user_id = :uid
+    ),
     assignment as (
         select c.slug
           from public.daily_assignments a
@@ -87,13 +108,14 @@ _STATE = text("""
       learned.v       as learned,
       interactions.likes,
       interactions.saves,
+      saved.v         as saved,
       (select slug from assignment) as assignment_slug,
       coalesce((select len from runs
                  where ends_on in (prof.today, prof.today - 1)
                  order by ends_on desc limit 1), 0) as current_streak,
       coalesce((select max(len) from runs), 0)      as longest_streak,
       (select count(*)::int from days)              as total_learned
-      from prof, followed, learned, interactions
+      from prof, followed, learned, interactions, saved
 """)
 
 
@@ -120,6 +142,14 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID) -> UserState | N
         ],
         likes=list(row.likes),
         bookmarks=list(row.saves),
+        saved=[
+            SavedConcept(
+                concept_slug=s["slug"],
+                title=s.get("title", ""),
+                topic_name=s.get("topic", ""),
+            )
+            for s in row.saved
+        ],
         stats=StreakStats(
             current=row.current_streak,
             longest=row.longest_streak,

@@ -27,6 +27,10 @@ concurrency:
 
 jobs:
   apk:
+    # Never react to our own apk-latest release. GitHub already blocks a
+    # GITHUB_TOKEN-created event from starting a run, so this is belt-and-braces
+    # against a self-trigger loop if GH_TOKEN is ever changed to a PAT.
+    if: github.event_name == 'workflow_dispatch' || github.event.release.tag_name != 'apk-latest'
     runs-on: ubuntu-latest
     defaults:
       run:

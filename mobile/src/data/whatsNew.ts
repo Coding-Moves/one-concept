@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.5.0',
+    highlights: [
+      'Forgot your password? You can now reset it right from the sign-in screen.',
+      'Tap any concept in History or your Saved list to open it again in full.',
+      'The About screen now links to our GitHub and a quick way to send feedback.',
+    ],
+  },
+  {
     version: '1.4.1',
     highlights: [
       'New About screen — tap About on your profile to see the app version and what One Concept is all about.',

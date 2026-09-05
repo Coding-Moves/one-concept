@@ -29,7 +29,10 @@ export interface ProgressContextValue {
    *  of which day it counts for, so it survives a cross-midnight completion. */
   hasLearned: (conceptId: string) => boolean;
   streaks: StreakStats;
-  markLearned: () => void;
+  /** Mark the day learned. Pass the concept actually shown (the server's, when
+   *  signed in) so the recorded concept, title, and topic match it; falls back
+   *  to the locally-selected concept when omitted. */
+  markLearned: (target?: Concept) => void;
   toggleTopic: (category: Category) => void;
   toggleLike: (conceptId: string) => void;
   toggleBookmark: (conceptId: string) => void;
@@ -158,12 +161,26 @@ export function ProgressProvider({ children, repository: override }: Props) {
     []
   );
 
-  const markLearned = useCallback(() => {
-    if (!concept) return;
+  const markLearned = useCallback((target?: Concept) => {
+    // Prefer the concept the screen actually showed (the server's, when signed
+    // in) so the learned record matches it; fall back to the local pick.
+    const learnedConcept = target ?? concept;
+    if (!learnedConcept) return;
     apply(
       (prev) => {
         if (prev.learned.some((r) => r.date === today)) return prev;
-        const learned = [...prev.learned, { conceptId: concept.id, date: today }];
+        const learned = [
+          ...prev.learned,
+          {
+            conceptId: learnedConcept.id,
+            date: today,
+            // Carry the title/topic so the History row is right immediately and
+            // survives a reload failure — otherwise the fallback would store a
+            // titleless record for the wrong (locally-picked) concept.
+            title: learnedConcept.title,
+            topicName: learnedConcept.category,
+          },
+        ];
         // A same-day completion always extends the current run by one; the
         // server's timezone-correct numbers replace this a moment later.
         const current = (prev.stats?.current ?? 0) + 1;
@@ -177,7 +194,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
           },
         };
       },
-      () => repository.markLearned(concept.id, today)
+      () => repository.markLearned(learnedConcept.id, today)
     );
   }, [apply, concept, repository, today]);
 

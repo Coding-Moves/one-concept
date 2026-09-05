@@ -115,32 +115,36 @@ export class RemoteProgressRepository implements ProgressRepository {
 
   async markLearned(conceptId: string): Promise<ProgressState> {
     const epoch = this.epoch;
-    // The response already carries the day and fresh streaks — merging it
-    // saves a second round trip, which on a distant connection is the
-    // difference between an instant tick and a multi-second stall.
     const done = await apiRequest<{
       completed: boolean;
       assigned_for: string;
       stats: { current: number; longest: number; total_learned: number };
     }>('/v1/daily/complete', { method: 'POST' });
 
-    // Use the concept id the caller passed, not this.cache.assignment: the
-    // cached assignment is null whenever /v1/me/state resolved before /v1/daily
-    // created the day's row, which used to drop today's learned record entirely
-    // — the button re-armed even though the POST succeeded (issue #38).
-    const learned = this.cache.learned.some((r) => r.date === done.assigned_for)
-      ? this.cache.learned
-      : [...this.cache.learned, { conceptId, date: done.assigned_for }];
-
-    return this.remember({
-      ...this.cache,
-      learned,
-      stats: {
-        current: done.stats.current,
-        longest: done.stats.longest,
-        totalLearned: done.stats.total_learned,
-      },
-    }, epoch);
+    // Reload the full state so History shows the true server record — the actual
+    // completed concept with its title and topic — rather than a client-side
+    // guess (the caller's concept id, no title). Without this the History tab
+    // only caught up on a full reload, i.e. an app restart (issue #91).
+    try {
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+    } catch {
+      // The completion already persisted; a failed reload must not roll it back.
+      // Patch in place using the caller's concept id (the cached assignment can
+      // be null when /v1/me/state resolved before /v1/daily created the row —
+      // issue #38) and the streaks the complete call already returned.
+      const learned = this.cache.learned.some((r) => r.date === done.assigned_for)
+        ? this.cache.learned
+        : [...this.cache.learned, { conceptId, date: done.assigned_for }];
+      return this.remember({
+        ...this.cache,
+        learned,
+        stats: {
+          current: done.stats.current,
+          longest: done.stats.longest,
+          totalLearned: done.stats.total_learned,
+        },
+      }, epoch);
+    }
   }
 
   async toggleTopic(category: Category): Promise<ProgressState> {

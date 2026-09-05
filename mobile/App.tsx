@@ -10,7 +10,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SpaceGrotesk_700Bold, useFonts } from '@expo-google-fonts/space-grotesk';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { ComponentProps, useCallback } from 'react';
+import { ComponentProps, useCallback, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
@@ -143,17 +143,25 @@ function ThemedApp() {
 }
 
 export default function App() {
-  const [fontsLoaded] = useFonts({ SpaceGrotesk_700Bold });
+  const [fontsLoaded, fontError] = useFonts({ SpaceGrotesk_700Bold });
+  // Proceed even if the font fails to load: falling back to the system font is
+  // far better than hanging on the splash forever (preventAutoHideAsync would
+  // otherwise never be undone).
+  const ready = fontsLoaded || !!fontError;
 
-  // Hide the native splash only once the first frame has actually laid out, so
-  // the splash hands straight over to real UI with no blank frame in between.
+  // Hide the native splash once the first frame has actually laid out, so it
+  // hands straight over to real UI with no blank frame. Guard with a ref so
+  // later layout passes (rotation, keyboard) don't call hideAsync again.
+  const splashHidden = useRef(false);
   const onLayoutRootView = useCallback(() => {
-    if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
-  }, [fontsLoaded]);
+    if (splashHidden.current) return;
+    splashHidden.current = true;
+    SplashScreen.hideAsync().catch(() => {});
+  }, []);
 
-  // The native splash stays up (preventAutoHideAsync above) until the font is
-  // ready — titles never flash in the fallback font, and there's no blank flash.
-  if (!fontsLoaded) return null;
+  // The native splash stays up (preventAutoHideAsync above) until we're ready —
+  // titles never flash in the fallback font, and there's no blank flash.
+  if (!ready) return null;
 
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>

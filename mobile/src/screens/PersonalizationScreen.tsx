@@ -3,20 +3,15 @@ import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FollowPill } from '../components/FollowPill';
-import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { CONCEPTS } from '../data/concepts';
+import { useTopics } from '../hooks/useTopics';
 import { radius, spacing, ThemeColors, typography } from '../theme';
-import { CATEGORIES } from '../types';
 
 export function PersonalizationScreen() {
   const navigation = useNavigation();
-  const { progress, toggleTopic } = useProgress();
+  const { loading, topics, toggle } = useTopics();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
-
-  const countFor = (category: string) =>
-    CONCEPTS.filter((c) => c.category === category).length;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
@@ -49,23 +44,28 @@ export function PersonalizationScreen() {
         day’s concept.
       </Text>
 
-      <View style={styles.list}>
-        {CATEGORIES.map((category, index) => {
-          const following = progress.followedTopics.includes(category);
-          return (
-            <View key={category}>
+      {loading ? (
+        <Text style={styles.topicMeta}>Loading topics…</Text>
+      ) : topics.length === 0 ? (
+        <Text style={styles.topicMeta}>
+          Couldn’t load topics — check your connection and reopen this screen.
+        </Text>
+      ) : (
+        <View style={styles.list}>
+          {topics.map((topic, index) => (
+            <View key={topic.slug}>
               {index > 0 && <View style={styles.separator} />}
               <View style={styles.row}>
                 <View style={styles.rowText}>
-                  <Text style={styles.topicName}>{category}</Text>
-                  <Text style={styles.topicMeta}>{countFor(category)} concepts</Text>
+                  <Text style={styles.topicName}>{topic.name}</Text>
+                  <Text style={styles.topicMeta}>{topic.conceptCount} concepts</Text>
                 </View>
-                <FollowPill following={following} onPress={() => toggleTopic(category)} />
+                <FollowPill following={topic.following} onPress={() => toggle(topic.slug)} />
               </View>
             </View>
-          );
-        })}
-      </View>
+          ))}
+        </View>
+      )}
     </ScrollView>
   );
 }

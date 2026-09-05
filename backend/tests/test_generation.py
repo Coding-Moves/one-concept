@@ -12,7 +12,6 @@ import httpx
 import pytest
 from sqlalchemy import text
 
-from app.config import get_settings
 from app.services import generation, pool, selection
 from app.services.generation import GenerationError, RateLimitedError, build_prompt, generate_concept, validate
 from app.services.interactions import set_followed_topics
@@ -224,6 +223,73 @@ async def test_rate_limit_releases_the_claim_and_refunds_the_attempt(session, pa
 async def test_retry_delay_is_read_from_the_response():
     response = httpx.Response(429, text='{"error": {"details": [{"retryDelay": "12s"}]}}')
     assert generation._retry_after_seconds(response) == 12.0
+
+
+async def test_stale_generating_rows_are_reclaimed(session):
+    """Issue #37: a row abandoned mid-generation by a crashed worker must not be
+    stuck in 'generating' forever — a later run reclaims it to 'pending'."""
+    topic_id = (await session.execute(text("""
+        insert into public.topics (slug, name, is_active, sort_order)
+        values ('test-reap', 'Reap Topic', false, 98)
+        returning id
+    """))).scalar_one()
+    # Three cases: claimed long ago (stale), claimed with no timestamp at all
+    # (a row stranded before migration 0008 existed), and one legitimately in
+    # flight right now.
+    await session.execute(text(f"""
+        insert into public.concept_backlog (topic_id, slug, title, status, claimed_at)
+        values
+          (:tid, 'stranded', 'Stranded', 'generating',
+           now() - make_interval(mins => {pool.STALE_CLAIM_MINUTES + 5})),
+          (:tid, 'pre-migration', 'Pre Migration', 'generating', null),
+          (:tid, 'in-flight', 'In Flight', 'generating', now())
+    """), {"tid": topic_id})
+    await session.commit()
+
+    # minimum_per_topic=0 → no generation happens; only the reaper runs.
+    await top_up(session, api_key="k", model="m", enabled=True,
+                 minimum_per_topic=0, call_cap=100)
+
+    rows = dict((await session.execute(text("""
+        select slug, status from public.concept_backlog
+         where slug in ('stranded', 'pre-migration', 'in-flight')
+    """))).all())
+    assert rows["stranded"] == "pending", "the abandoned claim must be reclaimed"
+    assert rows["pre-migration"] == "pending", "a NULL-claimed leftover is stale too"
+    assert rows["in-flight"] == "generating", "a fresh claim must be left alone"
+
+
+async def test_slug_collision_does_not_mark_the_backlog_done(session, patch_httpx):
+    """Issue #37: if the concept slug already exists the insert is a no-op, so the
+    backlog row must be flagged failed — not marked done, which would retire the
+    title having burned a Gemini call without publishing anything."""
+    patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
+    topic_id = (await session.execute(text("""
+        insert into public.topics (slug, name, is_active, sort_order)
+        values ('test-collision', 'Collision Topic', false, 97)
+        returning id
+    """))).scalar_one()
+    # A published concept already owns the slug the backlog row will generate.
+    await session.execute(text("""
+        insert into public.concepts (topic_id, slug, title, summary, status, source)
+        values (:tid, 'dup-slug', 'Existing', 'x', 'published', 'seed')
+    """), {"tid": topic_id})
+    await session.execute(text("""
+        insert into public.concept_backlog (topic_id, slug, title, status)
+        values (:tid, 'dup-slug', 'Duplicate', 'pending')
+    """), {"tid": topic_id})
+    await session.commit()
+
+    concept_id = await generate_one(session, "test-key", "gemini-2.0-flash", topic_id)
+    assert concept_id is None, "nothing was inserted, so no concept id is returned"
+
+    row = (await session.execute(text(
+        "select status from public.concept_backlog where slug = 'dup-slug'"))).one()
+    assert row.status == "failed", "a slug collision must not be recorded as done"
+    # The pre-existing concept is untouched — exactly one row owns the slug.
+    count = await session.scalar(
+        text("select count(*) from public.concepts where slug = 'dup-slug'"))
+    assert count == 1
     response = httpx.Response(429, headers={"retry-after": "30"}, text="{}")
     assert generation._retry_after_seconds(response) == 30.0
     assert generation._retry_after_seconds(httpx.Response(429, text="{}")) is None
@@ -314,26 +380,24 @@ async def test_top_up_fills_only_topics_below_the_threshold(session, patch_httpx
     assert short == [], f"topics left below the threshold: {short}"
 
 
-async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_httpx, monkeypatch):
-    """Issue #29 goal: with follows persisting, a user who has read every
-    published lesson in their only topic gets an on-demand generated lesson
-    from that same topic — never a silent widening to other topics."""
+async def test_dry_followed_topic_schedules_prefetch_not_inline_generation(
+    session, user, monkeypatch
+):
+    """Issue #43: the request never calls Gemini inline. When a followed topic
+    runs dry, selection schedules a background prefetch for it and serves today
+    from the wider catalog (or reports exhaustion) — it does not block on a
+    2–4 s generation. (This supersedes the synchronous on-demand path from #29:
+    the pool is meant to refill ahead of demand, not on the request thread.)"""
     from tests.test_selection import DAY
 
-    patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
-
-    # A real Settings copy, so new fields selection reads are always present.
-    stub = get_settings().model_copy(update={
-        "generation_on_demand": True,
-        "generation_enabled": True,
-        "gemini_api_key": "test-key",
-        "gemini_model": "gemini-2.0-flash",
-    })
-    monkeypatch.setattr(selection, "get_settings", lambda: stub)
+    # Record prefetch requests instead of spawning a real background task, so the
+    # test asserts intent without a detached generation running past its end.
+    prefetched: list = []
+    monkeypatch.setattr(selection, "request_prefetch", lambda tid: prefetched.append(tid))
 
     await set_followed_topics(session, user, ["linux-systems"])
-    # A dedicated pending backlog row, so this test cannot flake when earlier
-    # top-up tests happen to have drained the shared linux-systems backlog.
+    # A pending backlog row means the dry-topic branch has a topic to prefetch,
+    # regardless of what earlier tests left in the shared backlog.
     await session.execute(text("""
         insert into public.concept_backlog (topic_id, slug, title, status)
         select t.id, 'test-ondemand-linux', 'Test On-Demand Linux', 'pending'
@@ -348,21 +412,23 @@ async def test_exhausted_followed_topic_generates_in_topic(session, user, patch_
          where t.slug = 'linux-systems' and c.status = 'published'
     """))
 
-    # Drain the shelf: one lesson a day, all from the followed topic.
+    # Drain the followed shelf: one lesson a day, all from the followed topic.
     for offset in range(published):
         result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
         assert result.status == "ok"
         assert result.concept.topic_slug == "linux-systems"
         assert result.outside_followed_topics is False
 
-    # The shelf is dry — the next day must come from generation, same topic.
-    beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=published))
-    assert beyond.status == "ok"
-    assert beyond.concept.topic_slug == "linux-systems", "generation must stay in the followed topic"
-    assert beyond.outside_followed_topics is False
-
-    source = await session.scalar(
-        text("select source from public.concepts where slug = :s"),
-        {"s": beyond.concept.slug},
+    linux_topic_id = await session.scalar(
+        text("select id from public.topics where slug = 'linux-systems'")
     )
-    assert source == "gemini", "the new lesson was written on demand"
+
+    # The day past the shelf: no inline generation. Selection widens to the
+    # catalog for today (flagged) or reports exhaustion, and has asked to
+    # prefetch linux-systems ahead of demand.
+    beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=published))
+    if beyond.status == "ok":
+        assert beyond.outside_followed_topics is True, "a dry topic widens, never generates inline"
+    else:
+        assert beyond.status == "exhausted"
+    assert linux_topic_id in prefetched, "selection must schedule a prefetch for the dry topic"

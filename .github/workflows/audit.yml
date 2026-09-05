@@ -1,0 +1,190 @@
+# Weekly (and on release to main) security + code-quality audit.
+#
+# Detect-only by design: it NEVER changes code or opens fix PRs — Dependabot
+# owns dependency-update PRs, so the two cannot collide or double-notify. When
+# a scan finds something, it files a single deduplicated issue (one open per
+# concern) and closes nothing; actual fixes go through normal PRs.
+#
+# Each scan captures its own findings/clean status rather than failing the job,
+# so one clean report never hides another. The dependency scans decide on parsed
+# JSON, not exit codes, so a real tool error (network, bad JSON) fails the job
+# loudly instead of masquerading as a vulnerability finding.
+#
+# No secrets required — GITHUB_TOKEN with the permissions below is enough.
+name: Security & Code Audit
+
+on:
+  schedule:
+    - cron: "0 0 * * 1" # Mondays 00:00 UTC
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Prepare report directory
+        run: mkdir -p reports
+
+      # --- backend: dependency vulnerabilities ---------------------------------
+      # Decide on parsed JSON, not the exit code: pip-audit exits non-zero both
+      # when it finds vulns AND when it errors (network, unresolvable pin). A raw
+      # exit-code check would file a spurious "vulnerable dependencies" issue on
+      # a transient error. Instead: no valid JSON => real error => fail loudly;
+      # valid JSON => count actual vulns.
+      - name: pip-audit (backend dependencies)
+        id: pip_audit
+        run: |
+          python -m pip install --quiet pip-audit
+          set +e
+          pip-audit --format json -r backend/requirements.txt -r backend/requirements-dev.txt \
+            > reports/pip-audit.json 2> reports/pip-audit.err
+          set -e
+          if ! jq -e . reports/pip-audit.json > /dev/null 2>&1; then
+            echo "::error::pip-audit did not produce valid JSON — treating as tool failure, not findings:"
+            cat reports/pip-audit.err
+            exit 1
+          fi
+          # Shape-agnostic: count objects anywhere in the tree with a non-empty vulns array.
+          count=$(jq '[.. | objects | .vulns? // empty | select(length > 0)] | length' reports/pip-audit.json)
+          echo "vulnerable packages: $count"
+          if [ "$count" -gt 0 ]; then
+            echo "status=findings" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --- backend: real-bug lint (pyflakes + syntax; high signal, not style) --
+      - name: ruff (backend lint)
+        id: ruff
+        run: |
+          python -m pip install --quiet ruff
+          if ruff check --select F,E9 backend > reports/ruff.txt 2>&1; then
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=findings" >> "$GITHUB_OUTPUT"
+          fi
+          cat reports/ruff.txt
+
+      # --- mobile: dependency vulnerabilities ----------------------------------
+      # Same JSON-not-exit-code rule as pip-audit above: npm audit exits non-zero
+      # for findings AND for operational errors. Parse the JSON and count only
+      # high+critical; if the output isn't valid JSON, fail loudly rather than
+      # filing a bogus issue.
+      - name: npm audit (mobile dependencies)
+        id: npm_audit
+        working-directory: mobile
+        run: |
+          set +e
+          npm audit --json > ../reports/npm-audit.json 2> ../reports/npm-audit.err
+          set -e
+          if ! jq -e . ../reports/npm-audit.json > /dev/null 2>&1; then
+            echo "::error::npm audit did not produce valid JSON — treating as tool failure, not findings:"
+            cat ../reports/npm-audit.err
+            exit 1
+          fi
+          count=$(jq '((.metadata.vulnerabilities.high // 0) + (.metadata.vulnerabilities.critical // 0))' \
+                   ../reports/npm-audit.json)
+          echo "high+critical vulnerabilities: $count"
+          if [ "$count" -gt 0 ]; then
+            echo "status=findings" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          fi
+
+      # --- mobile: type errors -------------------------------------------------
+      - name: tsc (mobile typecheck)
+        id: tsc
+        working-directory: mobile
+        run: |
+          npm ci
+          if npx tsc --noEmit > ../reports/tsc.txt 2>&1; then
+            echo "status=clean" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=findings" >> "$GITHUB_OUTPUT"
+          fi
+          cat ../reports/tsc.txt
+
+      # --- file ONE deduplicated security issue --------------------------------
+      - name: File security findings
+        if: steps.pip_audit.outputs.status == 'findings' || steps.npm_audit.outputs.status == 'findings'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" \
+                   --label automated-issue --label security --state open \
+                   --json number --jq 'length')
+          if [ "$open" -gt 0 ]; then
+            echo "A security audit issue is already open — not duplicating."
+            exit 0
+          fi
+          {
+            echo "The weekly audit found dependency vulnerabilities. Fix via the"
+            echo "relevant Dependabot PR or a manual bump, then close this issue."
+            echo
+            echo "### pip-audit (backend)"
+            echo '```json'
+            head -c 8000 reports/pip-audit.json
+            echo '```'
+            echo "### npm audit (mobile, high + critical)"
+            echo '```json'
+            head -c 8000 reports/npm-audit.json
+            echo '```'
+          } > security-body.md
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Security audit: vulnerable dependencies" \
+            --label automated-issue --label security \
+            --body-file security-body.md
+
+      # --- file ONE deduplicated code-quality issue ----------------------------
+      - name: File code-quality findings
+        if: steps.ruff.outputs.status == 'findings' || steps.tsc.outputs.status == 'findings'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          open=$(gh issue list --repo "$GITHUB_REPOSITORY" \
+                   --label automated-issue --label code-quality --state open \
+                   --json number --jq 'length')
+          if [ "$open" -gt 0 ]; then
+            echo "A code-quality audit issue is already open — not duplicating."
+            exit 0
+          fi
+          {
+            echo "The weekly audit found lint or type problems."
+            echo
+            echo "### ruff (backend, pyflakes + syntax)"
+            echo '```'
+            head -c 8000 reports/ruff.txt
+            echo '```'
+            echo "### tsc (mobile)"
+            echo '```'
+            head -c 8000 reports/tsc.txt
+            echo '```'
+          } > quality-body.md
+          gh issue create --repo "$GITHUB_REPOSITORY" \
+            --title "Code quality: lint / type findings" \
+            --label automated-issue --label code-quality \
+            --body-file quality-body.md

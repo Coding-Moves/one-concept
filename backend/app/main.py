@@ -33,8 +33,12 @@ def create_app() -> FastAPI:
         version="0.2.0",
         description="Serves the daily concept. Owns the Gemini key and every database write.",
         lifespan=lifespan,
-        # Keep the schema browsable in development, closed in production.
+        # Keep the schema browsable in development, closed in production. Disable
+        # openapi_url alongside docs_url: with /docs off but /openapi.json still
+        # served, the full schema (every route, parameter, and model) stays
+        # public in production, which defeats the point of closing the docs.
         docs_url=None if settings.is_production else "/docs",
+        openapi_url=None if settings.is_production else "/openapi.json",
         redoc_url=None,
     )
 

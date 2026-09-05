@@ -1,8 +1,8 @@
-# OTA updates follow the branch model: merging mobile changes to develop
-# publishes to the preview channel (preview-profile builds — the developer's
-# own device), and a release merged to main publishes to production. Native
-# changes (new native modules, app.json native config) need a new build
-# instead — see mobile/DEPLOYMENT.md.
+# Preview-channel OTA for the develop branch (the developer's own devices),
+# plus a manual dispatch that publishes the chosen channel. Production OTA
+# for a release lives in release.yml, so the release tag is only cut after
+# that publish succeeds. Native changes need a new build — see
+# mobile/DEPLOYMENT.md.
 #
 # Requires the EXPO_TOKEN repository secret (Expo access token). Until it is
 # set, this workflow fails at the eas-update step and deploys nothing.
@@ -10,7 +10,7 @@ name: EAS Update (OTA)
 
 on:
   push:
-    branches: [main, develop]
+    branches: [develop]
     paths:
       - "mobile/**"
       - "!mobile/**.md"
@@ -29,15 +29,15 @@ jobs:
       run:
         working-directory: mobile
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
-      - uses: expo/expo-github-action@v8
+      - uses: expo/expo-github-action@v9
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_TOKEN }}
@@ -47,15 +47,17 @@ jobs:
       # --environment pulls the EXPO_PUBLIC_* variables from EAS into the
       # bundle; without it the update ships with empty config and crashes.
       - name: Publish OTA update (production)
-        if: >-
-          (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-          (github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'production')
-        run: eas update --channel production --environment production --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'production'
+        env:
+          MSG: ${{ github.event.head_commit.message || 'manual dispatch' }}
+        run: eas update --channel production --environment production --message "$MSG" --non-interactive
 
-      # A push to either branch refreshes preview (so a release never leaves
-      # preview devices behind); a manual run publishes only the chosen channel.
+      # A push to develop refreshes preview; a manual run publishes only the
+      # chosen channel.
       - name: Publish OTA update (preview)
         if: >-
           (github.event_name == 'push') ||
           (github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'preview')
-        run: eas update --channel preview --environment preview --message "${{ github.event.head_commit.message || 'manual dispatch' }}" --non-interactive
+        env:
+          MSG: ${{ github.event.head_commit.message || 'manual dispatch' }}
+        run: eas update --channel preview --environment preview --message "$MSG" --non-interactive

@@ -45,7 +45,7 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: ['expo-font', 'expo-secure-store'],
+    plugins: ['expo-font', 'expo-secure-store', 'expo-splash-screen'],
     extra: {
       eas: {
         projectId: '2ce53ebe-f549-4a33-affc-a50d8e80b483',

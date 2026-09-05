@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { WhatsNewEntry } from '../data/whatsNew';
-import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 interface Props {
   entry: WhatsNewEntry;
@@ -139,11 +139,11 @@ const createStyles = (colors: ThemeColors) =>
     },
     title: {
       ...typography.title,
-      fontSize: 24,
+      fontSize: scaleFont(24),
       color: colors.text,
     },
     version: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       fontWeight: '600',
       color: colors.textMuted,
       marginTop: 2,
@@ -164,7 +164,7 @@ const createStyles = (colors: ThemeColors) =>
     itemText: {
       flex: 1,
       ...typography.body,
-      fontSize: 15,
+      fontSize: scaleFont(15),
       color: colors.textSecondary,
     },
     button: {
@@ -175,7 +175,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     buttonText: {
       color: colors.onPrimary,
-      fontSize: 16,
+      fontSize: scaleFont(16),
       fontWeight: '700',
     },
   });

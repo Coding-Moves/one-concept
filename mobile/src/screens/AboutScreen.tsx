@@ -5,7 +5,7 @@ import Constants from 'expo-constants';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { radius, spacing, ThemeColors, typography } from '../theme';
+import { scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
 const HOW_IT_WORKS = [
@@ -72,7 +72,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       marginBottom: spacing.lg,
     },
-    title: { ...typography.title, fontSize: 24, color: colors.text },
+    title: { ...typography.title, fontSize: scaleFont(24), color: colors.text },
     closeButton: { padding: spacing.xs },
     hero: { alignItems: 'center', gap: spacing.xs, marginBottom: spacing.lg },
     badge: {
@@ -84,24 +84,24 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       marginBottom: spacing.sm,
     },
-    appName: { ...typography.title, fontSize: 26, color: colors.text },
-    version: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+    appName: { ...typography.title, fontSize: scaleFont(26), color: colors.text },
+    version: { fontSize: scaleFont(13), fontWeight: '600', color: colors.textMuted },
     tagline: {
-      fontSize: 15,
-      lineHeight: 22,
+      fontSize: scaleFont(15),
+      lineHeight: scaleFont(22),
       color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: spacing.xl,
     },
     sectionTitle: {
       ...typography.title,
-      fontSize: 18,
+      fontSize: scaleFont(18),
       color: colors.text,
       marginBottom: spacing.md,
     },
     list: { gap: spacing.md, marginBottom: spacing.xl },
     item: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
     itemIcon: { marginTop: 1 },
-    itemText: { flex: 1, fontSize: 15, lineHeight: 21, color: colors.textSecondary },
-    credit: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+    itemText: { flex: 1, fontSize: scaleFont(15), lineHeight: scaleFont(21), color: colors.textSecondary },
+    credit: { fontSize: scaleFont(13), color: colors.textMuted, textAlign: 'center' },
   });

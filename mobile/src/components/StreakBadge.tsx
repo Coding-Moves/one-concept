@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AnimatedFlame } from './AnimatedFlame';
 import { useTheme } from '../context/ThemeContext';
-import { radius, shadows, spacing, ThemeColors } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 import { StreakStats } from '../services/streak';
 
 export function StreakBadge({ streaks }: { streaks: StreakStats }) {
@@ -63,12 +63,12 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.xs,
     },
     value: {
-      fontSize: 19,
+      fontSize: scaleFont(19),
       fontFamily: 'SpaceGrotesk_700Bold',
       color: colors.text,
     },
     label: {
-      fontSize: 11.5,
+      fontSize: scaleFont(11.5),
       letterSpacing: 0.3,
       color: colors.textMuted,
     },

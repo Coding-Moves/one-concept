@@ -9,7 +9,7 @@ import { StreakBadge } from '../components/StreakBadge';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { toConcept } from '../services/dailyApi';
-import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export function TodayScreen() {
   const {
@@ -154,12 +154,12 @@ const createStyles = (colors: ThemeColors) =>
     },
     appName: {
       ...typography.title,
-      fontSize: 30,
+      fontSize: scaleFont(30),
       color: colors.text,
     },
     tagline: {
-      fontSize: 13.5,
-      lineHeight: 19,
+      fontSize: scaleFont(13.5),
+      lineHeight: scaleFont(19),
       color: colors.textMuted,
     },
     themeButton: {
@@ -176,7 +176,7 @@ const createStyles = (colors: ThemeColors) =>
       opacity: 0.6,
     },
     sectionLabel: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       fontWeight: '700',
       letterSpacing: 1.4,
       textTransform: 'uppercase',
@@ -190,7 +190,7 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: -spacing.sm,
     },
     offlineText: {
-      fontSize: 12.5,
+      fontSize: scaleFont(12.5),
       color: colors.textMuted,
     },
     noteBox: {
@@ -207,9 +207,9 @@ const createStyles = (colors: ThemeColors) =>
     },
     noteText: {
       flex: 1,
-      fontSize: 13,
+      fontSize: scaleFont(13),
       color: colors.textMuted,
-      lineHeight: 18,
+      lineHeight: scaleFont(18),
     },
     doneBox: {
       flexDirection: 'row',
@@ -225,7 +225,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     doneText: {
       color: colors.success,
-      fontSize: 16,
+      fontSize: scaleFont(16),
       fontWeight: '600',
       flexShrink: 1,
       textAlign: 'center',

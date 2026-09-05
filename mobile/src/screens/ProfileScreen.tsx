@@ -18,7 +18,7 @@ import {
   putNotificationPrefs,
   registerForReminders,
 } from '../services/notifications';
-import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -262,13 +262,13 @@ const createStyles = (colors: ThemeColors) =>
     },
     name: {
       ...typography.title,
-      fontSize: 24,
+      fontSize: scaleFont(24),
       color: colors.text,
     },
     subtitle: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       color: colors.textMuted,
-      lineHeight: 17,
+      lineHeight: scaleFont(17),
     },
     cardsRow: {
       flexDirection: 'row',
@@ -286,12 +286,12 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'flex-start',
     },
     cardValue: {
-      fontSize: 15,
+      fontSize: scaleFont(15),
       fontWeight: '700',
       color: colors.text,
     },
     cardLabel: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       color: colors.textMuted,
     },
     rowCard: {
@@ -315,17 +315,17 @@ const createStyles = (colors: ThemeColors) =>
       flexShrink: 1,
     },
     rowTitle: {
-      fontSize: 15,
+      fontSize: scaleFont(15),
       fontWeight: '600',
       color: colors.text,
     },
     rowSubtitle: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       color: colors.textMuted,
       marginTop: 2,
     },
     sectionLabel: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       fontWeight: '700',
       letterSpacing: 1,
       textTransform: 'uppercase',
@@ -333,7 +333,7 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: -spacing.sm,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       color: colors.textMuted,
     },
     savedList: {
@@ -362,12 +362,12 @@ const createStyles = (colors: ThemeColors) =>
       flexWrap: 'wrap',
     },
     savedTitle: {
-      fontSize: 15,
+      fontSize: scaleFont(15),
       fontWeight: '600',
       color: colors.text,
     },
     version: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       color: colors.textMuted,
       textAlign: 'center',
       marginTop: spacing.md,

@@ -3,7 +3,7 @@ import { useMemo, useRef } from 'react';
 import { Animated, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { radius, spacing, ThemeColors } from '../theme';
+import { scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 
 function usePop() {
@@ -122,7 +122,7 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.xs + 2,
     },
     likeCount: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       fontWeight: '600',
       color: colors.textSecondary,
     },

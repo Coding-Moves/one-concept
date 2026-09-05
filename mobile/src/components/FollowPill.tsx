@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { radius, spacing, ThemeColors } from '../theme';
+import { scaleFont, radius, spacing, ThemeColors } from '../theme';
 
 interface Props {
   following: boolean;
@@ -74,7 +74,7 @@ const createStyles = (colors: ThemeColors) =>
       opacity: 0.75,
     },
     label: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       fontWeight: '600',
     },
     followLabel: {

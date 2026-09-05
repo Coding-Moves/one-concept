@@ -8,7 +8,7 @@ import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
 import { formatDateKey } from '../services/dates';
-import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 import { Category, LearnedRecord } from '../types';
 
 const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
@@ -113,7 +113,7 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text,
     },
     subtitle: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       color: colors.textMuted,
     },
     list: {
@@ -137,12 +137,12 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'flex-start',
     },
     rowTitle: {
-      fontSize: 16,
+      fontSize: scaleFont(16),
       fontWeight: '600',
       color: colors.text,
     },
     rowDate: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       color: colors.textMuted,
     },
     empty: {
@@ -151,12 +151,12 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: spacing.xl * 2,
     },
     emptyTitle: {
-      fontSize: 17,
+      fontSize: scaleFont(17),
       fontWeight: '700',
       color: colors.text,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       color: colors.textMuted,
       textAlign: 'center',
     },

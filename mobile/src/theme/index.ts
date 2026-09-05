@@ -1,3 +1,11 @@
+/**
+ * Global type scale. Every font size and line height in the app is wrapped
+ * in scaleFont(), so the whole app's text scales from this one multiplier.
+ * Rounded to the nearest half-point to stay crisp on screen.
+ */
+export const FONT_SCALE = 0.9;
+export const scaleFont = (n: number): number => Math.round(n * FONT_SCALE * 2) / 2;
+
 export interface ThemeColors {
   background: string;
   surface: string;
@@ -87,8 +95,8 @@ export const shadows = {
 export const typography = {
   /** Display font for screen titles; loaded in App via expo-font.
    *  No fontWeight here — Android would apply faux bold on top of the 700 font file. */
-  title: { fontSize: 28, fontFamily: 'SpaceGrotesk_700Bold' },
-  heading: { fontSize: 22, fontWeight: '700' as const },
-  body: { fontSize: 16, lineHeight: 24 },
-  caption: { fontSize: 13 },
+  title: { fontSize: scaleFont(28), fontFamily: 'SpaceGrotesk_700Bold' },
+  heading: { fontSize: scaleFont(22), fontWeight: '700' as const },
+  body: { fontSize: scaleFont(16), lineHeight: scaleFont(24) },
+  caption: { fontSize: scaleFont(13) },
 };

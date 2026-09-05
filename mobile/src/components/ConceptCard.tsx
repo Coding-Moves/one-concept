@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { radius, shadows, spacing, ThemeColors } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 import { CategoryChip } from './CategoryChip';
 
@@ -36,14 +36,14 @@ const createStyles = (colors: ThemeColors) =>
       ...shadows.card,
     },
     title: {
-      fontSize: 24,
-      lineHeight: 30,
+      fontSize: scaleFont(24),
+      lineHeight: scaleFont(30),
       fontFamily: 'SpaceGrotesk_700Bold',
       color: colors.text,
     },
     summary: {
-      fontSize: 16,
-      lineHeight: 26,
+      fontSize: scaleFont(16),
+      lineHeight: scaleFont(26),
       color: colors.textSecondary,
     },
     exampleBox: {
@@ -55,15 +55,15 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.xs,
     },
     exampleLabel: {
-      fontSize: 11,
+      fontSize: scaleFont(11),
       fontWeight: '700',
       letterSpacing: 1.2,
       textTransform: 'uppercase',
       color: colors.categoryChipText,
     },
     exampleText: {
-      fontSize: 14.5,
-      lineHeight: 22,
+      fontSize: scaleFont(14.5),
+      lineHeight: scaleFont(22),
       color: colors.textSecondary,
     },
   });

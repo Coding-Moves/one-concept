@@ -8,7 +8,7 @@ import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS } from '../data/concepts';
 import { formatDateKey } from '../services/dates';
-import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 import { Category, LearnedRecord } from '../types';
 
 const CONCEPTS_BY_ID = new Map(CONCEPTS.map((c) => [c.id, c]));
@@ -36,10 +36,10 @@ function HistoryRow({
     <View style={styles.row}>
       <View style={styles.rowText}>
         <Text style={styles.rowTitle}>{title}</Text>
-        <View style={styles.metaRow}>
-          {category ? <CategoryChip category={category} /> : null}
-          <LikeCount count={likeTotal} />
-        </View>
+        {/* Category and likes each get their own row, so the heart never
+            wraps to a different line depending on chip width (issue #121). */}
+        {category ? <CategoryChip category={category} /> : null}
+        <LikeCount count={likeTotal} />
       </View>
       <Text style={styles.rowDate}>{formatDateKey(record.date)}</Text>
     </View>
@@ -78,7 +78,7 @@ export function HistoryScreen() {
             </View>
           ) : (
             <View style={styles.empty}>
-              <Ionicons name="library-outline" size={40} color={colors.textMuted} />
+              <Ionicons name="library-outline" size={scaleIcon(40)} color={colors.textMuted} />
               <Text style={styles.emptyTitle}>Nothing here yet</Text>
               <Text style={styles.emptyText}>
                 Learn today’s concept and it will show up here.
@@ -113,7 +113,7 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text,
     },
     subtitle: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       color: colors.textMuted,
     },
     list: {
@@ -134,20 +134,15 @@ const createStyles = (colors: ThemeColors) =>
     rowText: {
       gap: spacing.sm,
       flexShrink: 1,
-    },
-    metaRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      flexWrap: 'wrap',
+      alignItems: 'flex-start',
     },
     rowTitle: {
-      fontSize: 16,
+      fontSize: scaleFont(16),
       fontWeight: '600',
       color: colors.text,
     },
     rowDate: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       color: colors.textMuted,
     },
     empty: {
@@ -156,12 +151,12 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: spacing.xl * 2,
     },
     emptyTitle: {
-      fontSize: 17,
+      fontSize: scaleFont(17),
       fontWeight: '700',
       color: colors.text,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       color: colors.textMuted,
       textAlign: 'center',
     },

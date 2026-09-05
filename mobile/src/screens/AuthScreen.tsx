@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -98,7 +98,7 @@ export function AuthScreen() {
         >
           <Ionicons
             name={themeMode === 'dark' ? 'sunny-outline' : 'moon-outline'}
-            size={20}
+            size={scaleIcon(20)}
             color={colors.textSecondary}
           />
         </Pressable>
@@ -156,14 +156,14 @@ export function AuthScreen() {
 
           {error ? (
             <View style={[styles.banner, styles.errorBanner]}>
-              <Ionicons name="alert-circle-outline" size={18} color={colors.streak} />
+              <Ionicons name="alert-circle-outline" size={scaleIcon(18)} color={colors.streak} />
               <Text style={[styles.bannerText, { color: colors.streak }]}>{error}</Text>
             </View>
           ) : null}
 
           {notice ? (
             <View style={[styles.banner, styles.noticeBanner]}>
-              <Ionicons name="mail-outline" size={18} color={colors.success} />
+              <Ionicons name="mail-outline" size={scaleIcon(18)} color={colors.success} />
               <Text style={[styles.bannerText, { color: colors.success }]}>{notice}</Text>
             </View>
           ) : null}
@@ -219,12 +219,12 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
     },
     header: { gap: spacing.sm },
-    title: { ...typography.title, fontSize: 38, color: colors.text },
-    tagline: { fontSize: 15, color: colors.textMuted, lineHeight: 22 },
+    title: { ...typography.title, fontSize: scaleFont(38), color: colors.text },
+    tagline: { fontSize: scaleFont(15), color: colors.textMuted, lineHeight: scaleFont(22) },
     form: { gap: spacing.md },
     field: { gap: spacing.sm },
     label: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       fontWeight: '700',
       letterSpacing: 0.8,
       textTransform: 'uppercase',
@@ -237,7 +237,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.lg,
       paddingHorizontal: spacing.md + 2,
       paddingVertical: spacing.md,
-      fontSize: 16,
+      fontSize: scaleFont(16),
       color: colors.text,
       ...shadows.card,
     },
@@ -250,19 +250,19 @@ const createStyles = (colors: ThemeColors) =>
     },
     errorBanner: { backgroundColor: colors.categoryChip },
     noticeBanner: { backgroundColor: colors.successSurface },
-    bannerText: { flex: 1, fontSize: 14, lineHeight: 20 },
+    bannerText: { flex: 1, fontSize: scaleFont(14), lineHeight: scaleFont(20) },
     busy: { paddingVertical: spacing.md, alignItems: 'center' },
     switchText: {
       textAlign: 'center',
       color: colors.primary,
-      fontSize: 14,
+      fontSize: scaleFont(14),
       fontWeight: '600',
       paddingVertical: spacing.sm,
     },
     forgot: { alignSelf: 'flex-end', paddingTop: spacing.xs },
     forgotText: {
       color: colors.primary,
-      fontSize: 13,
+      fontSize: scaleFont(13),
       fontWeight: '600',
     },
   });

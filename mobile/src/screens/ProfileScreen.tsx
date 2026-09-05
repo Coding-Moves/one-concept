@@ -18,7 +18,7 @@ import {
   putNotificationPrefs,
   registerForReminders,
 } from '../services/notifications';
-import { radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -92,7 +92,7 @@ export function ProfileScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.header}>
         <View style={styles.avatar}>
-          <Ionicons name="person" size={26} color={colors.primary} />
+          <Ionicons name="person" size={scaleIcon(26)} color={colors.primary} />
         </View>
         <View style={styles.headerText}>
           <Text style={styles.name} numberOfLines={1} ellipsizeMode="tail">
@@ -107,7 +107,7 @@ export function ProfileScreen() {
       <View style={styles.cardsRow}>
         <View style={styles.card}>
           <AnimatedFlame
-            size={22}
+            size={scaleIcon(22)}
             color={streaks.current > 0 ? colors.streak : colors.textMuted}
             active={streaks.current > 0}
           />
@@ -115,7 +115,7 @@ export function ProfileScreen() {
           <Text style={styles.cardLabel}>Daily streak</Text>
         </View>
         <View style={styles.card}>
-          <Ionicons name="pulse" size={22} color={colors.primary} />
+          <Ionicons name="pulse" size={scaleIcon(22)} color={colors.primary} />
           <Text style={styles.cardValue}>
             {progress.likes.length} likes · {progress.bookmarks.length} saved
           </Text>
@@ -129,7 +129,7 @@ export function ProfileScreen() {
         accessibilityRole="button"
       >
         <View style={styles.rowLeft}>
-          <Ionicons name="sparkles-outline" size={20} color={colors.text} />
+          <Ionicons name="sparkles-outline" size={scaleIcon(20)} color={colors.text} />
           <View>
             <Text style={styles.rowTitle}>Personalize your feed</Text>
             <Text style={styles.rowSubtitle}>
@@ -137,7 +137,7 @@ export function ProfileScreen() {
             </Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
       </Pressable>
 
       <Pressable
@@ -146,20 +146,20 @@ export function ProfileScreen() {
         accessibilityRole="button"
       >
         <View style={styles.rowLeft}>
-          <Ionicons name="information-circle-outline" size={20} color={colors.text} />
+          <Ionicons name="information-circle-outline" size={scaleIcon(20)} color={colors.text} />
           <View>
             <Text style={styles.rowTitle}>About</Text>
             <Text style={styles.rowSubtitle}>Version, what this app is, and how it works</Text>
           </View>
         </View>
-        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
       </Pressable>
 
       <View style={styles.rowCard}>
         <View style={styles.rowLeft}>
           <Ionicons
             name={mode === 'dark' ? 'moon-outline' : 'sunny-outline'}
-            size={20}
+            size={scaleIcon(20)}
             color={colors.text}
           />
           <Text style={styles.rowTitle}>Dark mode</Text>
@@ -175,7 +175,7 @@ export function ProfileScreen() {
       {prefs ? (
         <View style={styles.rowCard}>
           <View style={styles.rowLeft}>
-            <Ionicons name="notifications-outline" size={20} color={colors.text} />
+            <Ionicons name="notifications-outline" size={scaleIcon(20)} color={colors.text} />
             <View>
               <Text style={styles.rowTitle}>Daily reminders</Text>
               <Text style={styles.rowSubtitle}>
@@ -210,7 +210,7 @@ export function ProfileScreen() {
                   <LikeCount count={c.likes} />
                 </View>
               </View>
-              <Ionicons name="bookmark" size={16} color={colors.primary} />
+              <Ionicons name="bookmark" size={scaleIcon(16)} color={colors.primary} />
             </View>
           ))}
         </View>
@@ -222,7 +222,7 @@ export function ProfileScreen() {
         accessibilityRole="button"
       >
         <View style={styles.rowLeft}>
-          <Ionicons name="log-out-outline" size={20} color={colors.streak} />
+          <Ionicons name="log-out-outline" size={scaleIcon(20)} color={colors.streak} />
           <Text style={[styles.rowTitle, { color: colors.streak }]}>Sign out</Text>
         </View>
       </Pressable>
@@ -262,13 +262,13 @@ const createStyles = (colors: ThemeColors) =>
     },
     name: {
       ...typography.title,
-      fontSize: 24,
+      fontSize: scaleFont(24),
       color: colors.text,
     },
     subtitle: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       color: colors.textMuted,
-      lineHeight: 17,
+      lineHeight: scaleFont(17),
     },
     cardsRow: {
       flexDirection: 'row',
@@ -286,12 +286,12 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'flex-start',
     },
     cardValue: {
-      fontSize: 15,
+      fontSize: scaleFont(15),
       fontWeight: '700',
       color: colors.text,
     },
     cardLabel: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       color: colors.textMuted,
     },
     rowCard: {
@@ -315,17 +315,17 @@ const createStyles = (colors: ThemeColors) =>
       flexShrink: 1,
     },
     rowTitle: {
-      fontSize: 15,
+      fontSize: scaleFont(15),
       fontWeight: '600',
       color: colors.text,
     },
     rowSubtitle: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       color: colors.textMuted,
       marginTop: 2,
     },
     sectionLabel: {
-      fontSize: 13,
+      fontSize: scaleFont(13),
       fontWeight: '700',
       letterSpacing: 1,
       textTransform: 'uppercase',
@@ -333,7 +333,7 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: -spacing.sm,
     },
     emptyText: {
-      fontSize: 14,
+      fontSize: scaleFont(14),
       color: colors.textMuted,
     },
     savedList: {
@@ -362,12 +362,12 @@ const createStyles = (colors: ThemeColors) =>
       flexWrap: 'wrap',
     },
     savedTitle: {
-      fontSize: 15,
+      fontSize: scaleFont(15),
       fontWeight: '600',
       color: colors.text,
     },
     version: {
-      fontSize: 12,
+      fontSize: scaleFont(12),
       color: colors.textMuted,
       textAlign: 'center',
       marginTop: spacing.md,

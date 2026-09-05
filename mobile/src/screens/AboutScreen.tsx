@@ -5,7 +5,7 @@ import Constants from 'expo-constants';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { radius, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
 const HOW_IT_WORKS = [
@@ -30,13 +30,13 @@ export function AboutScreen() {
           accessibilityRole="button"
           accessibilityLabel="Close"
         >
-          <Ionicons name="close" size={24} color={colors.text} />
+          <Ionicons name="close" size={scaleIcon(24)} color={colors.text} />
         </Pressable>
       </View>
 
       <View style={styles.hero}>
         <View style={styles.badge}>
-          <Ionicons name="bulb" size={30} color={colors.primary} />
+          <Ionicons name="bulb" size={scaleIcon(30)} color={colors.primary} />
         </View>
         <Text style={styles.appName}>One Concept</Text>
         <Text style={styles.version}>Version {version}</Text>
@@ -51,7 +51,7 @@ export function AboutScreen() {
       <View style={styles.list}>
         {HOW_IT_WORKS.map((line, i) => (
           <View key={i} style={styles.item}>
-            <Ionicons name="checkmark-circle" size={18} color={colors.success} style={styles.itemIcon} />
+            <Ionicons name="checkmark-circle" size={scaleIcon(18)} color={colors.success} style={styles.itemIcon} />
             <Text style={styles.itemText}>{line}</Text>
           </View>
         ))}
@@ -72,7 +72,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       marginBottom: spacing.lg,
     },
-    title: { ...typography.title, fontSize: 24, color: colors.text },
+    title: { ...typography.title, fontSize: scaleFont(24), color: colors.text },
     closeButton: { padding: spacing.xs },
     hero: { alignItems: 'center', gap: spacing.xs, marginBottom: spacing.lg },
     badge: {
@@ -84,24 +84,24 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       marginBottom: spacing.sm,
     },
-    appName: { ...typography.title, fontSize: 26, color: colors.text },
-    version: { fontSize: 13, fontWeight: '600', color: colors.textMuted },
+    appName: { ...typography.title, fontSize: scaleFont(26), color: colors.text },
+    version: { fontSize: scaleFont(13), fontWeight: '600', color: colors.textMuted },
     tagline: {
-      fontSize: 15,
-      lineHeight: 22,
+      fontSize: scaleFont(15),
+      lineHeight: scaleFont(22),
       color: colors.textSecondary,
       textAlign: 'center',
       marginBottom: spacing.xl,
     },
     sectionTitle: {
       ...typography.title,
-      fontSize: 18,
+      fontSize: scaleFont(18),
       color: colors.text,
       marginBottom: spacing.md,
     },
     list: { gap: spacing.md, marginBottom: spacing.xl },
     item: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm },
     itemIcon: { marginTop: 1 },
-    itemText: { flex: 1, fontSize: 15, lineHeight: 21, color: colors.textSecondary },
-    credit: { fontSize: 13, color: colors.textMuted, textAlign: 'center' },
+    itemText: { flex: 1, fontSize: scaleFont(15), lineHeight: scaleFont(21), color: colors.textSecondary },
+    credit: { fontSize: scaleFont(13), color: colors.textMuted, textAlign: 'center' },
   });

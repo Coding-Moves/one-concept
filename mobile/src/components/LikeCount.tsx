@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { ThemeColors } from '../theme';
+import { scaleIcon, scaleFont, ThemeColors } from '../theme';
 
 /**
  * A small "♥ N" badge showing how many people liked a concept. Renders nothing
@@ -15,7 +15,7 @@ export function LikeCount({ count }: { count: number }) {
   if (count <= 0) return null;
   return (
     <View style={styles.row}>
-      <Ionicons name="heart" size={13} color={colors.like} />
+      <Ionicons name="heart" size={scaleIcon(13)} color={colors.like} />
       <Text style={styles.text}>{count}</Text>
     </View>
   );
@@ -24,5 +24,5 @@ export function LikeCount({ count }: { count: number }) {
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     row: { flexDirection: 'row', alignItems: 'center', gap: 3 },
-    text: { fontSize: 12, fontWeight: '600', color: colors.textMuted },
+    text: { fontSize: scaleFont(12), fontWeight: '600', color: colors.textMuted },
   });

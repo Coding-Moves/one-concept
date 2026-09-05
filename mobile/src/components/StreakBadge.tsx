@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AnimatedFlame } from './AnimatedFlame';
 import { useTheme } from '../context/ThemeContext';
-import { radius, shadows, spacing, ThemeColors } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 import { StreakStats } from '../services/streak';
 
 export function StreakBadge({ streaks }: { streaks: StreakStats }) {
@@ -15,7 +15,7 @@ export function StreakBadge({ streaks }: { streaks: StreakStats }) {
       <View style={styles.stat}>
         <View style={styles.valueRow}>
           <AnimatedFlame
-            size={16}
+            size={scaleIcon(16)}
             color={streaks.current > 0 ? colors.streak : colors.textMuted}
             active={streaks.current > 0}
           />
@@ -25,14 +25,14 @@ export function StreakBadge({ streaks }: { streaks: StreakStats }) {
       </View>
       <View style={styles.stat}>
         <View style={styles.valueRow}>
-          <Ionicons name="trophy-outline" size={15} color={colors.categoryChipText} />
+          <Ionicons name="trophy-outline" size={scaleIcon(15)} color={colors.categoryChipText} />
           <Text style={styles.value}>{streaks.longest}</Text>
         </View>
         <Text style={styles.label}>longest</Text>
       </View>
       <View style={styles.stat}>
         <View style={styles.valueRow}>
-          <Ionicons name="library-outline" size={15} color={colors.categoryChipText} />
+          <Ionicons name="library-outline" size={scaleIcon(15)} color={colors.categoryChipText} />
           <Text style={styles.value}>{streaks.totalLearned}</Text>
         </View>
         <Text style={styles.label}>learned</Text>
@@ -63,12 +63,12 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.xs,
     },
     value: {
-      fontSize: 19,
+      fontSize: scaleFont(19),
       fontFamily: 'SpaceGrotesk_700Bold',
       color: colors.text,
     },
     label: {
-      fontSize: 11.5,
+      fontSize: scaleFont(11.5),
       letterSpacing: 0.3,
       color: colors.textMuted,
     },

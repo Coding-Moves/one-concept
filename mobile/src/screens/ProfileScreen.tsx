@@ -3,7 +3,7 @@ import Constants from 'expo-constants';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { AnimatedFlame } from '../components/AnimatedFlame';
 import { CategoryChip } from '../components/CategoryChip';
 import { LikeCount } from '../components/LikeCount';
@@ -90,7 +90,8 @@ export function ProfileScreen() {
       setPrefs(await putNotificationPrefs(next));
       if (next.enabled) registerForReminders().catch(() => {});
     } catch {
-      setPrefs(prefs);
+      setPrefs(prefs); // revert the visual toggle…
+      Alert.alert("Couldn't update reminders", 'Check your connection and try again.');
     }
   }, [prefs]);
 

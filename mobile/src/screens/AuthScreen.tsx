@@ -30,7 +30,11 @@ export function AuthScreen() {
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [notice, setNotice] = useState<string | null>(null);
+  // A banner with a bold header + body. The reset variant carries the email so
+  // it can be shown back for a quick typo check (issue #136).
+  const [notice, setNotice] = useState<
+    { title: string; body: string } | { title: string; sentTo: string } | null
+  >(null);
 
   const canSubmit = email.trim().length > 3 && password.length >= 6 && !busy;
 
@@ -44,7 +48,10 @@ export function AuthScreen() {
       } else {
         const { needsConfirmation } = await signUp(email, password);
         if (needsConfirmation) {
-          setNotice('Check your email to confirm your account, then sign in.');
+          setNotice({
+            title: 'Check your email',
+            body: 'Confirm your account from the email we just sent, then sign in.',
+          });
           setMode('signIn');
         }
       }
@@ -67,10 +74,9 @@ export function AuthScreen() {
     setBusy(true);
     try {
       await resetPassword(trimmed);
-      // Deliberately neutral: never reveal whether an account exists.
-      setNotice(
-        'If an account exists for that email, a password reset link is on its way. Check your inbox (and spam).'
-      );
+      // Show the email back for a typo check, but stay neutral about whether an
+      // account exists ("if it's registered") — no account enumeration.
+      setNotice({ title: 'Check your email', sentTo: trimmed });
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not send the reset email. Try again.');
     } finally {
@@ -118,7 +124,12 @@ export function AuthScreen() {
             <TextInput
               style={styles.input}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={(t) => {
+                setEmail(t);
+                // Editing the address invalidates the previous banner (#136).
+                if (notice) setNotice(null);
+                if (error) setError(null);
+              }}
               placeholder="you@example.com"
               placeholderTextColor={colors.textMuted}
               autoCapitalize="none"
@@ -162,9 +173,25 @@ export function AuthScreen() {
           ) : null}
 
           {notice ? (
-            <View style={[styles.banner, styles.noticeBanner]}>
+            <View
+              style={[styles.banner, styles.noticeBanner]}
+              accessibilityRole="alert"
+            >
               <Ionicons name="mail-outline" size={scaleIcon(18)} color={colors.success} />
-              <Text style={[styles.bannerText, { color: colors.success }]}>{notice}</Text>
+              <View style={styles.bannerBody}>
+                <Text style={styles.noticeTitle}>{notice.title}</Text>
+                <Text style={styles.noticeText}>
+                  {'sentTo' in notice ? (
+                    <>
+                      We’ve sent a password reset link to{' '}
+                      <Text style={styles.noticeStrong}>{notice.sentTo}</Text> (if it’s
+                      registered). Check your inbox and spam folder.
+                    </>
+                  ) : (
+                    notice.body
+                  )}
+                </Text>
+              </View>
             </View>
           ) : null}
 
@@ -251,6 +278,20 @@ const createStyles = (colors: ThemeColors) =>
     errorBanner: { backgroundColor: colors.categoryChip },
     noticeBanner: { backgroundColor: colors.successSurface },
     bannerText: { flex: 1, fontSize: scaleFont(14), lineHeight: scaleFont(20) },
+    bannerBody: { flex: 1, gap: 2 },
+    noticeTitle: {
+      fontSize: scaleFont(15),
+      fontWeight: '700',
+      color: colors.success,
+    },
+    // Body in the primary text colour, not green-on-green — high contrast on
+    // the success surface in both light and dark themes (issue #136).
+    noticeText: {
+      fontSize: scaleFont(14),
+      lineHeight: scaleFont(20),
+      color: colors.text,
+    },
+    noticeStrong: { fontWeight: '700', color: colors.text },
     busy: { paddingVertical: spacing.md, alignItems: 'center' },
     switchText: {
       textAlign: 'center',

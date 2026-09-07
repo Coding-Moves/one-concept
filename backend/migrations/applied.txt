@@ -1,0 +1,17 @@
+# Migrations applied to the PRODUCTION Supabase database.
+#
+# CI (.github/workflows/migrations.yml) fails on main and on release PRs if any
+# backend/migrations/*.sql file is NOT listed here — i.e. the code shipped a
+# migration that was never run on prod (the pool-topup "column claimed_at does
+# not exist" crash was exactly this).
+#
+# When you apply a migration to prod — Supabase → SQL Editor, or
+#   psql "$DIRECT_URL" -f backend/migrations/<file>
+# — add its filename below, in the same release PR.
+0001_schema.sql
+0002_rls.sql
+0003_seed_topics.sql
+0004_seed_concepts.sql
+0005_concept_backlog.sql
+0006_seed_backlog.sql
+0007_reminder_log.sql

@@ -36,8 +36,9 @@ export interface ProgressRepository {
   /** Server-side: PUT|DELETE /v1/concepts/{id}/like. */
   toggleLike(conceptId: string): Promise<ProgressState>;
 
-  /** Server-side: PUT|DELETE /v1/concepts/{id}/save. */
-  toggleBookmark(conceptId: string): Promise<ProgressState>;
+  /** Server-side: PUT|DELETE /v1/concepts/{id}/save. title/topicName let an
+   *  offline save show in the Saved list (not just the count) until sync. */
+  toggleBookmark(conceptId: string, title?: string, topicName?: string): Promise<ProgressState>;
 
   /** Replay any mutations queued while offline and return the reconciled state,
    *  or null if there's nothing to sync. Only the server-backed repository

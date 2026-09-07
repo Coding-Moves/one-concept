@@ -1,6 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError, apiRequest } from '../api/client';
 import { Category, DailyPayload, ProgressState } from '../types';
+import { todayKey } from './dates';
 import { clearQueue, dequeue, enqueue, keyOf, pending, QueuedMutation } from './mutationQueue';
 import { ProgressRepository } from './progressRepository';
 import { EMPTY_PROGRESS } from './storage';
@@ -160,14 +161,23 @@ export class RemoteProgressRepository implements ProgressRepository {
       done = await apiRequest('/v1/daily/complete', { method: 'POST' });
     } catch (err) {
       if (isOffline(err)) {
-        // Queue the completion and persist the optimistic learned record — with
-        // its title/topic so the History row stays right — until the server's
-        // record replaces it on the next sync.
-        await enqueue({ kind: 'learn' });
-        const learned = this.cache.learned.some((r) => r.date === today)
+        // Queue the completion (with the date — it can only be replayed today)
+        // and persist the optimistic record + streak bump so History AND the
+        // streak stay right until the server's numbers replace them on sync.
+        await enqueue({ kind: 'learn', date: today });
+        const already = this.cache.learned.some((r) => r.date === today);
+        const learned = already
           ? this.cache.learned
           : [...this.cache.learned, { conceptId, date: today, title, topicName }];
-        return this.remember({ ...this.cache, learned }, epoch);
+        const stats =
+          already || !this.cache.stats
+            ? this.cache.stats
+            : {
+                current: this.cache.stats.current + 1,
+                longest: Math.max(this.cache.stats.longest, this.cache.stats.current + 1),
+                totalLearned: this.cache.stats.totalLearned + 1,
+              };
+        return this.remember({ ...this.cache, learned, stats }, epoch);
       }
       throw err;
     }
@@ -259,22 +269,36 @@ export class RemoteProgressRepository implements ProgressRepository {
     }
   }
 
-  async toggleBookmark(conceptId: string): Promise<ProgressState> {
+  async toggleBookmark(
+    conceptId: string,
+    title?: string,
+    topicName?: string
+  ): Promise<ProgressState> {
     const epoch = this.epoch;
     const currently = this.cache.bookmarks.includes(conceptId);
     const desired = !currently;
 
     // Patch bookmarks/savedConcepts in place for the desired state — reused by
-    // the offline and reload-failed paths.
-    const patched = (): ProgressState => ({
-      ...this.cache,
-      bookmarks: desired
+    // the offline and reload-failed paths. When saving offline, add a minimal
+    // savedConcepts row (needs title + topic) so the concept shows in the Saved
+    // list right away, not just in the count (#133). Leave savedConcepts alone
+    // when it's absent (signed-out demo) or the caller didn't pass a title.
+    const patched = (): ProgressState => {
+      const bookmarks = desired
         ? [...this.cache.bookmarks, conceptId]
-        : this.cache.bookmarks.filter((id) => id !== conceptId),
-      savedConcepts: desired
-        ? this.cache.savedConcepts
-        : (this.cache.savedConcepts ?? []).filter((s) => s.conceptId !== conceptId),
-    });
+        : this.cache.bookmarks.filter((id) => id !== conceptId);
+      let savedConcepts = this.cache.savedConcepts;
+      if (savedConcepts) {
+        if (desired) {
+          if (title && topicName && !savedConcepts.some((s) => s.conceptId === conceptId)) {
+            savedConcepts = [{ conceptId, title, topicName, likeCount: 0 }, ...savedConcepts];
+          }
+        } else {
+          savedConcepts = savedConcepts.filter((s) => s.conceptId !== conceptId);
+        }
+      }
+      return { ...this.cache, bookmarks, savedConcepts };
+    };
 
     try {
       await this.toggle(conceptId, 'save', currently);
@@ -311,15 +335,24 @@ export class RemoteProgressRepository implements ProgressRepository {
     const entries = await pending();
     if (entries.length === 0) return null;
 
+    const today = todayKey();
     for (const m of entries) {
       if (epoch !== this.epoch) return null; // signed out mid-flush
+
+      // A completion can only be replayed on its own day — /v1/daily/complete
+      // always targets "today", so a stale 'learn' is dropped, not replayed.
+      if (m.kind === 'learn' && m.date !== today) {
+        await dequeue(keyOf(m), m);
+        continue;
+      }
+
       try {
         await this.replay(m);
-        await dequeue(keyOf(m));
+        await dequeue(keyOf(m), m); // guarded: don't clobber a newer same-key intent
       } catch (err) {
         if (isOffline(err)) return null; // still offline — keep the rest queued
         if (err instanceof ApiError && err.status >= 500) continue; // transient — retry next time
-        await dequeue(keyOf(m)); // 4xx: unfixable, drop so it can't block forever
+        await dequeue(keyOf(m), m); // 4xx: unfixable, drop so it can't block forever
       }
     }
 

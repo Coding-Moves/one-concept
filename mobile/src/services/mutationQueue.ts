@@ -16,7 +16,9 @@ export type QueuedMutation =
   | { kind: 'like'; slug: string; desired: boolean }
   | { kind: 'save'; slug: string; desired: boolean }
   | { kind: 'topics'; slugs: string[] }
-  | { kind: 'learn' };
+  // The date it was completed: /v1/daily/complete only completes "today", so a
+  // 'learn' queued on a previous day must be dropped, not replayed (#133).
+  | { kind: 'learn'; date: string };
 
 /** Stable coalescing key — one pending intent per (kind, target). */
 export function keyOf(m: QueuedMutation): string {
@@ -57,13 +59,17 @@ export async function enqueue(m: QueuedMutation): Promise<void> {
   await persist();
 }
 
-/** Remove the intent at a key (no-op if absent). */
-export async function dequeue(key: string): Promise<void> {
+/**
+ * Remove the intent at a key. If `expected` is given, only remove it when the
+ * stored intent still equals it — so a flush that replayed an old intent can't
+ * clobber a newer one enqueued for the same key mid-flush (#133).
+ */
+export async function dequeue(key: string, expected?: QueuedMutation): Promise<void> {
   const q = await ensureLoaded();
-  if (key in q) {
-    delete q[key];
-    await persist();
-  }
+  if (!(key in q)) return;
+  if (expected && JSON.stringify(q[key]) !== JSON.stringify(expected)) return;
+  delete q[key];
+  await persist();
 }
 
 /** All pending intents (order across keys is not significant). */

@@ -39,7 +39,7 @@ export interface ProgressContextValue {
   markLearned: (target?: Concept) => void;
   toggleTopic: (category: Category) => void;
   toggleLike: (conceptId: string) => void;
-  toggleBookmark: (conceptId: string) => void;
+  toggleBookmark: (conceptId: string, title?: string, topicName?: string) => void;
 }
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
@@ -282,12 +282,13 @@ export function ProgressProvider({ children, repository: override }: Props) {
   );
 
   const toggleBookmark = useCallback(
-    (conceptId: string) => {
+    (conceptId: string, title?: string, topicName?: string) => {
       const toggle = (prev: ProgressState) => ({
         ...prev,
         bookmarks: flip(prev.bookmarks, conceptId),
       });
-      apply(toggle, () => repository.toggleBookmark(conceptId), toggle);
+      // title/topic let an offline save appear in the Saved list, not just the count.
+      apply(toggle, () => repository.toggleBookmark(conceptId, title, topicName), toggle);
     },
     [apply, repository]
   );

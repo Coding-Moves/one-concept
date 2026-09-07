@@ -18,6 +18,9 @@ on:
 
 jobs:
   check:
+    # Explicit name so the reported check context is stable and descriptive
+    # ("Migrations applied check") — it's a required status check on main.
+    name: Migrations applied check
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

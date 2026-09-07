@@ -13,8 +13,10 @@ import { StatusBar } from 'expo-status-bar';
 import { ComponentProps, useCallback, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { OfflineBanner } from './src/components/OfflineBanner';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
+import { ConnectivityProvider, useOnline } from './src/context/ConnectivityContext';
 import { ProgressProvider } from './src/context/ProgressContext';
 import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { useWhatsNew } from './src/hooks/useWhatsNew';
@@ -69,6 +71,7 @@ function ThemedApp() {
   const { colors, mode } = useTheme();
   const { loading, session } = useAuth();
   const whatsNew = useWhatsNew();
+  const online = useOnline();
 
   if (loading) {
     return (
@@ -88,10 +91,11 @@ function ThemedApp() {
 
   if (!session) {
     return (
-      <>
+      <View style={{ flex: 1 }}>
+        {!online && <OfflineBanner />}
         <AuthScreen />
         <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      </>
+      </View>
     );
   }
 
@@ -109,7 +113,8 @@ function ThemedApp() {
   };
 
   return (
-    <>
+    <View style={{ flex: 1 }}>
+      {!online && <OfflineBanner />}
       <NavigationContainer theme={navigationTheme}>
         <RootStack.Navigator screenOptions={{ headerShown: false }}>
           <RootStack.Screen name="Tabs" component={Tabs} />
@@ -124,7 +129,7 @@ function ThemedApp() {
         <WhatsNewCard entry={whatsNew.entry} onDismiss={whatsNew.dismiss} />
       )}
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-    </>
+    </View>
   );
 }
 
@@ -194,11 +199,13 @@ export default function App() {
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <SafeAreaProvider>
         <ThemeProvider>
-          <AuthProvider>
-            <ProgressProvider>
-              <ThemedApp />
-            </ProgressProvider>
-          </AuthProvider>
+          <ConnectivityProvider>
+            <AuthProvider>
+              <ProgressProvider>
+                <ThemedApp />
+              </ProgressProvider>
+            </AuthProvider>
+          </ConnectivityProvider>
         </ThemeProvider>
       </SafeAreaProvider>
     </View>

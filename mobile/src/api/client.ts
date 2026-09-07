@@ -34,6 +34,30 @@ export function isApiConfigured(): boolean {
   return API_BASE_URL.length > 0;
 }
 
+// --- Connectivity, inferred from request outcomes (no native listener) -------
+// We learn we're offline when a fetch throws (no response), and back online the
+// moment any request reaches the server (even an HTTP error is "reachable").
+// The app subscribes to drive a global offline banner + the sync queue.
+let online = true;
+const connectivityListeners = new Set<(online: boolean) => void>();
+
+export function getConnectivity(): boolean {
+  return online;
+}
+
+export function subscribeConnectivity(fn: (online: boolean) => void): () => void {
+  connectivityListeners.add(fn);
+  return () => {
+    connectivityListeners.delete(fn);
+  };
+}
+
+function setConnectivity(next: boolean): void {
+  if (next === online) return;
+  online = next;
+  connectivityListeners.forEach((fn) => fn(next));
+}
+
 interface RequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
@@ -66,8 +90,12 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     });
   } catch (cause) {
     // Offline or unreachable host: callers fall back to cached state.
+    setConnectivity(false);
     throw new ApiError(0, 'Network request failed', cause);
   }
+
+  // Got a response (even a 4xx/5xx) — the server is reachable, so we're online.
+  setConnectivity(true);
 
   if (response.status === 204) return undefined as T;
 

@@ -1,0 +1,61 @@
+# Flags migrations that ship in the code but were never applied to the
+# production database. Migrations are applied to Supabase by hand (the deploy
+# does not auto-migrate), so a released migration that nobody ran leaves the
+# app querying a column/table that doesn't exist — e.g. the pool-topup worker
+# crashing on "column claimed_at does not exist".
+#
+# The check compares backend/migrations/*.sql against the applied.txt ledger.
+# It runs on main and on PRs INTO main (release PRs) — not on develop, where
+# unreleased migrations are legitimately not-yet-applied.
+name: Migrations applied check
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  check:
+    # Explicit name so the reported check context is stable and descriptive
+    # ("Migrations applied check") — it's a required status check on main.
+    name: Migrations applied check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Flag migrations not recorded as applied to production
+        working-directory: backend/migrations
+        run: |
+          ledger=applied.txt
+          if [ ! -f "$ledger" ]; then
+            echo "::error::$ledger is missing — the migrations ledger must exist."
+            exit 1
+          fi
+
+          shopt -s nullglob
+          missing=()
+          for f in *.sql; do
+            grep -qxF "$f" "$ledger" || missing+=("$f")
+          done
+
+          if [ ${#missing[@]} -eq 0 ]; then
+            echo "✓ All backend/migrations/*.sql files are recorded as applied to production."
+            exit 0
+          fi
+
+          {
+            echo "## ⚠️ Migrations not applied to production"
+            echo ""
+            echo "These \`backend/migrations/*.sql\` files are **not** listed in \`applied.txt\`, so they may ship in the code without ever having been run on the production database:"
+            echo ""
+            for f in "${missing[@]}"; do echo "- \`$f\`"; done
+            echo ""
+            echo "**Before this release reaches main:** run each on prod —"
+            echo "Supabase → SQL Editor, or \`psql \"\$DIRECT_URL\" -f backend/migrations/<file>\` —"
+            echo "then add its filename to \`backend/migrations/applied.txt\` in this PR."
+          } | tee -a "$GITHUB_STEP_SUMMARY"
+
+          echo "::error::Unapplied migrations: ${missing[*]}"
+          exit 1

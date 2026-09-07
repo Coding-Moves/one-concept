@@ -60,21 +60,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     let active = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!active) return;
-      setSession(data.session);
-      setLoading(false);
-      // Best-effort: reminders are a bonus, never a blocker for signing in.
-      if (data.session) {
-        registerForReminders().catch(() => {});
-        syncTimezone().catch(() => {});
-      } else {
-        // Signed out at startup: account caches have no business existing.
-        // Covers sessions that vanished without a SIGNED_OUT ever firing
-        // (cleared or corrupted auth storage across a restart).
-        clearAccountCaches().catch(() => {});
-      }
-    });
+
+    // The app-level spinner is gated on `loading`, so it MUST always resolve —
+    // even offline or if secure storage is unreadable. A timeout is the
+    // backstop against getSession() hanging; the catch handles a rejection.
+    // Either way we fall through to the signed-out UI rather than an infinite
+    // spinner (issue #133).
+    const failsafe = setTimeout(() => {
+      if (active) setLoading(false);
+    }, 8000);
+
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (!active) return;
+        setSession(data.session);
+        setLoading(false);
+        // Best-effort: reminders are a bonus, never a blocker for signing in.
+        if (data.session) {
+          registerForReminders().catch(() => {});
+          syncTimezone().catch(() => {});
+        } else {
+          // Signed out at startup: account caches have no business existing.
+          // Covers sessions that vanished without a SIGNED_OUT ever firing
+          // (cleared or corrupted auth storage across a restart).
+          clearAccountCaches().catch(() => {});
+        }
+      })
+      .catch(() => {
+        // Couldn't read the session (e.g. corrupted/locked secure store):
+        // treat as signed out instead of hanging on the spinner.
+        if (active) {
+          setSession(null);
+          setLoading(false);
+        }
+      })
+      .finally(() => clearTimeout(failsafe));
 
     const { data: subscription } = supabase.auth.onAuthStateChange((event, next) => {
       setSession(next);
@@ -92,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
+      clearTimeout(failsafe);
       subscription.subscription.unsubscribe();
     };
   }, []);

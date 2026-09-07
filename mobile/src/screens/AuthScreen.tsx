@@ -166,7 +166,7 @@ export function AuthScreen() {
           </View>
 
           {error ? (
-            <View style={[styles.banner, styles.errorBanner]}>
+            <View style={[styles.banner, styles.errorBanner]} accessibilityRole="alert">
               <Ionicons name="alert-circle-outline" size={scaleIcon(18)} color={colors.streak} />
               <Text style={[styles.bannerText, { color: colors.streak }]}>{error}</Text>
             </View>

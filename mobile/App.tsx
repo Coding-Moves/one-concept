@@ -24,6 +24,7 @@ import { AboutScreen } from './src/screens/AboutScreen';
 import { ConceptDetailScreen } from './src/screens/ConceptDetailScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
 import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
+import { SavedScreen } from './src/screens/SavedScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { RootStackParamList } from './src/navigation';
@@ -46,6 +47,7 @@ function ProfileStackScreen() {
         component={PersonalizationScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
+      <ProfileStack.Screen name="Saved" component={SavedScreen} />
       <ProfileStack.Screen
         name="About"
         component={AboutScreen}

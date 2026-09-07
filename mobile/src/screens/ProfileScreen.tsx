@@ -1,17 +1,13 @@
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { AnimatedFlame } from '../components/AnimatedFlame';
-import { CategoryChip } from '../components/CategoryChip';
-import { LikeCount } from '../components/LikeCount';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { CONCEPTS_BY_ID } from '../data/concepts';
-import { RootStackParamList } from '../navigation';
 import {
   getCachedNotificationPrefs,
   getNotificationPrefs,
@@ -24,46 +20,23 @@ import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography
 export type ProfileStackParamList = {
   ProfileHome: undefined;
   Personalization: undefined;
+  Saved: undefined;
   About: undefined;
 };
 
 export function ProfileScreen() {
-  // Composite: navigate within the Profile stack (Personalization, About) and
-  // up to the root stack's concept-detail modal (#124).
   const navigation =
-    useNavigation<
-      CompositeNavigationProp<
-        NativeStackNavigationProp<ProfileStackParamList, 'ProfileHome'>,
-        NativeStackNavigationProp<RootStackParamList>
-      >
-    >();
+    useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileHome'>>();
   const { progress, streaks } = useProgress();
   const { email, signOut } = useAuth();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // Server-backed state carries saved concepts with their titles/topics; the
-  // signed-out demo resolves bookmarked ids against the bundled catalog. Mapping
-  // signed-in bookmarks through the 20-concept demo is exactly what hid saved
-  // lessons from the 125+ server catalog (issue #90).
-  const likedIds = useMemo(() => new Set(progress.likes), [progress.likes]);
-  const saved = progress.savedConcepts
-    ? progress.savedConcepts.map((s) => ({
-        id: s.conceptId,
-        title: s.title,
-        topicName: s.topicName,
-        // Others' likes plus the viewer's own, so the number matches the card.
-        likes: (s.likeCount ?? 0) + (likedIds.has(s.conceptId) ? 1 : 0),
-      }))
-    : progress.bookmarks
-        .map((id) => CONCEPTS_BY_ID.get(id))
-        .filter((c): c is NonNullable<typeof c> => !!c)
-        .map((c) => ({
-          id: c.id,
-          title: c.title,
-          topicName: c.category as string,
-          likes: likedIds.has(c.id) ? 1 : 0,
-        }));
+  // The list itself now lives on a dedicated Saved screen (issue #131); the
+  // Profile only needs the count. Use bookmarks.length — the same source as the
+  // activity card above, and the one that updates optimistically on a save so
+  // the two counts never disagree.
+  const savedCount = progress.bookmarks.length;
 
   // Server-owned preference; absent until the first state fetch succeeds.
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
@@ -90,7 +63,8 @@ export function ProfileScreen() {
       setPrefs(await putNotificationPrefs(next));
       if (next.enabled) registerForReminders().catch(() => {});
     } catch {
-      setPrefs(prefs);
+      setPrefs(prefs); // revert the visual toggle…
+      Alert.alert("Couldn't update reminders", 'Check your connection and try again.');
     }
   }, [prefs]);
 
@@ -200,35 +174,24 @@ export function ProfileScreen() {
         </View>
       ) : null}
 
-      <Text style={styles.sectionLabel}>Saved concepts</Text>
-      {saved.length === 0 ? (
-        <Text style={styles.emptyText}>
-          Tap the bookmark on a concept to keep it here for later.
-        </Text>
-      ) : (
-        <View style={styles.savedList}>
-          {saved.map((c) => (
-            <Pressable
-              key={c.id}
-              onPress={() =>
-                navigation.navigate('ConceptDetail', { conceptId: c.id, title: c.title })
-              }
-              style={({ pressed }) => [styles.savedRow, pressed && styles.rowPressed]}
-              accessibilityRole="button"
-              accessibilityLabel={`Open ${c.title}`}
-            >
-              <View style={styles.savedText}>
-                <Text style={styles.savedTitle}>{c.title}</Text>
-                <View style={styles.savedMeta}>
-                  {c.topicName ? <CategoryChip category={c.topicName} /> : null}
-                  <LikeCount count={c.likes} />
-                </View>
-              </View>
-              <Ionicons name="bookmark" size={scaleIcon(16)} color={colors.primary} />
-            </Pressable>
-          ))}
+      <Pressable
+        onPress={() => navigation.navigate('Saved')}
+        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+      >
+        <View style={styles.rowLeft}>
+          <Ionicons name="bookmark-outline" size={scaleIcon(20)} color={colors.text} />
+          <View>
+            <Text style={styles.rowTitle}>Saved concepts</Text>
+            <Text style={styles.rowSubtitle}>
+              {savedCount === 0
+                ? 'Bookmark a concept to keep it for later'
+                : `${savedCount} saved · search and filter`}
+            </Text>
+          </View>
         </View>
-      )}
+        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
+      </Pressable>
 
       <Pressable
         onPress={signOut}
@@ -337,48 +300,6 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: scaleFont(12),
       color: colors.textMuted,
       marginTop: 2,
-    },
-    sectionLabel: {
-      fontSize: scaleFont(13),
-      fontWeight: '700',
-      letterSpacing: 1,
-      textTransform: 'uppercase',
-      color: colors.textMuted,
-      marginBottom: -spacing.sm,
-    },
-    emptyText: {
-      fontSize: scaleFont(14),
-      color: colors.textMuted,
-    },
-    savedList: {
-      gap: spacing.sm,
-    },
-    savedRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      padding: spacing.md,
-      gap: spacing.md,
-      ...shadows.card,
-    },
-    savedText: {
-      flexShrink: 1,
-      gap: spacing.sm,
-    },
-    savedMeta: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
-      flexWrap: 'wrap',
-    },
-    savedTitle: {
-      fontSize: scaleFont(15),
-      fontWeight: '600',
-      color: colors.text,
     },
     version: {
       fontSize: scaleFont(12),

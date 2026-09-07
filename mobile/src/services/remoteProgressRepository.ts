@@ -1,11 +1,18 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiRequest } from '../api/client';
+import { ApiError, apiRequest } from '../api/client';
 import { Category, DailyPayload, ProgressState } from '../types';
+import { todayKey } from './dates';
+import { clearQueue, dequeue, enqueue, keyOf, pending, QueuedMutation } from './mutationQueue';
 import { ProgressRepository } from './progressRepository';
 import { EMPTY_PROGRESS } from './storage';
 import { toCategory, toSlug } from './topics';
 
 const CACHE_KEY = 'one-concept/server-state/v1';
+
+/** True for a network failure (no response) — the signal to queue offline. */
+function isOffline(err: unknown): boolean {
+  return err instanceof ApiError && err.status === 0;
+}
 
 interface StatePayload {
   display_name: string | null;
@@ -90,10 +97,12 @@ export class RemoteProgressRepository implements ProgressRepository {
     return this.remember(toProgressState(payload), epoch);
   }
 
-  /** Drop the in-memory state; the module singleton outlives a sign-out. */
+  /** Drop the in-memory state; the module singleton outlives a sign-out. The
+   *  offline queue is account data too, so it goes with it. */
   forget(): void {
     this.epoch += 1;
     this.cache = EMPTY_PROGRESS;
+    clearQueue().catch(() => {});
   }
 
   async loadCached(): Promise<ProgressState | null> {
@@ -136,13 +145,43 @@ export class RemoteProgressRepository implements ProgressRepository {
     return this.cache;
   }
 
-  async markLearned(conceptId: string): Promise<ProgressState> {
+  async markLearned(
+    conceptId: string,
+    today: string,
+    title?: string,
+    topicName?: string
+  ): Promise<ProgressState> {
     const epoch = this.epoch;
-    const done = await apiRequest<{
+    let done: {
       completed: boolean;
       assigned_for: string;
       stats: { current: number; longest: number; total_learned: number };
-    }>('/v1/daily/complete', { method: 'POST' });
+    };
+    try {
+      done = await apiRequest('/v1/daily/complete', { method: 'POST' });
+    } catch (err) {
+      if (isOffline(err)) {
+        // Queue the completion (with the date — it can only be replayed today)
+        // and persist the optimistic record + streak bump so History AND the
+        // streak stay right until the server's numbers replace them on sync.
+        await enqueue({ kind: 'learn', date: today });
+        const already = this.cache.learned.some((r) => r.date === today);
+        const learned = already
+          ? this.cache.learned
+          : [...this.cache.learned, { conceptId, date: today, title, topicName }];
+        const stats =
+          already || !this.cache.stats
+            ? this.cache.stats
+            : {
+                current: this.cache.stats.current + 1,
+                longest: Math.max(this.cache.stats.longest, this.cache.stats.current + 1),
+                totalLearned: this.cache.stats.totalLearned + 1,
+              };
+        return this.remember({ ...this.cache, learned, stats }, epoch);
+      }
+      throw err;
+    }
+    await dequeue('learn');
 
     // Reload the full state so History shows the true server record — the actual
     // completed concept with its title and topic — rather than a client-side
@@ -176,13 +215,23 @@ export class RemoteProgressRepository implements ProgressRepository {
     const next = following
       ? this.cache.followedTopics.filter((c) => c !== category)
       : [...this.cache.followedTopics, category];
+    const slugs = next.map(toSlug);
 
     // Whole-list semantics: PUT replaces the set, so a retry is harmless.
-    const payload = await apiRequest<StatePayload>('/v1/me/topics', {
-      method: 'PUT',
-      body: { topics: next.map(toSlug) },
-    });
-    return this.fromState(payload, epoch);
+    try {
+      const payload = await apiRequest<StatePayload>('/v1/me/topics', {
+        method: 'PUT',
+        body: { topics: slugs },
+      });
+      await dequeue('topics');
+      return this.fromState(payload, epoch);
+    } catch (err) {
+      if (isOffline(err)) {
+        await enqueue({ kind: 'topics', slugs });
+        return this.remember({ ...this.cache, followedTopics: next }, epoch);
+      }
+      throw err;
+    }
   }
 
   private async toggle(
@@ -200,19 +249,67 @@ export class RemoteProgressRepository implements ProgressRepository {
   async toggleLike(conceptId: string): Promise<ProgressState> {
     const epoch = this.epoch;
     const currently = this.cache.likes.includes(conceptId);
-    await this.toggle(conceptId, 'like', currently);
-    return this.remember({
+    const desired = !currently;
+    const next: ProgressState = {
       ...this.cache,
-      likes: currently
-        ? this.cache.likes.filter((id) => id !== conceptId)
-        : [...this.cache.likes, conceptId],
-    }, epoch);
+      likes: desired
+        ? [...this.cache.likes, conceptId]
+        : this.cache.likes.filter((id) => id !== conceptId),
+    };
+    try {
+      await this.toggle(conceptId, 'like', currently);
+      await dequeue(`like:${conceptId}`);
+      return this.remember(next, epoch);
+    } catch (err) {
+      if (isOffline(err)) {
+        await enqueue({ kind: 'like', slug: conceptId, desired });
+        return this.remember(next, epoch);
+      }
+      throw err;
+    }
   }
 
-  async toggleBookmark(conceptId: string): Promise<ProgressState> {
+  async toggleBookmark(
+    conceptId: string,
+    title?: string,
+    topicName?: string
+  ): Promise<ProgressState> {
     const epoch = this.epoch;
     const currently = this.cache.bookmarks.includes(conceptId);
-    await this.toggle(conceptId, 'save', currently);
+    const desired = !currently;
+
+    // Patch bookmarks/savedConcepts in place for the desired state — reused by
+    // the offline and reload-failed paths. When saving offline, add a minimal
+    // savedConcepts row (needs title + topic) so the concept shows in the Saved
+    // list right away, not just in the count (#133). Leave savedConcepts alone
+    // when it's absent (signed-out demo) or the caller didn't pass a title.
+    const patched = (): ProgressState => {
+      const bookmarks = desired
+        ? [...this.cache.bookmarks, conceptId]
+        : this.cache.bookmarks.filter((id) => id !== conceptId);
+      let savedConcepts = this.cache.savedConcepts;
+      if (savedConcepts) {
+        if (desired) {
+          if (title && topicName && !savedConcepts.some((s) => s.conceptId === conceptId)) {
+            savedConcepts = [{ conceptId, title, topicName, likeCount: 0 }, ...savedConcepts];
+          }
+        } else {
+          savedConcepts = savedConcepts.filter((s) => s.conceptId !== conceptId);
+        }
+      }
+      return { ...this.cache, bookmarks, savedConcepts };
+    };
+
+    try {
+      await this.toggle(conceptId, 'save', currently);
+    } catch (err) {
+      if (isOffline(err)) {
+        await enqueue({ kind: 'save', slug: conceptId, desired });
+        return this.remember(patched(), epoch);
+      }
+      throw err;
+    }
+    await dequeue(`save:${conceptId}`);
     // The save/unsave has already persisted. Refresh the full state so the saved
     // list (which needs each concept's title/topic) reflects it — but if that
     // refresh fails, do NOT throw: a succeeded toggle must never be rolled back
@@ -221,13 +318,70 @@ export class RemoteProgressRepository implements ProgressRepository {
     try {
       return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
     } catch {
-      const bookmarks = currently
-        ? this.cache.bookmarks.filter((id) => id !== conceptId)
-        : [...this.cache.bookmarks, conceptId];
-      const savedConcepts = currently
-        ? (this.cache.savedConcepts ?? []).filter((s) => s.conceptId !== conceptId)
-        : this.cache.savedConcepts;
-      return this.remember({ ...this.cache, bookmarks, savedConcepts }, epoch);
+      return this.remember(patched(), epoch);
+    }
+  }
+
+  /**
+   * Replay queued offline mutations, then reconcile with the server (#133).
+   * Called when connectivity returns. Stops (leaving the rest queued) on the
+   * first network failure; drops an entry the server rejects with a 4xx (a
+   * poison op that can never succeed), keeps 5xx to retry later. Returns the
+   * reconciled state when the queue drains, or null if there's nothing to do
+   * or we're still offline.
+   */
+  async flushQueue(): Promise<ProgressState | null> {
+    const epoch = this.epoch;
+    const entries = await pending();
+    if (entries.length === 0) return null;
+
+    const today = todayKey();
+    for (const m of entries) {
+      if (epoch !== this.epoch) return null; // signed out mid-flush
+
+      // A completion can only be replayed on its own day — /v1/daily/complete
+      // always targets "today", so a stale 'learn' is dropped, not replayed.
+      if (m.kind === 'learn' && m.date !== today) {
+        await dequeue(keyOf(m), m);
+        continue;
+      }
+
+      try {
+        await this.replay(m);
+        await dequeue(keyOf(m), m); // guarded: don't clobber a newer same-key intent
+      } catch (err) {
+        if (isOffline(err)) return null; // still offline — keep the rest queued
+        if (err instanceof ApiError && err.status >= 500) continue; // transient — retry next time
+        await dequeue(keyOf(m), m); // 4xx: unfixable, drop so it can't block forever
+      }
+    }
+
+    if (epoch !== this.epoch) return null;
+    try {
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+    } catch {
+      return null;
+    }
+  }
+
+  private async replay(m: QueuedMutation): Promise<void> {
+    switch (m.kind) {
+      case 'like':
+        await apiRequest(`/v1/concepts/${encodeURIComponent(m.slug)}/like`, {
+          method: m.desired ? 'PUT' : 'DELETE',
+        });
+        return;
+      case 'save':
+        await apiRequest(`/v1/concepts/${encodeURIComponent(m.slug)}/save`, {
+          method: m.desired ? 'PUT' : 'DELETE',
+        });
+        return;
+      case 'topics':
+        await apiRequest('/v1/me/topics', { method: 'PUT', body: { topics: m.slugs } });
+        return;
+      case 'learn':
+        await apiRequest('/v1/daily/complete', { method: 'POST' });
+        return;
     }
   }
 }

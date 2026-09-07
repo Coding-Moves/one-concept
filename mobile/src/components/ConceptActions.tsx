@@ -70,7 +70,7 @@ export function ConceptActions({ concept }: { concept: Concept }) {
 
       <Pressable
         onPress={() => {
-          toggleBookmark(concept.id);
+          toggleBookmark(concept.id, concept.title, concept.category);
           save.pop();
         }}
         style={styles.action}

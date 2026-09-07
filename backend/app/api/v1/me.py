@@ -1,5 +1,7 @@
+from datetime import time
+
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import text
+from sqlalchemy import ARRAY, Time, bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
@@ -174,6 +176,26 @@ async def _load_prefs(db: AsyncSession, user_id) -> NotificationPrefs:
     )
 
 
+async def save_notification_prefs(
+    db: AsyncSession, user_id, prefs: NotificationPrefs
+) -> None:
+    """Persist reminder prefs. The times must be bound as datetime.time, not
+    strings: asyncpg infers the param type from `cast(... as time[])` and then
+    fails to encode plain strings ('str' object has no attribute 'hour'), which
+    500'd every save and made the reminder toggle snap back on (issue #131)."""
+    times = [time.fromisoformat(t) for t in prefs.reminder_times]
+    await db.execute(
+        text("""
+            update public.notification_preferences
+               set enabled = :enabled,
+                   reminder_times = :times
+             where user_id = :uid
+        """).bindparams(bindparam("times", type_=ARRAY(Time))),
+        {"enabled": prefs.enabled, "times": times, "uid": user_id},
+    )
+    await db.commit()
+
+
 @router.get("/notifications", response_model=NotificationPrefs)
 async def get_notifications(
     user: CurrentUser = Depends(get_current_user),
@@ -188,16 +210,7 @@ async def put_notifications(
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> NotificationPrefs:
-    await db.execute(
-        text("""
-            update public.notification_preferences
-               set enabled = :enabled,
-                   reminder_times = cast(:times as time[])
-             where user_id = :uid
-        """),
-        {"enabled": body.enabled, "times": body.reminder_times, "uid": user.id},
-    )
-    await db.commit()
+    await save_notification_prefs(db, user.id, body)
     return await _load_prefs(db, user.id)
 
 

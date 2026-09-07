@@ -115,16 +115,18 @@ function ThemedApp() {
   return (
     <View style={{ flex: 1 }}>
       {!online && <OfflineBanner />}
-      <NavigationContainer theme={navigationTheme}>
-        <RootStack.Navigator screenOptions={{ headerShown: false }}>
-          <RootStack.Screen name="Tabs" component={Tabs} />
-          <RootStack.Screen
-            name="ConceptDetail"
+      <View style={{ flex: 1 }}>
+        <NavigationContainer theme={navigationTheme}>
+          <RootStack.Navigator screenOptions={{ headerShown: false }}>
+            <RootStack.Screen name="Tabs" component={Tabs} />
+            <RootStack.Screen
+              name="ConceptDetail"
             component={ConceptDetailScreen}
             options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
           />
         </RootStack.Navigator>
-      </NavigationContainer>
+        </NavigationContainer>
+      </View>
       {whatsNew.entry && (
         <WhatsNewCard entry={whatsNew.entry} onDismiss={whatsNew.dismiss} />
       )}

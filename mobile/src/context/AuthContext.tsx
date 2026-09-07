@@ -113,6 +113,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       active = false;
+      clearTimeout(failsafe);
       subscription.subscription.unsubscribe();
     };
   }, []);

@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.6.0',
+    highlights: [
+      'Saved concepts now has its own screen — search your saves and filter them by topic.',
+    ],
+  },
+  {
     version: '1.5.0',
     highlights: [
       'Forgot your password? You can now reset it right from the sign-in screen.',

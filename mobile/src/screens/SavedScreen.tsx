@@ -67,14 +67,19 @@ export function SavedScreen() {
     return [ALL, ...[...set].sort()];
   }, [saved]);
 
+  // If the selected category no longer exists among saved concepts (e.g. the
+  // user unsaved its last one), fall back to All so the list can't get stuck
+  // empty with an invisible filter.
+  const effectiveCategory = categories.includes(category) ? category : ALL;
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     return saved.filter(
       (s) =>
-        (category === ALL || s.topicName === category) &&
+        (effectiveCategory === ALL || s.topicName === effectiveCategory) &&
         (q === '' || s.title.toLowerCase().includes(q))
     );
-  }, [saved, query, category]);
+  }, [saved, query, effectiveCategory]);
 
   return (
     <View style={styles.screen}>
@@ -125,11 +130,12 @@ export function SavedScreen() {
               data={categories}
               horizontal
               showsHorizontalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
               keyExtractor={(c) => c}
               style={styles.filterRow}
               contentContainerStyle={styles.filterContent}
               renderItem={({ item }) => {
-                const active = item === category;
+                const active = item === effectiveCategory;
                 return (
                   <Pressable
                     onPress={() => setCategory(item)}

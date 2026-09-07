@@ -33,8 +33,10 @@ export function ProfileScreen() {
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   // The list itself now lives on a dedicated Saved screen (issue #131); the
-  // Profile only needs the count for the row.
-  const savedCount = progress.savedConcepts?.length ?? progress.bookmarks.length;
+  // Profile only needs the count. Use bookmarks.length — the same source as the
+  // activity card above, and the one that updates optimistically on a save so
+  // the two counts never disagree.
+  const savedCount = progress.bookmarks.length;
 
   // Server-owned preference; absent until the first state fetch succeeds.
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);

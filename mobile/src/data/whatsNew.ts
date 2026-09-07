@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.7.0',
+    highlights: [
+      'Works offline — read, like, save, and mark concepts learned with no connection, and everything syncs automatically the moment you’re back online.',
+    ],
+  },
+  {
     version: '1.6.0',
     highlights: [
       'Saved concepts now has its own screen — search your saves and filter them by topic.',

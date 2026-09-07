@@ -20,8 +20,15 @@ export interface ProgressRepository {
   /** Pin the concept assigned for a day. Server-side this becomes GET /v1/daily. */
   setAssignment(conceptId: string, date: string): Promise<ProgressState>;
 
-  /** Mark the day's concept learned. Server-side: POST /v1/daily/complete. */
-  markLearned(conceptId: string, date: string): Promise<ProgressState>;
+  /** Mark the day's concept learned. Server-side: POST /v1/daily/complete.
+   *  title/topicName let an offline completion keep a proper History row until
+   *  the server's record replaces it on the next sync. */
+  markLearned(
+    conceptId: string,
+    date: string,
+    title?: string,
+    topicName?: string
+  ): Promise<ProgressState>;
 
   /** Follow / unfollow a topic. Server-side: PUT /v1/me/topics. */
   toggleTopic(category: Category): Promise<ProgressState>;
@@ -31,4 +38,9 @@ export interface ProgressRepository {
 
   /** Server-side: PUT|DELETE /v1/concepts/{id}/save. */
   toggleBookmark(conceptId: string): Promise<ProgressState>;
+
+  /** Replay any mutations queued while offline and return the reconciled state,
+   *  or null if there's nothing to sync. Only the server-backed repository
+   *  implements this; the local (signed-out) one has no queue. */
+  flushQueue?(): Promise<ProgressState | null>;
 }

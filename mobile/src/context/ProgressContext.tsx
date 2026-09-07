@@ -8,6 +8,8 @@ import {
   useRef,
   useState,
 } from 'react';
+import { AppState } from 'react-native';
+import { subscribeConnectivity } from '../api/client';
 import { CONCEPTS } from '../data/concepts';
 import { Category, Concept, DailyOutcome, ProgressState } from '../types';
 import { selectDailyConcept } from '../services/dailyConcept';
@@ -106,6 +108,41 @@ export function ProgressProvider({ children, repository: override }: Props) {
     };
   }, [repository, today]);
 
+  // Drain the offline mutation queue when connectivity returns or the app comes
+  // back to the foreground, then apply the server-reconciled state (issue #133).
+  // Serialised via `flushing` so overlapping triggers don't double-replay.
+  useEffect(() => {
+    if (!repository.flushQueue) return;
+    let active = true;
+    let flushing = false;
+    const flush = async () => {
+      if (flushing || !active) return;
+      flushing = true;
+      try {
+        const next = await repository.flushQueue?.();
+        if (active && next) setProgress(next);
+      } catch {
+        // A flush failure just leaves items queued for the next trigger.
+      } finally {
+        flushing = false;
+      }
+    };
+
+    const unsubscribe = subscribeConnectivity((online) => {
+      if (online) flush();
+    });
+    const appState = AppState.addEventListener('change', (s) => {
+      if (s === 'active') flush();
+    });
+    flush(); // catch up on anything left from a previous session
+
+    return () => {
+      active = false;
+      unsubscribe();
+      appState.remove();
+    };
+  }, [repository]);
+
   // The day's assignment is pinned once made, even if the concept's topic is
   // unfollowed later that day — topic changes apply from the next assignment.
   // Memoised so a parent re-render (e.g. an hourly token refresh handing down a
@@ -196,7 +233,13 @@ export function ProgressProvider({ children, repository: override }: Props) {
           },
         };
       },
-      () => repository.markLearned(learnedConcept.id, today),
+      () =>
+        repository.markLearned(
+          learnedConcept.id,
+          today,
+          learnedConcept.title,
+          learnedConcept.category
+        ),
       // On failure, remove just today's record; the stats revert is approximate
       // (longest can't be reconstructed) and the next state load corrects it.
       (prev) => ({

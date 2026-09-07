@@ -15,3 +15,5 @@
 0005_concept_backlog.sql
 0006_seed_backlog.sql
 0007_reminder_log.sql
+0008_backlog_claimed_at.sql
+0009_like_count_index.sql

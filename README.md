@@ -38,13 +38,14 @@ link's build current automatically.
 
 ## Contributing
 
-Issues, ideas, and pull requests are welcome — see
-[CONTRIBUTING.md](CONTRIBUTING.md). Open an issue before starting a large
-change.
+The best way to help is to **open an issue** — feedback, bug reports, and
+suggestions all shape the project. We build it as a small team and don't
+generally take outside pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-[MIT](LICENSE)
+[MIT](LICENSE) — you're free to use, run locally, modify, and redistribute the
+code. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute.
 
 ---
 

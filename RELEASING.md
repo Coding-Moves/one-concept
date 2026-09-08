@@ -3,7 +3,9 @@
 Production release flow. Keep it boring and repeatable.
 
 ## Branch model
-- `develop` is the default branch; all feature/fix PRs target it.
+- `develop` is the default branch; the **team's** feature/fix PRs target it.
+  (This is our internal flow — the project doesn't take outside PRs; see
+  [CONTRIBUTING.md](CONTRIBUTING.md).)
 - `main` is production. A release is a single PR **develop → main** (no `release/*` branch).
 - Merging to `main` triggers `.github/workflows/release.yml`.
 

@@ -38,14 +38,14 @@ link's build current automatically.
 
 ## Contributing
 
-This is a source-available, single-team project — **we don't accept external
-pull requests.** Issues are welcome, though: feedback, bug reports, and feature
-suggestions all help. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The best way to help is to **open an issue** — feedback, bug reports, and
+suggestions all shape the project. We build it as a small team and don't
+generally take outside pull requests. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
 [MIT](LICENSE) — you're free to use, run locally, modify, and redistribute the
-code. See [CONTRIBUTING.md](CONTRIBUTING.md) for the contribution policy.
+code. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to contribute.
 
 ---
 

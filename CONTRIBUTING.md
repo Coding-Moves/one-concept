@@ -1,40 +1,27 @@
-# Contributing to one-concept
+# Contributing to One Concept
 
-Thanks for your interest in contributing! We welcome issues, bug reports, feature requests, and pull requests.
+One Concept is **source-available, but not open to outside code contributions.**
+The code is here to read, learn from, run, and share — but this is a
+single-team project and we don't take external changes.
 
-## Filing issues
-- Search existing issues first to avoid duplicates.
-- When opening a new issue, include a short title, a description of the problem or feature, steps to reproduce (if applicable), and the expected behavior.
+## What you can do
 
-## Branch model and releases
+- **Open an issue.** Feedback, bug reports, and feature suggestions are welcome
+  and are the best way to influence the project. Search existing issues first,
+  then include a clear title, what happened vs. what you expected, and steps to
+  reproduce for bugs.
+  → https://github.com/Coding-Moves/one-concept/issues
+- **Use the code.** Under the [MIT License](LICENSE) you're free to use, run
+  locally, modify, and redistribute it. See [backend/README.md](backend/README.md)
+  and [mobile/DEPLOYMENT.md](mobile/DEPLOYMENT.md) to run it yourself.
 
-- **`develop`** is the default branch. All feature and fix PRs target it.
-- **`main`** is production. Only release PRs (develop → main) merge into it.
-- Merging a release PR tags the commit and publishes a GitHub Release named
-  after the app version in `mobile/app.config.js` — bump that version as part of
-  the release PR. Backend deploys and the production OTA update follow the
-  merge automatically; develop merges update the preview channel only.
-- A native mobile change (new native module, icons, native app config)
-  additionally needs a new APK build and a manual `runtimeVersion` bump — see
-  `mobile/DEPLOYMENT.md`.
+## What we don't accept
 
-## Contributing code
-1. Fork the repository.
-2. Create a descriptive branch: `fix/short-description` or `feat/short-description`.
-3. Make small, focused changes and add tests where appropriate.
-4. Run the project's tests and linters (if present) before committing.
-5. Open a pull request against the `develop` branch with a clear description of what you changed and why.
+- **Pull requests from outside the team.** We don't review or merge external
+  pull requests, and unsolicited PRs will be closed. Please open an issue
+  instead.
 
-## Coding style
-- This repository primarily uses TypeScript and Python. Please follow the project's existing style.
-- For TypeScript: prefer Prettier and ESLint if configured in the project.
-- For Python: prefer Black and Flake8 if applicable.
+## License
 
-## Commit messages
-- Use a short summary line and an optional body. You may follow Conventional Commits (e.g., `fix:`, `feat:`) but it is not required.
-
-## License for contributions
-By submitting a pull request, you agree that your contributions will be licensed under the repository's license (MIT).
-
-## Questions or discussion
-If you're unsure about something, open an issue or contact the maintainers via the repository discussions or issues page: https://github.com/Coding-Moves/one-concept
+The project is licensed under the [MIT License](LICENSE). Opening an issue does
+not transfer any rights; it simply helps us improve the project.

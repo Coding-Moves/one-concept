@@ -7,12 +7,11 @@ claims as completed work.
 
 ## Current status
 
-- Assigned scope: establish repository instructions and bookkeeping, explore
-  the codebase, and open the setup PR requested by the owner.
-- Application task: none assigned yet.
-- Setup chunk: instructions, codebase map, and bookkeeping complete.
-- Branch: `codex/project-bookkeeping`; future feature PR base: `develop`.
-- PR: [#176](https://github.com/Coding-Moves/one-concept/pull/176), targeting `develop`.
+- Assigned scope: review the open bot PRs individually, approve and merge the
+  verified updates, and notify the owner when finished.
+- Setup PR [#176](https://github.com/Coding-Moves/one-concept/pull/176) is merged.
+- Review decisions and validation are recorded below. GitHub PR links hold the
+  live merge/check status; the React pair is integrated through PR #172.
 
 ## Working agreement — 2026-09-11
 
@@ -47,7 +46,7 @@ responsibilities, not a request to launch additional agents.
 | Codebase map covering mobile, backend, schema, tests, and operations | `f6aec01` — `docs: map application architecture and development paths` |
 | Durable setup record, validation baseline, and future chunk template | `fb5ccdb` — `docs: initialize project work log` |
 | Owner authorship and no AI attribution rule | `5a25b7e` — `docs: record owner authorship and no AI attribution` |
-| Setup PR link and publication handoff | This commit: `docs: record setup pull request` |
+| Setup PR link and publication handoff | `4cc1a68` — `docs: record setup pull request` |
 
 ### Exploration and decisions
 
@@ -83,9 +82,47 @@ database was tested. The files changed in this chunk are documentation only.
 
 ### Next step
 
-The setup PR is open for review. Await review feedback or the owner's next task.
-Use any new task's scope to define the next PR chunk and plan small commits before
-implementation. Recheck branch/working-tree state when work resumes.
+The setup PR was subsequently merged. The owner's next task is recorded below.
+
+## Bot PR review — 2026-09-12
+
+The owner requested individual review, approval, and merging of all open bot PRs.
+The initial inventory contained #172, #173, and #174, all targeting `develop`.
+No PR CI checks were attached, so validation used an isolated checkout with
+dummy public configuration and no live backend or production credentials.
+
+| PR | Finding and disposition |
+| --- | --- |
+| [#172 — React DOM 19.2.8](https://github.com/Coding-Moves/one-concept/pull/172) | Standalone `npm ci` failed with ERESOLVE because React remained 19.2.3. Initial changes-requested review recorded. Resolved by incorporating #173 so React and React DOM update together. |
+| [#173 — React 19.2.8](https://github.com/Coding-Moves/one-concept/pull/173) | Standalone renderer smoke check threw an exact-version mismatch with React DOM 19.2.3. Initial changes-requested review recorded. Approval applies to the validated pair incorporated in #172, not a standalone merge. |
+| [#174 — TypeScript 7.0.2](https://github.com/Coding-Moves/one-concept/pull/174) | Clean install, typecheck, and Android/web exports passed against current develop. Approved and merged as `71cf7fe`; its preview OTA workflow also passed. |
+
+### React integration and validation
+
+- Preserved both original dependency commits and refreshed current `develop`
+  into the React DOM branch. Resolved adjacent manifest/lockfile edits by setting
+  both React and React DOM to `19.2.8`; no other dependency changes were introduced.
+- Dependabot rebased #173 during review. Rebuilt the pair using its updated head
+  `195b48a` and verified that both package files were byte-identical to the tested
+  candidate. Integration merge commit: `62d54cc`.
+- Clean `npm ci --ignore-scripts --no-audit --no-fund`, `npm run typecheck`, and
+  server-renderer smoke test passed for the pair with TypeScript 7.0.2.
+- Expo production exports for Android and web passed. The renderer smoke test
+  returned `<div>One Concept</div>` with React and React DOM both at 19.2.8.
+- Expo SDK 57's bundled recommendations still list React/React DOM 19.2.3;
+  these are tested patch updates within the allowed Dependabot patch policy.
+  A physical-device test was not performed. Native runtime and app version were
+  unchanged; this is a dependency maintenance update, not a production release.
+- Decision: approve each React PR in the context of the tested pair and merge
+  #172 into `develop` once both heads are verified. #173's head is included in
+  that integration, avoiding a broken intermediate preview OTA.
+- Bookkeeping commit: `docs: record bot dependency reviews` (this commit).
+
+### Handoff
+
+Verify the GitHub merge states and resulting preview OTA, then notify the owner.
+Use PR #172's live status for the final integrated result. No `develop` to `main`
+release is included in this task.
 
 ## Template for the next chunk
 

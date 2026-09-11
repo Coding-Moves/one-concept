@@ -7,11 +7,13 @@ claims as completed work.
 
 ## Current status
 
-- Assigned scope: review the open bot PRs individually, approve and merge the
-  verified updates, and notify the owner when finished.
-- Setup PR [#176](https://github.com/Coding-Moves/one-concept/pull/176) is merged.
-- Review decisions and validation are recorded below. GitHub PR links hold the
-  live merge/check status; the React pair is integrated through PR #172.
+- Assigned scope: resolve UI issues #166 and #167 in one focused PR into
+  `develop`, ahead of the owner's later release PR.
+- Branch: `codex/offline-ui-recovery`, based on refreshed `develop` at `e4d3997`.
+- Prior work is complete: setup #176 and bot PRs #172, #173, #174 are merged;
+  the final combined preview OTA succeeded.
+- Implementation and validation are in progress. Production release preparation
+  and the `develop` to `main` PR follow after this feature/fix PR is merged.
 
 ## Working agreement — 2026-09-11
 
@@ -123,6 +125,27 @@ dummy public configuration and no live backend or production credentials.
 Verify the GitHub merge states and resulting preview OTA, then notify the owner.
 Use PR #172's live status for the final integrated result. No `develop` to `main`
 release is included in this task.
+
+## Offline UI recovery — 2026-09-12
+
+- **Issues:** [#166](https://github.com/Coding-Moves/one-concept/issues/166)
+  (animated offline empty pages) and
+  [#167](https://github.com/Coding-Moves/one-concept/issues/167)
+  (weak connections cause sign-in prompts and raw network errors).
+- **Scope:** preserve cached browsing during session refresh; present friendly
+  authentication errors; reuse an animated, accessible empty state with retry
+  on unavailable content. Preserve useful cached content and real empty states.
+- **Planned commits:** session recovery and regression coverage; friendly auth
+  transport/error handling; shared offline illustration; integrate screen retry
+  states; record validation and PR handoff. Keep each meaningful change atomic.
+- **Research:** read Expo SDK 57 docs, React Native Animated/AccessibilityInfo
+  docs, and the installed Supabase refresh/storage implementation. Use built-in
+  animation with reduced-motion support; no asset download or native dependency.
+- **Release boundary:** keep app/runtime versions unchanged in this chunk. The
+  later release preparation selects the version and includes a matching one-time
+  What's New entry only for new features, per `RELEASING.md`.
+- **Validation:** pending implementation; use dummy public configuration and
+  mocked services, not live accounts or production data.
 
 ## Template for the next chunk
 

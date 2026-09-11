@@ -1,0 +1,92 @@
+# Working on One Concept
+
+## Start here
+
+Read this file and [docs/WORK_LOG.md](docs/WORK_LOG.md) at the start of each task.
+Use [docs/CODEBASE_MAP.md](docs/CODEBASE_MAP.md) to locate the implementation,
+then inspect the relevant source before editing. Read any more specific
+`AGENTS.md` in the directories you touch. In particular, `mobile/AGENTS.md`
+requires the exact Expo SDK 57 documentation before writing mobile code.
+
+## Owner's PR and commit rules
+
+- Deliver assigned work in coherent chunks, with one PR per chunk.
+- Give every small, meaningful change its own commit. Commit incrementally;
+  do not wait until the end and put the entire task into one large commit.
+- Keep as many meaningful, atomic commits as the chunk naturally produces in
+  its PR. There is no numeric maximum or minimum. Do not split a coherent
+  change into broken fragments or make empty commits to inflate the count.
+- Group all commits for the same chunk into that PR; a small commit does not
+  need a separate PR. Keep unrelated work for its own chunk.
+- Preserve the individual commits. Do not squash, amend away, or rewrite them
+  unless the owner requests it. Prefer a follow-up commit for review fixes.
+- Each commit should describe one purpose and leave the affected code usable.
+  Include directly related tests with the behavior they verify; separately
+  scoped implementation, documentation, and cleanup changes get separate commits.
+- Inspect the staged diff before committing and stage only the intended files
+  or hunks. Never include unrelated local work, credentials, or generated output.
+
+## Branches and PRs
+
+- Inspect the current branch and working tree before making changes. Preserve
+  existing work and do not silently continue an unrelated old branch.
+- Team feature/fix PRs target `develop`, as documented in [RELEASING.md](RELEASING.md).
+  Use a descriptive `codex/` branch for a new chunk unless the owner specifies
+  a branch. Check the available base revision; do not assume local refs are current.
+- `main` is production. A production release uses a `develop` to `main` PR and
+  the release runbook. Merging there triggers deployment and release automation.
+- PR descriptions explain the resulting behavior, list meaningful changes and
+  validation, and disclose remaining limitations. Keep the PR scope aligned
+  with the assigned chunk while retaining its commit history.
+- Proceed with actions authorized by the task and prior conversation. A request
+  to inspect or prepare the repository does not by itself request a production
+  release. Do not infer a new feature task from an item in the work log.
+
+## Responsibilities and bookkeeping
+
+These are responsibilities for the working agent, not a requirement to create
+separate agents:
+
+| Responsibility | What to do |
+| --- | --- |
+| Planner | Record the assigned outcome, chunk boundary, and intended small commits. |
+| Implementer | Trace the relevant code and make focused, incremental changes. |
+| Reviewer | Inspect the diff, check behavior and regressions, and run relevant checks. |
+| Bookkeeper | Keep `docs/WORK_LOG.md` current with decisions, commits, PRs, validation, and next steps. |
+
+Update the log when a chunk starts, when its scope changes, and at handoff.
+Record actual outcomes, including skipped tests and blocked actions. Use commit
+hashes and PR links once they exist; the log's own commit can be identified by
+its subject to avoid a self-referential hash. Keep the active entry concise.
+Update the codebase map when an assigned change alters the structure or flow.
+
+## Implementation boundaries
+
+- The mobile client uses Supabase Auth and the FastAPI API. Keep Gemini keys and
+  database credentials on the backend; the API owns application database writes.
+- Identity comes from the verified JWT. Preserve the database constraints for
+  one assignment per user/day and no repeated concept per user.
+- Preserve server timezone rules for assignments, completions, streaks, and
+  reminders. Repeated writes and offline replay must remain safe.
+- Keep Gemini generation off the daily HTTP request path. Preserve backlog
+  claiming, retry limits, and the generation kill switch.
+- New account caches must participate in sign-out cleanup. Consider in-flight
+  requests, account changes, and offline writes when modifying progress state.
+- SQL migrations are ordered and immutable once applied. Add a new migration
+  instead of changing one already applied. Add to `backend/migrations/applied.txt`
+  only after actual production application has been verified, never merely to pass CI.
+- `mobile/app.config.js` owns the app version. Keep `runtimeVersion` unchanged
+  for JS-only releases; native changes require the native release procedure.
+
+## Validation
+
+- Mobile: run `npm run typecheck` from `mobile/` for TypeScript changes. Check the
+  affected UI flow when behavior or presentation changes. There is currently no
+  mobile unit-test script; do not report nonexistent checks as passing.
+- Backend: run `.venv/bin/python -m pytest` from `backend/`, using the relevant
+  tests during development. Database tests need Podman and PostgreSQL 16; report
+  skips distinctly from passes. Use test configuration, not production services.
+- Documentation-only work: inspect the text, verify local links and paths, and
+  run `git diff --check`. Do not add tests that merely mirror prose.
+- Run checks appropriate to the change. Report what ran, its result, and any
+  material unverified behavior in the work log and final handoff.

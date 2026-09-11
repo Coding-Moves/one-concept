@@ -8,11 +8,11 @@ claims as completed work.
 ## Current status
 
 - Assigned scope: establish repository instructions and bookkeeping, explore
-  the codebase, then wait for the owner's first implementation task.
+  the codebase, and open the setup PR requested by the owner.
 - Application task: none assigned yet.
 - Setup chunk: instructions, codebase map, and bookkeeping complete.
 - Branch: `codex/project-bookkeeping`; future feature PR base: `develop`.
-- PR: none opened for this preparation step.
+- PR: [#176](https://github.com/Coding-Moves/one-concept/pull/176), targeting `develop`.
 
 ## Working agreement — 2026-09-11
 
@@ -46,7 +46,8 @@ responsibilities, not a request to launch additional agents.
 | Root instructions, PR/commit rules, responsibilities, validation guidance | `25c7540` — `docs: define agent workflow and granular commit rules` |
 | Codebase map covering mobile, backend, schema, tests, and operations | `f6aec01` — `docs: map application architecture and development paths` |
 | Durable setup record, validation baseline, and future chunk template | `fb5ccdb` — `docs: initialize project work log` |
-| Owner authorship and no AI attribution rule | This commit: `docs: record owner authorship and no AI attribution` |
+| Owner authorship and no AI attribution rule | `5a25b7e` — `docs: record owner authorship and no AI attribution` |
+| Setup PR link and publication handoff | This commit: `docs: record setup pull request` |
 
 ### Exploration and decisions
 
@@ -71,11 +72,20 @@ responsibilities, not a request to launch additional agents.
 No deployed API, physical device, push delivery, native build, or production
 database was tested. The files changed in this chunk are documentation only.
 
+### PR publication — 2026-09-11
+
+- Refreshed `origin/develop` and checked the complete branch diff before pushing.
+- Opened [PR #176](https://github.com/Coding-Moves/one-concept/pull/176) from
+  `codex/project-bookkeeping` into `develop` using the owner's `Muawiya-contact`
+  GitHub account. All four original setup commits are preserved.
+- Added this bookkeeping update as a separate follow-up commit. The PR records
+  the existing validation baseline and its PostgreSQL integration-test limitation.
+
 ### Next step
 
-Await the owner's task. Use its scope to define the next PR chunk and plan small
-commits before implementation. Recheck branch/working-tree state when work resumes;
-the setup commits are local and have not been pushed or opened as a PR.
+The setup PR is open for review. Await review feedback or the owner's next task.
+Use any new task's scope to define the next PR chunk and plan small commits before
+implementation. Recheck branch/working-tree state when work resumes.
 
 ## Template for the next chunk
 

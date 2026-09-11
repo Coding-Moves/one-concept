@@ -4,6 +4,8 @@ import { fetchTopics, ServerTopic, setFollowedTopics } from '../services/topicsA
 
 export interface Topics {
   loading: boolean;
+  error: boolean;
+  retry: () => void;
   topics: ServerTopic[];
   /** Follow/unfollow one topic. The PUT sends every currently-followed slug
    *  from the full server list, so no topic is ever dropped by omission. */
@@ -17,6 +19,9 @@ export function useTopics(): Topics {
   const userId = session?.user?.id ?? null;
   const [topics, setTopics] = useState<ServerTopic[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [attempt, setAttempt] = useState(0);
+  const retry = useCallback(() => setAttempt((value) => value + 1), []);
 
   useEffect(() => {
     if (!userId) {
@@ -26,13 +31,13 @@ export function useTopics(): Topics {
     }
     let cancelled = false;
     setLoading(true);
+    setError(false);
     fetchTopics()
       .then((list) => {
         if (!cancelled) setTopics(list);
       })
       .catch(() => {
-        // Offline: leave the list empty; the screen shows its own notice
-        // rather than a stale or invented set.
+        if (!cancelled) setError(true);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -40,7 +45,7 @@ export function useTopics(): Topics {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, attempt]);
 
   const toggle = useCallback(
     (slug: string) => {
@@ -64,5 +69,5 @@ export function useTopics(): Topics {
     [topics]
   );
 
-  return { loading, topics, toggle };
+  return { loading, error, retry, topics, toggle };
 }

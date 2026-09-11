@@ -5,6 +5,8 @@ import { useMemo, useState } from 'react';
 import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryChip } from '../components/CategoryChip';
 import { LikeCount } from '../components/LikeCount';
+import { UnavailableState } from '../components/UnavailableState';
+import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
@@ -30,7 +32,8 @@ const ALL = 'All';
  *  no longer clutters the Profile scroll (issue #131). */
 export function SavedScreen() {
   const navigation = useNavigation<Nav>();
-  const { progress } = useProgress();
+  const { progress, refresh } = useProgress();
+  const online = useOnline();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -96,7 +99,9 @@ export function SavedScreen() {
         <View style={styles.iconButton} />
       </View>
 
-      {saved.length === 0 ? (
+      {saved.length === 0 && !online && !progress.stats ? (
+        <UnavailableState offline message="Connect to load your saved concepts on this device." onRetry={refresh} />
+      ) : saved.length === 0 ? (
         <View style={styles.empty}>
           <Ionicons name="bookmark-outline" size={scaleIcon(40)} color={colors.textMuted} />
           <Text style={styles.emptyTitle}>Nothing saved yet</Text>

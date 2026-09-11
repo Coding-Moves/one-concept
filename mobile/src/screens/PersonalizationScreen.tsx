@@ -3,13 +3,16 @@ import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FollowPill } from '../components/FollowPill';
+import { UnavailableState } from '../components/UnavailableState';
+import { useOnline } from '../context/ConnectivityContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTopics } from '../hooks/useTopics';
 import { scaleIcon, scaleFont, spacing, ThemeColors, typography } from '../theme';
 
 export function PersonalizationScreen() {
   const navigation = useNavigation();
-  const { loading, topics, toggle } = useTopics();
+  const { loading, error, retry, topics, toggle } = useTopics();
+  const online = useOnline();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -35,10 +38,14 @@ export function PersonalizationScreen() {
 
       {loading ? (
         <Text style={styles.topicMeta}>Loading topics…</Text>
+      ) : error && topics.length === 0 ? (
+        <UnavailableState
+          offline={!online}
+          message="Connect to load your topics and choose what to learn next."
+          onRetry={retry}
+        />
       ) : topics.length === 0 ? (
-        <Text style={styles.topicMeta}>
-          Couldn’t load topics — check your connection and reopen this screen.
-        </Text>
+        <Text style={styles.topicMeta}>No topics are available yet.</Text>
       ) : (
         <View style={styles.list}>
           {topics.map((topic, index) => (

@@ -21,6 +21,11 @@ own commit, and the PR retains all commits for that chunk. Prefer the maximum
 useful granularity, without empty commits or artificially broken changes.
 No numeric commit cap was specified. Preserve history instead of squashing it.
 
+Authorship follow-up: the owner requests credit for their work with no Codex
+co-author or AI attribution. The configured Git identity is `Muawiya Amir`;
+the setup commits use that identity for author and committer, with no co-author
+trailers. Preserve the configured owner identity for future work.
+
 The agent handles planning, implementation, review, and bookkeeping. These are
 responsibilities, not a request to launch additional agents.
 
@@ -40,7 +45,8 @@ responsibilities, not a request to launch additional agents.
 | --- | --- |
 | Root instructions, PR/commit rules, responsibilities, validation guidance | `25c7540` — `docs: define agent workflow and granular commit rules` |
 | Codebase map covering mobile, backend, schema, tests, and operations | `f6aec01` — `docs: map application architecture and development paths` |
-| Durable setup record, validation baseline, and future chunk template | This commit: `docs: initialize project work log` |
+| Durable setup record, validation baseline, and future chunk template | `fb5ccdb` — `docs: initialize project work log` |
+| Owner authorship and no AI attribution rule | This commit: `docs: record owner authorship and no AI attribution` |
 
 ### Exploration and decisions
 

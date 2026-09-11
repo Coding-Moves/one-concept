@@ -1,6 +1,7 @@
 import 'react-native-url-polyfill/auto';
 import { createClient, type Session } from '@supabase/supabase-js';
 import { sessionStorage } from './secureStorage';
+import { fetchWithTimeout } from '../api/fetchWithTimeout';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
@@ -29,6 +30,7 @@ export async function readCachedSession(): Promise<Session | null> {
  * access token that the backend verifies.
  */
 export const supabase = createClient(url, anonKey, {
+  global: { fetch: fetchWithTimeout },
   auth: {
     storageKey,
     storage: sessionStorage,

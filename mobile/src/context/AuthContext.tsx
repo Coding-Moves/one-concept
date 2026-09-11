@@ -1,4 +1,4 @@
-import type { Session } from '@supabase/supabase-js';
+import { isAuthRetryableFetchError, type Session } from '@supabase/supabase-js';
 import {
   createContext,
   ReactNode,
@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { API_BASE_URL, setTokenProvider } from '../api/client';
+import { API_BASE_URL, ApiError, setConnectivity, setTokenProvider } from '../api/client';
 import { readCachedSession, supabase } from '../lib/supabase';
 import { clearAccountCaches } from '../services/accountCaches';
 import { restoreAuthSession } from '../services/authSession';
@@ -30,24 +30,6 @@ export interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-/** Supabase errors are readable, but a few are worth rewording for humans. */
-function describe(error: { message: string; status?: number }): string {
-  const message = error.message.toLowerCase();
-  if (message.includes('invalid login credentials')) {
-    return 'That email and password combination did not match an account.';
-  }
-  if (message.includes('already registered') || message.includes('already been registered')) {
-    return 'An account with that email already exists. Try signing in instead.';
-  }
-  if (message.includes('password should be')) {
-    return 'Passwords need to be at least 6 characters.';
-  }
-  if (message.includes('failed to fetch') || message.includes('network')) {
-    return 'Could not reach the server. Check your connection and try again.';
-  }
-  return error.message;
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,7 +38,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // The API client asks for a token per request; Supabase refreshes it in the
     // background, so this always hands back a currently valid one.
     setTokenProvider(async () => {
-      const { data } = await supabase.auth.getSession();
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        if (isAuthRetryableFetchError(error)) {
+          setConnectivity(false);
+          throw new ApiError(0, 'Could not refresh session', error);
+        }
+        throw new ApiError(401, 'Session unavailable');
+      }
       return data.session?.access_token ?? null;
     });
 
@@ -82,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: email.trim(),
       password,
     });
-    if (error) throw new Error(describe(error));
+    if (error) throw error;
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
@@ -90,7 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       email: email.trim(),
       password,
     });
-    if (error) throw new Error(describe(error));
+    if (error) throw error;
     // With email confirmation switched on, sign-up returns a user but no session.
     return { needsConfirmation: !data.session };
   }, []);
@@ -108,7 +97,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       ? { redirectTo: `${API_BASE_URL}/reset-password` }
       : undefined;
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), options);
-    if (error) throw new Error(describe(error));
+    if (error) throw error;
   }, []);
 
   const signOut = useCallback(async () => {

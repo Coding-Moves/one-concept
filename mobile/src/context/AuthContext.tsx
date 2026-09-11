@@ -9,8 +9,9 @@ import {
   useState,
 } from 'react';
 import { API_BASE_URL, setTokenProvider } from '../api/client';
-import { supabase } from '../lib/supabase';
+import { readCachedSession, supabase } from '../lib/supabase';
 import { clearAccountCaches } from '../services/accountCaches';
+import { restoreAuthSession } from '../services/authSession';
 import {
   deregisterForReminders,
   registerForReminders,
@@ -59,64 +60,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return data.session?.access_token ?? null;
     });
 
-    let active = true;
-
-    // The app-level spinner is gated on `loading`, so it MUST always resolve —
-    // even offline or if secure storage is unreadable. A timeout is the
-    // backstop against getSession() hanging; the catch handles a rejection.
-    // Either way we fall through to the signed-out UI rather than an infinite
-    // spinner (issue #133).
-    const failsafe = setTimeout(() => {
-      if (active) setLoading(false);
-    }, 8000);
-
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        if (!active) return;
-        setSession(data.session);
-        setLoading(false);
-        // Best-effort: reminders are a bonus, never a blocker for signing in.
-        if (data.session) {
-          registerForReminders().catch(() => {});
-          syncTimezone().catch(() => {});
-        } else {
-          // Signed out at startup: account caches have no business existing.
-          // Covers sessions that vanished without a SIGNED_OUT ever firing
-          // (cleared or corrupted auth storage across a restart).
-          clearAccountCaches().catch(() => {});
-        }
-      })
-      .catch(() => {
-        // Couldn't read the session (e.g. corrupted/locked secure store):
-        // treat as signed out instead of hanging on the spinner.
-        if (active) {
-          setSession(null);
-          setLoading(false);
-        }
-      })
-      .finally(() => clearTimeout(failsafe));
-
-    const { data: subscription } = supabase.auth.onAuthStateChange((event, next) => {
-      setSession(next);
-      if (event === 'SIGNED_IN' && next) {
-        registerForReminders().catch(() => {});
-        syncTimezone().catch(() => {});
-      }
-      if (event === 'SIGNED_OUT') {
-        // Account data must not outlive the account on a shared device. The
-        // event covers every sign-out path — the button, an expired refresh
-        // token, a revoked session — not just our own signOut() call.
-        clearAccountCaches().catch(() => {});
-      }
-    });
-
-    return () => {
-      active = false;
-      clearTimeout(failsafe);
-      subscription.subscription.unsubscribe();
-    };
+    return restoreAuthSession(
+      supabase.auth,
+      readCachedSession,
+      setSession,
+      () => setLoading(false),
+      () => { clearAccountCaches().catch(() => {}); },
+    );
   }, []);
+
+  const userId = session?.user.id;
+  useEffect(() => {
+    if (!userId) return;
+    // Best-effort; a token refresh must not block cached browsing.
+    registerForReminders().catch(() => {});
+    syncTimezone().catch(() => {});
+  }, [userId]);
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({

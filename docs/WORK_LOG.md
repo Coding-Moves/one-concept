@@ -12,7 +12,8 @@ claims as completed work.
 - Branch: `codex/offline-ui-recovery`, based on refreshed `develop` at `e4d3997`.
 - Prior work is complete: setup #176 and bot PRs #172, #173, #174 are merged;
   the final combined preview OTA succeeded.
-- Implementation and validation are in progress. Production release preparation
+- PR: [#177](https://github.com/Coding-Moves/one-concept/pull/177), targeting
+  `develop`; implementation is complete. Production release preparation
   and the `develop` to `main` PR follow after this feature/fix PR is merged.
 
 ## Working agreement — 2026-09-11
@@ -144,8 +145,19 @@ release is included in this task.
 - **Release boundary:** keep app/runtime versions unchanged in this chunk. The
   later release preparation selects the version and includes a matching one-time
   What's New entry only for new features, per `RELEASING.md`.
-- **Validation:** pending implementation; use dummy public configuration and
-  mocked services, not live accounts or production data.
+- **Commits:** `db1c59e` records scope; `4bed52a` restores cached sessions;
+  `53f2e1a` adds safe auth messages and bounded requests; `67643d6` adds the
+  reusable animation; `22fbcef` integrates retry and offline states on six screens.
+- **Validation:** clean dependency install, 10 Node regression tests,
+  TypeScript checks, and Android/web production exports passed. Browser checks
+  used dummy accounts and intercepted requests: expired-session cached browsing
+  and offline states in Today, History, Saved, Stats, and Personalization were
+  verified, including the light-theme layout and successful topic retry.
+  No live backend, physical device, or native release was tested.
+- **Documentation:** updated the codebase map and test instructions. Bookkeeping
+  and handoff are recorded in `docs: record offline UI validation and handoff`.
+- **Next step:** owner reviews and merges this PR into `develop`, then prepares
+  the version bump/eligible What's New entry and opens the release PR.
 
 ## Template for the next chunk
 

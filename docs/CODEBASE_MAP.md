@@ -40,8 +40,9 @@ inside a root stack, with a concept-detail modal above them.
 
 All screens live in `mobile/src/screens/`. Reusable presentation in
 `mobile/src/components/` covers lesson cards/actions, category/follow controls,
-like counts, streak/flame visuals, buttons, skeletons, the offline banner, and
-the What's New card. `src/theme/index.ts` defines colors, spacing, radii,
+like counts, streak/flame visuals, buttons, skeletons, the offline banner,
+`UnavailableState` (animated offline/retry UI), and the What's New card.
+`src/theme/index.ts` defines colors, spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 `src/navigation.ts` types the root stack.
 
@@ -51,12 +52,19 @@ typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
   session storage through Expo SecureStore, with AsyncStorage on web.
 - `AuthContext.tsx` owns session startup, sign-in/up/recovery/sign-out, supplies
   the API token provider, and triggers push registration and timezone sync.
+  `services/authSession.ts` restores cached identity while refresh is pending;
+  confirmed sign-out still clears account caches. `authErrors.ts` keeps raw
+  transport diagnostics out of authentication forms.
 - `src/api/client.ts` makes authenticated JSON requests, exposes `ApiError`, and
   infers connectivity from request results. `ConnectivityContext` drives the
   global banner; there is no native connectivity listener.
+  `api/fetchWithTimeout.ts` bounds API and auth fetches to 15 seconds.
 - `ProgressContext.tsx` is the shared UI state owner. It loads cached state
   before revalidation, applies optimistic actions, serializes mutation requests,
   and flushes queued work on foreground/connectivity events.
+  Screen retries use its serialized `refresh`; topic and detail screens have
+  their own retry paths. Failed loads do not substitute demo lessons or totals
+  for an authenticated account.
 - `services/progressRepository.ts` defines the persistence interface.
   `remoteProgressRepository.ts` implements API state, account caching, optimistic
   offline fallbacks, and replay. `localProgressRepository.ts` and `storage.ts`
@@ -158,7 +166,8 @@ session pooler. Applied migrations must not be rewritten.
 ## Builds, checks, and releases
 
 - Mobile dependencies/scripts are in `mobile/package.json` and `package-lock.json`;
-  use npm. `npm run typecheck` runs `tsc --noEmit`; no unit-test script is defined.
+  use npm. `npm run typecheck` runs `tsc --noEmit`; `npm test` uses Node 24's
+  built-in runner for session recovery, auth messages, and request timeouts.
   Expo provides Android/iOS/web development commands. Native project folders are
   not tracked. EAS profiles separate development, preview, production, and production APKs.
 - Backend dependencies are pinned in `requirements.txt`/`requirements-dev.txt`.

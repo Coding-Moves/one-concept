@@ -15,7 +15,7 @@ them does not install them. Daily reminders remain push notifications.
 
 The owner has chosen their existing Gmail account for SMTP, with a $0 budget and
 no domain purchase. The HTML works with either Gmail or Resend: follow
-[template installation](#6-install-the-two-templates) to replace the two bodies,
+[template installation](#6-install-the-templates) to install the email bodies,
 then [verify delivery](#7-verify-real-delivery-before-completing-either-issue).
 SMTP credentials belong only in Supabase's SMTP settings, never in the HTML.
 Saving the templates changes future emails immediately; no app update is needed.
@@ -167,24 +167,32 @@ Keep the project's existing Supabase URL and anon/publishable key unchanged.
 Do not replace the email action link with either landing-page URL: the user must
 first pass through Supabase's token verification endpoint.
 
-### 6. Install the two templates
+### 6. Install the templates
 
 In **Supabase → Authentication → Email → Templates**, open each matching template.
-Set its subject below, then paste the **entire raw HTML file**, including its
-`{{ .ConfirmationURL }}` placeholders, into the body and save.
+Set its subject below, then paste the **entire raw HTML file** into the body and
+save. Preserve `{{ .ConfirmationURL }}` in signup and reset; the password-changed
+notification has no verification token or reset-link placeholder.
 
 | Supabase template | Subject | File |
 | --- | --- | --- |
 | Confirm sign up | `Confirm your email — One Concept` | [confirm-signup.html](../backend/email-templates/confirm-signup.html) |
 | Reset password | `Reset your password — One Concept` | [reset-password.html](../backend/email-templates/reset-password.html) |
+| Password changed (Security) | `Your password was changed — One Concept` | [password-changed.html](../backend/email-templates/password-changed.html) |
+
+For **Security → Password changed**, also enable the notification switch and save.
+This email reports a completed password change; it does not initiate a reset.
+It directs the user to Forgot password in the app and links to the existing
+support address from the app's About screen. Do not copy the recovery template
+or add `{{ .ConfirmationURL }}` to this notification.
 
 On GitHub, open the file and choose **Raw** to copy its source. Do not copy a
-rendered browser preview or replace the placeholders manually. Both templates
+rendered browser preview or replace the placeholders manually. The two action templates
 use the same supported variable, but Supabase supplies the appropriate signup
 or recovery verification URL for the selected template. Subjects are separate
 dashboard fields; the HTML comments do not configure them.
 
-The templates use a dark masthead with a text wordmark, short account-specific
+The action templates use a dark masthead with a text wordmark, short account-specific
 copy, one full-width action button, and a separate fallback-link area. Inline
 styles, tables, and system fonts keep the design usable without remote images,
 fonts, or JavaScript. Recovery's heading includes an optional soft hyphen so
@@ -193,6 +201,9 @@ They do not claim an expiry duration, which is controlled by Supabase settings.
 The app has no magic-link sign-in button, so the optional magic-link template
 from #171 is deferred; no new authentication method is enabled by this PR.
 [Supabase template variables](https://supabase.com/docs/guides/auth/auth-email-templates#terminology).
+The password-changed notification uses the same masthead and typography with a
+separate security-advice section. Notification emails must be enabled separately;
+see [Supabase's security notification documentation](https://supabase.com/docs/guides/auth/auth-email-templates).
 
 ### 7. Verify real delivery before completing either issue
 
@@ -208,6 +219,9 @@ delivery status, and outcome in the PR's activation checklist.
 - [ ] **Password recovery:** for that account, use Forgot password in the app,
   receive the branded email, open `/reset-password` via its button, set a new
   password, then successfully sign in with the new password.
+- [ ] **Password changed:** after enabling the security notification, complete a
+  reset on a test account you control and verify the separate notification
+  arrives. Check its organization/support destinations without sending a message.
 - [ ] **Used/expired recovery link:** confirm it does not permit another reset;
   request a fresh link and check that recovery still works.
 - [ ] **Second inbox provider:** repeat delivery checks using another inbox

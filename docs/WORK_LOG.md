@@ -15,10 +15,11 @@ claims as completed work.
 - Owner requires a $0 setup and has chosen their existing Gmail account for
   Supabase SMTP. The owner is performing dashboard setup; saving the settings
   and actual inbox delivery remain unverified. Resend preparation stays in draft.
-- Current follow-up: redesign the two HTML emails with shorter copy and polished
-  One Concept text branding. The configured mobile images are Expo starter assets;
-  the owner explicitly selected text branding instead. Preserve verification URLs
-  and deliver replacement HTML in the same draft PR, with no dashboard changes.
+- Redesigned signup/recovery emails and added a matching password-changed
+  notification with One Concept text branding and a linked Coding Moves masthead.
+  The configured mobile images are Expo starter assets; the owner explicitly
+  selected text branding. All three HTML files are ready for manual installation
+  in the same draft PR. No dashboard settings were changed.
 - PR #185 (#150) is merged. [PR #186](https://github.com/Coding-Moves/one-concept/pull/186)
   remains open; its independent review found no actionable issue and reran all
   63 generation tests with no skips. Its generation-budget changes are separate.
@@ -30,6 +31,33 @@ claims as completed work.
   record the status at the time; this task does not authorize a production release.
 
 ## Resend authentication email (#152 and #171) — 2026-09-12
+
+### Password-changed notification follow-up
+
+- Owner requested a matching replacement for Supabase's Password changed email.
+  Add one standalone security notification in the same draft PR, followed by
+  installation notes and validation. Preserve the two existing action templates.
+- Rechecked Supabase's password-changed notification semantics and the support
+  email in `mobile/src/screens/AboutScreen.tsx`. Use the existing text masthead
+  and GitHub organization link; point support to the app's published email.
+  Do not include a fabricated reset token/link or change any Supabase setting.
+- Delivered `backend/email-templates/password-changed.html`: dark masthead,
+  completed-change confirmation, and a separate section directing unrecognized
+  changes to Forgot password and the app's support email. Added installation,
+  notification-enablement, and real-inbox acceptance instructions to the runbook.
+- **Validation:** all 12 local Chromium scenarios passed at 320/390/600/960px
+  with normal, doubled, and stripped styles. Checked exact organization/support
+  links, support-address agreement with the app, no token variables or external
+  resources, no styled horizontal overflow, and readable line heights. Inspected
+  mobile, desktop, and doubled-text previews. Backend/mobile tests were not run
+  for this standalone HTML/documentation change; live notification delivery and
+  actual email-client rendering still require verification.
+- Commit `95b9db6` adds the notification; `docs: explain password changed email
+  installation and validation` records its runbook, map, and handoff. Local
+  Markdown file/anchor checks and `git diff --check` passed.
+- **Handoff:** same draft PR #187. Copy the new raw HTML and its subject into
+  Supabase's Security → Password changed template and enable that notification.
+  No messages sent or production settings changed. Preserve existing commits.
 
 ### Template redesign follow-up
 

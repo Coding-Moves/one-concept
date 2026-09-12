@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -17,6 +18,10 @@ class Settings(BaseSettings):
     database_url: str
     direct_url: str | None = None
 
+    # Best-effort API pool warm-up; zero disables it. Workers do not start it.
+    db_keepalive_interval_seconds: float = Field(default=30, ge=0, allow_inf_nan=False)
+    db_keepalive_timeout_seconds: float = Field(default=5, gt=0, allow_inf_nan=False)
+
     supabase_url: str
     supabase_jwks_url: str
     # Present for legacy HS256 projects; this project signs with ES256 via JWKS.
@@ -32,10 +37,11 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.1-flash-lite"
     generation_enabled: bool = False
     min_pool_per_topic: int = 25
-    generation_daily_call_cap: int = 200
+    # Shared by all generation paths; zero prevents new reservations.
+    generation_daily_call_cap: int = Field(default=200, ge=0)
     # Seconds between worker calls; the free tier allows ~10 requests a minute.
     generation_pace_seconds: float = 6.0
-    # Last-resort generation inside a request, when a user's pool is empty.
+    # Schedule background refill when a user's unread pool is low.
     generation_on_demand: bool = True
 
     allowed_origins: str = "http://localhost:8081"

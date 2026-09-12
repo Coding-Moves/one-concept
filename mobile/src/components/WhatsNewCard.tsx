@@ -5,6 +5,7 @@ import {
   Easing,
   Modal,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -71,7 +72,11 @@ export function WhatsNewCard({ entry, onDismiss }: Props) {
             <Text style={styles.title}>What's new</Text>
             <Text style={styles.version}>Version {entry.version}</Text>
 
-            <View style={styles.list}>
+            <ScrollView
+              style={styles.highlights}
+              contentContainerStyle={styles.list}
+              accessibilityLabel="Release highlights"
+            >
               {entry.highlights.map((line, i) => (
                 <View key={i} style={styles.item}>
                   <Ionicons
@@ -80,10 +85,10 @@ export function WhatsNewCard({ entry, onDismiss }: Props) {
                     color={colors.success}
                     style={styles.itemIcon}
                   />
-                  <Text style={styles.itemText}>{line}</Text>
+                  <Text testID="release-highlight" style={styles.itemText}>{line}</Text>
                 </View>
               ))}
-            </View>
+            </ScrollView>
 
             <Pressable
               onPress={onDismiss}
@@ -112,8 +117,10 @@ const createStyles = (colors: ThemeColors) =>
     cardWrap: {
       width: '100%',
       maxWidth: 420,
+      maxHeight: '100%',
     },
     card: {
+      flexShrink: 1,
       backgroundColor: colors.surface,
       borderRadius: radius.xl,
       borderWidth: 1,
@@ -149,10 +156,11 @@ const createStyles = (colors: ThemeColors) =>
       marginTop: 2,
       marginBottom: spacing.lg,
     },
-    list: {
-      gap: spacing.md,
+    highlights: {
+      flexShrink: 1,
       marginBottom: spacing.lg,
     },
+    list: { gap: spacing.md },
     item: {
       flexDirection: 'row',
       alignItems: 'flex-start',

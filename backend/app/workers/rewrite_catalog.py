@@ -13,6 +13,7 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.db.session import SessionLocal, engine
+from app.services.generation_budget import GenerationBudgetExhausted, reserve_generation_call
 from app.services.generation import (
     PROMPT_VERSION,
     GenerationError,
@@ -45,54 +46,67 @@ async def main() -> None:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     settings = get_settings()
 
-    async with SessionLocal() as session:
-        todo = (await session.execute(_TODO, {"pv": PROMPT_VERSION})).all()
-        # Close the read transaction before the paced generation loop begins:
-        # otherwise this initial SELECT's transaction stays open across every
-        # Gemini call, pace sleep, and rate-limit backoff below, pinning a server
-        # connection on the transaction pooler for the entire (long) run.
-        await session.commit()
-        log.info("%s lessons to rewrite with prompt %s", len(todo), PROMPT_VERSION)
+    try:
+        if not settings.generation_enabled:
+            log.info("generation disabled; catalog unchanged")
+            return
+        if not settings.gemini_api_key:
+            log.info("no API key configured; catalog unchanged")
+            return
+        async with SessionLocal() as session:
+            todo = (await session.execute(_TODO, {"pv": PROMPT_VERSION})).all()
+            # Close the read transaction before the paced generation loop begins:
+            # otherwise this initial SELECT's transaction stays open across every
+            # Gemini call, pace sleep, and rate-limit backoff below, pinning a server
+            # connection on the transaction pooler for the entire (long) run.
+            await session.commit()
+            log.info("%s lessons to rewrite with prompt %s", len(todo), PROMPT_VERSION)
 
-        rewritten = failed = 0
-        backoff, streak = BACKOFF_START, 0
-        for row in todo:
-            while True:
-                try:
-                    result = await generate_concept(
-                        title=row.title, topic_name=row.topic_name, angle=None,
-                        api_key=settings.gemini_api_key, model=settings.gemini_model,
-                    )
-                except RateLimitedError as exc:
-                    streak += 1
-                    if streak >= MAX_RATE_LIMIT_STREAK:
-                        log.warning("giving up: %s consecutive rate limits", streak)
-                        log.info("rewritten %s, failed %s (resume by re-running)", rewritten, failed)
-                        await engine.dispose()
+            rewritten = failed = 0
+            backoff, streak = BACKOFF_START, 0
+            for row in todo:
+                while True:
+                    try:
+                        await reserve_generation_call(session, settings.generation_daily_call_cap)
+                        await session.commit()
+                        result = await generate_concept(
+                            title=row.title, topic_name=row.topic_name, angle=None,
+                            api_key=settings.gemini_api_key, model=settings.gemini_model,
+                        )
+                    except GenerationBudgetExhausted:
+                        await session.rollback()
+                        log.info("daily call cap reached: rewritten %s, failed %s (resume on a later day)", rewritten, failed)
                         return
-                    delay = max(exc.retry_after or 0.0, backoff)
-                    log.warning("rate limited; retrying %s in %.0fs", row.title, delay)
-                    await asyncio.sleep(delay)
-                    backoff = min(backoff * 2, BACKOFF_MAX)
-                    continue
-                except GenerationError as exc:
-                    # Leave it on the old prompt version; a later run retries it.
-                    log.warning("skipping %s: %s", row.title, exc)
-                    failed += 1
+                    except RateLimitedError as exc:
+                        streak += 1
+                        if streak >= MAX_RATE_LIMIT_STREAK:
+                            log.warning("giving up: %s consecutive rate limits", streak)
+                            log.info("rewritten %s, failed %s (resume by re-running)", rewritten, failed)
+                            return
+                        delay = max(exc.retry_after or 0.0, backoff)
+                        log.warning("rate limited; retrying %s in %.0fs", row.title, delay)
+                        await asyncio.sleep(delay)
+                        backoff = min(backoff * 2, BACKOFF_MAX)
+                        continue
+                    except GenerationError as exc:
+                        # Leave it on the old prompt version; a later run retries it.
+                        log.warning("skipping %s: %s", row.title, exc)
+                        failed += 1
+                        break
+                    streak, backoff = 0, BACKOFF_START
+                    await session.execute(_UPDATE, {
+                        "id": row.id, "summary": result.summary, "example": result.example,
+                        "model": result.model, "pv": result.prompt_version,
+                    })
+                    await session.commit()
+                    rewritten += 1
+                    log.info("rewrote %s (%s/%s)", row.title, rewritten, len(todo))
                     break
-                streak, backoff = 0, BACKOFF_START
-                await session.execute(_UPDATE, {
-                    "id": row.id, "summary": result.summary, "example": result.example,
-                    "model": result.model, "pv": result.prompt_version,
-                })
-                await session.commit()
-                rewritten += 1
-                log.info("rewrote %s (%s/%s)", row.title, rewritten, len(todo))
-                break
-            await asyncio.sleep(PACE_SECONDS)
+                await asyncio.sleep(PACE_SECONDS)
 
-    log.info("done: rewritten %s, failed %s", rewritten, failed)
-    await engine.dispose()
+        log.info("done: rewritten %s, failed %s", rewritten, failed)
+    finally:
+        await engine.dispose()
 
 
 if __name__ == "__main__":

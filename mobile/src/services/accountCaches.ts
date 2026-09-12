@@ -7,14 +7,22 @@
  * progress) deliberately stay out.
  */
 
+import { invalidateAccountRequests } from '../api/client';
 import { clearDailyCache } from './dailyApi';
+import { conceptCache } from './conceptApi';
 import { clearNotificationPrefsCache } from './notifications';
 import { clearServerStateCache } from './remoteProgressRepository';
+import { savedCollectionCache } from './savedApi';
+import { clearTopicsCache } from './topicsApi';
 
 export async function clearAccountCaches(): Promise<void> {
+  invalidateAccountRequests();
   await Promise.all([
     clearServerStateCache(),
     clearDailyCache(),
+    conceptCache.clear(),
+    savedCollectionCache.clear(),
+    clearTopicsCache(),
     clearNotificationPrefsCache(),
   ]);
 }

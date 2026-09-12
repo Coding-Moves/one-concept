@@ -13,6 +13,9 @@ requires the exact Expo SDK 57 documentation before writing mobile code.
 - Deliver assigned work in coherent chunks, with one PR per chunk.
 - Give every small, meaningful change its own commit. Commit incrementally;
   do not wait until the end and put the entire task into one large commit.
+- Prefer a higher number of focused commits per PR. Separate independently
+  reviewable behavior, UI, and documentation changes instead of bundling them;
+  keep regression tests with the behavior they verify.
 - Keep as many meaningful, atomic commits as the chunk naturally produces in
   its PR. There is no numeric maximum or minimum. Do not split a coherent
   change into broken fragments or make empty commits to inflate the count.

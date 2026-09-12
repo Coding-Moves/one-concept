@@ -1,14 +1,18 @@
-from datetime import time
+from datetime import date, time
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import ARRAY, Time, bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
 from app.schemas.daily import ConceptOut, DailyOut
-from app.schemas.me import LearnedOut, ProfileIn, SavedConceptOut, StateOut, StreakOut, TopicsIn
+from app.schemas.me import (
+    HistoryPageOut, LearnedOut, ProfileIn, SavedConceptOut, SavedPageOut, StateOut,
+    StreakOut, TopicsIn,
+)
 from app.schemas.notifications import NotificationPrefs, PushTokenIn
+from app.services.collections import history_page, saved_page
 from app.services.interactions import set_followed_topics
 from app.services.selection import DailyResult, get_or_create_daily
 from app.services.state import load_state
@@ -59,12 +63,16 @@ def _to_state_out(state) -> StateOut:
             for s in state.saved
         ],
         stats=StreakOut(**vars(state.stats)),
+        learned_before_window=state.learned_before_window,
+        history_next_cursor=state.history_next_cursor,
+        saved_next_cursor=state.saved_next_cursor,
         assignment_slug=state.assignment_slug,
     )
 
 
 @router.get("/state", response_model=StateOut)
 async def get_state(
+    compact: bool = False,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StateOut:
@@ -73,16 +81,39 @@ async def get_state(
     Bootstrapping only runs when the state query finds no profile, so the
     common path costs a single round trip.
     """
-    state = await load_state(db, user.id)
+    state = await load_state(db, user.id, compact=compact)
     if state is None:
         await ensure_bootstrapped(db, user.id, user.email)
         await db.commit()
-        state = await load_state(db, user.id)
+        state = await load_state(db, user.id, compact=compact)
     out = _to_state_out(state)
     # Fold today's concept in so the app needs one startup round trip (#102).
     # Same create-on-first-call behaviour as GET /v1/daily.
     out.daily = _daily_out_or_none(await get_or_create_daily(db, user.id))
     return out
+
+
+@router.get("/history", response_model=HistoryPageOut)
+async def get_history(
+    cursor: date | None = None,
+    limit: int = Query(default=50, ge=1, le=100),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> HistoryPageOut:
+    return await history_page(db, user.id, cursor, limit)
+
+
+@router.get("/saved", response_model=SavedPageOut)
+async def get_saved(
+    cursor: str | None = Query(default=None, max_length=200),
+    limit: int = Query(default=50, ge=1, le=100),
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> SavedPageOut:
+    try:
+        return await saved_page(db, user.id, cursor, limit)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invalid saved cursor") from exc
 
 
 @router.get("/stats", response_model=StreakOut)
@@ -96,11 +127,12 @@ async def get_stats(
 @router.put("/topics", response_model=StateOut)
 async def put_topics(
     body: TopicsIn,
+    compact: bool = False,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StateOut:
     await set_followed_topics(db, user.id, body.topics)
-    return _to_state_out(await load_state(db, user.id))
+    return _to_state_out(await load_state(db, user.id, compact=compact))
 
 
 @router.post("/push-token", status_code=status.HTTP_204_NO_CONTENT)
@@ -217,6 +249,7 @@ async def put_notifications(
 @router.patch("", response_model=StateOut)
 async def patch_profile(
     body: ProfileIn,
+    compact: bool = False,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StateOut:
@@ -244,4 +277,4 @@ async def patch_profile(
             {"n": body.display_name, "uid": user.id},
         )
     await db.commit()
-    return _to_state_out(await load_state(db, user.id))
+    return _to_state_out(await load_state(db, user.id, compact=compact))

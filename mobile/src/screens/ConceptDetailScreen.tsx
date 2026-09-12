@@ -31,7 +31,12 @@ export function ConceptDetailScreen() {
   useEffect(() => {
     let active = true;
     setStatus('loading');
-    fetchConcept(conceptId)
+    fetchConcept(conceptId, (cached) => {
+      if (active) {
+        setConcept(cached);
+        setStatus('ready');
+      }
+    })
       .then((c) => {
         if (active) {
           setConcept(c);

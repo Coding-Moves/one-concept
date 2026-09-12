@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 # the actual Gemini API instead of reporting exhaustion.
 os.environ["GENERATION_ENABLED"] = "false"
 os.environ["GEMINI_API_KEY"] = ""
+os.environ["GENERATION_DAILY_CALL_CAP"] = "200"
 
 CONTAINER = "one-concept-test-db"
 PORT = 55433
@@ -114,3 +115,16 @@ async def user(session):
     )
     await session.commit()
     return user_id
+
+
+@pytest_asyncio.fixture
+async def empty_generation_budget(session):
+    """Generation tests share a schema, but each starts with its own daily budget."""
+    from sqlalchemy import text
+
+    await session.execute(text("delete from public.generation_daily_usage"))
+    await session.commit()
+    yield
+    await session.rollback()
+    await session.execute(text("delete from public.generation_daily_usage"))
+    await session.commit()

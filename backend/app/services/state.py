@@ -13,6 +13,7 @@ from datetime import date
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.collections import STATE_WINDOW, saved_cursor
 from app.services.streaks import StreakStats
 
 
@@ -46,6 +47,9 @@ class UserState:
     # user's 20 concepts). `bookmarks` stays as bare slugs for membership counts.
     saved: list[SavedConcept]
     stats: StreakStats
+    learned_before_window: dict[str, int] | None = None
+    history_next_cursor: str | None = None
+    saved_next_cursor: str | None = None
     assignment_slug: str | None = None
     display_name: str | None = None
 
@@ -68,14 +72,22 @@ _STATE = text("""
           join public.topics t on t.id = c.topic_id
          where a.user_id = :uid and a.completed_at is not null
     ),
+    recent_learned_rows as materialized (
+        select * from learned_rows order by assigned_for desc limit :window_limit
+    ),
+    older_counts as (
+        select topic_name, count(*)::int as n from learned_rows
+         where assigned_for < (select min(assigned_for) from recent_learned_rows)
+         group by topic_name
+    ),
     learned as (
         select coalesce(json_agg(json_build_object(
                    'slug', slug, 'title', title, 'topic', topic_name, 'on', assigned_for,
                    'likes', (select count(*) from public.concept_interactions ci
-                              where ci.concept_id = learned_rows.concept_id
+                              where ci.concept_id = recent_learned_rows.concept_id
                                 and ci.liked_at is not null and ci.user_id <> :uid)::int)
                    order by assigned_for desc), '[]'::json) as v
-          from learned_rows
+          from recent_learned_rows
     ),
     interactions as (
         select
@@ -85,18 +97,22 @@ _STATE = text("""
           join public.concepts c on c.id = i.concept_id
          where i.user_id = :uid
     ),
+    saved_rows as materialized (
+        select concept_id, saved_at from public.concept_interactions
+         where user_id = :uid and saved_at is not null
+         order by saved_at desc, concept_id desc limit :window_limit
+    ),
     saved as (
         select coalesce(json_agg(json_build_object(
                    'slug', c.slug, 'title', c.title, 'topic', t.name,
+                   'at', i.saved_at, 'id', i.concept_id,
                    'likes', (select count(*) from public.concept_interactions ci
                               where ci.concept_id = c.id
                                 and ci.liked_at is not null and ci.user_id <> :uid)::int)
-                   order by i.saved_at desc) filter (where i.saved_at is not null),
-                 '[]'::json) as v
-          from public.concept_interactions i
+                   order by i.saved_at desc, i.concept_id desc), '[]'::json) as v
+          from saved_rows i
           join public.concepts c on c.id = i.concept_id
           join public.topics t on t.id = c.topic_id
-         where i.user_id = :uid
     ),
     assignment as (
         select c.slug
@@ -114,6 +130,8 @@ _STATE = text("""
       prof.today,
       followed.v      as followed_topics,
       learned.v       as learned,
+      coalesce((select json_object_agg(topic_name, n) from older_counts),
+               '{}'::json) as learned_before_window,
       interactions.likes,
       interactions.saves,
       saved.v         as saved,
@@ -127,10 +145,12 @@ _STATE = text("""
 """)
 
 
-async def load_state(session: AsyncSession, user_id: uuid.UUID) -> UserState | None:
+async def load_state(session: AsyncSession, user_id: uuid.UUID, *, compact: bool = False) -> UserState | None:
     """Returns None when the user has no profile row yet, so the caller can
     bootstrap and retry — keeping the common path to a single query."""
-    row = (await session.execute(_STATE, {"uid": user_id})).first()
+    row = (await session.execute(_STATE, {
+        "uid": user_id, "window_limit": STATE_WINDOW if compact else None,
+    })).first()
     if row is None:
         return None
 
@@ -165,5 +185,10 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID) -> UserState | N
             longest=row.longest_streak,
             total_learned=row.total_learned,
         ),
+        learned_before_window=dict(row.learned_before_window) if compact else None,
+        history_next_cursor=(row.learned[-1]["on"]
+                             if compact and row.total_learned > len(row.learned) else None),
+        saved_next_cursor=(saved_cursor(row.saved[-1]["at"], row.saved[-1]["id"])
+                           if compact and len(row.saves) > len(row.saved) else None),
         assignment_slug=row.assignment_slug,
     )

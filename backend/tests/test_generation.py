@@ -137,7 +137,7 @@ async def test_unexpected_shape_is_rejected(patch_httpx):
 
 # ---------------------------------------------------------------- pool
 
-async def test_generate_one_publishes_and_marks_the_backlog(session, patch_httpx):
+async def test_generate_one_publishes_and_marks_the_backlog(empty_generation_budget, session, patch_httpx):
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
     before = await session.scalar(text("select count(*) from public.concepts where source = 'gemini'"))
 
@@ -158,7 +158,7 @@ async def test_generate_one_publishes_and_marks_the_backlog(session, patch_httpx
     assert row.backlog_status == "done"
 
 
-async def test_failed_generation_leaves_the_item_retryable(session, patch_httpx):
+async def test_failed_generation_leaves_the_item_retryable(empty_generation_budget, session, patch_httpx):
     patch_httpx(_stub_transport({}, status=500))
     claimed_before = await session.scalar(
         text("select count(*) from public.concept_backlog where status = 'pending'"))
@@ -178,7 +178,7 @@ async def test_failed_generation_leaves_the_item_retryable(session, patch_httpx)
     assert after == claimed_before, "the item returned to the queue"
 
 
-async def test_repeated_failures_retire_the_item(session, patch_httpx):
+async def test_repeated_failures_retire_the_item(empty_generation_budget, session, patch_httpx):
     patch_httpx(_stub_transport({}, status=500))
     # An inactive topic of its own, so this cannot disturb the shared backlog
     # that the other tests draw from.
@@ -202,7 +202,7 @@ async def test_repeated_failures_retire_the_item(session, patch_httpx):
     assert row.attempts == 3
 
 
-async def test_rate_limit_releases_the_claim_and_refunds_the_attempt(session, patch_httpx):
+async def test_rate_limit_releases_the_claim_and_refunds_the_attempt(empty_generation_budget, session, patch_httpx):
     patch_httpx(_stub_transport({}, status=429))
     pending_before = await session.scalar(
         text("select count(*) from public.concept_backlog where status = 'pending'"))
@@ -225,7 +225,7 @@ async def test_retry_delay_is_read_from_the_response():
     assert generation._retry_after_seconds(response) == 12.0
 
 
-async def test_stale_generating_rows_are_reclaimed(session):
+async def test_stale_generating_rows_are_reclaimed(empty_generation_budget, session):
     """Issue #37: a row abandoned mid-generation by a crashed worker must not be
     stuck in 'generating' forever — a later run reclaims it to 'pending'."""
     topic_id = (await session.execute(text("""
@@ -259,7 +259,7 @@ async def test_stale_generating_rows_are_reclaimed(session):
     assert rows["in-flight"] == "generating", "a fresh claim must be left alone"
 
 
-async def test_slug_collision_does_not_mark_the_backlog_done(session, patch_httpx):
+async def test_slug_collision_does_not_mark_the_backlog_done(empty_generation_budget, session, patch_httpx):
     """Issue #37: if the concept slug already exists the insert is a no-op, so the
     backlog row must be flagged failed — not marked done, which would retire the
     title having burned a Gemini call without publishing anything."""
@@ -295,7 +295,7 @@ async def test_slug_collision_does_not_mark_the_backlog_done(session, patch_http
     assert generation._retry_after_seconds(httpx.Response(429, text="{}")) is None
 
 
-async def test_top_up_backs_off_and_retries_after_a_rate_limit(session, patch_httpx, monkeypatch):
+async def test_top_up_backs_off_and_retries_after_a_rate_limit(empty_generation_budget, session, patch_httpx, monkeypatch):
     calls = {"n": 0}
 
     def handler(request: httpx.Request) -> httpx.Response:
@@ -317,7 +317,7 @@ async def test_top_up_backs_off_and_retries_after_a_rate_limit(session, patch_ht
     assert sleeps and sleeps[0] >= pool.BACKOFF_START_SECONDS
 
 
-async def test_top_up_gives_up_after_consecutive_rate_limits(session, patch_httpx, monkeypatch):
+async def test_top_up_gives_up_after_consecutive_rate_limits(empty_generation_budget, session, patch_httpx, monkeypatch):
     patch_httpx(_stub_transport({}, status=429))
 
     async def fake_sleep(seconds):
@@ -330,20 +330,20 @@ async def test_top_up_gives_up_after_consecutive_rate_limits(session, patch_http
     assert result.skipped_reason == "rate limited"
 
 
-async def test_top_up_respects_the_kill_switch(session):
+async def test_top_up_respects_the_kill_switch(empty_generation_budget, session):
     result = await top_up(session, api_key="k", model="m", enabled=False,
                           minimum_per_topic=25, call_cap=200)
     assert result.generated == 0
     assert result.skipped_reason == "generation disabled"
 
 
-async def test_top_up_without_a_key_does_nothing(session):
+async def test_top_up_without_a_key_does_nothing(empty_generation_budget, session):
     result = await top_up(session, api_key="", model="m", enabled=True,
                           minimum_per_topic=25, call_cap=200)
     assert result.skipped_reason == "no API key configured"
 
 
-async def test_top_up_stops_at_the_call_cap(session, patch_httpx):
+async def test_top_up_stops_at_the_call_cap(empty_generation_budget, session, patch_httpx):
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
     result = await top_up(session, api_key="k", model="gemini-2.0-flash", enabled=True,
                           minimum_per_topic=25, call_cap=3)
@@ -351,7 +351,7 @@ async def test_top_up_stops_at_the_call_cap(session, patch_httpx):
     assert result.skipped_reason == "daily call cap reached"
 
 
-async def test_top_up_fills_only_topics_below_the_threshold(session, patch_httpx):
+async def test_top_up_fills_only_topics_below_the_threshold(empty_generation_budget, session, patch_httpx):
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
 
     threshold = 6
@@ -381,6 +381,7 @@ async def test_top_up_fills_only_topics_below_the_threshold(session, patch_httpx
 
 
 async def test_dry_followed_topic_schedules_prefetch_not_inline_generation(
+    empty_generation_budget,
     session, user, monkeypatch
 ):
     """Issue #43: the request never calls Gemini inline. When a followed topic

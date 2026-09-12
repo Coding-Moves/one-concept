@@ -29,6 +29,7 @@ backend/
 │   │   └── users.py         profile bootstrap (safety net for the DB trigger)
 │   └── api/v1/              health, topics, daily
 ├── migrations/          # plain SQL, applied in filename order
+├── email-templates/     # account email HTML installed manually in Supabase Auth
 ├── tests/               # 25 tests: token verification, selection, HTTP
 ├── Dockerfile           # what Railway builds
 └── .env.example         # copy to .env — never commit the filled copy
@@ -52,7 +53,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 | GET | `/v1/topics` | yes | Active topics, concept counts, and whether you follow each. |
 | GET | `/v1/daily` | yes | Today's concept. Creates the assignment on first call, idempotent after. |
 | POST | `/v1/daily/complete` | yes | Mark today learned. Server sets the timestamp and the day it counts for. |
-| GET | `/v1/me/state` | yes | Everything the app renders: follows, history, likes, saves, streaks. One query. |
+| GET | `/v1/me/state?compact=true` | yes | Startup state with at most 50 learned/saved detail rows, full membership and totals, and today's lesson. |
+| GET | `/v1/me/history` | yes | Completed concepts, newest assigned day first; cursor pagination. |
+| GET | `/v1/me/saved` | yes | Saved metadata, newest save first; cursor pagination. |
 | GET | `/v1/me/stats` | yes | Streaks alone, for other consumers. |
 | PUT | `/v1/me/topics` | yes | Replace the followed set (whole-list semantics, so retries are safe). |
 | PATCH | `/v1/me` | yes | Display name and timezone. Unknown zones are rejected. |
@@ -66,6 +69,33 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 been assigned every published concept — it never repeats one. Phase 6 hooks
 Gemini generation in at that point.
 
+## Startup and collection pagination
+
+Updated mobile clients send `compact=true` on `GET /v1/me/state`,
+`PUT /v1/me/topics`, and `PATCH /v1/me`. Each response embeds at most 50 learned
+and 50 saved detail records. Full `likes` and `bookmarks` slug arrays, streaks,
+and `stats.total_learned` remain authoritative. `learned_before_window` groups
+older completions by topic name; add those counts to the recent learned rows
+for category totals, including any optimistic offline completion.
+
+Continue from `history_next_cursor` or `saved_next_cursor` using the matching
+collection endpoint. Each returns `{items, next_cursor}`; a null cursor means
+there are no more rows. Both accept `limit` (default 50, range 1–100) and an
+optional `cursor`. History uses the last assigned date; Saved uses an opaque
+save-timestamp/UUID cursor so tied timestamps and deletions do not skip rows.
+Keep cursors unchanged and URL-encode them. All queries use the verified user.
+Pages are live reads: refresh startup state to see new saves/completions made
+above an existing cursor while paging.
+
+The limit applies before per-concept like-count enrichment. Bare membership
+arrays and aggregate calculations still grow with account activity. Older
+clients that omit `compact=true` keep the full legacy detail response during
+backend/OTA rollout; their startup cost is unchanged until updated. The mobile
+History screen still shows the last ten lessons; its full-history UI is separate.
+Saved loads older metadata only when opened, preserving search/category filters,
+and caches it for offline use. Downloaded lesson bodies also supply missing
+metadata offline, even if Saved was never opened before.
+
 ## Authentication
 
 The project signs tokens with **ES256**, so the API verifies them against the
@@ -77,6 +107,11 @@ confusion attacks, both of which are covered by tests.
 `user_id` is taken from the verified token's `sub` claim and from nowhere else.
 No endpoint accepts a user id as a parameter.
 
+Supabase Auth sends signup, recovery, and enabled security notifications using
+the project's configured sender. See [Email templates](../docs/EMAIL_TEMPLATES.md)
+for the three branded HTML files and manual installation steps. An app deployment
+does not publish these templates or change SMTP settings.
+
 ## Content generation
 
 Gemini writes lessons. It does **not** choose subjects.
@@ -85,6 +120,8 @@ Gemini writes lessons. It does **not** choose subjects.
 curated backlog (150 titles)
         ↓
 worker: is a topic below MIN_POOL_PER_TOPIC published concepts?
+        ↓
+claim a title + reserve one shared daily call, then commit
         ↓
 Gemini writes {summary, example} for one backlogged title
         ↓
@@ -117,17 +154,60 @@ It is safe to run concurrently: backlog items are claimed with
 | Control | Effect |
 |---|---|
 | `GENERATION_ENABLED` | Master switch. Nothing calls Gemini when false. |
-| `GENERATION_DAILY_CALL_CAP` | Hard ceiling per run, so a retry loop cannot burn the quota. |
+| `GENERATION_DAILY_CALL_CAP` | Shared daily reservation ceiling across scheduled refill, on-demand prefetch, and catalog rewriting; zero stops new calls. |
 | `attempts < 3` | A title that keeps failing is retired rather than blocking the queue. |
 | Validation | Malformed output leaves the item pending; it never reaches a reader. |
-| `GENERATION_ON_DEMAND` | Last-resort in-request generation when one user's pool is dry. |
+| `GENERATION_ON_DEMAND` | Allows background refill when a user has few unread lessons. |
+
+### Shared generation budget
+
+`generation_daily_usage` stores committed call reservations, one row per Pacific
+calendar day. PostgreSQL computes the day in `America/Los_Angeles`, matching
+[Gemini's midnight Pacific RPD reset](https://ai.google.dev/gemini-api/docs/rate-limits),
+including daylight saving time. User assignment/streak timezones are unchanged.
+The atomic UPSERT prevents competing API/worker processes from spending the same
+last slot. Restarts and repeated job runs retain usage; a new day gets a new row.
+
+`generate_one` claims the backlog title and reserves quota in one transaction,
+then commits before calling Gemini. An exhausted budget rolls back the title
+claim and attempt. Once committed, failed responses, rate limits, cancellation,
+or a worker crash keep the reservation; uncertain provider calls must not be
+refunded. Gemini throttling still refunds the separate **backlog retry attempt**.
+Empty backlog does not consume quota. Database/reservation failures stop generation
+before the provider call. The manual rewrite worker uses the same ledger and
+respects `GENERATION_ENABLED`; unfinished lessons retain their old prompt version
+for a later run. Daily reading remains independent of generation.
+
+Set the **same `GENERATION_DAILY_CALL_CAP` on the API and every worker** sharing
+this database. Changing it does not erase existing usage. This is an application
+budget, not a provider quota lookup: other applications using the same Gemini
+project are outside this ledger, and provider rate/token limits still apply.
+
+**Before deploying this code:** apply
+[`0010_generation_daily_usage.sql`](migrations/0010_generation_daily_usage.sql)
+using the migration procedure in [RELEASING.md](../RELEASING.md). The production
+ledger remains unchanged until actual application is verified. Earlier application
+versions do not use this counter, and calls made before deployment cannot be
+reconstructed from it. Pause old generators during rollout; enable the new code
+at the next Pacific reset, or conservatively seed today's usage while generation
+is paused, to avoid granting another allowance in the middle of the day.
+
+Inspect reservations without changing them:
+
+```sql
+select budget_day, calls_used
+from public.generation_daily_usage
+order by budget_day desc
+limit 7;
+```
 
 ### Fallback ladder in `/v1/daily`
 
 1. An unseen concept in a followed topic.
-2. Failing that, generate one in the user's least-recently-seen followed topic.
-3. Failing that, widen to the whole catalog and flag `outside_followed_topics`.
-4. Failing that, return `409 catalog_exhausted`. A concept is never repeated.
+2. If that pool is dry, schedule a background refill and immediately widen to
+   the whole catalog, flagging `outside_followed_topics`.
+3. If nothing unseen remains, return `409 catalog_exhausted`. A concept is never
+   repeated. A low unread watermark can also schedule refill before exhaustion.
 
 ## Latency and database region
 
@@ -136,16 +216,48 @@ Measured against a Supabase project in `ap-northeast-1` from Europe, a single
 round trip is 160–1100 ms — so the code is written to minimise the *number* of
 statements rather than their complexity:
 
-- `/v1/me/state` is **one query**. It returns follows, history, likes, saves,
-  today's assignment, and streaks together, and bootstrapping only runs when
-  that query finds no profile.
+- The state aggregate is **one query**, returning follows, recent detail rows,
+  membership, assignment slug, and full streaks/totals. Bootstrapping only runs
+  when no profile exists. The `/v1/me/state` handler separately resolves today's
+  lesson, folding it into the same HTTP response.
 - Follow updates are one statement (a data-modifying CTE), not one per topic.
 - Connection pooling is on. Without it every request paid a fresh TCP + TLS +
   auth handshake to the database region, which cost seconds.
 
-The remaining latency is geography. **Deploy the API in the same region as the
-database** — on Railway, pick the region closest to your Supabase project — and
-these round trips drop to single-digit milliseconds.
+Geography and connection reuse both affect latency. **Deploy the API close to
+the database**, then compare fresh, immediately reused, and post-idle requests.
+Timing a slow query alone does not establish that a new connection was opened.
+
+The API runs a best-effort `SELECT 1` probe immediately on startup and then
+every `DB_KEEPALIVE_INTERVAL_SECONDS` (default 30 seconds, measured after each
+probe finishes). It borrows from the same pool as requests and promptly returns
+the connection, rolling back the implicit transaction. The pool reuses its most
+recently returned connection, so low traffic can use a warm slot while surplus
+idle slots expire. `pool_pre_ping` remains enabled for dead connections.
+
+`DB_KEEPALIVE_TIMEOUT_SECONDS` (default 5 seconds) bounds checkout, reconnect,
+and query together. Rollback/return has a separate budget of the same duration;
+failed cleanup invalidates the connection. A failed attempt logs only the
+exception type and retries after the interval; it does not block API startup.
+Shutdown cancels the task before disposing the engine. Set the interval to `0`
+to disable probes. Each API
+process runs its own task; importing the engine in cron workers starts no task.
+Pool size and overflow limits remain 5 each. A cold startup or a burst requiring
+additional connections can still pay connection setup time.
+
+Reproduce idle expiry without production services using:
+
+```bash
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@127.0.0.1:55433/postgres \
+SUPABASE_URL=http://test.invalid SUPABASE_JWKS_URL=http://test.invalid/jwks \
+GENERATION_ENABLED=false GEMINI_API_KEY= \
+  .venv/bin/python -m pytest tests/test_db_keepalive_postgres.py -q -s
+```
+
+The PostgreSQL 16 tests set short idle expiry only on their own sessions and
+compare connection counts and request timings with warming disabled/enabled.
+They also check transaction cleanup and recovery from a terminated connection.
+These timings describe the local test environment, not deployed Supavisor latency.
 
 ## Connection strings
 

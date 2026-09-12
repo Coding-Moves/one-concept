@@ -22,6 +22,17 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.8.0',
+    highlights: [
+      'Read saved lessons and examples offline after they download to your device.',
+      'Likes, saves, and progress sync automatically when you reconnect or reopen the app.',
+      'Choose topics offline and keep your selections between visits.',
+      'Enjoy a lighter startup and find older saved lessons with search and topic filters.',
+      'Show or hide your password when signing in or creating an account.',
+      'Refreshed account emails make confirmation, password resets, and security updates clearer.',
+    ],
+  },
+  {
     version: '1.7.1',
     highlights: [
       'Stay signed in and keep reading cached lessons on a weak connection.',

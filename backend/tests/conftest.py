@@ -22,6 +22,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 # the actual Gemini API instead of reporting exhaustion.
 os.environ["GENERATION_ENABLED"] = "false"
 os.environ["GEMINI_API_KEY"] = ""
+os.environ["GENERATION_DAILY_CALL_CAP"] = "200"
 
 CONTAINER = "one-concept-test-db"
 PORT = 55433

@@ -7,19 +7,22 @@ claims as completed work.
 
 ## Current status
 
-- Preparing version **1.8.0** on `codex/1-8-0-release-prep`, from refreshed
-  `develop` (`15aad70`). Feature/fix PRs #183, #184, #185, #186, #188, and #189
-  are merged. Runtime remains **1.3.0** for this JavaScript-only mobile release.
-- The version and six-benefit What's New card are implemented and verified in
-  [preparation PR #190](https://github.com/Coding-Moves/one-concept/pull/190).
-  Merge it into `develop`, then open the single
-  `develop` → `main` release PR after the database prerequisite is satisfied.
-  Production merge/deployment is not part of this request.
+- Opened [release PR #191](https://github.com/Coding-Moves/one-concept/pull/191),
+  **develop → main**, for version **1.8.0**. Feature/fix PRs #183, #184, #185,
+  #186, #188, and #189 are included. Runtime remains **1.3.0** for this
+  JavaScript-only mobile release.
+- The version and six-benefit What's New card landed through
+  [preparation PR #190](https://github.com/Coding-Moves/one-concept/pull/190),
+  merged as `fa2b7a7` with all five commits preserved. Production release merging
+  remains pending.
 - Production read-only inspection confirmed migration 0010 is missing. Automatic
   approval review rejected applying it because the release-PR request did not
   separately authorize a production schema change. No migration was executed and
   `backend/migrations/applied.txt` is unchanged. Explicit owner authorization is
-  needed for this step before the release PR, as required by `RELEASING.md`.
+  needed for this step before merging the release. After being informed of the
+  blocker, the owner explicitly requested opening the release PR now; #191 is
+  open with the migration prominently marked as pending. This changes the usual
+  runbook ordering for this release only, not the applied-ledger requirement.
 - Resend setup remains deferred in [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187).
   The owner reports installing all three merged email templates and enabling the
   password-change notification in Supabase; actual inbox delivery is unverified.
@@ -66,12 +69,15 @@ claims as completed work.
   requires consistent caps across API/workers and pausing old generators during
   rollout. Enable the new generators at the next Pacific reset, or seed today's
   usage conservatively while paused. No live worker settings were changed.
-- **PR:** [#190](https://github.com/Coding-Moves/one-concept/pull/190), ready for
-  review into `develop`, preserves the focused preparation commits.
-  `docs: link 1.8.0 preparation PR` records publication; check GitHub for its
-  resulting merge state. The production release PR has not been opened.
-- **Next step:** merge #190, obtain authorization and complete the database
-  prerequisite, then open `develop` → `main` without merging production.
+- **PRs:** preparation [#190](https://github.com/Coding-Moves/one-concept/pull/190)
+  merged into `develop` as `fa2b7a7`, preserving all five commits. Release
+  [#191](https://github.com/Coding-Moves/one-concept/pull/191) is open from
+  `develop` to `main` at the owner's explicit request to open it now. The release
+  description marks migration 0010 and generation rollout handling as pending.
+  `docs: record 1.8.0 release PR handoff` records this outcome.
+- **Next step:** obtain authorization, apply/verify migration 0010, and only then
+  update the ledger. Require the migration check to pass before production merge.
+  Opening the PR did not apply the migration or publish a production release.
 
 ## Saved reading offline and password visibility (#182) — 2026-09-12
 

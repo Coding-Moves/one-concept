@@ -12,6 +12,7 @@ import { clearDailyCache } from './dailyApi';
 import { conceptCache } from './conceptApi';
 import { clearNotificationPrefsCache } from './notifications';
 import { clearServerStateCache } from './remoteProgressRepository';
+import { savedCollectionCache } from './savedApi';
 import { clearTopicsCache } from './topicsApi';
 
 export async function clearAccountCaches(): Promise<void> {
@@ -20,6 +21,7 @@ export async function clearAccountCaches(): Promise<void> {
     clearServerStateCache(),
     clearDailyCache(),
     conceptCache.clear(),
+    savedCollectionCache.clear(),
     clearTopicsCache(),
     clearNotificationPrefsCache(),
   ]);

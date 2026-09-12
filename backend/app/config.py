@@ -37,10 +37,11 @@ class Settings(BaseSettings):
     gemini_model: str = "gemini-3.1-flash-lite"
     generation_enabled: bool = False
     min_pool_per_topic: int = 25
-    generation_daily_call_cap: int = 200
+    # Shared by all generation paths; zero prevents new reservations.
+    generation_daily_call_cap: int = Field(default=200, ge=0)
     # Seconds between worker calls; the free tier allows ~10 requests a minute.
     generation_pace_seconds: float = 6.0
-    # Last-resort generation inside a request, when a user's pool is empty.
+    # Schedule background refill when a user's unread pool is low.
     generation_on_demand: bool = True
 
     allowed_origins: str = "http://localhost:8081"

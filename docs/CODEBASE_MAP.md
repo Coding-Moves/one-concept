@@ -159,23 +159,30 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 - `services/generation.py` builds versioned prompts, calls Gemini through httpx,
   validates output, and exposes rate-limit errors. `pool.py` claims backlog work
   with `FOR UPDATE SKIP LOCKED`, publishes validated rows, refunds throttled
-  attempts, reclaims stale work, and applies pacing/retry/call limits.
+  attempts and reclaims stale work. Claims and daily call reservations commit
+  together before contacting the provider; quota denial rolls back the claim.
+- `services/generation_budget.py` atomically reserves from the shared
+  `generation_daily_usage` ledger using PostgreSQL's Pacific calendar day. All
+  API prefetch, scheduled refill, and manual rewrite calls share this budget.
+  Failed/uncertain calls retain their reservation; restarts do not reset it.
 - `services/prefetch.py` schedules bounded background top-ups, with a low unread
   watermark, a published-count target, and per-process in-flight topic tracking.
+  Exhausted shared budget is a normal stop condition.
 - `services/reminders.py` claims due user/day/time slots before sending Expo push
   batches, handles timezone and midnight windows, suppresses completed days, and
   drops unregistered device tokens. A claimed but failed send can miss a reminder.
 - `workers/pool_topup.py` and `workers/reminders.py` are cron entry points.
   `workers/rewrite_catalog.py` is a maintenance command that rewrites existing
-  lessons through Gemini; do not run it merely to inspect the project.
+  lessons through Gemini with the shared budget and generation kill switch;
+  do not run it merely to inspect the project.
 
 ## Schema and migrations
 
 `db/models.py` mirrors the SQL schema; migrations are the schema authority.
-The ten tables cover profiles, topics, concepts, user topics, daily assignments,
+The eleven tables cover profiles, topics, concepts, user topics, daily assignments,
 concept interactions, notification preferences, device tokens, the concept
-backlog, and reminder logs. Unique constraints enforce one daily assignment and
-no concept repeats per user. RLS adds isolation behind backend identity checks.
+backlog, reminder logs, and shared daily generation usage. Unique constraints
+enforce one daily assignment and no concept repeats per user. RLS adds isolation behind backend identity checks.
 
 | Migration | Purpose |
 | --- | --- |
@@ -186,9 +193,11 @@ no concept repeats per user. RLS adds isolation behind backend identity checks.
 | `0007_reminder_log.sql` | Unique reminder claims. |
 | `0008_backlog_claimed_at.sql` | Timestamp for reclaiming abandoned generation. |
 | `0009_like_count_index.sql` | Index for public like counts. |
+| `0010_generation_daily_usage.sql` | Backend-only daily Gemini call reservations shared by all generation paths. |
 
-All nine filenames are recorded in `migrations/applied.txt` in this checkout.
-That is repository evidence, not an independent check of production. Application
+The first nine filenames are recorded in `migrations/applied.txt` in this checkout;
+`0010_generation_daily_usage.sql` is pending production application. The ledger
+is repository evidence, not an independent check of production. Application
 connections use the transaction pooler; migration DDL uses `DIRECT_URL` and the
 session pooler. Applied migrations must not be rewritten.
 

@@ -12,6 +12,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    Integer,
     SmallInteger,
     Text,
     Time,
@@ -175,3 +176,12 @@ class ReminderLog(Base):
     local_date: Mapped[date] = mapped_column(Date, primary_key=True)
     slot: Mapped[time] = mapped_column(Time, primary_key=True)
     sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
+class GenerationDailyUsage(Base):
+    """Mirror of migrations/0010_generation_daily_usage.sql; backend-only quota."""
+
+    __tablename__ = "generation_daily_usage"
+
+    budget_day: Mapped[date] = mapped_column(Date, primary_key=True)
+    calls_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

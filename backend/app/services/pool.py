@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.config import get_settings
+from app.services.generation_budget import GenerationBudgetExhausted, reserve_generation_call
 from app.services.generation import GenerationError, RateLimitedError, generate_concept
 
 log = logging.getLogger(__name__)
@@ -130,11 +132,21 @@ class TopUpResult:
 
 
 async def generate_one(
-    session: AsyncSession, api_key: str, model: str, topic_id: uuid.UUID | None = None
+    session: AsyncSession, api_key: str, model: str, topic_id: uuid.UUID | None = None,
+    *, call_cap: int | None = None,
 ) -> uuid.UUID | None:
-    """Generate and publish a single backlog item. Returns the concept id."""
-    claimed = (await session.execute(_CLAIM, {"topic_id": topic_id})).first()
-    await session.commit()
+    """Claim a title and daily budget together, then generate outside the transaction."""
+    cap = get_settings().generation_daily_call_cap if call_cap is None else call_cap
+    try:
+        claimed = (await session.execute(_CLAIM, {"topic_id": topic_id})).first()
+        if claimed is not None:
+            await reserve_generation_call(session, cap)
+        await session.commit()
+    except BaseException:
+        # Quota denial/DB failure/cancellation must undo the claim and its attempt.
+        # Once committed, a call's quota reservation is never refunded.
+        await session.rollback()
+        raise
     if claimed is None:
         return None
 
@@ -209,7 +221,7 @@ async def top_up(
     if reaped:
         log.warning("reclaimed %s stale 'generating' backlog rows", len(reaped))
 
-    generated = failed = calls = 0
+    generated = failed = 0
     backoff = BACKOFF_START_SECONDS
     rate_limit_streak = 0
     for topic in (await session.execute(_POOL_COUNTS)).all():
@@ -218,13 +230,11 @@ async def top_up(
             continue
         remaining = min(deficit, topic.pending)
         while remaining > 0:
-            if calls >= call_cap:
-                # A hard ceiling so a retry loop cannot burn the daily quota.
-                log.warning("stopping: hit the daily call cap of %s", call_cap)
-                return TopUpResult(generated, failed, "daily call cap reached")
-            calls += 1
             try:
-                concept_id = await generate_one(session, api_key, model, topic.id)
+                concept_id = await generate_one(session, api_key, model, topic.id, call_cap=call_cap)
+            except GenerationBudgetExhausted:
+                log.info("stopping: shared daily call cap of %s reached", call_cap)
+                return TopUpResult(generated, failed, "daily call cap reached")
             except RateLimitedError as exc:
                 rate_limit_streak += 1
                 if rate_limit_streak >= MAX_CONSECUTIVE_RATE_LIMITS:

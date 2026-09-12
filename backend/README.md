@@ -115,6 +115,8 @@ curated backlog (150 titles)
         ↓
 worker: is a topic below MIN_POOL_PER_TOPIC published concepts?
         ↓
+claim a title + reserve one shared daily call, then commit
+        ↓
 Gemini writes {summary, example} for one backlogged title
         ↓
 validate — length bounds, no boilerplate opener, no code fence,
@@ -146,17 +148,60 @@ It is safe to run concurrently: backlog items are claimed with
 | Control | Effect |
 |---|---|
 | `GENERATION_ENABLED` | Master switch. Nothing calls Gemini when false. |
-| `GENERATION_DAILY_CALL_CAP` | Hard ceiling per run, so a retry loop cannot burn the quota. |
+| `GENERATION_DAILY_CALL_CAP` | Shared daily reservation ceiling across scheduled refill, on-demand prefetch, and catalog rewriting; zero stops new calls. |
 | `attempts < 3` | A title that keeps failing is retired rather than blocking the queue. |
 | Validation | Malformed output leaves the item pending; it never reaches a reader. |
-| `GENERATION_ON_DEMAND` | Last-resort in-request generation when one user's pool is dry. |
+| `GENERATION_ON_DEMAND` | Allows background refill when a user has few unread lessons. |
+
+### Shared generation budget
+
+`generation_daily_usage` stores committed call reservations, one row per Pacific
+calendar day. PostgreSQL computes the day in `America/Los_Angeles`, matching
+[Gemini's midnight Pacific RPD reset](https://ai.google.dev/gemini-api/docs/rate-limits),
+including daylight saving time. User assignment/streak timezones are unchanged.
+The atomic UPSERT prevents competing API/worker processes from spending the same
+last slot. Restarts and repeated job runs retain usage; a new day gets a new row.
+
+`generate_one` claims the backlog title and reserves quota in one transaction,
+then commits before calling Gemini. An exhausted budget rolls back the title
+claim and attempt. Once committed, failed responses, rate limits, cancellation,
+or a worker crash keep the reservation; uncertain provider calls must not be
+refunded. Gemini throttling still refunds the separate **backlog retry attempt**.
+Empty backlog does not consume quota. Database/reservation failures stop generation
+before the provider call. The manual rewrite worker uses the same ledger and
+respects `GENERATION_ENABLED`; unfinished lessons retain their old prompt version
+for a later run. Daily reading remains independent of generation.
+
+Set the **same `GENERATION_DAILY_CALL_CAP` on the API and every worker** sharing
+this database. Changing it does not erase existing usage. This is an application
+budget, not a provider quota lookup: other applications using the same Gemini
+project are outside this ledger, and provider rate/token limits still apply.
+
+**Before deploying this code:** apply
+[`0010_generation_daily_usage.sql`](migrations/0010_generation_daily_usage.sql)
+using the migration procedure in [RELEASING.md](../RELEASING.md). The production
+ledger remains unchanged until actual application is verified. Earlier application
+versions do not use this counter, and calls made before deployment cannot be
+reconstructed from it. Pause old generators during rollout; enable the new code
+at the next Pacific reset, or conservatively seed today's usage while generation
+is paused, to avoid granting another allowance in the middle of the day.
+
+Inspect reservations without changing them:
+
+```sql
+select budget_day, calls_used
+from public.generation_daily_usage
+order by budget_day desc
+limit 7;
+```
 
 ### Fallback ladder in `/v1/daily`
 
 1. An unseen concept in a followed topic.
-2. Failing that, generate one in the user's least-recently-seen followed topic.
-3. Failing that, widen to the whole catalog and flag `outside_followed_topics`.
-4. Failing that, return `409 catalog_exhausted`. A concept is never repeated.
+2. If that pool is dry, schedule a background refill and immediately widen to
+   the whole catalog, flagging `outside_followed_topics`.
+3. If nothing unseen remains, return `409 catalog_exhausted`. A concept is never
+   repeated. A low unread watermark can also schedule refill before exhaustion.
 
 ## Latency and database region
 

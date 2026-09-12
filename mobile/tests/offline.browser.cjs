@@ -16,6 +16,8 @@ const unread = concept('fixture-unread', 'Unread saved fixture');
 const state = { display_name: 'Fixture', timezone: 'UTC', today: date, followed_topics: ['computer-science'], learned: [], likes: [], bookmarks: [saved.slug, unread.slug], saved: [saved, unread].map(c => ({concept_slug:c.slug, title:c.title, topic_name:c.topic_name})), stats: {current:0,longest:0,total_learned:0}, assignment_slug: daily.slug, daily: { assigned_for: date, assigned_at: new Date().toISOString(), completed_at: null, learned:false, outside_followed_topics:false, concept:daily } };
 let online = true;
 let failLikes = false;
+let failTopics = false;
+let stateRequests = 0, topicRequests = 0;
 let holdLike = false, releaseLike;
 const writes = [];
 const errors = [];
@@ -43,6 +45,11 @@ const server = http.createServer((req,res) => {
     if (!online) return route.abort('internetdisconnected');
     const req = route.request(); const endpoint = new URL(req.url()).pathname.replace('/api','');
     const method = req.method();
+    if (endpoint === '/v1/me/state') stateRequests++;
+    if (endpoint === '/v1/topics') {
+      topicRequests++;
+      if (failTopics) return route.abort('connectionreset');
+    }
     if (holdLike && endpoint.endsWith('/like')) { await new Promise(r=>{releaseLike=r;}); return route.abort('internetdisconnected'); }
     if (method !== 'GET') writes.push({endpoint,method,body:req.postDataJSON()});
     if (failLikes && endpoint.endsWith('/like')) return route.fulfill({status:503,contentType:'application/json',body:'{}'});
@@ -69,6 +76,31 @@ const server = http.createServer((req,res) => {
   if (midnight) await page.clock.setFixedTime(new Date(date+'T23:59:00Z'));
   await page.goto('http://127.0.0.1:4781');
   await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+  if (process.argv.includes('--partial-connectivity')) {
+    await expect.poll(()=>topicRequests).toBeGreaterThan(0);
+    await page.waitForTimeout(300);
+    const beforeState=stateRequests, beforeTopics=topicRequests;
+    failTopics=true;
+    await page.evaluate(()=>{window.dispatchEvent(new Event('offline'));window.dispatchEvent(new Event('online'));});
+    await expect.poll(()=>topicRequests-beforeTopics).toBeGreaterThan(0);
+    await page.waitForTimeout(1000);
+    assert.equal(stateRequests-beforeState,1);
+    assert.equal(topicRequests-beforeTopics,1);
+    await expect.poll(()=>topicRequests-beforeTopics,{timeout:7000}).toBe(2);
+    await page.waitForTimeout(1000);
+    assert.equal(stateRequests-beforeState,2);
+    assert.equal(topicRequests-beforeTopics,2);
+    // Recover without an online event: the backed-off timer must still retry.
+    failTopics=false;
+    await expect.poll(()=>topicRequests-beforeTopics,{timeout:12000}).toBe(3);
+    await expect(page.getByText('Offline — changes will sync when you reconnect',{exact:true})).toHaveCount(0);
+    await page.waitForTimeout(1000);
+    assert.equal(stateRequests-beforeState,3);
+    assert.equal(topicRequests-beforeTopics,3);
+    assert.deepEqual(errors,[]);
+    console.log('PASS: partial connectivity backs off, recovers automatically, and stops polling');
+    return;
+  }
   if (midnight) {
     holdLike=true;
     await page.getByRole('button',{name:'Like',exact:true}).click();

@@ -22,23 +22,24 @@ export function createSyncLoop(run: () => Promise<boolean>, initiallyActive = tr
       try { retry = await run(); } catch { /* retry after transient failure */ }
       finally {
         running = false;
-        if (wakeAgain) {
-          wakeAgain = false;
-          schedule(0);
-        } else if (retry) {
+        const repeat = wakeAgain;
+        wakeAgain = false;
+        // A successful request can report online before a later request in
+        // this run fails. Such wakeups must not bypass or reset retry backoff.
+        if (retry) {
           schedule(delay);
           delay = Math.min(delay * 2, 30000);
         } else {
           delay = 5000;
+          if (repeat) schedule(0);
         }
       }
     }, ms);
   };
   const wake = () => {
     if (!active || stopped) return;
-    delay = 5000;
     if (running) wakeAgain = true;
-    else schedule(0);
+    else { delay = 5000; schedule(0); }
   };
 
   return {

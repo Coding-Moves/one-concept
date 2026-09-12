@@ -5,14 +5,14 @@
  * slug space so a topic the app has never heard of is never dropped.
  */
 
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiRequest } from '../api/client';
+import { enqueue, pending } from './mutationQueue';
+import { OfflineCache } from './offlineCache';
+import { TopicStore, ServerTopic } from './topicStore';
 
-export interface ServerTopic {
-  slug: string;
-  name: string;
-  conceptCount: number;
-  following: boolean;
-}
+export type { ServerTopic } from './topicStore';
+const cache = new OfflineCache<ServerTopic[]>(AsyncStorage, 'one-concept/topics/v1/');
 
 interface TopicPayload {
   slug: string;
@@ -21,19 +21,22 @@ interface TopicPayload {
   following: boolean;
 }
 
-export async function fetchTopics(): Promise<ServerTopic[]> {
-  const rows = await apiRequest<TopicPayload[]>('/v1/topics');
-  return rows.map((r) => ({
-    slug: r.slug,
-    name: r.name,
-    conceptCount: r.concept_count,
-    following: r.following,
-  }));
-}
+export const topicStore = new TopicStore({
+  read: () => cache.get('catalog'),
+  write: topics => cache.set('catalog', topics),
+  fetch: async () => {
+    const rows = await apiRequest<TopicPayload[]>('/v1/topics');
+    return rows.map(r => ({
+      slug: r.slug, name: r.name, conceptCount: r.concept_count, following: r.following,
+    }));
+  },
+  pending: async () => (await pending()).find(m => m.kind === 'topics')?.slugs,
+  enqueue: slugs => enqueue({ kind: 'topics', slugs }),
+});
 
-/** Replace the followed set. Whole-list semantics: the caller sends every
- *  slug it wants followed, so nothing it omits by accident survives — which
- *  is exactly why the caller must pass the full server list, not a subset. */
-export async function setFollowedTopics(slugs: string[]): Promise<void> {
-  await apiRequest<void>('/v1/me/topics', { method: 'PUT', body: { topics: slugs } });
+export const fetchTopics = () => topicStore.load();
+
+export async function clearTopicsCache(): Promise<void> {
+  topicStore.reset();
+  await cache.clear();
 }

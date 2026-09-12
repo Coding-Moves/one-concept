@@ -7,20 +7,98 @@ claims as completed work.
 
 ## Current status
 
-- Assigned scope: add the explicitly requested one-time What's New card for
-  `1.7.1` to the open release PR.
-- Branch: `codex/1-7-1-whats-new`, based on `develop` at `0596f6d`.
-- Version preparation [#178](https://github.com/Coding-Moves/one-concept/pull/178)
-  is merged. Release [#179](https://github.com/Coding-Moves/one-concept/pull/179)
-  is open; its migration check and version-preparation preview OTA passed.
-- Card and standing-policy follow-up:
-  [#180](https://github.com/Coding-Moves/one-concept/pull/180), targeting `develop`
-  so it is included in release #179. Its PR records the final merge/check status.
-- [PR #177](https://github.com/Coding-Moves/one-concept/pull/177) is merged; its
-  [preview OTA](https://github.com/Coding-Moves/one-concept/actions/runs/34677521802)
-  passed. Its completed browser checks also covered retry after reconnecting,
-  dark/reduced-motion mode, and friendly offline sign-in errors.
-- Production merge/publication remains the owner's next step after release review.
+- Review follow-up complete in the same PR #183: pending actions survive midnight
+  and partial connection failures retain retry backoff. Each fix has its own
+  commit with regression coverage; prior commits and APK compatibility remain.
+- Completed scope: only [#133](https://github.com/Coding-Moves/one-concept/issues/133).
+  [PR #183](https://github.com/Coding-Moves/one-concept/pull/183) is open into
+  `develop` for offline reading, personalization persistence, and automatic
+  action synchronization. Problems were reproduced before implementation.
+- Branch: `codex/133-offline-reading-sync`, based on refreshed `origin/develop`
+  at `89a8fb8`. The starting tree matches the tested baseline.
+- Release #179 and card follow-up #180 are merged; #181 synchronized `main`
+  back into `develop`. This task does not authorize another production release.
+
+## PR #183 review fixes — 2026-09-12
+
+- Owner requested both findings fixed in the existing PR against `develop`.
+  Planned and delivered one fix/test commit per finding, followed by this
+  documentation handoff. Read the exact Expo SDK 57 documentation before edits.
+- Reproduced both problems before editing: a save waiting behind a like across
+  midnight never persisted (the unchanged `develop` control succeeded); successful
+  state requests followed by failed topics requests caused rapid repeated fetches.
+  The new committed browser scenarios fail on the previous PR export.
+- `d9a07f5` — `fix: preserve pending actions across midnight`: split account
+  invalidation from daily refresh, preserve pending counts, and prevent cached
+  previews from overwriting pending optimistic actions. Browser coverage checks
+  queued save persistence through date change, offline restart, and replay.
+- `409b1af` — `fix: retain backoff after partial sync failures`: failed attempts
+  retain backoff even when their own requests report connectivity changes.
+  Tests cover the full 5/10/20/30-second progression, immediate reconnect while
+  waiting, coalesced successful wakeups, and automatic recovery in the browser.
+- **Validation:** 31 Node 24 tests, TypeScript, Android/web production exports,
+  and whitespace checks passed. Both new browser scenarios and the full offline
+  flow passed, including timer-only reconnect, 503 recovery, offline save restart,
+  and sign-out with an in-flight request. No browser runtime errors. No backend
+  changes; backend tests, live services, and physical-device checks were not run.
+- **Handoff:** both fixes stay in [PR #183](https://github.com/Coding-Moves/one-concept/pull/183)
+  on `codex/133-offline-reading-sync`. Native runtime, version, and dependencies
+  are unchanged. Documentation commit: `docs: record PR 183 review fixes`.
+
+## Offline reading and synchronization (#133) — 2026-09-12
+
+- Before editing, exported the unchanged web app and exercised it in Chromium
+  with dummy authentication and intercepted API requests. No live account used.
+- Confirmed: a custom saved concept opened online loses its full text after an
+  offline restart; a warmed topic catalog is unavailable after offline restart;
+  offline topic changes do not enter the persistent queue; restoring connectivity
+  alone leaves an offline like queued without sending a request.
+- Passing controls: saved detail online, cached Today offline, and durable offline
+  like queuing. Preserve those existing behaviors and the offline banner.
+- Planned atomic commits: persistent full-concept reading with account cleanup
+  and tests; cached topic catalog and queued follows with tests; automatic sync
+  triggers with tests; validation, codebase map, and PR handoff.
+- Owner chose to keep the current APK: automatically retry while the app is open
+  or reopened. No OS background worker, native dependency, or version/runtime bump.
+- Read the exact Expo SDK 57 documentation before mobile edits. Other issues,
+  including #182's password-visibility request, remain outside this PR.
+- Additional replay checks reproduced two related failures before their fixes:
+  a 503 reverted a queued unlike in the UI; a request failing after sign-out
+  recreated the old action queue. Preserve pending choices during reconciliation
+  and fence late request callbacks/token resolution after account cleanup.
+- Implemented full per-lesson storage and missing saved-lesson downloads;
+  shared cached topics with durable follows; serialized outbox writes; automatic
+  foreground retry with 5–30 second backoff, immediate browser/foreground wakeup,
+  and no idle polling once reachable with an empty queue. Saved reading requires
+  the lesson to have finished downloading during an online session.
+- **Validation:** all 28 Node 24 regression tests, TypeScript, Android/web Expo
+  production exports, and whitespace checks passed. The mocked Chromium flow
+  passed offline restart, unopened saved-lesson downloads, cached sharing, follows,
+  likes/saves, timer-only and browser-event reconnect, 503 retention/recovery,
+  and sign-out with a request in flight. Inspected the offline detail screenshot.
+  No live backend, physical phone, native share sheet, or production deployment
+  was tested; no backend code changed and backend tests were not run.
+- **Repeatability:** `mobile/tests/offline.browser.cjs` and its README retain the
+  before/after reproduction flow, dummy public configuration, and optional race
+  checks. New focused Node tests cover storage, outbox, topics, reconciliation,
+  and scheduler behavior without adding dependencies.
+
+| Change | Commit |
+| --- | --- |
+| Baseline reproduction and scope | `0e82f03` |
+| Full offline lesson storage and saved downloads | `0085285` |
+| Cached topics and queued follow choices | `41da1ab` |
+| Serialized durable outbox | `f8d1ca6` |
+| Automatic foreground synchronization | `1a82c2e` |
+| Preserve pending choices during reconciliation | `cfa24ea` |
+| Sign-out request fence and browser regression | `d19e1fe` |
+| Validation and navigation guide | `docs: record issue 133 validation and handoff` |
+
+- **PR:** [#183](https://github.com/Coding-Moves/one-concept/pull/183), opened
+  into `develop` with all individual commits and the owner's configured identity.
+  Publication bookkeeping: `docs: link issue 133 pull request`.
+- **Handoff:** ready for owner review. The PR remains open; merging and release
+  preparation are the owner's next steps, outside this task.
 
 ## Working agreement — 2026-09-11
 

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { fetchTopics, ServerTopic, setFollowedTopics } from '../services/topicsApi';
+import { fetchTopics, ServerTopic, topicStore } from '../services/topicsApi';
 
 export interface Topics {
   loading: boolean;
@@ -17,7 +17,7 @@ export function useTopics(): Topics {
   // Key on the user id, not the session object: supabase hands a fresh object
   // on every token refresh, which would otherwise refetch the list hourly.
   const userId = session?.user?.id ?? null;
-  const [topics, setTopics] = useState<ServerTopic[]>([]);
+  const topics = useSyncExternalStore(topicStore.subscribe, topicStore.getSnapshot);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -25,7 +25,6 @@ export function useTopics(): Topics {
 
   useEffect(() => {
     if (!userId) {
-      setTopics([]);
       setLoading(false);
       return;
     }
@@ -33,9 +32,6 @@ export function useTopics(): Topics {
     setLoading(true);
     setError(false);
     fetchTopics()
-      .then((list) => {
-        if (!cancelled) setTopics(list);
-      })
       .catch(() => {
         if (!cancelled) setError(true);
       })
@@ -49,25 +45,10 @@ export function useTopics(): Topics {
 
   const toggle = useCallback(
     (slug: string) => {
-      // Compute the next list synchronously from current state — never read a
-      // value assigned inside a setState updater, which React may not have run
-      // yet (that would PUT an empty list and unfollow everything).
-      const next = topics.map((t) =>
-        t.slug === slug ? { ...t, following: !t.following } : t
-      );
-      setTopics(next);
-
-      const followed = next.filter((t) => t.following).map((t) => t.slug);
-      // Fire-and-forget; on failure reload the server's truth so the pill can
-      // never lie about what was actually saved.
-      setFollowedTopics(followed).catch(() => {
-        fetchTopics()
-          .then(setTopics)
-          .catch(() => {});
-      });
+      topicStore.toggle(slug).catch(() => setError(true));
     },
-    [topics]
+    []
   );
 
-  return { loading, error, retry, topics, toggle };
+  return { loading: loading && topics.length === 0, error, retry, topics, toggle };
 }

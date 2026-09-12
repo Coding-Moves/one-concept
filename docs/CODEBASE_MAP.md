@@ -34,7 +34,7 @@ inside a root stack, with a concept-detail modal above them.
 | `ProfileScreen.tsx` | Account, reminder preferences, theme, sign-out, and links to profile subpages. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Saved concepts and detail navigation. |
-| `ConceptDetailScreen.tsx` | Full lesson fetched by slug, with bundled catalog fallback. |
+| `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |
 | `AuthScreen.tsx` | Sign-in, sign-up, and password recovery. |
 | `AboutScreen.tsx` | Branding and app information. |
 
@@ -61,26 +61,40 @@ typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
   `api/fetchWithTimeout.ts` bounds API and auth fetches to 15 seconds.
 - `ProgressContext.tsx` is the shared UI state owner. It loads cached state
   before revalidation, applies optimistic actions, serializes mutation requests,
-  and flushes queued work on foreground/connectivity events.
+  and flushes queued work on the same mutation chain. `services/syncLoop.ts`
+  retries while offline or actions remain, using 5–30 second backoff, including
+  when only some requests succeed. Daily refreshes preserve pending actions;
+  account/source changes invalidate them and clear the displayed state. Foreground
+  and browser reconnect events wake an idle loop immediately; backgrounding
+  pauses timers.
+  This remains compatible with the current APK and has no closed-app worker.
   Screen retries use its serialized `refresh`; topic and detail screens have
   their own retry paths. Failed loads do not substitute demo lessons or totals
   for an authenticated account.
 - `services/progressRepository.ts` defines the persistence interface.
   `remoteProgressRepository.ts` implements API state, account caching, optimistic
-  offline fallbacks, and replay. `localProgressRepository.ts` and `storage.ts`
+  offline fallbacks, and replay. `pendingProgress.ts` retains unacknowledged
+  likes, saves, and same-day completions during server reconciliation.
+  `localProgressRepository.ts` and `storage.ts`
   retain local/demo support; this is not a separate visible guest navigation flow.
-- `mutationQueue.ts` stores the latest intent per like/save/topic/completion key
-  in AsyncStorage. Replay discards stale-day completions, retains retryable
-  failures, and reconciles state. It does not backdate server completion.
+- `mutationQueue.ts` wires AsyncStorage to `mutationOutbox.ts`, which serializes
+  disk writes and stores the latest intent per like/save/topic/completion key.
+  Replay discards stale-day completions, retains retryable failures, and
+  reconciles state. It does not backdate server completion.
 - `accountCaches.ts` centralizes account cache cleanup. The remote repository's
-  epoch guards prevent some late results from being persisted after a wipe.
+  epoch guards reject late mutation callbacks after a wipe; the API invalidates
+  requests still waiting for an old account's token during cleanup.
   Device theme/demo state is separate from account data.
 - `dailyApi.ts` maps server concepts to UI types and clears an old daily cache;
-  current daily data arrives in `/v1/me/state`. `conceptApi.ts` fetches full
-  concepts by slug. UI concept IDs are slugs, while the database also has UUIDs.
-- `hooks/useTopics.ts` and `services/topicsApi.ts` load the dynamic server catalog
-  and replace follow sets. This path is separate from the progress repository's
-  queued topic mutations; inspect the caller before assuming offline support.
+  current daily data arrives in `/v1/me/state`. `conceptApi.ts` persists full
+  lessons by slug, including each cached daily lesson and missing saved lessons
+  downloaded with three workers. Offline reading requires a completed download.
+  `offlineCache.ts` provides per-entry storage and fences late writes on sign-out.
+  UI concept IDs are slugs, while the database also has UUIDs.
+- `hooks/useTopics.ts`, `services/topicsApi.ts`, and `topicStore.ts` share the
+  cached dynamic topic catalog. Follow changes enter the same durable outbox as
+  other actions; queued choices override stale server responses until replay.
+  Both the catalog and full-concept cache participate in account cleanup.
 - `services/notifications.ts` handles permissions, Android channel setup, Expo
   tokens, timezone sync, preference caching, and deregistration before sign-out.
 - `data/concepts.ts`, `services/dailyConcept.ts`, `dates.ts`, `streak.ts`, and
@@ -168,7 +182,8 @@ session pooler. Applied migrations must not be rewritten.
 
 - Mobile dependencies/scripts are in `mobile/package.json` and `package-lock.json`;
   use npm. `npm run typecheck` runs `tsc --noEmit`; `npm test` uses Node 24's
-  built-in runner for session recovery, auth messages, and request timeouts.
+  built-in runner for session recovery, auth messages, request timeouts, offline
+  cache cleanup, outbox ordering, topic persistence, and sync scheduling.
   Expo provides Android/iOS/web development commands. Native project folders are
   not tracked. EAS profiles separate development, preview, production, and production APKs.
 - Backend dependencies are pinned in `requirements.txt`/`requirements-dev.txt`.
@@ -207,8 +222,8 @@ the implementation or older documentation:
   only. Both are used by the authenticated application today.
 - `mobile/DEPLOYMENT.md` describes an older OTA trigger and fewer workflows.
   Use current workflow YAML plus `RELEASING.md` to trace release behavior.
-- The roadmap still lists offline reading as future work although cached state
-  and queued progress writes exist. This does not establish complete offline
-  coverage for every screen (topic personalization has its own request path).
+- The roadmap's older offline milestones predate the current full-lesson cache,
+  cached personalization, and foreground queue synchronization. Closed-app OS
+  background scheduling remains outside the current APK's capabilities.
 - The backend README's test-count/phase notes are historical. See
   [WORK_LOG.md](WORK_LOG.md) for the actual local validation baseline.

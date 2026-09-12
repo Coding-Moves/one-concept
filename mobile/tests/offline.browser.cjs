@@ -119,10 +119,18 @@ const server = http.createServer((req,res) => {
     // No Saved screen/cache yet: downloaded lesson bodies must supply older titles offline.
     online=false; await page.reload();
     await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+    const storedLessons = await page.evaluate(slugs => slugs.map(slug => {
+      const raw = localStorage.getItem('one-concept/concepts/v1/' + slug);
+      const lesson = raw ? JSON.parse(raw) : null;
+      return lesson && {id:lesson.id, summary:lesson.summary, example:lesson.example};
+    }), collection.map(c => c.slug));
+    assert.deepEqual(storedLessons, collection.map(c => ({id:c.slug, summary:c.summary, example:c.example})));
+    console.log('PASS: all 365 saved explanations and examples persist across offline restart');
     await profile(); await page.getByText('Saved concepts',{exact:true}).click();
     await page.getByPlaceholder('Search saved concepts').fill('Older mathematics');
     await page.getByRole('button',{name:'Open Older mathematics fixture',exact:true}).click();
     await expect(page.getByText(collection[364].summary,{exact:true})).toBeVisible();
+    await expect(page.getByText(collection[364].example,{exact:true})).toBeVisible();
     await close();
     console.log('PASS: unopened older saved lesson remains searchable and readable offline');
     await page.getByRole('button',{name:'Back',exact:true}).click();
@@ -238,7 +246,10 @@ const server = http.createServer((req,res) => {
   await profile(); await page.getByText('Saved concepts',{exact:true}).click();
   await page.getByRole('button',{name:'Open Saved fixture',exact:true}).click();
   if (baseline) await expect(page.getByText('This concept couldn’t be loaded. Check your connection and try again.',{exact:true})).toBeVisible();
-  else await expect(page.getByText(saved.summary,{exact:true})).toBeVisible();
+  else {
+    await expect(page.getByText(saved.summary,{exact:true})).toBeVisible();
+    await expect(page.getByText(saved.example,{exact:true})).toBeVisible();
+  }
   console.log(baseline?'CONFIRMED: previously viewed saved body unavailable offline':'PASS: viewed saved body survives offline restart');
   if (process.env.OFFLINE_SCREENSHOT_PATH) await page.screenshot({path:process.env.OFFLINE_SCREENSHOT_PATH});
   if (!baseline) {
@@ -250,6 +261,7 @@ const server = http.createServer((req,res) => {
   if (!baseline) {
     await page.getByRole('button',{name:'Open Unread saved fixture',exact:true}).click();
     await expect(page.getByText(unread.summary,{exact:true})).toBeVisible();
+    await expect(page.getByText(unread.example,{exact:true})).toBeVisible();
     console.log('PASS: saved body downloaded without opening its detail'); await close();
   }
   online=true; await page.reload();

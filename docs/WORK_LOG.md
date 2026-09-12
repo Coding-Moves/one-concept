@@ -7,16 +7,13 @@ claims as completed work.
 
 ## Current status
 
-- Current chunk: [#182](https://github.com/Coding-Moves/one-concept/issues/182),
-  saved reading offline and password visibility, on
-  `codex/182-offline-saved-password` from refreshed `develop` (`58e9b1d`).
-  Source inspection confirms the missing toggle. The full-lesson disk cache
-  already exists on `develop` but is absent from production `main`; verify the
-  exported UI before deciding whether any further offline implementation is needed.
-- Read the exact Expo SDK 57 and React Native 0.86 input/button documentation.
-  Planned commits: scope; password toggle with behavior regression; offline
-  acceptance coverage if useful; documentation and PR handoff. Keep the change
-  JS-only, preserve existing cache cleanup, and open one PR into `develop`.
+- Implemented and validated [#182](https://github.com/Coding-Moves/one-concept/issues/182)
+  on `codex/182-offline-saved-password` from refreshed `develop` (`58e9b1d`).
+  Added show/hide controls for sign-in/signup. Verified the existing full-lesson
+  cache across offline restart, and strengthened coverage of saved examples.
+  Preparing one PR into `develop`; phone rollout requires the next release.
+- PR #188 is merged. The owner reports installing all three email templates and
+  enabling the notification in Supabase; actual inbox delivery remains unverified.
 
 - Published the three branded Supabase templates in non-draft
   [PR #188](https://github.com/Coding-Moves/one-concept/pull/188) into `develop`,
@@ -42,6 +39,41 @@ claims as completed work.
   rollout handling. Mobile and production release work are outside this chunk.
 - PR #185 (#150) is merged. Preserve the owner's identity and the preference for
   more focused commits in this and future PRs.
+
+## Saved reading offline and password visibility (#182) — 2026-09-12
+
+- Read the exact Expo SDK 57 and React Native 0.86 input/Pressable documentation.
+  Compared fresh `develop` with production `main` and inspected both issue images.
+  Production still fetches full lessons only from the API; `develop` already
+  persists/downloads saved bodies through the earlier #133/#150 changes.
+- Reproduced the missing eye button in an unchanged web export: the new browser
+  test failed at Show password. The existing 365-item offline scenario passed
+  before editing, so no duplicate cache implementation or new native storage
+  dependency was needed. Lessons must download online once before offline use.
+- Added an eye button with changing Show/Hide password accessibility labels and
+  a 48px minimum target. It preserves typed values/autofill hints, disables
+  correction, and masks again on sign-in/signup submission and mode changes.
+  The field/control disable during requests. Visibility is not persisted.
+- **Validation:** TypeScript and all 33 Node 24 tests passed, with no skips.
+  Web and Android production exports succeeded with dummy configuration.
+  The password browser regression passed both themes, keyboard activation,
+  value/submission preservation, busy state, signup confirmation, remasking,
+  and 320/390/960px targets/overflow. An initial harness assertion expected an
+  explicit HTML text type; corrected it to check the input's effective type.
+- Both final offline browser scenarios passed: large collections and timer-only
+  reconnect with a replay error/sign-out in flight. Verified all 365 explanations
+  and examples on disk after restart, unopened older/read saved bodies in the UI,
+  search/filter, retry, pending unsaves, offline save, and cache cleanup. No browser
+  runtime errors. Inspected light/dark auth and offline lesson screenshots.
+- Artifacts stay under `/tmp/one-concept-182-*`. No live account, email, backend,
+  or production service was used. Native keyboard/autofill, screen readers, and
+  on-device storage were not exercised; preview checks remain in
+  `mobile/tests/README.md`. Backend tests were not run for this mobile-only change.
+- Commits: `b76fecd` records scope; `2e41289` adds the UI and browser regression;
+  `test: verify all saved lesson bodies survive offline restart` strengthens
+  offline acceptance; `docs: record password and offline reading verification`
+  records the map, test instructions, and handoff. Version/runtime are unchanged;
+  this chunk prepares a feature PR and does not open or merge a release PR.
 
 ## Separate branded email templates — 2026-09-12
 

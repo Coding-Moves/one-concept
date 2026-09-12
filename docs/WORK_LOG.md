@@ -7,6 +7,17 @@ claims as completed work.
 
 ## Current status
 
+- Published the three branded Supabase templates in non-draft
+  [PR #188](https://github.com/Coding-Moves/one-concept/pull/188) into `develop`,
+  from `a6e81f1` on `codex/branded-auth-email-templates`. GitHub reports the PR
+  mergeable with no conflicts; no CI checks are configured for this PR.
+- Resend delivery preparation remains in [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187).
+  Its duplicate template files are removed in a follow-up commit. Original
+  histories are intact. Template installation is independent of a domain purchase
+  or app release and still requires pasting HTML into Supabase.
+- No SMTP settings, live templates, notifications, or production release were
+  changed. Real inbox rendering and delivery remain unverified.
+
 - Implemented and validated [#151](https://github.com/Coding-Moves/one-concept/issues/151),
   shared daily Gemini generation budget, on `codex/151-shared-generation-budget`
   from refreshed `origin/develop` (`65eb21d`). Published
@@ -20,6 +31,38 @@ claims as completed work.
   rollout handling. Mobile and production release work are outside this chunk.
 - PR #185 (#150) is merged. Preserve the owner's identity and the preference for
   more focused commits in this and future PRs.
+
+## Separate branded email templates — 2026-09-12
+
+- Owner requested the three templates in a separate non-draft PR, allowing
+  branding to merge while domain/provider setup stays deferred. Rechecked
+  Supabase documentation: customizing templates does not remove the built-in
+  sender's team-only/two-emails-per-hour restrictions. Existing configured
+  Gmail SMTP can be used separately once authenticated and tested.
+- Preserved nine original template commits from #187, in order, covering signup,
+  recovery, copy/spacing improvements, the dark text masthead, the Coding Moves
+  organization link, and the password-changed notification. Sources are byte for
+  byte identical to the previously validated versions. The owner selected text
+  branding; no custom app logo was available.
+- Added `docs/EMAIL_TEMPLATES.md` with exact subjects, manual installation,
+  confirmation placeholders, the security toggle, existing redirect contract,
+  and activation checks. The guide does not require domain purchase or Resend.
+- **Validation:** the unchanged HTML previously passed 60 Chromium scenarios:
+  48 for signup/recovery and 12 for password changed, across four widths and
+  normal/doubled/stripped styles, plus normal/long verification URLs. Those checks
+  covered links, fallback URLs, styled overflow, spacing, action sizes, and no
+  external resources; mobile/desktop/enlarged previews were inspected. For this
+  split, verified byte equality with `b0695ca`, inspected app redirect/support
+  source, checked local Markdown paths/anchors, and ran `git diff --check`.
+  Browser scenarios were not repeated for identical HTML. Backend/mobile and
+  live-email tests were not run for this HTML/documentation-only change.
+- Commits: `245b7f6` records scope; `d88f432` through `50d065d` preserve the nine
+  template changes; `4ccba83` adds installation/navigation docs; this handoff is
+  `docs: record independent email template PR and validation`.
+- **Handoff:** merge #188 independently of #187. Then install/test templates in
+  Supabase before announcing the changed emails. Merging/releasing the app does
+  not synchronize templates or enable security notifications. Delivery issues
+  #152/#171 stay open for the remaining operational work; no release PR opened.
 
 ## Shared generation budget (#151) — 2026-09-12
 

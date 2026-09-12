@@ -18,6 +18,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
+| Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
 
 ## Mobile navigation and presentation
 

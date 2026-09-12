@@ -146,7 +146,7 @@ export class RemoteProgressRepository implements ProgressRepository {
   async load(): Promise<ProgressState> {
     const epoch = this.epoch;
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true'), epoch);
     } catch {
       const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
       if (raw && epoch === this.epoch) {
@@ -216,7 +216,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     // guess (the caller's concept id, no title). Without this the History tab
     // only caught up on a full reload, i.e. an app restart (issue #91).
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true'), epoch);
     } catch {
       // The completion already persisted; a failed reload must not roll it back.
       // Patch in place using the caller's concept id (the cached assignment can
@@ -247,7 +247,7 @@ export class RemoteProgressRepository implements ProgressRepository {
 
     // Whole-list semantics: PUT replaces the set, so a retry is harmless.
     try {
-      const payload = await apiRequest<StatePayload>('/v1/me/topics', {
+      const payload = await apiRequest<StatePayload>('/v1/me/topics?compact=true', {
         method: 'PUT',
         body: { topics: slugs },
       });
@@ -350,7 +350,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     // by the UI. Fall back to patching in place; the saved list catches up on
     // the next successful load.
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true'), epoch);
     } catch {
       return this.remember(patched(), epoch);
     }
@@ -394,7 +394,7 @@ export class RemoteProgressRepository implements ProgressRepository {
 
     if (epoch !== this.epoch) return null;
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state'), epoch);
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true'), epoch);
     } catch {
       return null;
     }
@@ -413,7 +413,7 @@ export class RemoteProgressRepository implements ProgressRepository {
         });
         return;
       case 'topics':
-        await apiRequest('/v1/me/topics', { method: 'PUT', body: { topics: m.slugs } });
+        await apiRequest('/v1/me/topics?compact=true', { method: 'PUT', body: { topics: m.slugs } });
         return;
       case 'learn':
         await apiRequest('/v1/daily/complete', { method: 'POST' });

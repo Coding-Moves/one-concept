@@ -59,7 +59,9 @@ const server = http.createServer((req,res) => {
     const method = req.method();
     if (endpoint === '/v1/me/state') {
       stateRequests++;
-      if (process.argv.includes('--require-compact')) assert.equal(new URL(req.url()).searchParams.get('compact'),'true');
+    }
+    if (process.argv.includes('--require-compact') && ['/v1/me/state','/v1/me/topics','/v1/me'].includes(endpoint)) {
+      assert.equal(new URL(req.url()).searchParams.get('compact'),'true');
     }
     if (endpoint === '/v1/me/saved') {
       savedRequests++;

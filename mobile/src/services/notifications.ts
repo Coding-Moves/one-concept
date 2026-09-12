@@ -37,7 +37,7 @@ Notifications.setNotificationHandler({
 export async function syncTimezone(): Promise<void> {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   if (!timezone) return;
-  await apiRequest<unknown>('/v1/me', { method: 'PATCH', body: { timezone } });
+  await apiRequest<unknown>('/v1/me?compact=true', { method: 'PATCH', body: { timezone } });
 }
 
 /** Ask permission (first run only) and register this handset's token. */

@@ -7,15 +7,18 @@ claims as completed work.
 
 ## Current status
 
-- Active: [#151](https://github.com/Coding-Moves/one-concept/issues/151), shared
-  daily Gemini generation budget, on `codex/151-shared-generation-budget` from
-  refreshed `origin/develop` (`65eb21d`). PR #185 is merged.
-- Plan: persist an atomic daily call reservation; integrate scheduled/on-demand
-  generation and catalog rewriting; verify concurrency, rollover, failures, and
-  kill switches; open one PR into `develop` with focused commits and owner authorship.
-- A new migration is needed. Apply it only to disposable test PostgreSQL during
-  this task; leave the production ledger unchanged until application is verified.
-  Mobile and production release work are outside this chunk.
+- Implemented and validated [#151](https://github.com/Coding-Moves/one-concept/issues/151),
+  shared daily Gemini generation budget, on `codex/151-shared-generation-budget`
+  from refreshed `origin/develop` (`65eb21d`). Publishing one PR into `develop`.
+- Scheduled refill, API prefetch, and manual catalog rewrites now share persisted
+  daily reservations. Reruns/restarts retain usage; a denied reservation cannot
+  spend a backlog attempt. All 145 backend tests passed with no skips.
+- Migration `0010_generation_daily_usage.sql` was applied only to disposable
+  PostgreSQL 16. It must be applied before production deployment; the production
+  ledger remains unchanged. The README records consistent settings and first-day
+  rollout handling. Mobile and production release work are outside this chunk.
+- PR #185 (#150) is merged. Preserve the owner's identity and the preference for
+  more focused commits in this and future PRs.
 
 ## Shared generation budget (#151) — 2026-09-12
 
@@ -37,6 +40,40 @@ claims as completed work.
 - Intended commits: scope/reproduction; counter migration/service/concurrency
   tests; backlog/scheduled enforcement/tests; prefetch integration/tests; rewrite
   enforcement/tests; operational documentation/validation; PR bookkeeping.
+
+- Added migration `0010_generation_daily_usage.sql`, an ORM mirror, and a backend-
+  only ledger with an atomic UPSERT. A new Pacific budget date gets a new row;
+  no reset job or process memory is involved. All services must use the same cap.
+- Before pool integration, the new PostgreSQL regression reproduced two scheduled
+  runs each spending two calls under a cap of two (expected second run: zero).
+  After integration it passes. The prefetch zero-cap test now makes zero calls,
+  and simultaneous scheduled/prefetch runs share their remaining slots.
+- Quota reservation and backlog claim commit together before the provider call,
+  releasing the connection. Denial or a failed commit rolls the claim back. Empty
+  backlog spends nothing; committed failed/throttled/cancelled attempts retain
+  quota. Separate backlog rate-limit refunds and retry retirement remain intact.
+- Catalog rewrites use the same reservation gate, honor generation/key switches,
+  retain old content when stopped, and dispose their engine on every exit. The
+  maintenance command was exercised only with a disposable DB and mocked provider.
+- **Validation:** all 145 backend tests passed against PostgreSQL 16 (no skips),
+  including 33 new cases across the counter and generation-path suites. Ruff
+  (`F,E9`), whitespace, and documentation link checks passed. Twenty concurrent
+  reservations with cap three admit exactly three; twelve concurrent backlog
+  generations also admit three unique publications without extra spent attempts.
+  Coverage includes independent sessions/reruns, Pacific winter/summer midnight,
+  cap changes/zero/negative values, RLS denial for client roles, empty backlog,
+  committed-before-provider checks, DB/commit failures, provider failures and
+  cancellation, switches, rate-limit refunds, and cross-path competition.
+- **Deployment limits:** production DDL, migration-ledger updates, paid calls,
+  live provider quota checks, and deployment were not performed. Mobile tests
+  were not run because no mobile code changed. The ledger starts empty and cannot
+  reconstruct old calls: pause old generators during rollout, then enable at the
+  next budget reset or seed today's usage conservatively. Other applications'
+  Gemini usage is outside this application ledger; provider limits still apply.
+- Commits: `92d537f` scope/reproduction; `91f70ba` ledger/migration/tests;
+  `b8eabdc` claim/scheduled enforcement/tests; `2b199da` prefetch integration/tests;
+  `e39df10` rewrite enforcement/tests. Documentation handoff:
+  `docs: document shared generation budget rollout and validation`.
 
 ## Bounded startup state (#150) — 2026-09-12
 

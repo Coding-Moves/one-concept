@@ -10,7 +10,8 @@ claims as completed work.
 - Prepared one PR chunk for [#152](https://github.com/Coding-Moves/one-concept/issues/152)
   and [#171](https://github.com/Coding-Moves/one-concept/issues/171): Resend delivery
   setup and branded authentication emails. Branch `codex/152-171-resend-auth-email`
-  starts from refreshed `origin/develop` (`65eb21d`).
+  starts from refreshed `origin/develop` (`65eb21d`). Published as
+  [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187) into `develop`.
 - Owner chose Resend and has no domain. Prepare all repository files and exact
   manual setup steps now; domain registration, account configuration, and live
   delivery verification remain pending. Owner subsequently specified a $0
@@ -72,7 +73,16 @@ claims as completed work.
   chunk changes only standalone templates and documentation, not application code.
 - Commits so far: `cf7cf8d` scope; `a17ede9` signup; `ed28df7` recovery;
   `a44d624` account-focused copy; `2dd12c7` setup guide; `de1d290` scalable text.
-  Validation handoff: `docs: record authentication email validation and activation limits`.
+  `fd448f9` records validation and activation limits.
+- **PR:** [#187](https://github.com/Coding-Moves/one-concept/pull/187), draft into
+  `develop`, with closing references for both #152 and #171. Both issues remain
+  open until the live activation checklist passes and the PR merges. Publication
+  bookkeeping: `docs: link combined authentication email pull request`.
+- **Owner handoff:** create the free Resend account and decide whether NIC.UA's
+  card-verification/public-contact terms are acceptable before registering any
+  free domain. The question remains pending; no consent was inferred. Complete
+  the exact DNS/SMTP/template steps in `docs/EMAIL_SETUP.md` once a suitable domain
+  is active. No purchase or provider switch is authorized by the $0 scope.
 
 ## Bounded startup state (#150) — 2026-09-12
 

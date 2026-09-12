@@ -13,7 +13,8 @@ claims as completed work.
   starts from refreshed `origin/develop` (`65eb21d`).
 - Owner chose Resend and has no domain. Prepare all repository files and exact
   manual setup steps now; domain registration, account configuration, and live
-  delivery verification remain pending. Both issues belong to this same PR.
+  delivery verification remain pending. Owner subsequently specified a $0
+  budget: no domain purchase. Both issues belong to this same PR.
 - PR #185 (#150) is merged. [PR #186](https://github.com/Coding-Moves/one-concept/pull/186)
   remains open; its independent review found no actionable issue and reran all
   63 generation tests with no skips. Its generation-budget changes are separate.
@@ -36,8 +37,13 @@ claims as completed work.
   sign-in is not currently offered in the app and is outside this chunk.
 - Read the official Resend SMTP/domain and Supabase SMTP/template documentation.
   A verified owned domain is required for real-user Resend delivery; the free
-  sending plan does not include purchasing a domain. Owner will perform the
-  purchase and account steps. No credentials belong in source or the PR.
+  sending plan does not provide one. Owner will perform account/registration
+  steps. No credentials belong in source or the PR.
+- Scope clarification: owner requires a $0 setup and will not purchase a domain.
+  NIC.UA documents free .pp.ua registration/renewal and DNS, but card verification,
+  phone activation, and public registrant data apply. Presented these conditions
+  to the owner; no registration, payment, or disclosure of contact data performed.
+  Resend acceptance of a future free domain and inbox delivery remain unverified.
 - Planned commits: scope/verification; signup email; password recovery email;
   installation and operational guide; validation and PR handoff. Preserve small
   meaningful commits, owner authorship, and the existing authentication flow.

@@ -17,6 +17,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Content engine | `backend/app/services/generation.py`, `pool.py`, `prefetch.py`; Gemini lessons from a curated backlog. |
 | Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
+| Authentication email | `backend/email-templates/` contains signup and recovery HTML for Supabase Auth; `docs/EMAIL_SETUP.md` covers Resend SMTP/DNS installation and real-inbox acceptance. These files are installed manually, not deployed by the app. |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
 
 ## Mobile navigation and presentation

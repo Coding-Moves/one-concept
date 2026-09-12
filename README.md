@@ -34,6 +34,7 @@ link's build current automatically.
 - [Architecture](docs/ARCHITECTURE.md) — how the pieces fit, selection, reminders, security
 - [Roadmap](docs/ROADMAP.md) — shipped phases and what's next
 - [Backend](backend/README.md) — API endpoints, auth, running locally
+- [Authentication email](docs/EMAIL_SETUP.md) — Resend setup, branded templates, and delivery checks
 - [Deployment](mobile/DEPLOYMENT.md) — EAS builds, OTA updates, release runbook
 
 ## Contributing

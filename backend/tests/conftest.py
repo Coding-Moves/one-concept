@@ -114,3 +114,16 @@ async def user(session):
     )
     await session.commit()
     return user_id
+
+
+@pytest_asyncio.fixture
+async def empty_generation_budget(session):
+    """Generation tests share a schema, but each starts with its own daily budget."""
+    from sqlalchemy import text
+
+    await session.execute(text("delete from public.generation_daily_usage"))
+    await session.commit()
+    yield
+    await session.rollback()
+    await session.execute(text("delete from public.generation_daily_usage"))
+    await session.commit()

@@ -2,6 +2,7 @@
 
 import asyncio
 import uuid
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
@@ -9,7 +10,7 @@ import pytest_asyncio
 from sqlalchemy import text
 from sqlalchemy.exc import DBAPIError
 
-from app.services import generation_budget as budget, pool
+from app.services import generation_budget as budget, pool, prefetch
 from app.services.generation import GeneratedConcept, GenerationError, RateLimitedError
 from app.services.generation_budget import GenerationBudgetExhausted
 
@@ -155,3 +156,63 @@ def test_negative_daily_cap_is_rejected():
         Settings(_env_file=None, database_url="postgresql://test:test@localhost/test",
                  supabase_url="http://test.invalid", supabase_jwks_url="http://test.invalid/jwks",
                  generation_daily_call_cap=-1)
+
+
+@pytest.fixture
+def prefetch_config(monkeypatch, sessionmaker_for_test):
+    config = SimpleNamespace(generation_enabled=True, generation_on_demand=True,
+                             gemini_api_key="test", gemini_model="test", generation_daily_call_cap=2)
+    monkeypatch.setattr(prefetch, "get_settings", lambda: config)
+    monkeypatch.setattr(prefetch, "SessionLocal", sessionmaker_for_test)
+    return config
+
+
+async def run_prefetch(topic):
+    prefetch.request_prefetch(topic)
+    await asyncio.gather(*list(prefetch._tasks))
+    assert topic not in prefetch._inflight
+
+
+async def test_prefetch_zero_cap_makes_no_provider_call(topic, generator, session, prefetch_config, caplog):
+    prefetch_config.generation_daily_call_cap = 0
+    with caplog.at_level("INFO"):
+        await run_prefetch(topic)
+    generator.assert_not_awaited()
+    assert await calls_used(session) == 0
+    assert "daily call cap reached" in caplog.text
+    assert not any(record.levelname == "ERROR" for record in caplog.records)
+
+
+@pytest.mark.parametrize("prefetch_first", [True, False])
+async def test_scheduled_and_prefetch_share_remaining_budget(topic, generator, session, prefetch_config, prefetch_first):
+    if prefetch_first:
+        await run_prefetch(topic)
+        assert (await top_up(session, 2)).generated == 0
+    else:
+        assert (await top_up(session, 2)).generated == 2
+        await run_prefetch(topic)
+    # Re-triggering a completed background job cannot restore its allowance.
+    await run_prefetch(topic)
+    assert generator.await_count == await calls_used(session) == 2
+
+
+async def test_prefetch_and_worker_compete_for_the_same_last_slots(topic, generator, session, prefetch_config):
+    await asyncio.gather(run_prefetch(topic), top_up(session, 2))
+    assert generator.await_count == await calls_used(session) == 2
+
+
+@pytest.mark.parametrize("disabled", ["generation_enabled", "generation_on_demand", "gemini_api_key"])
+async def test_prefetch_preserves_generation_switches(topic, generator, session, prefetch_config, disabled):
+    setattr(prefetch_config, disabled, "" if disabled == "gemini_api_key" else False)
+    await run_prefetch(topic)
+    generator.assert_not_awaited()
+    assert await calls_used(session) == 0
+
+
+async def test_prefetch_rate_limit_spends_quota_but_refunds_backlog_attempt(topic, generator, session, prefetch_config):
+    generator.side_effect = RateLimitedError()
+    await run_prefetch(topic)
+    assert generator.await_count == await calls_used(session) == 1
+    assert await session.scalar(text(
+        "select sum(attempts) from public.concept_backlog where topic_id = :id"
+    ), {"id": topic}) == 0

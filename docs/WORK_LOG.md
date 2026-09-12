@@ -9,7 +9,8 @@ claims as completed work.
 
 - Completed implementation: [#149](https://github.com/Coding-Moves/one-concept/issues/149),
   reducing database reconnect work on requests after idle time. Validated and
-  preparing the focused backend PR into `develop`.
+  published in [PR #184](https://github.com/Coding-Moves/one-concept/pull/184)
+  into `develop`.
 - Branch: `codex/149-db-connection-warmup`, from refreshed `origin/develop`
   at `f34ba77`. PR #183, including both review fixes for #133, is merged.
 - Delivered: idle-expiry reproduction, bounded/configurable warm-up with lifecycle
@@ -60,7 +61,12 @@ claims as completed work.
   unverified. Cold startup and additional connections during bursts can still pay
   setup cost. Each API process adds a periodic probe with the configured interval.
 - Commits: `50d73ab` — reproduction and scope; `6bf0399` — implementation/tests;
-  documentation handoff — `docs: document database warm-up validation`.
+  `679163a` — validation and operational documentation.
+- **PR:** [#184](https://github.com/Coding-Moves/one-concept/pull/184), open into
+  `develop` with all individual commits and the owner's configured identity.
+  Publication bookkeeping: `docs: link database warm-up pull request`.
+  Disposable reproduction/test containers were removed. Ready for owner review;
+  merging and deployment were not performed.
 
 ## PR #183 review fixes — 2026-09-12
 

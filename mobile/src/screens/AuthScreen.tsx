@@ -29,6 +29,7 @@ export function AuthScreen() {
   const [mode, setMode] = useState<Mode>('signIn');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // A banner with a bold header + body. The reset variant carries the email so
@@ -40,6 +41,7 @@ export function AuthScreen() {
   const canSubmit = email.trim().length > 3 && password.length >= 6 && !busy;
 
   const submit = async () => {
+    setPasswordVisible(false);
     setError(null);
     setNotice(null);
     setBusy(true);
@@ -143,17 +145,35 @@ export function AuthScreen() {
 
           <View style={styles.field}>
             <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              value={password}
-              onChangeText={setPassword}
-              placeholder="At least 6 characters"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
-              secureTextEntry
-              editable={!busy}
-            />
+            <View>
+              <TextInput
+                style={[styles.input, styles.passwordInput]}
+                value={password}
+                onChangeText={setPassword}
+                placeholder="At least 6 characters"
+                placeholderTextColor={colors.textMuted}
+                accessibilityLabel="Password"
+                autoCapitalize="none"
+                autoCorrect={false}
+                autoComplete={mode === 'signIn' ? 'current-password' : 'new-password'}
+                secureTextEntry={!passwordVisible}
+                editable={!busy}
+              />
+              <Pressable
+                onPress={() => setPasswordVisible(visible => !visible)}
+                disabled={busy}
+                accessibilityRole="button"
+                accessibilityLabel={passwordVisible ? 'Hide password' : 'Show password'}
+                accessibilityState={{ disabled: busy }}
+                style={({ pressed }) => [styles.passwordToggle, pressed && { opacity: 0.6 }]}
+              >
+                <Ionicons
+                  name={passwordVisible ? 'eye-off-outline' : 'eye-outline'}
+                  size={scaleIcon(20)}
+                  color={colors.textSecondary}
+                />
+              </Pressable>
+            </View>
             {mode === 'signIn' ? (
               <Pressable
                 onPress={forgotPassword}
@@ -211,6 +231,7 @@ export function AuthScreen() {
           <Pressable
             onPress={() => {
               setMode(mode === 'signIn' ? 'signUp' : 'signIn');
+              setPasswordVisible(false);
               setError(null);
               setNotice(null);
             }}
@@ -268,6 +289,18 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: scaleFont(16),
       color: colors.text,
       ...shadows.card,
+    },
+    passwordInput: { paddingRight: scaleIcon(20) + spacing.md * 2 + spacing.sm },
+    passwordToggle: {
+      position: 'absolute',
+      right: spacing.xs,
+      top: 0,
+      bottom: 0,
+      minWidth: 48,
+      minHeight: 48,
+      paddingHorizontal: spacing.sm,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     banner: {
       flexDirection: 'row',

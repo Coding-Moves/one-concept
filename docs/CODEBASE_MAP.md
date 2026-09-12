@@ -36,7 +36,7 @@ inside a root stack, with a concept-detail modal above them.
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
 | `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |
-| `AuthScreen.tsx` | Sign-in, sign-up, and password recovery. |
+| `AuthScreen.tsx` | Sign-in, sign-up, password recovery, and accessible show/hide password controls that reset on mode changes or submission. |
 | `AboutScreen.tsx` | Branding and app information. |
 
 All screens live in `mobile/src/screens/`. Reusable presentation in

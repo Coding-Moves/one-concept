@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { describeAuthError } from '../services/authErrors';
 import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 type Mode = 'signIn' | 'signUp';
@@ -56,7 +57,7 @@ export function AuthScreen() {
         }
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong. Try again.');
+      setError(describeAuthError(e));
     } finally {
       setBusy(false);
     }
@@ -78,7 +79,7 @@ export function AuthScreen() {
       // account exists ("if it's registered") — no account enumeration.
       setNotice({ title: 'Check your email', sentTo: trimmed });
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Could not send the reset email. Try again.');
+      setError(describeAuthError(e));
     } finally {
       setBusy(false);
     }

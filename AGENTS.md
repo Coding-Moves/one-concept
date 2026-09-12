@@ -91,8 +91,8 @@ Update the codebase map when an assigned change alters the structure or flow.
 ## Validation
 
 - Mobile: run `npm run typecheck` from `mobile/` for TypeScript changes. Check the
-  affected UI flow when behavior or presentation changes. There is currently no
-  mobile unit-test script; do not report nonexistent checks as passing.
+  affected UI flow when behavior or presentation changes. Run `npm test` with
+  Node 24 for authentication/session and request-timeout regression tests.
 - Backend: run `.venv/bin/python -m pytest` from `backend/`, using the relevant
   tests during development. Database tests need Podman and PostgreSQL 16; report
   skips distinctly from passes. Use test configuration, not production services.

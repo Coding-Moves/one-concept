@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
+import { UnavailableState } from '../components/UnavailableState';
+import { useOnline } from '../context/ConnectivityContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
 import { fetchConcept } from '../services/conceptApi';
@@ -23,6 +25,8 @@ export function ConceptDetailScreen() {
 
   const [concept, setConcept] = useState<Concept | null>(null);
   const [status, setStatus] = useState<Status>('loading');
+  const [attempt, setAttempt] = useState(0);
+  const online = useOnline();
 
   useEffect(() => {
     let active = true;
@@ -49,7 +53,7 @@ export function ConceptDetailScreen() {
     return () => {
       active = false;
     };
-  }, [conceptId]);
+  }, [conceptId, attempt]);
 
   return (
     <View style={styles.screen}>
@@ -73,9 +77,11 @@ export function ConceptDetailScreen() {
         </View>
       ) : status === 'error' || !concept ? (
         <View style={styles.center}>
-          <Ionicons name="cloud-offline-outline" size={scaleIcon(40)} color={colors.textMuted} />
-          <Text style={styles.errorTitle}>Couldn’t load this concept</Text>
-          <Text style={styles.errorText}>Check your connection and try again.</Text>
+          <UnavailableState
+            offline={!online}
+            message="This concept couldn’t be loaded. Check your connection and try again."
+            onRetry={() => setAttempt((value) => value + 1)}
+          />
         </View>
       ) : (
         <ScrollView contentContainerStyle={styles.content}>
@@ -101,6 +107,4 @@ const createStyles = (colors: ThemeColors) =>
     closeButton: { padding: spacing.xs },
     content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.xl },
-    errorTitle: { fontSize: scaleFont(17), fontWeight: '700', color: colors.text },
-    errorText: { fontSize: scaleFont(14), color: colors.textMuted, textAlign: 'center' },
   });

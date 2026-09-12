@@ -7,6 +7,8 @@
  * module never imports the auth stack (and never stores a token itself).
  */
 
+import { fetchWithTimeout } from './fetchWithTimeout';
+
 /** Public config only. Secrets live in backend/.env, never in the bundle. */
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
 
@@ -52,7 +54,7 @@ export function subscribeConnectivity(fn: (online: boolean) => void): () => void
   };
 }
 
-function setConnectivity(next: boolean): void {
+export function setConnectivity(next: boolean): void {
   if (next === online) return;
   online = next;
   connectivityListeners.forEach((fn) => fn(next));
@@ -82,7 +84,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}${path}`, {
+    response = await fetchWithTimeout(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),

@@ -2,6 +2,9 @@ import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SkeletonBlock } from '../components/Skeleton';
 import { StreakBadge } from '../components/StreakBadge';
+import { UnavailableState } from '../components/UnavailableState';
+import { useAuth } from '../context/AuthContext';
+import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { useTopics } from '../hooks/useTopics';
@@ -66,13 +69,14 @@ function ProgressBar({ fraction, styles }: { fraction: number; styles: Styles })
 
 export function StatsScreen() {
   const { loading, progress, streaks } = useProgress();
-  const { loading: topicsLoading, topics } = useTopics();
+  const { loading: topicsLoading, topics, error, retry } = useTopics();
+  const { session } = useAuth();
+  const online = useOnline();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
-  // Server topics present => signed in: count against the real catalog. Empty
-  // => signed-out demo: count against the bundled concepts.
-  const serverMode = topics.length > 0;
+  // A failed catalog request must not substitute demo totals for a real account.
+  const serverMode = !!session;
   const categories = useMemo(
     () =>
       serverMode
@@ -106,34 +110,44 @@ export function StatsScreen() {
         <>
           <StreakBadge streaks={streaks} />
 
-          <View style={styles.card}>
-            <View style={styles.overallRow}>
-              <Text style={styles.cardTitle}>All concepts</Text>
-              <Text style={styles.overallCount}>
-                {overall.learned} / {overall.total}
-              </Text>
-            </View>
-            <ProgressBar
-              fraction={overall.total ? overall.learned / overall.total : 0}
-              styles={styles}
+          {error && topics.length === 0 ? (
+            <UnavailableState
+              offline={!online}
+              message="Connect to load your topic breakdown. Your saved progress is still here."
+              onRetry={retry}
             />
-          </View>
-
-          <Text style={styles.sectionLabel}>By category</Text>
-
-          <View style={styles.card}>
-            {categories.map((c) => (
-              <View key={c.label} style={styles.categoryBlock}>
+          ) : (
+            <>
+              <View style={styles.card}>
                 <View style={styles.overallRow}>
-                  <Text style={styles.categoryName}>{c.label}</Text>
-                  <Text style={styles.categoryCount}>
-                    {c.learned} / {c.total}
+                  <Text style={styles.cardTitle}>All concepts</Text>
+                  <Text style={styles.overallCount}>
+                    {overall.learned} / {overall.total}
                   </Text>
                 </View>
-                <ProgressBar fraction={c.total ? c.learned / c.total : 0} styles={styles} />
+                <ProgressBar
+                  fraction={overall.total ? overall.learned / overall.total : 0}
+                  styles={styles}
+                />
               </View>
-            ))}
-          </View>
+
+              <Text style={styles.sectionLabel}>By category</Text>
+
+              <View style={styles.card}>
+                {categories.map((c) => (
+                  <View key={c.label} style={styles.categoryBlock}>
+                    <View style={styles.overallRow}>
+                      <Text style={styles.categoryName}>{c.label}</Text>
+                      <Text style={styles.categoryCount}>
+                        {c.learned} / {c.total}
+                      </Text>
+                    </View>
+                    <ProgressBar fraction={c.total ? c.learned / c.total : 0} styles={styles} />
+                  </View>
+                ))}
+              </View>
+            </>
+          )}
         </>
       )}
     </ScrollView>

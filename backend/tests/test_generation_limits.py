@@ -13,6 +13,7 @@ from sqlalchemy.exc import DBAPIError
 from app.services import generation_budget as budget, pool, prefetch
 from app.services.generation import GeneratedConcept, GenerationError, RateLimitedError
 from app.services.generation_budget import GenerationBudgetExhausted
+from app.workers import rewrite_catalog as rewrite
 
 pytestmark = pytest.mark.usefixtures("empty_generation_budget")
 
@@ -216,3 +217,86 @@ async def test_prefetch_rate_limit_spends_quota_but_refunds_backlog_attempt(topi
     assert await session.scalar(text(
         "select sum(attempts) from public.concept_backlog where topic_id = :id"
     ), {"id": topic}) == 0
+
+
+@pytest_asyncio.fixture
+async def rewrite_config(topic, session, generator, sessionmaker_for_test, monkeypatch):
+    config = SimpleNamespace(generation_enabled=True, gemini_api_key="test", gemini_model="test",
+                             generation_daily_call_cap=2)
+    await session.execute(text("""
+        insert into public.concepts (topic_id, slug, title, summary)
+        select :tid, :prefix || n, 'Original title ' || n, 'Original summary'
+          from generate_series(1, 3) n
+    """), {"tid": topic, "prefix": f"rewrite-{topic}-"})
+    await session.commit()
+    monkeypatch.setattr(rewrite, "get_settings", lambda: config)
+    monkeypatch.setattr(rewrite, "SessionLocal", sessionmaker_for_test)
+    monkeypatch.setattr(rewrite, "generate_concept", generator)
+    monkeypatch.setattr(rewrite, "_TODO", text(str(rewrite._TODO).replace(
+        "where c.status = 'published'", "where c.status = 'published' and c.topic_id = :tid"
+    )).bindparams(tid=topic))
+    monkeypatch.setattr(rewrite, "engine", SimpleNamespace(dispose=AsyncMock()))
+    monkeypatch.setattr(rewrite, "asyncio", SimpleNamespace(sleep=AsyncMock()))
+    return config
+
+
+async def rewritten_count(session, topic):
+    return await session.scalar(text("""
+        select count(*) from public.concepts where topic_id = :tid and prompt_version = :pv
+    """), {"tid": topic, "pv": rewrite.PROMPT_VERSION})
+
+
+async def test_rewrite_reruns_and_scheduled_jobs_share_budget(topic, generator, session, rewrite_config):
+    await rewrite.main()
+    await rewrite.main()
+    assert await rewritten_count(session, topic) == 2
+    assert (await top_up(session, 2)).generated == 0
+    assert generator.await_count == await calls_used(session) == 2
+    assert rewrite.engine.dispose.await_count == 2
+
+
+async def test_scheduled_budget_denial_leaves_catalog_unchanged(topic, generator, session, rewrite_config):
+    assert (await top_up(session, 2)).generated == 2
+    generator.reset_mock()
+    await rewrite.main()
+    generator.assert_not_awaited()
+    assert await session.scalar(text("""
+        select count(*) from public.concepts where topic_id = :tid and summary = 'Original summary'
+    """), {"tid": topic}) == 3
+    rewrite.engine.dispose.assert_awaited_once()
+
+
+@pytest.mark.parametrize("disabled", ["generation_enabled", "gemini_api_key", "generation_daily_call_cap"])
+async def test_rewrite_preserves_switches_and_zero_budget(topic, generator, session, rewrite_config, disabled):
+    setattr(rewrite_config, disabled, "" if disabled == "gemini_api_key" else 0)
+    await rewrite.main()
+    generator.assert_not_awaited()
+    assert await calls_used(session) == 0
+    assert await rewritten_count(session, topic) == 0
+    rewrite.engine.dispose.assert_awaited_once()
+
+
+async def test_rewrite_throttling_retry_spends_each_call(topic, generator, session, rewrite_config):
+    generator.side_effect = [RateLimitedError(), GeneratedConcept(summary="Fixture", example="Fixture", model="test")]
+    await rewrite.main()
+    assert generator.await_count == await calls_used(session) == 2
+    assert await rewritten_count(session, topic) == 1
+    assert rewrite.asyncio.sleep.await_count >= 1
+
+
+async def test_rewrite_database_failure_never_calls_provider(topic, generator, session, rewrite_config, monkeypatch):
+    monkeypatch.setattr(budget, "_RESERVE", text("select 1 / 0"))
+    with pytest.raises(DBAPIError):
+        await rewrite.main()
+    generator.assert_not_awaited()
+    assert await calls_used(session) == 0
+    rewrite.engine.dispose.assert_awaited_once()
+
+
+async def test_rewrite_cancelled_provider_keeps_budget_and_cleans_up(topic, generator, session, rewrite_config):
+    generator.side_effect = asyncio.CancelledError()
+    with pytest.raises(asyncio.CancelledError):
+        await rewrite.main()
+    assert await calls_used(session) == 1
+    assert await rewritten_count(session, topic) == 0
+    rewrite.engine.dispose.assert_awaited_once()

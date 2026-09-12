@@ -7,20 +7,31 @@ claims as completed work.
 
 ## Current status
 
-- Assigned scope: add the explicitly requested one-time What's New card for
-  `1.7.1` to the open release PR.
-- Branch: `codex/1-7-1-whats-new`, based on `develop` at `0596f6d`.
-- Version preparation [#178](https://github.com/Coding-Moves/one-concept/pull/178)
-  is merged. Release [#179](https://github.com/Coding-Moves/one-concept/pull/179)
-  is open; its migration check and version-preparation preview OTA passed.
-- Card and standing-policy follow-up:
-  [#180](https://github.com/Coding-Moves/one-concept/pull/180), targeting `develop`
-  so it is included in release #179. Its PR records the final merge/check status.
-- [PR #177](https://github.com/Coding-Moves/one-concept/pull/177) is merged; its
-  [preview OTA](https://github.com/Coding-Moves/one-concept/actions/runs/34677521802)
-  passed. Its completed browser checks also covered retry after reconnecting,
-  dark/reduced-motion mode, and friendly offline sign-in errors.
-- Production merge/publication remains the owner's next step after release review.
+- Assigned scope: only [#133](https://github.com/Coding-Moves/one-concept/issues/133).
+  Confirm the problems first, then open one PR into `develop` for offline reading,
+  personalization persistence, and automatic action synchronization.
+- Branch: `codex/133-offline-reading-sync`, based on refreshed `origin/develop`
+  at `89a8fb8`. The starting tree matches the tested baseline.
+- Release #179 and card follow-up #180 are merged; #181 synchronized `main`
+  back into `develop`. This task does not authorize another production release.
+
+## Offline reading and synchronization (#133) — 2026-09-12
+
+- Before editing, exported the unchanged web app and exercised it in Chromium
+  with dummy authentication and intercepted API requests. No live account used.
+- Confirmed: a custom saved concept opened online loses its full text after an
+  offline restart; a warmed topic catalog is unavailable after offline restart;
+  offline topic changes do not enter the persistent queue; restoring connectivity
+  alone leaves an offline like queued without sending a request.
+- Passing controls: saved detail online, cached Today offline, and durable offline
+  like queuing. Preserve those existing behaviors and the offline banner.
+- Planned atomic commits: persistent full-concept reading with account cleanup
+  and tests; cached topic catalog and queued follows with tests; automatic sync
+  triggers with tests; validation, codebase map, and PR handoff.
+- Clarification pending: keep the current APK with sync while open/reopened, or
+  add native OS background scheduling (new APK, OS-controlled execution timing).
+- Read the exact Expo SDK 57 documentation before mobile edits. Other issues,
+  including #182's password-visibility request, remain outside this PR.
 
 ## Working agreement — 2026-09-11
 

@@ -17,7 +17,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Content engine | `backend/app/services/generation.py`, `pool.py`, `prefetch.py`; Gemini lessons from a curated backlog. |
 | Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
-| Authentication email | `backend/email-templates/` contains signup, recovery, and password-changed notification HTML with One Concept text branding; `docs/EMAIL_SETUP.md` covers manual installation, the security notification toggle, the current Gmail SMTP choice, optional Resend setup, and real-inbox acceptance. These files are installed manually, not deployed by the app. |
+| SMTP delivery setup | `docs/EMAIL_SETUP.md` retains deferred provider configuration and real-inbox acceptance. The branded HTML and its installation guide are separate in [PR #188](https://github.com/Coding-Moves/one-concept/pull/188). |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
 
 ## Mobile navigation and presentation

@@ -29,7 +29,6 @@ backend/
 │   │   └── users.py         profile bootstrap (safety net for the DB trigger)
 │   └── api/v1/              health, topics, daily
 ├── migrations/          # plain SQL, applied in filename order
-├── email-templates/     # signup/recovery HTML installed manually in Supabase Auth
 ├── tests/               # 25 tests: token verification, selection, HTTP
 ├── Dockerfile           # what Railway builds
 └── .env.example         # copy to .env — never commit the filled copy
@@ -107,12 +106,11 @@ confusion attacks, both of which are covered by tests.
 `user_id` is taken from the verified token's `sub` claim and from nowhere else.
 No endpoint accepts a user id as a parameter.
 
-Supabase Auth sends account confirmation and password-recovery emails through
-its configured email provider. Install the branded HTML in `email-templates/`
-and configure Resend custom SMTP using [Authentication email setup](../docs/EMAIL_SETUP.md).
-The guide includes domain/DNS steps, free-plan limits, the existing redirect
-contract, and real-inbox acceptance checks. Merging the files does not configure
-SMTP or publish templates; production activation must be verified separately.
+Supabase Auth sends account emails through its configured provider. See
+[SMTP delivery setup](../docs/EMAIL_SETUP.md) for the deferred provider preparation
+and real-inbox checks. Branded templates are delivered independently in
+[PR #188](https://github.com/Coding-Moves/one-concept/pull/188). Repository changes
+do not configure SMTP or publish templates in Supabase.
 
 ## Content generation
 

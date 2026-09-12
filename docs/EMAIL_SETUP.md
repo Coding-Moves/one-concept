@@ -1,36 +1,26 @@
-# Authentication email setup
+# SMTP delivery setup (deferred)
 
-This is the shared delivery and branding setup for [#152](https://github.com/Coding-Moves/one-concept/issues/152)
+This draft prepares the delivery configuration for [#152](https://github.com/Coding-Moves/one-concept/issues/152)
 and [#171](https://github.com/Coding-Moves/one-concept/issues/171).
-**Status: prepared for installation; production SMTP and inbox delivery are not verified.**
-Keep the implementation PR in draft until the acceptance checks below pass.
+**Status: SMTP activation and real inbox delivery remain unverified.**
+Keep [PR #187](https://github.com/Coding-Moves/one-concept/pull/187) in draft.
+The owner has a $0 budget and is not purchasing a domain now.
+
+The branded HTML and installation guide are a separate, non-draft change in
+[PR #188](https://github.com/Coding-Moves/one-concept/pull/188). Those templates
+work with the project's configured sender and do not depend on this draft or
+on buying a domain. This branch retains the provider preparation only.
+
+The owner previously chose an existing Gmail account for initial Supabase SMTP;
+actual authentication and inbox delivery still need verification. Supabase's
+built-in sender remains limited to project-team addresses and currently two
+emails per hour; customizing the HTML does not remove those restrictions.
+[Supabase SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp).
 
 The app already asks Supabase Auth to send signup and password-recovery emails.
-Supabase owns verification tokens; the configured provider transports messages
-through custom SMTP. FastAPI serves the existing confirmation and password-reset pages. The
-HTML files in this repository must be installed in Supabase; deploying or merging
-them does not install them. Daily reminders remain push notifications.
-
-## Replace the existing templates
-
-The owner has chosen their existing Gmail account for SMTP, with a $0 budget and
-no domain purchase. The HTML works with either Gmail or Resend: follow
-[template installation](#6-install-the-templates) to install the email bodies,
-then [verify delivery](#7-verify-real-delivery-before-completing-either-issue).
-SMTP credentials belong only in Supabase's SMTP settings, never in the HTML.
-Saving the templates changes future emails immediately; no app update is needed.
-
-Use the complete raw source, not a rendered preview. The redesign keeps the same
-subjects and confirmation placeholders, so existing redirect settings still apply.
-The owner chose One Concept text branding because the app currently contains
-Expo starter icons rather than a separate official logo. No logo URL is needed.
-The masthead's "Coding Moves" text links once per email to the verified
-[GitHub organization](https://github.com/Coding-Moves). Authentication buttons
-and fallback links still use Supabase's own confirmation URL.
-
-Gmail is a limited personal sender; successful tests do not establish capacity
-for a large rollout. Live SMTP authentication and inbox delivery remain unverified.
-The existing draft PR stays open while those checks are pending.
+Supabase owns verification tokens and sends through its configured SMTP provider;
+FastAPI serves the existing confirmation/reset pages. No app release installs
+SMTP settings or email templates. Daily reminders remain push notifications.
 
 ## Optional Resend setup
 
@@ -167,43 +157,14 @@ Keep the project's existing Supabase URL and anon/publishable key unchanged.
 Do not replace the email action link with either landing-page URL: the user must
 first pass through Supabase's token verification endpoint.
 
-### 6. Install the templates
+### 6. Install the separately reviewed templates
 
-In **Supabase → Authentication → Email → Templates**, open each matching template.
-Set its subject below, then paste the **entire raw HTML file** into the body and
-save. Preserve `{{ .ConfirmationURL }}` in signup and reset; the password-changed
-notification has no verification token or reset-link placeholder.
-
-| Supabase template | Subject | File |
-| --- | --- | --- |
-| Confirm sign up | `Confirm your email — One Concept` | [confirm-signup.html](../backend/email-templates/confirm-signup.html) |
-| Reset password | `Reset your password — One Concept` | [reset-password.html](../backend/email-templates/reset-password.html) |
-| Password changed (Security) | `Your password was changed — One Concept` | [password-changed.html](../backend/email-templates/password-changed.html) |
-
-For **Security → Password changed**, also enable the notification switch and save.
-This email reports a completed password change; it does not initiate a reset.
-It directs the user to Forgot password in the app and links to the existing
-support address from the app's About screen. Do not copy the recovery template
-or add `{{ .ConfirmationURL }}` to this notification.
-
-On GitHub, open the file and choose **Raw** to copy its source. Do not copy a
-rendered browser preview or replace the placeholders manually. The two action templates
-use the same supported variable, but Supabase supplies the appropriate signup
-or recovery verification URL for the selected template. Subjects are separate
-dashboard fields; the HTML comments do not configure them.
-
-The action templates use a dark masthead with a text wordmark, short account-specific
-copy, one full-width action button, and a separate fallback-link area. Inline
-styles, tables, and system fonts keep the design usable without remote images,
-fonts, or JavaScript. Recovery's heading includes an optional soft hyphen so
-enlarged text can break the word "password" cleanly on narrow screens.
-They do not claim an expiry duration, which is controlled by Supabase settings.
-The app has no magic-link sign-in button, so the optional magic-link template
-from #171 is deferred; no new authentication method is enabled by this PR.
-[Supabase template variables](https://supabase.com/docs/guides/auth/auth-email-templates#terminology).
-The password-changed notification uses the same masthead and typography with a
-separate security-advice section. Notification emails must be enabled separately;
-see [Supabase's security notification documentation](https://supabase.com/docs/guides/auth/auth-email-templates).
+The three branded HTML files and their provider-independent installation guide
+are delivered in [PR #188](https://github.com/Coding-Moves/one-concept/pull/188).
+Use that PR's `docs/EMAIL_TEMPLATES.md` for subjects, raw source, confirmation
+placeholders, and the password-changed notification toggle. This delivery draft
+contains no template files. The template PR can merge before provider setup;
+merging either PR does not install templates in Supabase.
 
 ### 7. Verify real delivery before completing either issue
 
@@ -234,8 +195,8 @@ delivery status, and outcome in the PR's activation checklist.
   messages arrive in the recipient inboxes. If using Resend, check its delivery
   logs too. Provider acceptance alone does not prove inbox delivery or working links.
 
-When these pass, record the actual results, mark the PR ready, and merge the
-single PR that closes both #152 and #171. Do not close either as completed while
+When these pass, record the actual results, mark this delivery PR ready, and merge it
+to complete the delivery work for #152 and #171. Do not close either as completed while
 required provider verification or real delivery is still pending. Record Gmail's
 limited-volume tradeoff explicitly; do not describe it as a verified production
 transactional service merely because the HTML has been installed.

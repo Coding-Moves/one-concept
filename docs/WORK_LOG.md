@@ -7,22 +7,17 @@ claims as completed work.
 
 ## Current status
 
-- Prepared one PR chunk for [#152](https://github.com/Coding-Moves/one-concept/issues/152)
-  and [#171](https://github.com/Coding-Moves/one-concept/issues/171): Resend delivery
-  setup and branded authentication emails. Branch `codex/152-171-resend-auth-email`
-  starts from refreshed `origin/develop` (`65eb21d`). Published as
-  [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187) into `develop`.
-- Owner requires a $0 setup and has chosen their existing Gmail account for
-  Supabase SMTP. The owner is performing dashboard setup; saving the settings
-  and actual inbox delivery remain unverified. Resend preparation stays in draft.
-- Redesigned signup/recovery emails and added a matching password-changed
-  notification with One Concept text branding and a linked Coding Moves masthead.
-  The configured mobile images are Expo starter assets; the owner explicitly
-  selected text branding. All three HTML files are ready for manual installation
-  in the same draft PR. No dashboard settings were changed.
-- PR #185 (#150) is merged. [PR #186](https://github.com/Coding-Moves/one-concept/pull/186)
-  remains open; its independent review found no actionable issue and reran all
-  63 generation tests with no skips. Its generation-budget changes are separate.
+- The owner split email branding from deferred provider setup. The three HTML
+  files and their independent installation guide are in ready-for-review
+  [PR #188](https://github.com/Coding-Moves/one-concept/pull/188), targeting `develop`.
+- [PR #187](https://github.com/Coding-Moves/one-concept/pull/187) stays in draft for
+  SMTP delivery preparation. The owner is not purchasing a domain. Gmail setup
+  and real delivery remain unverified; no production configuration was changed.
+- Removed duplicate template files from this draft with a follow-up commit and
+  redirected its installation references to #188. Original commits remain intact;
+  no history was rewritten. The new PR preserves nine focused template commits.
+- PRs #185 (#150) and [#186](https://github.com/Coding-Moves/one-concept/pull/186)
+  are merged into `develop`; their implementation is separate from this draft.
 - The owner reinforced the preference for more focused commits in **all future
   PRs** for this project. Saved in `AGENTS.md`; retain individual commits and
   related tests without artificial splits or empty commits.
@@ -31,6 +26,20 @@ claims as completed work.
   record the status at the time; this task does not authorize a production release.
 
 ## Resend authentication email (#152 and #171) — 2026-09-12
+
+### Separate template PR — scope supersedes the earlier combined handoffs
+
+- Owner requested a non-draft PR for reusable templates independent of Resend
+  or domain purchase. Published #188 from fresh `develop` (`a6e81f1`) and narrowed
+  this draft to provider documentation. Template installation remains manual in
+  Supabase and is independent of app release. Delivery issues remain open.
+- The final HTML in #188 matches the previously validated source byte for byte
+  (60 Chromium scenarios). This cleanup changes documentation and removes the
+  duplicated sources; local Markdown paths and whitespace checks passed. No
+  backend/mobile or live-email tests were run for the split.
+- Follow-up commit: `docs: keep deferred email delivery separate from templates`.
+  Before this draft is ready, complete provider configuration and real-inbox
+  acceptance. No payments, SMTP changes, messages, or release were performed.
 
 ### Password-changed notification follow-up
 

@@ -108,8 +108,12 @@ typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 ## Backend request and service flow
 
 `main.py` configures CORS, routes, production documentation visibility, a shared
-JWKS cache, and engine cleanup. `config.py` loads settings and normalizes pooler
-URLs; `db/session.py` creates the async engine/session dependency.
+JWKS cache, and engine cleanup. Its lifespan owns `db/keepalive.py`'s configurable
+database probes; checkout/query and connection return are bounded, failures retry,
+and cancellation awaits cleanup before engine disposal. `config.py` loads settings
+and normalizes pooler URLs; `db/session.py` creates the async engine/session
+dependency and reuses the most recently returned connection to keep a hot slot.
+The existing pre-ping, transaction pooler mode, and pool limits remain in place.
 `deps.py` obtains identity from bearer tokens verified by `core/security.py`
 (ES256, issuer, audience, expiry, and subject). `core/errors.py` formats auth errors.
 
@@ -189,8 +193,10 @@ session pooler. Applied migrations must not be rewritten.
 - Backend dependencies are pinned in `requirements.txt`/`requirements-dev.txt`.
   From `backend/`, run `.venv/bin/python -m uvicorn app.main:app --reload --port 8000`
   for development and `.venv/bin/python -m pytest` for tests after configuration.
-- Seven test modules cover HTTP contracts, token validation, daily selection,
-  writes/streaks, generation, reminders, and notification preferences.
+- Nine test modules cover HTTP contracts, token validation, daily selection,
+  writes/streaks, generation, reminders, notification preferences, and connection
+  warm-up/cleanup. The pool integration checks compare real PostgreSQL idle expiry
+  with warming disabled/enabled and print timing plus physical-connection counts.
   `tests/conftest.py` supplies a disposable PostgreSQL 16 database through Podman
   on port 55433, applies every migration, and disables live generation. HTTP calls
   to Gemini/Expo are mocked. Database-dependent tests skip if Podman cannot start.

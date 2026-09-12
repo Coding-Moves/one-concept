@@ -7,15 +7,14 @@ claims as completed work.
 
 ## Current status
 
-- Active scope: [#149](https://github.com/Coding-Moves/one-concept/issues/149),
-  reducing database reconnect work on requests after idle time. Owner authorized
-  a focused backend fix in a separate PR into `develop`.
+- Completed implementation: [#149](https://github.com/Coding-Moves/one-concept/issues/149),
+  reducing database reconnect work on requests after idle time. Validated and
+  preparing the focused backend PR into `develop`.
 - Branch: `codex/149-db-connection-warmup`, from refreshed `origin/develop`
   at `f34ba77`. PR #183, including both review fixes for #133, is merged.
-- Plan: reproduce idle expiry with PostgreSQL 16 before implementation; add a
-  bounded, configurable warm-up with lifecycle and reconnect tests; document
-  measured outcomes and open the PR. Keep connection safety checks and the
-  current pooler mode. No mobile, migration, or production configuration changes.
+- Delivered: idle-expiry reproduction, bounded/configurable warm-up with lifecycle
+  and reconnect coverage, and operational instructions. Connection safety checks
+  and current pooler mode remain. No mobile, migration, or production changes.
 - The issue's production 600 ms figure has not been independently reproduced.
   All regression tests and before/after experiments use disposable test services.
 - Release #179 and card follow-up #180 are merged; #181 synchronized `main`
@@ -36,6 +35,32 @@ claims as completed work.
   configuration, and current connection limits. Cancel probes before pool disposal.
 - Planned commits: reproduction/scope; warm connection lifecycle with regression
   tests; measured validation, operational instructions, and PR handoff.
+- Implemented an immediate then periodic API lifespan probe (30-second default,
+  zero to disable), reusing the most recently returned pool connection. Checkout/
+  query and rollback/return each have a five-second default budget. Failures retry
+  after the interval; logs omit raw connection details. Shutdown waits for cleanup,
+  including when cleanup itself fails. The task does not start in cron workers.
+- A real-PostgreSQL test caught cancellation returning before SQLAlchemy finished
+  connection cleanup. Fixed it before handoff and added failure/cancellation coverage.
+- **Validation:** all 105 backend tests passed, with real PostgreSQL 16 integration
+  coverage and no skips. Ruff (`F,E9`) and whitespace checks passed. The final
+  controlled comparison (800 ms test-session idle timeout, 1.2-second gaps) was:
+
+  | Warm-up | Three request times (ms) | New physical connections |
+  | --- | --- | --- |
+  | Disabled | 223.98, 209.61, 234.05 | 3 |
+  | Enabled, 200 ms test interval | 7.93, 8.18, 8.29 | 0 |
+
+  Both cases use the same engine factory, query, and disposable database. Timings
+  are reported rather than asserted; connection counts are the regression check.
+  Covered query/checkout/cleanup timeouts, recovery, cancellation, transaction
+  release, terminated connections, disabled probes, and lifespan failures.
+- **Limits:** no live Supabase/Railway measurement, production deployment, mobile
+  test, or native build. The issue's deployed timeout/600 ms figure remains
+  unverified. Cold startup and additional connections during bursts can still pay
+  setup cost. Each API process adds a periodic probe with the configured interval.
+- Commits: `50d73ab` — reproduction and scope; `6bf0399` — implementation/tests;
+  documentation handoff — `docs: document database warm-up validation`.
 
 ## PR #183 review fixes — 2026-09-12
 

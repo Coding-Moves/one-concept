@@ -9,11 +9,11 @@ import Constants from 'expo-constants';
  * `version` matches the new `expo.version`. A version with no matching entry
  * simply shows no card.
  *
- * CONTENT POLICY (issue #97): list ONLY new user-facing FEATURES. Do NOT list
- * bug fixes, memory/leak or performance fixes, UI/UX tweaks, or things removed —
- * the card celebrates what's genuinely new, not the changelog. Keep each line
- * plain, meaningful, and short; a few bullets at most. If a release has no new
- * feature, leave its highlights empty (or add no entry) and no card appears.
+ * CONTENT POLICY: every release includes a nonempty entry focused on new
+ * features and user-visible improvements — what's new and what's better.
+ * Describe real benefits in a few short bullets, not error lists, technical
+ * diagnostics, or internal maintenance. This replaces the features-only rule
+ * from issue #97 at the owner's request; see RELEASING.md.
  */
 export interface WhatsNewEntry {
   version: string;
@@ -21,6 +21,14 @@ export interface WhatsNewEntry {
 }
 
 export const WHATS_NEW: WhatsNewEntry[] = [
+  {
+    version: '1.7.1',
+    highlights: [
+      'Stay signed in and keep reading cached lessons on a weak connection.',
+      'Animated offline screens now include a Try again button to reload missing content.',
+      'Clearer sign-in guidance when your connection is unavailable.',
+    ],
+  },
   {
     version: '1.7.0',
     highlights: [

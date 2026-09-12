@@ -7,6 +7,8 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CategoryChip } from '../components/CategoryChip';
 import { LikeCount } from '../components/LikeCount';
 import { SkeletonRow } from '../components/Skeleton';
+import { UnavailableState } from '../components/UnavailableState';
+import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
@@ -59,7 +61,8 @@ function HistoryRow({
 }
 
 export function HistoryScreen() {
-  const { loading, progress } = useProgress();
+  const { loading, progress, refresh } = useProgress();
+  const online = useOnline();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   // Composite: History is a tab screen that reaches up to the root stack's
@@ -108,6 +111,8 @@ export function HistoryScreen() {
               <SkeletonRow />
               <SkeletonRow />
             </View>
+          ) : !online && !progress.stats ? (
+            <UnavailableState offline message="Connect to load your learning history on this device." onRetry={refresh} />
           ) : (
             <View style={styles.empty}>
               <Ionicons name="library-outline" size={scaleIcon(40)} color={colors.textMuted} />

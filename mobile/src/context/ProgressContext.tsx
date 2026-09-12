@@ -23,6 +23,7 @@ import { computeStreaks, StreakStats } from '../services/streak';
 
 export interface ProgressContextValue {
   loading: boolean;
+  refresh: () => Promise<void>;
   progress: ProgressState;
   /** Today's assigned concept (local selection; the offline/demo fallback). */
   concept: Concept | null;
@@ -196,9 +197,13 @@ export function ProgressProvider({ children, repository: override }: Props) {
           if (undo) setProgress(undo);
         }
       });
+      return chain.current;
     },
     []
   );
+
+  // Retry shares the mutation chain, so a refresh cannot overwrite a later tap.
+  const refresh = useCallback(() => apply(null, () => repository.load()), [apply, repository]);
 
   const markLearned = useCallback((target?: Concept) => {
     // Prefer the concept the screen actually showed (the server's, when signed
@@ -305,6 +310,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
   const value = useMemo<ProgressContextValue>(
     () => ({
       loading,
+      refresh,
       progress,
       concept,
       serverDaily,
@@ -318,6 +324,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
     }),
     [
       loading,
+      refresh,
       progress,
       concept,
       serverDaily,

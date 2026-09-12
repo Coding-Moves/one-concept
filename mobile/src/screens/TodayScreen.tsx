@@ -6,6 +6,9 @@ import { ConceptCard } from '../components/ConceptCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
 import { StreakBadge } from '../components/StreakBadge';
+import { UnavailableState } from '../components/UnavailableState';
+import { useAuth } from '../context/AuthContext';
+import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { toConcept } from '../services/dailyApi';
@@ -20,16 +23,18 @@ export function TodayScreen() {
     learnedToday,
     streaks,
     markLearned,
+    refresh,
   } = useProgress();
+  const { session } = useAuth();
+  const online = useOnline();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   const outcome = serverDaily;
-  // The backend decides the day's concept; the locally-picked one is the
-  // offline fallback until Phase 4 moves the rest of the state server-side.
+  // An authenticated user can read a cached assignment, never an invented demo lesson.
   const serverConcept =
     outcome && outcome.status === 'ok' ? toConcept(outcome.payload) : null;
-  const concept = serverConcept ?? localConcept;
+  const concept = serverConcept ?? (session ? null : localConcept);
 
   // The shown concept is done if today's date is marked (the instant
   // optimistic signal) OR the *server* concept is in the learned set — the
@@ -109,11 +114,15 @@ export function TodayScreen() {
               <ConceptCard concept={concept} />
               <ConceptActions concept={concept} />
             </>
-          ) : (
-            <Text style={styles.tagline}>No concepts available.</Text>
-          )}
+          ) : !exhausted ? (
+            <UnavailableState
+              offline={!online}
+              message="Today’s concept isn’t available on this device yet. Connect and try again."
+              onRetry={refresh}
+            />
+          ) : null}
 
-          {done ? (
+          {concept && (done ? (
             <View style={styles.doneBox}>
               <Ionicons name="checkmark-circle" size={scaleIcon(20)} color={colors.success} />
               <Text style={styles.doneText}>Learned today — see you tomorrow!</Text>
@@ -124,7 +133,7 @@ export function TodayScreen() {
               onPress={() => markLearned(concept ?? undefined)}
               disabled={!concept}
             />
-          )}
+          ))}
         </>
       )}
     </ScrollView>

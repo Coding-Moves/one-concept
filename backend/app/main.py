@@ -1,5 +1,6 @@
+import asyncio
 import logging
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -9,6 +10,7 @@ from app.api.v1.pages import router as pages_router
 from app.api.v1.router import api_router
 from app.config import get_settings
 from app.core.security import JwksCache
+from app.db.keepalive import keep_database_warm
 from app.db.session import engine
 
 
@@ -22,8 +24,22 @@ async def lifespan(app: FastAPI):
         settings.environment,
         settings.uses_transaction_pooler,
     )
-    yield
-    await engine.dispose()
+    warmup = None
+    if settings.db_keepalive_interval_seconds > 0:
+        warmup = asyncio.create_task(
+            keep_database_warm(
+                engine, settings.db_keepalive_interval_seconds, settings.db_keepalive_timeout_seconds
+            ),
+            name="database-keepalive",
+        )
+    try:
+        yield
+    finally:
+        if warmup is not None:
+            warmup.cancel()
+            with suppress(asyncio.CancelledError):
+                await warmup
+        await engine.dispose()
 
 
 def create_app() -> FastAPI:

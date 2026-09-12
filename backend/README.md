@@ -143,9 +143,40 @@ statements rather than their complexity:
 - Connection pooling is on. Without it every request paid a fresh TCP + TLS +
   auth handshake to the database region, which cost seconds.
 
-The remaining latency is geography. **Deploy the API in the same region as the
-database** — on Railway, pick the region closest to your Supabase project — and
-these round trips drop to single-digit milliseconds.
+Geography and connection reuse both affect latency. **Deploy the API close to
+the database**, then compare fresh, immediately reused, and post-idle requests.
+Timing a slow query alone does not establish that a new connection was opened.
+
+The API runs a best-effort `SELECT 1` probe immediately on startup and then
+every `DB_KEEPALIVE_INTERVAL_SECONDS` (default 30 seconds, measured after each
+probe finishes). It borrows from the same pool as requests and promptly returns
+the connection, rolling back the implicit transaction. The pool reuses its most
+recently returned connection, so low traffic can use a warm slot while surplus
+idle slots expire. `pool_pre_ping` remains enabled for dead connections.
+
+`DB_KEEPALIVE_TIMEOUT_SECONDS` (default 5 seconds) bounds checkout, reconnect,
+and query together. Rollback/return has a separate budget of the same duration;
+failed cleanup invalidates the connection. A failed attempt logs only the
+exception type and retries after the interval; it does not block API startup.
+Shutdown cancels the task before disposing the engine. Set the interval to `0`
+to disable probes. Each API
+process runs its own task; importing the engine in cron workers starts no task.
+Pool size and overflow limits remain 5 each. A cold startup or a burst requiring
+additional connections can still pay connection setup time.
+
+Reproduce idle expiry without production services using:
+
+```bash
+DATABASE_URL=postgresql+asyncpg://postgres:postgres@127.0.0.1:55433/postgres \
+SUPABASE_URL=http://test.invalid SUPABASE_JWKS_URL=http://test.invalid/jwks \
+GENERATION_ENABLED=false GEMINI_API_KEY= \
+  .venv/bin/python -m pytest tests/test_db_keepalive_postgres.py -q -s
+```
+
+The PostgreSQL 16 tests set short idle expiry only on their own sessions and
+compare connection counts and request timings with warming disabled/enabled.
+They also check transaction cleanup and recovery from a terminated connection.
+These timings describe the local test environment, not deployed Supavisor latency.
 
 ## Connection strings
 

@@ -7,17 +7,66 @@ claims as completed work.
 
 ## Current status
 
-- Review follow-up complete in the same PR #183: pending actions survive midnight
-  and partial connection failures retain retry backoff. Each fix has its own
-  commit with regression coverage; prior commits and APK compatibility remain.
-- Completed scope: only [#133](https://github.com/Coding-Moves/one-concept/issues/133).
-  [PR #183](https://github.com/Coding-Moves/one-concept/pull/183) is open into
-  `develop` for offline reading, personalization persistence, and automatic
-  action synchronization. Problems were reproduced before implementation.
-- Branch: `codex/133-offline-reading-sync`, based on refreshed `origin/develop`
-  at `89a8fb8`. The starting tree matches the tested baseline.
+- Completed implementation: [#149](https://github.com/Coding-Moves/one-concept/issues/149),
+  reducing database reconnect work on requests after idle time. Validated and
+  published in [PR #184](https://github.com/Coding-Moves/one-concept/pull/184)
+  into `develop`.
+- Branch: `codex/149-db-connection-warmup`, from refreshed `origin/develop`
+  at `f34ba77`. PR #183, including both review fixes for #133, is merged.
+- Delivered: idle-expiry reproduction, bounded/configurable warm-up with lifecycle
+  and reconnect coverage, and operational instructions. Connection safety checks
+  and current pooler mode remain. No mobile, migration, or production changes.
+- The issue's production 600 ms figure has not been independently reproduced.
+  All regression tests and before/after experiments use disposable test services.
 - Release #179 and card follow-up #180 are merged; #181 synchronized `main`
   back into `develop`. This task does not authorize another production release.
+
+## Database connections after idle (#149) — 2026-09-12
+
+- Reproduced before implementation using the unchanged app engine/session and
+  a disposable PostgreSQL 16 container on loopback port 55434. Set the test
+  server's idle-session timeout to 1.5 seconds, then waited two seconds between
+  requests. SQLAlchemy connection events confirm all three post-idle requests
+  created a new physical connection: 260.23, 221.45, and 220.35 ms. Immediate
+  reuse took 10.91, 10.24, and 9.40 ms with zero new connections.
+- This reproduces the request-time reconnect mechanism under controlled idle
+  expiry, not Supavisor's deployed timeout or the issue's production 600 ms figure.
+- Intended fix: configurable, bounded probes in the FastAPI lifespan, reusing
+  the most recently returned connection. Keep `pool_pre_ping`, transaction-mode
+  configuration, and current connection limits. Cancel probes before pool disposal.
+- Planned commits: reproduction/scope; warm connection lifecycle with regression
+  tests; measured validation, operational instructions, and PR handoff.
+- Implemented an immediate then periodic API lifespan probe (30-second default,
+  zero to disable), reusing the most recently returned pool connection. Checkout/
+  query and rollback/return each have a five-second default budget. Failures retry
+  after the interval; logs omit raw connection details. Shutdown waits for cleanup,
+  including when cleanup itself fails. The task does not start in cron workers.
+- A real-PostgreSQL test caught cancellation returning before SQLAlchemy finished
+  connection cleanup. Fixed it before handoff and added failure/cancellation coverage.
+- **Validation:** all 105 backend tests passed, with real PostgreSQL 16 integration
+  coverage and no skips. Ruff (`F,E9`) and whitespace checks passed. The final
+  controlled comparison (800 ms test-session idle timeout, 1.2-second gaps) was:
+
+  | Warm-up | Three request times (ms) | New physical connections |
+  | --- | --- | --- |
+  | Disabled | 223.98, 209.61, 234.05 | 3 |
+  | Enabled, 200 ms test interval | 7.93, 8.18, 8.29 | 0 |
+
+  Both cases use the same engine factory, query, and disposable database. Timings
+  are reported rather than asserted; connection counts are the regression check.
+  Covered query/checkout/cleanup timeouts, recovery, cancellation, transaction
+  release, terminated connections, disabled probes, and lifespan failures.
+- **Limits:** no live Supabase/Railway measurement, production deployment, mobile
+  test, or native build. The issue's deployed timeout/600 ms figure remains
+  unverified. Cold startup and additional connections during bursts can still pay
+  setup cost. Each API process adds a periodic probe with the configured interval.
+- Commits: `50d73ab` — reproduction and scope; `6bf0399` — implementation/tests;
+  `679163a` — validation and operational documentation.
+- **PR:** [#184](https://github.com/Coding-Moves/one-concept/pull/184), open into
+  `develop` with all individual commits and the owner's configured identity.
+  Publication bookkeeping: `docs: link database warm-up pull request`.
+  Disposable reproduction/test containers were removed. Ready for owner review;
+  merging and deployment were not performed.
 
 ## PR #183 review fixes — 2026-09-12
 

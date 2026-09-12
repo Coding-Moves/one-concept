@@ -103,6 +103,10 @@ export interface ProgressState {
    * which resolves saved items against the bundled catalog instead.
    */
   savedConcepts?: SavedConcept[];
+  /** Counts older than the recent learned window; absent on legacy responses. */
+  learnedBeforeWindow?: Record<string, number>;
+  /** Continuation after the embedded saved window; absent on legacy responses. */
+  savedNextCursor?: string | null;
   /**
    * Streaks as computed by the server, when the state came from the server.
    * Absent for purely local state, where the client derives them instead.

@@ -2,12 +2,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { CategoryChip } from '../components/CategoryChip';
 import { LikeCount } from '../components/LikeCount';
 import { UnavailableState } from '../components/UnavailableState';
 import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
+import { useSavedConcepts } from '../hooks/useSavedConcepts';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
@@ -34,6 +35,7 @@ export function SavedScreen() {
   const navigation = useNavigation<Nav>();
   const { progress, refresh } = useProgress();
   const online = useOnline();
+  const { savedConcepts, loading, failed, retry } = useSavedConcepts(progress);
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -45,8 +47,8 @@ export function SavedScreen() {
   // Server state carries titles/topics; the signed-out demo resolves bookmark
   // ids against the bundled catalog (issue #90).
   const saved: SavedItem[] = useMemo(() => {
-    if (progress.savedConcepts) {
-      return progress.savedConcepts.map((s) => ({
+    if (savedConcepts) {
+      return savedConcepts.map((s) => ({
         id: s.conceptId,
         title: s.title,
         topicName: s.topicName,
@@ -62,7 +64,7 @@ export function SavedScreen() {
         topicName: c.category as string,
         likes: likedIds.has(c.id) ? 1 : 0,
       }));
-  }, [progress.savedConcepts, progress.bookmarks, likedIds]);
+  }, [savedConcepts, progress.bookmarks, likedIds]);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -99,7 +101,21 @@ export function SavedScreen() {
         <View style={styles.iconButton} />
       </View>
 
-      {saved.length === 0 && !online && !progress.stats ? (
+      {loading ? (
+        <View style={styles.loadStatus}>
+          <ActivityIndicator color={colors.primary} />
+          <Text style={styles.emptyText}>Loading more saved concepts…</Text>
+        </View>
+      ) : failed ? (
+        <Pressable onPress={retry} accessibilityRole="button" style={styles.loadStatus}>
+          <Text style={styles.emptyText}>
+            {online ? 'Some saved concepts could not be refreshed. Tap to retry.'
+              : 'Showing downloaded concepts. Connect and tap to load more.'}
+          </Text>
+        </Pressable>
+      ) : null}
+
+      {saved.length === 0 && (loading || failed) ? null : saved.length === 0 && !online && !progress.stats ? (
         <UnavailableState offline message="Connect to load your saved concepts on this device." onRetry={refresh} />
       ) : saved.length === 0 ? (
         <View style={styles.empty}>
@@ -164,7 +180,9 @@ export function SavedScreen() {
             ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
             keyboardShouldPersistTaps="handled"
             ListEmptyComponent={
-              <Text style={styles.noMatch}>No saved concepts match your search.</Text>
+              <Text style={styles.noMatch}>
+                {loading || failed ? 'No matches in the concepts loaded so far.' : 'No saved concepts match your search.'}
+              </Text>
             }
             renderItem={({ item }) => (
               <Pressable
@@ -204,6 +222,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
     title: { ...typography.title, fontSize: scaleFont(20), color: colors.text },
+    loadStatus: { padding: spacing.md, gap: spacing.sm, alignItems: 'center' },
     searchBox: {
       flexDirection: 'row',
       alignItems: 'center',

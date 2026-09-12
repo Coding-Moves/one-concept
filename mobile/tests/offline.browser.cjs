@@ -8,12 +8,24 @@ const root = process.argv[2];
 if (!root || !fs.existsSync(path.join(root, 'index.html'))) throw new Error('Pass an Expo web export directory as the first argument.');
 const baseline = process.argv.includes('--baseline');
 const midnight = process.argv.includes('--midnight');
+const largeCollections = process.argv.includes('--large-collections');
 const date = new Date().toISOString().slice(0, 10);
 const concept = (slug, title) => ({ id: slug, slug, title, summary: `Full explanation of ${title}.`, example: `A concrete example of ${title}.`, topic_slug: 'computer-science', topic_name: 'Computer Science', like_count: 2 });
 const daily = concept('fixture-daily', 'Daily fixture');
 const saved = concept('fixture-saved', 'Saved fixture');
 const unread = concept('fixture-unread', 'Unread saved fixture');
 const state = { display_name: 'Fixture', timezone: 'UTC', today: date, followed_topics: ['computer-science'], learned: [], likes: [], bookmarks: [saved.slug, unread.slug], saved: [saved, unread].map(c => ({concept_slug:c.slug, title:c.title, topic_name:c.topic_name})), stats: {current:0,longest:0,total_learned:0}, assignment_slug: daily.slug, daily: { assigned_for: date, assigned_at: new Date().toISOString(), completed_at: null, learned:false, outside_followed_topics:false, concept:daily } };
+const collection = [saved, unread, ...Array.from({length:363}, (_, i) => concept(`older-${i}`, `Older lesson ${i}`))];
+collection[364] = {...collection[364], title:'Older mathematics fixture', topic_name:'Mathematics'};
+if (largeCollections) {
+  state.bookmarks = collection.map(c=>c.slug);
+  state.saved = collection.slice(0,50).map(c=>({concept_slug:c.slug,title:c.title,topic_name:c.topic_name,like_count:c.like_count}));
+  state.saved_next_cursor = '50';
+  state.learned = state.saved.map((c,i)=>({...c,learned_on:new Date(Date.now()-(i+1)*86400000).toISOString().slice(0,10)}));
+  state.learned_before_window = {'Computer Science':314,Mathematics:1};
+  state.stats = {current:365,longest:365,total_learned:365};
+}
+let savedRequests = 0, failSaved = false, holdSaved = false, releaseSaved;
 let online = true;
 let failLikes = false;
 let failTopics = false;
@@ -45,7 +57,23 @@ const server = http.createServer((req,res) => {
     if (!online) return route.abort('internetdisconnected');
     const req = route.request(); const endpoint = new URL(req.url()).pathname.replace('/api','');
     const method = req.method();
-    if (endpoint === '/v1/me/state') stateRequests++;
+    if (endpoint === '/v1/me/state') {
+      stateRequests++;
+    }
+    if (process.argv.includes('--require-compact') && ['/v1/me/state','/v1/me/topics','/v1/me'].includes(endpoint)) {
+      assert.equal(new URL(req.url()).searchParams.get('compact'),'true');
+    }
+    if (endpoint === '/v1/me/saved') {
+      savedRequests++;
+      if (holdSaved) await new Promise(r=>{releaseSaved=r;});
+      if (failSaved) return route.fulfill({status:503,contentType:'application/json',body:'{}'});
+      const url=new URL(req.url()); const offset=Number(url.searchParams.get('cursor'));
+      assert.equal(url.searchParams.get('limit'),'50');
+      return route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({
+        items:collection.slice(offset,offset+50).map(c=>({concept_slug:c.slug,title:c.title,topic_name:c.topic_name,like_count:c.like_count})),
+        next_cursor:offset+50<collection.length ? String(offset+50) : null,
+      })});
+    }
     if (endpoint === '/v1/topics') {
       topicRequests++;
       if (failTopics) return route.abort('connectionreset');
@@ -62,8 +90,12 @@ const server = http.createServer((req,res) => {
       if(method==='PUT') state[key].push(slug);
     }
     if (endpoint === '/v1/me/state' || endpoint === '/v1/me/topics') body=state;
+    else if (endpoint === '/v1/topics' && largeCollections) body=[
+      {slug:'computer-science',name:'Computer Science',concept_count:400,following:true},
+      {slug:'mathematics',name:'Mathematics',concept_count:25,following:false},
+    ];
     else if (endpoint === '/v1/topics') body=[{slug:'computer-science',name:'Computer Science',concept_count:25},{slug:'new-topic',name:'New topic',concept_count:12}].map(t=>({...t,following:state.followed_topics.includes(t.slug)}));
-    else if (endpoint.startsWith('/v1/concepts/') && method === 'GET') body=[daily,saved,unread].find(c=>endpoint.endsWith(c.slug));
+    else if (endpoint.startsWith('/v1/concepts/') && method === 'GET') body=[daily,...(largeCollections ? collection : [saved,unread])].find(c=>endpoint.endsWith(c.slug));
     else if (endpoint === '/v1/me/notifications') body={enabled:false,reminder_times:[]};
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
   });
@@ -76,6 +108,81 @@ const server = http.createServer((req,res) => {
   if (midnight) await page.clock.setFixedTime(new Date(date+'T23:59:00Z'));
   await page.goto('http://127.0.0.1:4781');
   await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+  if (largeCollections) {
+    assert.equal(savedRequests,0,'Older Saved metadata must not load on startup');
+    await page.getByText('Stats',{exact:true}).last().click();
+    await expect(page.getByText('365 / 425',{exact:true})).toBeVisible();
+    await expect(page.getByText('364 / 400',{exact:true})).toBeVisible();
+    await expect(page.getByText('1 / 25',{exact:true})).toBeVisible();
+    console.log('PASS: compact startup retains all-time and per-topic totals');
+    await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('one-concept/concepts/')).length),{timeout:30000}).toBe(366);
+    // No Saved screen/cache yet: downloaded lesson bodies must supply older titles offline.
+    online=false; await page.reload();
+    await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+    await profile(); await page.getByText('Saved concepts',{exact:true}).click();
+    await page.getByPlaceholder('Search saved concepts').fill('Older mathematics');
+    await page.getByRole('button',{name:'Open Older mathematics fixture',exact:true}).click();
+    await expect(page.getByText(collection[364].summary,{exact:true})).toBeVisible();
+    await close();
+    console.log('PASS: unopened older saved lesson remains searchable and readable offline');
+    await page.getByRole('button',{name:'Back',exact:true}).click();
+    // Force page loading to prove that search/filter do not merely rely on cached bodies.
+    await page.evaluate(()=>{for(const k of Object.keys(localStorage)) if(k.startsWith('one-concept/concepts/') || k.startsWith('one-concept/saved-list/')) localStorage.removeItem(k);});
+    await page.getByText('Saved concepts',{exact:true}).click();
+    const offlineRetry = page.getByText('Showing downloaded concepts. Connect and tap to load more.',{exact:true});
+    await expect(offlineRetry).toBeVisible();
+    const beforeManualRetry=savedRequests;
+    online=true; await offlineRetry.click();
+    await expect.poll(()=>savedRequests-beforeManualRetry,{timeout:2000}).toBe(7);
+    await page.getByRole('button',{name:'Back',exact:true}).click();
+    console.log('PASS: manual retry probes restored connectivity without waiting for background sync');
+    online=true; failSaved=true;
+    await page.reload(); await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+    await profile(); await page.getByText('Saved concepts',{exact:true}).click();
+    await expect(page.getByText('Some saved concepts could not be refreshed. Tap to retry.',{exact:true})).toBeVisible();
+    const beforeRetry=savedRequests;
+    await page.waitForTimeout(1500); assert.equal(savedRequests,beforeRetry,'Failed pages must not spin');
+    failSaved=false;
+    await page.getByText('Some saved concepts could not be refreshed. Tap to retry.',{exact:true}).click();
+    await expect.poll(()=>savedRequests-beforeRetry).toBe(7);
+    await expect(page.getByText('Loading more saved concepts…',{exact:true})).toHaveCount(0);
+    await page.getByRole('button',{name:'Mathematics',exact:true}).click();
+    await page.getByPlaceholder('Search saved concepts').fill('Older mathematics');
+    await page.getByRole('button',{name:'Open Older mathematics fixture',exact:true}).click();
+    await expect(page.getByText(collection[364].summary,{exact:true})).toBeVisible();
+    await close();
+    if(process.env.COLLECTION_SCREENSHOT_PATH) await page.screenshot({path:process.env.COLLECTION_SCREENSHOT_PATH});
+    console.log('PASS: bounded pages, retry, older title search, and category filter');
+    online=false; await page.reload(); await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+    await page.getByRole('button',{name:'Mark as learned',exact:true}).click();
+    await expect.poll(async()=>(await queue()).learn?.date).toBe(date);
+    await page.getByText('Stats',{exact:true}).last().click();
+    await expect(page.getByText('366 / 425',{exact:true})).toBeVisible();
+    await expect(page.getByText('365 / 400',{exact:true})).toBeVisible();
+    console.log('PASS: offline completion increments aggregate and category totals');
+    await profile(); await page.getByText('Saved concepts',{exact:true}).click();
+    await page.getByPlaceholder('Search saved concepts').fill('Older mathematics');
+    await page.getByRole('button',{name:'Open Older mathematics fixture',exact:true}).click();
+    await page.getByRole('button',{name:'Remove from saved',exact:true}).last().click();
+    await expect.poll(async()=>(await queue())['save:older-362']?.desired).toBe(false);
+    await close();
+    await expect(page.getByRole('button',{name:'Open Older mathematics fixture',exact:true})).toHaveCount(0);
+    console.log('PASS: pending unsave overrides cached page membership');
+    // Drop only this test's pending actions to isolate a late successful page response.
+    await page.evaluate(()=>localStorage.removeItem('one-concept/mutation-queue/v1'));
+    online=true; holdSaved=true;
+    await page.reload(); await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+    await profile(); await page.getByText('Saved concepts',{exact:true}).click();
+    await expect.poll(()=>Boolean(releaseSaved)).toBe(true);
+    await page.getByRole('button',{name:'Back',exact:true}).click();
+    await page.getByText('Sign out',{exact:true}).click();
+    await expect(page.getByText('Welcome back — sign in to pick up your streak.',{exact:true})).toBeVisible();
+    holdSaved=false; releaseSaved(); await page.waitForTimeout(500);
+    await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('one-concept/saved-list/') || k.startsWith('one-concept/concepts/')).length)).toBe(0);
+    assert.deepEqual(errors,[]);
+    console.log('PASS: sign-out fences a late Saved page and removes collection caches');
+    return;
+  }
   if (process.argv.includes('--partial-connectivity')) {
     await expect.poll(()=>topicRequests).toBeGreaterThan(0);
     await page.waitForTimeout(300);
@@ -205,7 +312,7 @@ const server = http.createServer((req,res) => {
     await page.getByText('Sign out',{exact:true}).click();
     await expect(page.getByText('Welcome back — sign in to pick up your streak.',{exact:true})).toBeVisible();
     if (releaseLike) { releaseLike(); await page.waitForTimeout(500); }
-    await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('one-concept/concepts/') || key.startsWith('one-concept/topics/') || key==='one-concept/mutation-queue/v1').length)).toBe(0);
+    await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('one-concept/concepts/') || key.startsWith('one-concept/topics/') || key.startsWith('one-concept/saved-list/') || key==='one-concept/mutation-queue/v1').length)).toBe(0);
     console.log('PASS: sign-out removes full lessons, topics, and queued actions');
   }
   assert.deepEqual(errors,[]); console.log('No browser runtime errors');

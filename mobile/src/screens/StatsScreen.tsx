@@ -12,6 +12,7 @@ import { CONCEPTS } from '../data/concepts';
 import { ServerTopic } from '../services/topicsApi';
 import { scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { LearnedRecord } from '../types';
+import { learnedTopicCounts } from '../services/progressTotals';
 
 interface CategoryProgress {
   label: string;
@@ -40,14 +41,10 @@ function demoCategoryProgress(learnedIds: Set<string>): CategoryProgress[] {
  *  bars reflect the 125+ real catalog, not the demo's 20 (issue #35). */
 function serverCategoryProgress(
   topics: ServerTopic[],
-  learned: LearnedRecord[]
+  learned: LearnedRecord[],
+  beforeWindow?: Record<string, number>,
 ): CategoryProgress[] {
-  const learnedByTopic = new Map<string, number>();
-  for (const record of learned) {
-    if (record.topicName) {
-      learnedByTopic.set(record.topicName, (learnedByTopic.get(record.topicName) ?? 0) + 1);
-    }
-  }
+  const learnedByTopic = learnedTopicCounts(learned, beforeWindow);
   return topics.map((t) => ({
     label: t.name,
     total: t.conceptCount,
@@ -80,13 +77,13 @@ export function StatsScreen() {
   const categories = useMemo(
     () =>
       serverMode
-        ? serverCategoryProgress(topics, progress.learned)
+        ? serverCategoryProgress(topics, progress.learned, progress.learnedBeforeWindow)
         : demoCategoryProgress(new Set(progress.learned.map((r) => r.conceptId))),
-    [serverMode, topics, progress.learned]
+    [serverMode, topics, progress.learned, progress.learnedBeforeWindow]
   );
   const overall = serverMode
     ? {
-        learned: progress.learned.length,
+        learned: progress.stats?.totalLearned ?? progress.learned.length,
         total: topics.reduce((sum, t) => sum + t.conceptCount, 0),
       }
     : {

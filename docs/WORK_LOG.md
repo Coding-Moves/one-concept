@@ -7,20 +7,36 @@ claims as completed work.
 
 ## Current status
 
-- Implemented and validated [#150](https://github.com/Coding-Moves/one-concept/issues/150),
-  the next open issue in ascending order, on `codex/150-bounded-startup-state`
-  from refreshed `origin/develop` (`a9aab63`). Published as
-  [PR #185](https://github.com/Coding-Moves/one-concept/pull/185) into `develop`.
-- Compact startup includes 50 learned/saved detail records, exact totals, and
-  cursor access to older records. Saved search/filter and offline reading remain
-  available; full History UI (#159) is separate. Existing clients retain their
-  legacy response until updated. No new APK, migration, or production release.
-- The owner reinforced the preference for more focused commits in **all future
-  PRs** for this project. Saved in `AGENTS.md`; retain individual commits and
-  related tests without artificial splits or empty commits.
-- PRs #183 (#133) and #184 (#149) are merged into `develop`. Release #179,
-  card follow-up #180, and branch sync #181 are also merged. Their handoffs below
-  record the status at the time; this task does not authorize a production release.
+- Active: [#151](https://github.com/Coding-Moves/one-concept/issues/151), shared
+  daily Gemini generation budget, on `codex/151-shared-generation-budget` from
+  refreshed `origin/develop` (`65eb21d`). PR #185 is merged.
+- Plan: persist an atomic daily call reservation; integrate scheduled/on-demand
+  generation and catalog rewriting; verify concurrency, rollover, failures, and
+  kill switches; open one PR into `develop` with focused commits and owner authorship.
+- A new migration is needed. Apply it only to disposable test PostgreSQL during
+  this task; leave the production ledger unchanged until application is verified.
+  Mobile and production release work are outside this chunk.
+
+## Shared generation budget (#151) — 2026-09-12
+
+- Confirmed both gaps before implementation against the same generation source
+  now on `develop`: with a zero configured cap, actual prefetch/pool control flow
+  reached the mocked generator five times; two scheduled runs capped at two each
+  made four calls total. Database/provider boundaries were mocked, with no live
+  services or keys. The existing counter resets per run; prefetch never reads it.
+- Use one database reservation per attempted provider call, committed before the
+  network request. Budget denial must roll back the backlog claim without burning
+  an attempt. Once reserved, failed/throttled/uncertain calls still consume budget;
+  preserve the separate backlog retry refund for rate limits.
+- Align the budget day with Gemini's documented midnight Pacific reset, computed
+  by PostgreSQL in `America/Los_Angeles`, independently of user progress timezones.
+  [Provider documentation](https://ai.google.dev/gemini-api/docs/rate-limits).
+- Inspection also found the manual catalog rewriter calls the same provider;
+  include it in the shared budget rather than leaving another bypass. No catalog
+  rewrite will actually be run against production.
+- Intended commits: scope/reproduction; counter migration/service/concurrency
+  tests; backlog/scheduled enforcement/tests; prefetch integration/tests; rewrite
+  enforcement/tests; operational documentation/validation; PR bookkeeping.
 
 ## Bounded startup state (#150) — 2026-09-12
 

@@ -7,39 +7,71 @@ claims as completed work.
 
 ## Current status
 
-- Implemented and validated [#182](https://github.com/Coding-Moves/one-concept/issues/182)
-  on `codex/182-offline-saved-password` from refreshed `develop` (`58e9b1d`).
-  Added show/hide controls for sign-in/signup. Verified the existing full-lesson
-  cache across offline restart, and strengthened coverage of saved examples.
-  Published [PR #189](https://github.com/Coding-Moves/one-concept/pull/189) into
-  `develop`; phone rollout requires the next release.
-- PR #188 is merged. The owner reports installing all three email templates and
-  enabling the notification in Supabase; actual inbox delivery remains unverified.
+- Preparing version **1.8.0** on `codex/1-8-0-release-prep`, from refreshed
+  `develop` (`15aad70`). Feature/fix PRs #183, #184, #185, #186, #188, and #189
+  are merged. Runtime remains **1.3.0** for this JavaScript-only mobile release.
+- The version and six-benefit What's New card are implemented and verified in
+  [preparation PR #190](https://github.com/Coding-Moves/one-concept/pull/190).
+  Merge it into `develop`, then open the single
+  `develop` → `main` release PR after the database prerequisite is satisfied.
+  Production merge/deployment is not part of this request.
+- Production read-only inspection confirmed migration 0010 is missing. Automatic
+  approval review rejected applying it because the release-PR request did not
+  separately authorize a production schema change. No migration was executed and
+  `backend/migrations/applied.txt` is unchanged. Explicit owner authorization is
+  needed for this step before the release PR, as required by `RELEASING.md`.
+- Resend setup remains deferred in [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187).
+  The owner reports installing all three merged email templates and enabling the
+  password-change notification in Supabase; actual inbox delivery is unverified.
 
-- Published the three branded Supabase templates in non-draft
-  [PR #188](https://github.com/Coding-Moves/one-concept/pull/188) into `develop`,
-  from `a6e81f1` on `codex/branded-auth-email-templates`. GitHub reports the PR
-  mergeable with no conflicts; no CI checks are configured for this PR.
-- Resend delivery preparation remains in [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187).
-  Its duplicate template files are removed in a follow-up commit. Original
-  histories are intact. Template installation is independent of a domain purchase
-  or app release and still requires pasting HTML into Supabase.
-- No SMTP settings, live templates, notifications, or production release were
-  changed. Real inbox rendering and delivery remain unverified.
+## Version 1.8.0 preparation — 2026-09-13
 
-- Implemented and validated [#151](https://github.com/Coding-Moves/one-concept/issues/151),
-  shared daily Gemini generation budget, on `codex/151-shared-generation-budget`
-  from refreshed `origin/develop` (`65eb21d`). Published
-  [PR #186](https://github.com/Coding-Moves/one-concept/pull/186) into `develop`.
-- Scheduled refill, API prefetch, and manual catalog rewrites now share persisted
-  daily reservations. Reruns/restarts retain usage; a denied reservation cannot
-  spend a backlog attempt. All 145 backend tests passed with no skips.
-- Migration `0010_generation_daily_usage.sql` was applied only to disposable
-  PostgreSQL 16. It must be applied before production deployment; the production
-  ledger remains unchanged. The README records consistent settings and first-day
-  rollout handling. Mobile and production release work are outside this chunk.
-- PR #185 (#150) is merged. Preserve the owner's identity and the preference for
-  more focused commits in this and future PRs.
+- **Scope:** wind up merged work and open the release PR with its required
+  version-matched, one-time What's New card. Keep original focused commits and
+  leave production release merging to the owner.
+- **Highlights:** downloaded saved lessons/examples offline; automatic action
+  synchronization on reconnect/reopen; persistent offline topic choices; lighter
+  startup and older Saved search/filter access; password visibility; clearer
+  account emails. The deferred SMTP-provider draft is excluded.
+- **Card:** allow the highlight list to scroll while the heading and Got it stay
+  visible. Keep the existing device/version dismissal key and sign-in gating.
+  The browser regression checks the actual exported version, both themes at
+  320×568, 390×844, and 844×390, the last highlight, and offline restart after
+  dismissal. No native dependency or runtime change is needed.
+- **Commits:** `d087182` records scope; `e846760` makes long release cards readable
+  with regression coverage; `1e92332` sets version 1.8.0 and its six highlights.
+  `docs: record 1.8.0 release validation and migration prerequisite` records the
+  test instructions, map, and this handoff.
+- **Validation:** all **145 backend tests passed, no skips**, using disposable
+  PostgreSQL 16 and dummy Auth configuration with generation disabled. TypeScript
+  and all **33 Node 24 tests passed, no skips**. Android and web production exports
+  passed with dummy public configuration. The new card browser scenario passed
+  all six viewport/theme combinations and dismissal across offline restart;
+  screenshots were inspected. An initial web export retained the old Expo config
+  version in Metro's cache; rebuilding with `--clear` resolved it. No application
+  code workaround was needed. Artifacts remain under `/tmp/one-concept-1-8-*`.
+- **Limits:** physical-device/native accessibility checks and actual inbox
+  delivery were not exercised. This release reran backend/unit/card checks;
+  #189's documented password and full offline-collection acceptance checks remain
+  the coverage for those unchanged flows.
+- **Database prerequisite:** a read-only query against the configured One Concept
+  production project found no `public.generation_daily_usage` table. Automatic
+  approval review rejected executing `0010_generation_daily_usage.sql` before it
+  ran; neither production nor the applied ledger was changed. The prepared SQL
+  creates a backend-only usage table with its primary key, nonnegative counter
+  constraint, and row-level security. Obtain explicit owner authorization, apply
+  and verify it, then record its filename through a focused PR into `develop`.
+- **Deployment handoff:** the shared generation-budget rollout in
+  [backend/README.md](../backend/README.md#shared-generation-budget) still
+  requires consistent caps across API/workers and pausing old generators during
+  rollout. Enable the new generators at the next Pacific reset, or seed today's
+  usage conservatively while paused. No live worker settings were changed.
+- **PR:** [#190](https://github.com/Coding-Moves/one-concept/pull/190), ready for
+  review into `develop`, preserves the focused preparation commits.
+  `docs: link 1.8.0 preparation PR` records publication; check GitHub for its
+  resulting merge state. The production release PR has not been opened.
+- **Next step:** merge #190, obtain authorization and complete the database
+  prerequisite, then open `develop` → `main` without merging production.
 
 ## Saved reading offline and password visibility (#182) — 2026-09-12
 

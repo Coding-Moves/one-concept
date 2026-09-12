@@ -109,6 +109,8 @@ typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 - `data/whatsNew.ts`, `hooks/useWhatsNew.ts`, and `services/whatsNewStore.ts` control
   version announcements. Every release includes a matching one-time card focused
   on new features and user-visible improvements, per `RELEASING.md`.
+  `components/WhatsNewCard.tsx` scrolls long highlight lists independently of the
+  heading/dismissal controls so small screens can reach every item.
 - `src/types/index.ts` defines shared concept, progress, daily, history, and
   streak types. API payloads also have types near their service consumers.
 
@@ -232,7 +234,7 @@ session pooler. Applied migrations must not be rewritten.
   findings as issues. `cleanup.yml` manages stale issues; Dependabot schedules
   dependency updates with Expo-managed version restrictions. The checked-in
   workflows do not include a general PR pytest job.
-- `mobile/app.config.js` currently has app version `1.7.1` and native runtime
+- `mobile/app.config.js` currently has app version `1.8.0` and native runtime
   `1.3.0`; `package.json`'s `1.0.0` is not the release-version authority.
 
 ## Documentation drift to remember

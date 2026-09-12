@@ -18,7 +18,7 @@ module.exports = {
     name: 'One Concept',
     slug: 'one-concept',
     owner: 'coding-moves',
-    version: '1.7.1',
+    version: '1.8.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',

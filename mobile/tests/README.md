@@ -51,14 +51,18 @@ CI=1 EXPO_NO_DOTENV=1 EXPO_NO_TELEMETRY=1 EXPO_OFFLINE=1 \
   EXPO_PUBLIC_API_BASE_URL=http://127.0.0.1:4781/api \
   EXPO_PUBLIC_SUPABASE_URL=http://127.0.0.1:4781 \
   EXPO_PUBLIC_SUPABASE_ANON_KEY=test-public-key \
-  npx expo export --platform web --output-dir /tmp/one-concept-offline
+  npx expo export --platform web --clear --output-dir /tmp/one-concept-offline
 node tests/offline.browser.cjs /tmp/one-concept-offline \
   --no-event --retry-error --signout-inflight
 node tests/offline.browser.cjs /tmp/one-concept-offline --midnight
 node tests/offline.browser.cjs /tmp/one-concept-offline --partial-connectivity
 node tests/offline.browser.cjs /tmp/one-concept-offline --large-collections --require-compact
+node tests/offline.browser.cjs /tmp/one-concept-offline --whats-new
 node tests/password.browser.cjs /tmp/one-concept-offline
 ```
+
+`--clear` ensures a changed app version reaches the export instead of reusing
+stale Expo configuration from Metro.
 
 The flags exercise timer-only reconnection, a 503 during replay, and a request
 that fails after sign-out. Omit `--no-event` to test the browser online event.
@@ -78,6 +82,13 @@ into the compact API contract; it can be added to the other scenarios too.
 For the unchanged pre-fix export, `--baseline` asserts the original #133 failures.
 The test uses port 4781 and closes its server/browser afterward. Optional
 `OFFLINE_SCREENSHOT_PATH` saves the offline detail view for visual inspection.
+
+`--whats-new` checks the current version's card in light/dark themes at small
+phone, standard phone, and landscape sizes. The title and Got it must stay fully
+visible, the final highlight must scroll into view, and dismissal must persist
+through an offline restart. Set `WHATS_NEW_SCREENSHOT_DIR` to save all six previews.
+Use a version with a nonempty What's New entry; the test intentionally fails if
+that required release content is missing or the export has a stale version.
 
 `password.browser.cjs` uses the same export, Playwright settings, and port 4781;
 run the browser scripts sequentially. It starts signed out and intercepts

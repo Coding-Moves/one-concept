@@ -9,6 +9,7 @@ if (!root || !fs.existsSync(path.join(root, 'index.html'))) throw new Error('Pas
 const baseline = process.argv.includes('--baseline');
 const midnight = process.argv.includes('--midnight');
 const largeCollections = process.argv.includes('--large-collections');
+const whatsNew = process.argv.includes('--whats-new');
 const date = new Date().toISOString().slice(0, 10);
 const concept = (slug, title) => ({ id: slug, slug, title, summary: `Full explanation of ${title}.`, example: `A concrete example of ${title}.`, topic_slug: 'computer-science', topic_name: 'Computer Science', like_count: 2 });
 const daily = concept('fixture-daily', 'Daily fixture');
@@ -45,14 +46,14 @@ const server = http.createServer((req,res) => {
  const browser = await chromium.launch({ executablePath:process.env.PLAYWRIGHT_CHROMIUM_PATH, headless:true, args:['--no-sandbox'] });
  try {
   const context = await browser.newContext({viewport:{width:390,height:844},timezoneId:'UTC'});
-  await context.addInitScript(({session, appVersion}) => {
+  await context.addInitScript(({session, appVersion, whatsNew}) => {
     Object.defineProperty(navigator, 'share', {configurable:true,value:async data=>{window.fixtureShared=data;}});
     if (!localStorage.getItem('fixture-seeded')) {
       localStorage.setItem('sb-127-auth-token', JSON.stringify(session));
-      localStorage.setItem('one-concept/last-seen-version/v1',appVersion);
+      localStorage.setItem('one-concept/last-seen-version/v1',whatsNew ? 'previous-version' : appVersion);
       localStorage.setItem('fixture-seeded','yes');
     }
-  }, {session, appVersion});
+  }, {session, appVersion, whatsNew});
   await context.route('**/api/**', async route => {
     if (!online) return route.abort('internetdisconnected');
     const req = route.request(); const endpoint = new URL(req.url()).pathname.replace('/api','');
@@ -107,6 +108,38 @@ const server = http.createServer((req,res) => {
   const queue=async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('one-concept/mutation-queue/v1')||'{}'));
   if (midnight) await page.clock.setFixedTime(new Date(date+'T23:59:00Z'));
   await page.goto('http://127.0.0.1:4781');
+  if (whatsNew) {
+    const heading = page.getByText("What's new", {exact:true});
+    const gotIt = page.getByRole('button', {name:'Got it', exact:true});
+    await expect(heading).toBeVisible();
+    await expect(page.getByText('Version ' + appVersion, {exact:true})).toBeVisible();
+    for (const colorScheme of ['light', 'dark']) {
+      await page.emulateMedia({colorScheme});
+      for (const viewport of [{width:320,height:568}, {width:390,height:844}, {width:844,height:390}]) {
+        await page.setViewportSize(viewport);
+        await expect(heading).toBeInViewport({ratio:1});
+        await expect(gotIt).toBeInViewport({ratio:1});
+        const last = page.getByTestId('release-highlight').last();
+        await last.scrollIntoViewIfNeeded();
+        await expect(last).toBeInViewport({ratio:1});
+        await expect(gotIt).toBeInViewport({ratio:1});
+        if (process.env.WHATS_NEW_SCREENSHOT_DIR) {
+          fs.mkdirSync(process.env.WHATS_NEW_SCREENSHOT_DIR, {recursive:true});
+          await page.screenshot({path:path.join(process.env.WHATS_NEW_SCREENSHOT_DIR, `${colorScheme}-${viewport.width}x${viewport.height}.png`)});
+        }
+      }
+    }
+    await gotIt.click();
+    await expect(heading).toHaveCount(0);
+    await expect.poll(() => page.evaluate(() => localStorage.getItem('one-concept/last-seen-version/v1'))).toBe(appVersion);
+    online=false;
+    await page.reload();
+    await expect(page.getByText(daily.summary, {exact:true})).toBeVisible();
+    await expect(heading).toHaveCount(0);
+    assert.deepEqual(errors, []);
+    console.log('PASS: release card fits phone/landscape layouts in both themes, all highlights scroll into view, and dismissal survives offline restart');
+    return;
+  }
   await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
   if (largeCollections) {
     assert.equal(savedRequests,0,'Older Saved metadata must not load on startup');

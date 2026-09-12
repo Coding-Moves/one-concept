@@ -7,17 +7,35 @@ claims as completed work.
 
 ## Current status
 
-- Review follow-up complete in the same PR #183: pending actions survive midnight
-  and partial connection failures retain retry backoff. Each fix has its own
-  commit with regression coverage; prior commits and APK compatibility remain.
-- Completed scope: only [#133](https://github.com/Coding-Moves/one-concept/issues/133).
-  [PR #183](https://github.com/Coding-Moves/one-concept/pull/183) is open into
-  `develop` for offline reading, personalization persistence, and automatic
-  action synchronization. Problems were reproduced before implementation.
-- Branch: `codex/133-offline-reading-sync`, based on refreshed `origin/develop`
-  at `89a8fb8`. The starting tree matches the tested baseline.
+- Active scope: [#149](https://github.com/Coding-Moves/one-concept/issues/149),
+  reducing database reconnect work on requests after idle time. Owner authorized
+  a focused backend fix in a separate PR into `develop`.
+- Branch: `codex/149-db-connection-warmup`, from refreshed `origin/develop`
+  at `f34ba77`. PR #183, including both review fixes for #133, is merged.
+- Plan: reproduce idle expiry with PostgreSQL 16 before implementation; add a
+  bounded, configurable warm-up with lifecycle and reconnect tests; document
+  measured outcomes and open the PR. Keep connection safety checks and the
+  current pooler mode. No mobile, migration, or production configuration changes.
+- The issue's production 600 ms figure has not been independently reproduced.
+  All regression tests and before/after experiments use disposable test services.
 - Release #179 and card follow-up #180 are merged; #181 synchronized `main`
   back into `develop`. This task does not authorize another production release.
+
+## Database connections after idle (#149) — 2026-09-12
+
+- Reproduced before implementation using the unchanged app engine/session and
+  a disposable PostgreSQL 16 container on loopback port 55434. Set the test
+  server's idle-session timeout to 1.5 seconds, then waited two seconds between
+  requests. SQLAlchemy connection events confirm all three post-idle requests
+  created a new physical connection: 260.23, 221.45, and 220.35 ms. Immediate
+  reuse took 10.91, 10.24, and 9.40 ms with zero new connections.
+- This reproduces the request-time reconnect mechanism under controlled idle
+  expiry, not Supavisor's deployed timeout or the issue's production 600 ms figure.
+- Intended fix: configurable, bounded probes in the FastAPI lifespan, reusing
+  the most recently returned connection. Keep `pool_pre_ping`, transaction-mode
+  configuration, and current connection limits. Cancel probes before pool disposal.
+- Planned commits: reproduction/scope; warm connection lifecycle with regression
+  tests; measured validation, operational instructions, and PR handoff.
 
 ## PR #183 review fixes — 2026-09-12
 

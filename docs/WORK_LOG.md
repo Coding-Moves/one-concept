@@ -7,7 +7,7 @@ claims as completed work.
 
 ## Current status
 
-- Preparing one PR for [#152](https://github.com/Coding-Moves/one-concept/issues/152)
+- Prepared one PR chunk for [#152](https://github.com/Coding-Moves/one-concept/issues/152)
   and [#171](https://github.com/Coding-Moves/one-concept/issues/171): Resend delivery
   setup and branded authentication emails. Branch `codex/152-171-resend-auth-email`
   starts from refreshed `origin/develop` (`65eb21d`).
@@ -50,6 +50,29 @@ claims as completed work.
 - The PR will track both issues, with live activation explicitly pending.
   Keep it in draft until both delivery flows have passed real-inbox checks;
   repository changes alone do not establish that either issue is resolved.
+- Delivered standalone signup and recovery HTML with One Concept / Coding Moves
+  branding, the existing Supabase confirmation variable in both action and
+  fallback links, system fonts, inline styles, and no remote assets. Refined the
+  copy to focus on account actions, following Supabase's transactional guidance.
+- Added `docs/EMAIL_SETUP.md`: the $0 constraint, a conditional free-domain route,
+  DNS and scoped-key steps, exact SMTP fields, existing redirect URLs, template
+  installation, separate Supabase/Resend limits, and a live acceptance checklist.
+- **Validation:** 24 local Chromium scenarios passed across both templates at
+  320/390/600/960 pixels, with normal, doubled, and stripped styling. Verified
+  complete dummy verification URLs, copyable fallback links, no remote resources,
+  and no horizontal overflow with normal/enlarged text. Visual review caught
+  overlapping enlarged text; switched to relative line spacing and rechecked.
+  Inspected mobile, desktop, and enlarged-text screenshots. Text/button contrast
+  exceeds 4.5:1; relative Markdown links and whitespace checks passed.
+- **Limits:** no messages sent, accounts created, domain registered, payment made,
+  DNS edited, SMTP activated, or production template installed. Resend acceptance,
+  real inbox delivery, and native email-client rendering remain unverified. The
+  first preview launch lacked Playwright's bundled browser; the installed Chrome
+  completed validation. Backend pytest/mobile builds were not run because this
+  chunk changes only standalone templates and documentation, not application code.
+- Commits so far: `cf7cf8d` scope; `a17ede9` signup; `ed28df7` recovery;
+  `a44d624` account-focused copy; `2dd12c7` setup guide; `de1d290` scalable text.
+  Validation handoff: `docs: record authentication email validation and activation limits`.
 
 ## Bounded startup state (#150) — 2026-09-12
 

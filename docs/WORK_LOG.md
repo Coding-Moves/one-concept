@@ -7,6 +7,9 @@ claims as completed work.
 
 ## Current status
 
+- Review follow-up complete in the same PR #183: pending actions survive midnight
+  and partial connection failures retain retry backoff. Each fix has its own
+  commit with regression coverage; prior commits and APK compatibility remain.
 - Completed scope: only [#133](https://github.com/Coding-Moves/one-concept/issues/133).
   [PR #183](https://github.com/Coding-Moves/one-concept/pull/183) is open into
   `develop` for offline reading, personalization persistence, and automatic
@@ -15,6 +18,32 @@ claims as completed work.
   at `89a8fb8`. The starting tree matches the tested baseline.
 - Release #179 and card follow-up #180 are merged; #181 synchronized `main`
   back into `develop`. This task does not authorize another production release.
+
+## PR #183 review fixes — 2026-09-12
+
+- Owner requested both findings fixed in the existing PR against `develop`.
+  Planned and delivered one fix/test commit per finding, followed by this
+  documentation handoff. Read the exact Expo SDK 57 documentation before edits.
+- Reproduced both problems before editing: a save waiting behind a like across
+  midnight never persisted (the unchanged `develop` control succeeded); successful
+  state requests followed by failed topics requests caused rapid repeated fetches.
+  The new committed browser scenarios fail on the previous PR export.
+- `d9a07f5` — `fix: preserve pending actions across midnight`: split account
+  invalidation from daily refresh, preserve pending counts, and prevent cached
+  previews from overwriting pending optimistic actions. Browser coverage checks
+  queued save persistence through date change, offline restart, and replay.
+- `409b1af` — `fix: retain backoff after partial sync failures`: failed attempts
+  retain backoff even when their own requests report connectivity changes.
+  Tests cover the full 5/10/20/30-second progression, immediate reconnect while
+  waiting, coalesced successful wakeups, and automatic recovery in the browser.
+- **Validation:** 31 Node 24 tests, TypeScript, Android/web production exports,
+  and whitespace checks passed. Both new browser scenarios and the full offline
+  flow passed, including timer-only reconnect, 503 recovery, offline save restart,
+  and sign-out with an in-flight request. No browser runtime errors. No backend
+  changes; backend tests, live services, and physical-device checks were not run.
+- **Handoff:** both fixes stay in [PR #183](https://github.com/Coding-Moves/one-concept/pull/183)
+  on `codex/133-offline-reading-sync`. Native runtime, version, and dependencies
+  are unchanged. Documentation commit: `docs: record PR 183 review fixes`.
 
 ## Offline reading and synchronization (#133) — 2026-09-12
 

@@ -62,8 +62,11 @@ typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 - `ProgressContext.tsx` is the shared UI state owner. It loads cached state
   before revalidation, applies optimistic actions, serializes mutation requests,
   and flushes queued work on the same mutation chain. `services/syncLoop.ts`
-  retries while offline or actions remain, using 5–30 second backoff. Foreground
-  and browser reconnect events wake it immediately; backgrounding pauses timers.
+  retries while offline or actions remain, using 5–30 second backoff, including
+  when only some requests succeed. Daily refreshes preserve pending actions;
+  account/source changes invalidate them and clear the displayed state. Foreground
+  and browser reconnect events wake an idle loop immediately; backgrounding
+  pauses timers.
   This remains compatible with the current APK and has no closed-app worker.
   Screen retries use its serialized `refresh`; topic and detail screens have
   their own retry paths. Failed loads do not substitute demo lessons or totals

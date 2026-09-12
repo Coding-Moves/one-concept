@@ -50,10 +50,17 @@ CI=1 EXPO_NO_DOTENV=1 EXPO_NO_TELEMETRY=1 EXPO_OFFLINE=1 \
   npx expo export --platform web --output-dir /tmp/one-concept-offline
 node tests/offline.browser.cjs /tmp/one-concept-offline \
   --no-event --retry-error --signout-inflight
+node tests/offline.browser.cjs /tmp/one-concept-offline --midnight
+node tests/offline.browser.cjs /tmp/one-concept-offline --partial-connectivity
 ```
 
 The flags exercise timer-only reconnection, a 503 during replay, and a request
 that fails after sign-out. Omit `--no-event` to test the browser online event.
+The separate `--midnight` scenario holds a like request across the date change,
+queues Save behind it, and verifies persistence through offline restart and replay.
+`--partial-connectivity` serves progress but fails topics, checks that requests
+back off, and restores topics to verify automatic recovery without a browser event.
+The scheduler unit tests check the full 5–30 second delay progression.
 For the unchanged pre-fix export, `--baseline` asserts the original #133 failures.
 The test uses port 4781 and closes its server/browser afterward. Optional
 `OFFLINE_SCREENSHOT_PATH` saves the offline detail view for visual inspection.

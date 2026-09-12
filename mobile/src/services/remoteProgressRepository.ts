@@ -114,10 +114,10 @@ export class RemoteProgressRepository implements ProgressRepository {
 
   /** Drop the in-memory state; the module singleton outlives a sign-out. The
    *  offline queue is account data too, so it goes with it. */
-  forget(): void {
+  forget(): Promise<void> {
     this.epoch += 1;
     this.cache = EMPTY_PROGRESS;
-    clearQueue().catch(() => {});
+    return clearQueue();
   }
 
   async loadCached(): Promise<ProgressState | null> {
@@ -182,6 +182,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     try {
       done = await apiRequest('/v1/daily/complete', { method: 'POST' });
     } catch (err) {
+      if (epoch !== this.epoch) return EMPTY_PROGRESS;
       if (isOffline(err)) {
         // Queue the completion (with the date — it can only be replayed today)
         // and persist the optimistic record + streak bump so History AND the
@@ -203,6 +204,7 @@ export class RemoteProgressRepository implements ProgressRepository {
       }
       throw err;
     }
+    if (epoch !== this.epoch) return EMPTY_PROGRESS;
     await dequeue('learn');
 
     // Reload the full state so History shows the true server record — the actual
@@ -245,9 +247,11 @@ export class RemoteProgressRepository implements ProgressRepository {
         method: 'PUT',
         body: { topics: slugs },
       });
+      if (epoch !== this.epoch) return EMPTY_PROGRESS;
       await dequeue('topics');
       return this.fromState(payload, epoch);
     } catch (err) {
+      if (epoch !== this.epoch) return EMPTY_PROGRESS;
       if (isOffline(err)) {
         await enqueue({ kind: 'topics', slugs });
         return this.remember({ ...this.cache, followedTopics: next }, epoch);
@@ -280,9 +284,11 @@ export class RemoteProgressRepository implements ProgressRepository {
     };
     try {
       await this.toggle(conceptId, 'like', currently);
+      if (epoch !== this.epoch) return EMPTY_PROGRESS;
       await dequeue(`like:${conceptId}`);
       return this.remember(next, epoch);
     } catch (err) {
+      if (epoch !== this.epoch) return EMPTY_PROGRESS;
       if (isOffline(err)) {
         await enqueue({ kind: 'like', slug: conceptId, desired });
         return this.remember(next, epoch);
@@ -325,12 +331,14 @@ export class RemoteProgressRepository implements ProgressRepository {
     try {
       await this.toggle(conceptId, 'save', currently);
     } catch (err) {
+      if (epoch !== this.epoch) return EMPTY_PROGRESS;
       if (isOffline(err)) {
         await enqueue({ kind: 'save', slug: conceptId, desired });
         return this.remember(patched(), epoch);
       }
       throw err;
     }
+    if (epoch !== this.epoch) return EMPTY_PROGRESS;
     await dequeue(`save:${conceptId}`);
     // The save/unsave has already persisted. Refresh the full state so the saved
     // list (which needs each concept's title/topic) reflects it — but if that
@@ -370,8 +378,10 @@ export class RemoteProgressRepository implements ProgressRepository {
 
       try {
         await this.replay(m);
+        if (epoch !== this.epoch) return null;
         await dequeue(keyOf(m), m); // guarded: don't clobber a newer same-key intent
       } catch (err) {
+        if (epoch !== this.epoch) return null;
         if (isOffline(err)) return null; // still offline — keep the rest queued
         if (err instanceof ApiError && err.status >= 500) continue; // transient — retry next time
         await dequeue(keyOf(m), m); // 4xx: unfixable, drop so it can't block forever
@@ -413,6 +423,8 @@ export const remoteProgressRepository = new RemoteProgressRepository();
 /** Forget everything: the disk cache AND the singleton's in-memory copy.
  *  Called on sign-out so the next account can never see this one's data. */
 export async function clearServerStateCache(): Promise<void> {
-  remoteProgressRepository.forget();
-  await AsyncStorage.removeItem(CACHE_KEY).catch(() => {});
+  await Promise.all([
+    remoteProgressRepository.forget(),
+    AsyncStorage.removeItem(CACHE_KEY),
+  ]);
 }

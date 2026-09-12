@@ -26,6 +26,12 @@ export class ApiError extends Error {
 type TokenProvider = () => Promise<string | null>;
 
 let getAccessToken: TokenProvider = async () => null;
+let accountEpoch = 0;
+
+/** Cancel requests still waiting for a token when the account is cleared. */
+export function invalidateAccountRequests(): void {
+  accountEpoch += 1;
+}
 
 /** Registered once by the auth layer in Phase 3. */
 export function setTokenProvider(provider: TokenProvider): void {
@@ -77,7 +83,9 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     throw new ApiError(0, 'EXPO_PUBLIC_API_BASE_URL is not set');
   }
 
+  const epoch = accountEpoch;
   const token = await getAccessToken();
+  if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;

@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.7.1',
+    highlights: [
+      'Keep reading cached lessons when a weak connection interrupts sign-in refresh.',
+      'Animated offline screens now include a Try again button to reload missing content.',
+      'Clear connection messages replace technical errors when signing in.',
+    ],
+  },
+  {
     version: '1.7.0',
     highlights: [
       'Works offline — read, like, save, and mark concepts learned with no connection, and everything syncs automatically the moment you’re back online.',

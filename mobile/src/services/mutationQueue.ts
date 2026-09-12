@@ -11,6 +11,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
  * only the final set.
  */
 const QUEUE_KEY = 'one-concept/mutation-queue/v1';
+const listeners = new Set<() => void>();
+
+export function subscribeQueue(listener: () => void): () => void {
+  listeners.add(listener);
+  return () => { listeners.delete(listener); };
+}
 
 export type QueuedMutation =
   | { kind: 'like'; slug: string; desired: boolean }
@@ -57,6 +63,7 @@ export async function enqueue(m: QueuedMutation): Promise<void> {
   const q = await ensureLoaded();
   q[keyOf(m)] = m;
   await persist();
+  listeners.forEach(listener => listener());
 }
 
 /**

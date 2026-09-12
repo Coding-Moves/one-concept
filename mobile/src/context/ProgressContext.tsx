@@ -9,7 +9,7 @@ import {
   useState,
 } from 'react';
 import { AppState } from 'react-native';
-import { subscribeConnectivity } from '../api/client';
+import { getConnectivity, subscribeConnectivity } from '../api/client';
 import { CONCEPTS } from '../data/concepts';
 import { Category, Concept, DailyOutcome, ProgressState } from '../types';
 import { selectDailyConcept } from '../services/dailyConcept';
@@ -17,6 +17,8 @@ import { todayKey } from '../services/dates';
 import { localProgressRepository } from '../services/localProgressRepository';
 import { ProgressRepository } from '../services/progressRepository';
 import { remoteProgressRepository } from '../services/remoteProgressRepository';
+import { subscribeQueue } from '../services/mutationQueue';
+import { fetchTopics } from '../services/topicsApi';
 import { useAuth } from './AuthContext';
 import { EMPTY_PROGRESS } from '../services/storage';
 import { computeStreaks, StreakStats } from '../services/streak';
@@ -122,6 +124,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
       try {
         const next = await repository.flushQueue?.();
         if (active && next) setProgress(next);
+        if (active && next && getConnectivity()) await fetchTopics().catch(() => {});
       } catch {
         // A flush failure just leaves items queued for the next trigger.
       } finally {
@@ -132,6 +135,9 @@ export function ProgressProvider({ children, repository: override }: Props) {
     const unsubscribe = subscribeConnectivity((online) => {
       if (online) flush();
     });
+    const unsubscribeQueue = subscribeQueue(() => {
+      if (getConnectivity()) flush();
+    });
     const appState = AppState.addEventListener('change', (s) => {
       if (s === 'active') flush();
     });
@@ -140,6 +146,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
     return () => {
       active = false;
       unsubscribe();
+      unsubscribeQueue();
       appState.remove();
     };
   }, [repository]);

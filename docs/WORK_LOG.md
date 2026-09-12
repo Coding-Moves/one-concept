@@ -9,7 +9,8 @@ claims as completed work.
 
 - Implemented and validated [#151](https://github.com/Coding-Moves/one-concept/issues/151),
   shared daily Gemini generation budget, on `codex/151-shared-generation-budget`
-  from refreshed `origin/develop` (`65eb21d`). Publishing one PR into `develop`.
+  from refreshed `origin/develop` (`65eb21d`). Published
+  [PR #186](https://github.com/Coding-Moves/one-concept/pull/186) into `develop`.
 - Scheduled refill, API prefetch, and manual catalog rewrites now share persisted
   daily reservations. Reruns/restarts retain usage; a denied reservation cannot
   spend a backlog attempt. All 145 backend tests passed with no skips.
@@ -72,8 +73,12 @@ claims as completed work.
   Gemini usage is outside this application ledger; provider limits still apply.
 - Commits: `92d537f` scope/reproduction; `91f70ba` ledger/migration/tests;
   `b8eabdc` claim/scheduled enforcement/tests; `2b199da` prefetch integration/tests;
-  `e39df10` rewrite enforcement/tests. Documentation handoff:
-  `docs: document shared generation budget rollout and validation`.
+  `e39df10` rewrite enforcement/tests; `2baec95` operational documentation and
+  validation.
+- **PR:** [#186](https://github.com/Coding-Moves/one-concept/pull/186), open into
+  `develop` with individual commits and owner authorship. Publication bookkeeping:
+  `docs: link shared generation budget pull request`. Ready for review; merging,
+  production migration application, and deployment were not performed.
 
 ## Bounded startup state (#150) — 2026-09-12
 

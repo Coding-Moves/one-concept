@@ -8,8 +8,8 @@ import {
   useRef,
   useState,
 } from 'react';
-import { AppState } from 'react-native';
-import { getConnectivity, subscribeConnectivity } from '../api/client';
+import { AppState, Platform } from 'react-native';
+import { getConnectivity, isApiConfigured, setConnectivity, subscribeConnectivity } from '../api/client';
 import { CONCEPTS } from '../data/concepts';
 import { Category, Concept, DailyOutcome, ProgressState } from '../types';
 import { selectDailyConcept } from '../services/dailyConcept';
@@ -17,7 +17,8 @@ import { todayKey } from '../services/dates';
 import { localProgressRepository } from '../services/localProgressRepository';
 import { ProgressRepository } from '../services/progressRepository';
 import { remoteProgressRepository } from '../services/remoteProgressRepository';
-import { subscribeQueue } from '../services/mutationQueue';
+import { pending as queuedMutations, subscribeQueue } from '../services/mutationQueue';
+import { createSyncLoop } from '../services/syncLoop';
 import { fetchTopics } from '../services/topicsApi';
 import { useAuth } from './AuthContext';
 import { EMPTY_PROGRESS } from '../services/storage';
@@ -75,15 +76,24 @@ export function ProgressProvider({ children, repository: override }: Props) {
     override ?? (session ? remoteProgressRepository : localProgressRepository);
 
   const today = todayKey();
+  const userId = session?.user.id;
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  const pending = useRef(0);
+  const accountEpoch = useRef(0);
+  const confirmed = useRef<ProgressState | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      setLoading(true);
+    accountEpoch.current += 1;
+    pending.current = 0;
+    confirmed.current = null;
+    setLoading(true);
+    setProgress(EMPTY_PROGRESS);
+    chain.current = chain.current.then(async () => {
+      if (cancelled) return;
       // The repository just swapped (sign-in or sign-out). The old account's
       // state must not stay on screen while the new source loads — wiping the
       // caches below is not enough when the leak lives in React state.
-      setProgress(EMPTY_PROGRESS);
 
       // Paint from the last known state immediately — on a slow connection
       // the difference between this and waiting on the network is the whole
@@ -103,53 +113,16 @@ export function ProgressProvider({ children, repository: override }: Props) {
       const next = picked ? await repository.setAssignment(picked.id, today) : stored;
       if (cancelled) return;
 
-      setProgress(next);
+      confirmed.current = next;
+      if (pending.current === 0) setProgress(next);
       setLoading(false);
-    })();
+      if (userId && getConnectivity()) void fetchTopics().catch(() => {});
+    }).catch(() => { if (!cancelled) setLoading(false); });
     return () => {
       cancelled = true;
+      accountEpoch.current += 1;
     };
-  }, [repository, today]);
-
-  // Drain the offline mutation queue when connectivity returns or the app comes
-  // back to the foreground, then apply the server-reconciled state (issue #133).
-  // Serialised via `flushing` so overlapping triggers don't double-replay.
-  useEffect(() => {
-    if (!repository.flushQueue) return;
-    let active = true;
-    let flushing = false;
-    const flush = async () => {
-      if (flushing || !active) return;
-      flushing = true;
-      try {
-        const next = await repository.flushQueue?.();
-        if (active && next) setProgress(next);
-        if (active && next && getConnectivity()) await fetchTopics().catch(() => {});
-      } catch {
-        // A flush failure just leaves items queued for the next trigger.
-      } finally {
-        flushing = false;
-      }
-    };
-
-    const unsubscribe = subscribeConnectivity((online) => {
-      if (online) flush();
-    });
-    const unsubscribeQueue = subscribeQueue(() => {
-      if (getConnectivity()) flush();
-    });
-    const appState = AppState.addEventListener('change', (s) => {
-      if (s === 'active') flush();
-    });
-    flush(); // catch up on anything left from a previous session
-
-    return () => {
-      active = false;
-      unsubscribe();
-      unsubscribeQueue();
-      appState.remove();
-    };
-  }, [repository]);
+  }, [repository, today, userId]);
 
   // The day's assignment is pinned once made, even if the concept's topic is
   // unfollowed later that day — topic changes apply from the next assignment.
@@ -184,22 +157,25 @@ export function ProgressProvider({ children, repository: override }: Props) {
   // momentarily wipe a later tap's optimistic change (a flicker). On failure we
   // undo just this change functionally, on top of the latest state, so a
   // concurrent change is never lost (the clobber #39 originally fixed).
-  const chain = useRef<Promise<void>>(Promise.resolve());
-  const pending = useRef(0);
   const apply = useCallback(
     (
       optimistic: ((prev: ProgressState) => ProgressState) | null,
-      run: () => Promise<ProgressState>,
+      run: () => Promise<ProgressState | null>,
       undo?: (prev: ProgressState) => ProgressState
     ) => {
+      const epoch = accountEpoch.current;
       if (optimistic) setProgress(optimistic);
       pending.current += 1;
       chain.current = chain.current.then(async () => {
+        if (epoch !== accountEpoch.current) return;
         try {
           const next = await run();
+          if (epoch !== accountEpoch.current) return;
           pending.current -= 1;
-          if (pending.current === 0) setProgress(next);
+          if (next) confirmed.current = next;
+          if (pending.current === 0 && confirmed.current) setProgress(confirmed.current);
         } catch {
+          if (epoch !== accountEpoch.current) return;
           pending.current -= 1;
           if (undo) setProgress(undo);
         }
@@ -208,6 +184,57 @@ export function ProgressProvider({ children, repository: override }: Props) {
     },
     []
   );
+
+  // Queue replay shares the same chain as taps and initial loading. A later
+  // optimistic action cannot be overwritten by a reconnect's server snapshot.
+  useEffect(() => {
+    if (!repository.flushQueue || !isApiConfigured()) return;
+    let active = true;
+    const loop = createSyncLoop(async () => {
+      let retry = true;
+      await apply(null, async () => {
+        if (!active) return null;
+        const entries = await queuedMutations();
+        let next: ProgressState | null = null;
+        if (entries.length) next = await repository.flushQueue!();
+        else if (!getConnectivity()) next = await repository.load();
+        if (!active) return null;
+        if (next && getConnectivity()) await fetchTopics().catch(() => {});
+        retry = !getConnectivity() || (await queuedMutations()).length > 0;
+        return next;
+      });
+      return retry;
+    }, AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
+    const unsubscribe = subscribeConnectivity(online => {
+      if (online) loop.wake();
+      else loop.retry();
+    });
+    const unsubscribeQueue = subscribeQueue(() => {
+      if (getConnectivity()) loop.wake();
+      else loop.retry();
+    });
+    const appState = AppState.addEventListener('change', state => loop.setActive(state === 'active'));
+    // Browsers have an immediate reconnect event. Native JS retries pending
+    // work with backoff because the current APK has no connectivity module.
+    const reconnect = () => loop.wake();
+    const disconnect = () => setConnectivity(false);
+    if (Platform.OS === 'web') {
+      window.addEventListener('online', reconnect);
+      window.addEventListener('offline', disconnect);
+    }
+    loop.wake();
+    return () => {
+      active = false;
+      loop.stop();
+      unsubscribe();
+      unsubscribeQueue();
+      appState.remove();
+      if (Platform.OS === 'web') {
+        window.removeEventListener('online', reconnect);
+        window.removeEventListener('offline', disconnect);
+      }
+    };
+  }, [apply, repository, userId]);
 
   // Retry shares the mutation chain, so a refresh cannot overwrite a later tap.
   const refresh = useCallback(() => apply(null, () => repository.load()), [apply, repository]);

@@ -7,6 +7,16 @@ claims as completed work.
 
 ## Current status
 
+- Active scope: [#150](https://github.com/Coding-Moves/one-concept/issues/150),
+  the next open issue in ascending order. Branch `codex/150-bounded-startup-state`
+  starts at refreshed `origin/develop` (`a9aab63`); PR #184 is merged.
+- Plan: reproduce growing state payloads; add capped startup metadata and cursor
+  endpoints; adapt mobile Stats/Saved without losing totals, search, or offline
+  data; validate and open one PR into `develop`. Keep the existing last-ten History
+  UI (#159 is separate). Older clients retain the legacy contract; updated JS
+  opts into compact state. No new APK, dependency, migration, or release planned.
+- Read the exact Expo SDK 57 documentation before mobile changes. Each coherent
+  backend, mobile, and documentation change will retain its own commit/tests.
 - Completed implementation: [#149](https://github.com/Coding-Moves/one-concept/issues/149),
   reducing database reconnect work on requests after idle time. Validated and
   published in [PR #184](https://github.com/Coding-Moves/one-concept/pull/184)
@@ -20,6 +30,16 @@ claims as completed work.
   All regression tests and before/after experiments use disposable test services.
 - Release #179 and card follow-up #180 are merged; #181 synchronized `main`
   back into `develop`. This task does not authorize another production release.
+
+## Bounded startup state (#150) — 2026-09-12
+
+- Confirmed before implementation with disposable PostgreSQL 16 and 365 completed
+  and saved concepts: both the existing request and `?compact=true` returned all
+  365 detail rows in each list, about 151 KB. The new regression failed at the
+  expected 50-row limit. No production service was used.
+- Keep legacy state responses for older clients during backend/OTA rollout. The
+  updated client will request compact metadata, retain exact aggregate totals,
+  and load older Saved metadata in pages when needed. Full History UI is separate.
 
 ## Database connections after idle (#149) — 2026-09-12
 

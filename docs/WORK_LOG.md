@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+- Current release preparation: version **1.8.0**, based on `develop` (`15aad70`),
+  on `codex/1-8-0-release-prep`. PRs #183, #184, #185, #186, #188, and #189 are
+  merged. The owner requested the release PR and a benefit-focused one-time card.
+- Prepare the version/card in a small PR into `develop`, preserve runtime 1.3.0,
+  validate the release, verify/apply pending migration 0010, then open the single
+  `develop` → `main` PR. Production merge/deployment is not part of this request.
+  Resend setup remains deferred in draft #187.
+
 - Implemented and validated [#182](https://github.com/Coding-Moves/one-concept/issues/182)
   on `codex/182-offline-saved-password` from refreshed `develop` (`58e9b1d`).
   Added show/hide controls for sign-in/signup. Verified the existing full-lesson

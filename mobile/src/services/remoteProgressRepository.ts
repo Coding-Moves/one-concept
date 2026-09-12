@@ -4,6 +4,7 @@ import { Category, DailyPayload, ProgressState } from '../types';
 import { todayKey } from './dates';
 import { cacheSavedConcepts, conceptCache } from './conceptApi';
 import { toConcept } from './dailyApi';
+import { withPendingProgress } from './pendingProgress';
 import { clearQueue, dequeue, enqueue, keyOf, pending, QueuedMutation } from './mutationQueue';
 import { ProgressRepository } from './progressRepository';
 import { EMPTY_PROGRESS } from './storage';
@@ -97,6 +98,8 @@ export class RemoteProgressRepository implements ProgressRepository {
 
   private async fromState(payload: StatePayload, epoch: number): Promise<ProgressState> {
     if (epoch !== this.epoch) return EMPTY_PROGRESS;
+    const state = withPendingProgress(toProgressState(payload), this.cache, await pending());
+    if (epoch !== this.epoch) return EMPTY_PROGRESS;
     // Keep each day's full text for later History/Saved reading, and download
     // saved bodies without holding up the initial screen.
     const contentEpoch = conceptCache.epoch;
@@ -105,8 +108,8 @@ export class RemoteProgressRepository implements ProgressRepository {
       await conceptCache.set(concept.id, concept, contentEpoch).catch(() => {});
     }
     if (epoch !== this.epoch) return EMPTY_PROGRESS;
-    void cacheSavedConcepts(payload.bookmarks, contentEpoch);
-    return this.remember(toProgressState(payload), epoch);
+    void cacheSavedConcepts(state.bookmarks, contentEpoch);
+    return this.remember(state, epoch);
   }
 
   /** Drop the in-memory state; the module singleton outlives a sign-out. The

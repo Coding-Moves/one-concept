@@ -11,7 +11,8 @@ claims as completed work.
   on `codex/182-offline-saved-password` from refreshed `develop` (`58e9b1d`).
   Added show/hide controls for sign-in/signup. Verified the existing full-lesson
   cache across offline restart, and strengthened coverage of saved examples.
-  Preparing one PR into `develop`; phone rollout requires the next release.
+  Published [PR #189](https://github.com/Coding-Moves/one-concept/pull/189) into
+  `develop`; phone rollout requires the next release.
 - PR #188 is merged. The owner reports installing all three email templates and
   enabling the notification in Supabase; actual inbox delivery remains unverified.
 
@@ -70,10 +71,11 @@ claims as completed work.
   on-device storage were not exercised; preview checks remain in
   `mobile/tests/README.md`. Backend tests were not run for this mobile-only change.
 - Commits: `b76fecd` records scope; `2e41289` adds the UI and browser regression;
-  `test: verify all saved lesson bodies survive offline restart` strengthens
-  offline acceptance; `docs: record password and offline reading verification`
-  records the map, test instructions, and handoff. Version/runtime are unchanged;
-  this chunk prepares a feature PR and does not open or merge a release PR.
+  `18fb94b` strengthens offline acceptance; `eef0ea4` records the map, test
+  instructions, and handoff. `docs: link password and saved reading PR` records
+  [PR #189](https://github.com/Coding-Moves/one-concept/pull/189), non-draft into
+  `develop`, with five focused commits. Version/runtime are unchanged; this
+  chunk does not open or merge a release PR.
 
 ## Separate branded email templates — 2026-09-12
 

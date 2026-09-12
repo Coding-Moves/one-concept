@@ -7,6 +7,15 @@ claims as completed work.
 
 ## Current status
 
+- Active follow-up: fix the failed check on release #191, as requested after the
+  missing production migration was identified. Both failed runs report migration
+  0010; the latest preview OTA passed. Work on `codex/1-8-0-migration-check` from
+  refreshed `develop` (`a5e972c`). Verify/apply the exact pending SQL, record the
+  ledger only after production verification, then merge the focused fix into
+  `develop` and confirm the release check. Production release merging remains
+  outside this follow-up. Planned commits: scope; verified migration ledger;
+  validation and release handoff.
+
 - Opened [release PR #191](https://github.com/Coding-Moves/one-concept/pull/191),
   **develop → main**, for version **1.8.0**. Feature/fix PRs #183, #184, #185,
   #186, #188, and #189 are included. Runtime remains **1.3.0** for this

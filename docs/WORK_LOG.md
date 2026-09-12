@@ -9,7 +9,8 @@ claims as completed work.
 
 - Implemented and validated [#150](https://github.com/Coding-Moves/one-concept/issues/150),
   the next open issue in ascending order, on `codex/150-bounded-startup-state`
-  from refreshed `origin/develop` (`a9aab63`). Publishing one PR into `develop`.
+  from refreshed `origin/develop` (`a9aab63`). Published as
+  [PR #185](https://github.com/Coding-Moves/one-concept/pull/185) into `develop`.
 - Compact startup includes 50 learned/saved detail records, exact totals, and
   cursor access to older records. Saved search/filter and offline reading remain
   available; full History UI (#159) is separate. Existing clients retain their
@@ -71,7 +72,11 @@ claims as completed work.
   `ce38299` backend contract/endpoints/tests; `32cc70a` Stats compatibility/tests;
   `b62ab19` Saved paging/cache/browser checks; `50b7f88` compact request activation;
   `2d83b7a` manual reconnect retry. Documentation handoff:
-  `docs: document compact state rollout and validation`.
+  `docs: document compact state rollout and validation` (`730a28d`).
+- **PR:** [#185](https://github.com/Coding-Moves/one-concept/pull/185), open into
+  `develop` with individual commits and owner authorship. Publication bookkeeping:
+  `docs: link bounded startup pull request`. Ready for owner review; merging and
+  deployment were not performed. Disposable browser/database checks finished.
 
 ## Database connections after idle (#149) — 2026-09-12
 

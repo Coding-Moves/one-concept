@@ -33,7 +33,7 @@ inside a root stack, with a concept-detail modal above them.
 | `StatsScreen.tsx` | Streak and topic statistics. |
 | `ProfileScreen.tsx` | Account, reminder preferences, theme, sign-out, and links to profile subpages. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
-| `SavedScreen.tsx` | Saved concepts and detail navigation. |
+| `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
 | `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |
 | `AuthScreen.tsx` | Sign-in, sign-up, and password recovery. |
 | `AboutScreen.tsx` | Branding and app information. |
@@ -73,7 +73,9 @@ typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
   for an authenticated account.
 - `services/progressRepository.ts` defines the persistence interface.
   `remoteProgressRepository.ts` implements API state, account caching, optimistic
-  offline fallbacks, and replay. `pendingProgress.ts` retains unacknowledged
+  offline fallbacks, and replay. It opts into compact startup metadata; Stats
+  uses full server totals plus older-topic counts through `progressTotals.ts`.
+  `pendingProgress.ts` retains unacknowledged
   likes, saves, and same-day completions during server reconciliation.
   `localProgressRepository.ts` and `storage.ts`
   retain local/demo support; this is not a separate visible guest navigation flow.
@@ -91,6 +93,10 @@ typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
   downloaded with three workers. Offline reading requires a completed download.
   `offlineCache.ts` provides per-entry storage and fences late writes on sign-out.
   UI concept IDs are slugs, while the database also has UUIDs.
+- `hooks/useSavedConcepts.ts` loads older Saved metadata in 50-record pages on
+  that screen, retaining full search/filter access. `services/savedApi.ts` owns
+  its account-keyed disk cache; `accountCaches.ts` clears it and invalidates late
+  writes. Missing offline metadata can be recovered from downloaded lesson bodies.
 - `hooks/useTopics.ts`, `services/topicsApi.ts`, and `topicStore.ts` share the
   cached dynamic topic catalog. Follow changes enter the same durable outbox as
   other actions; queued choices override stale server responses until replay.
@@ -122,7 +128,8 @@ The existing pre-ping, transaction pooler mode, and pool limits remain in place.
 | `health.py`: `GET /health` | Liveness plus a database query. |
 | `topics.py`: `GET /v1/topics` | Active topics, published counts, follow state. |
 | `daily.py`: `GET /v1/daily`, `POST /v1/daily/complete` | Selection, completion, server-derived date and streaks. Exhaustion returns 409 with `catalog_exhausted`. |
-| `me.py`: `GET /v1/me/state`, `/stats` | Aggregate app state, with today's lesson folded into the state response. |
+| `me.py`: `GET /v1/me/state`, `/stats` | Optional compact state, exact totals, today's lesson. |
+| `me.py`: `GET /v1/me/history`, `/saved` | Cursor pages through `services/collections.py`; default 50, maximum 100 items. |
 | `me.py`: `PUT /v1/me/topics`, `PATCH /v1/me` | Whole-set follows, profile name, PostgreSQL-validated timezone. |
 | `me.py`: `GET/PUT /v1/me/notifications`, `POST/DELETE /v1/me/push-token` | Reminder preferences and scoped device registration/removal. |
 | `concepts.py`: `GET /v1/concepts/{slug}`, `PUT/DELETE .../like`, `.../save` | Published lesson detail and independent interaction writes. |
@@ -138,7 +145,10 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 - `services/state.py` aggregates profile, follows, learned/saved metadata, likes,
   assignment slug, and derived streaks in one SQL statement. The `/me/state`
   handler then calls selection separately to add `daily`; one HTTP request does
-  not mean one database statement for the entire endpoint.
+  not mean one database statement for the entire endpoint. Compact clients get
+  at most 50 enriched learned/saved rows, older-topic counts and continuation
+  cursors; bare membership and aggregate streak/totals remain complete. Legacy
+  clients keep the full detail lists until upgraded.
 - `services/interactions.py` implements likes/saves, full-set follows, and
   idempotent completion of the most recent assignment from today or yesterday.
   Yesterday's grace applies when there is no newer assignment; older days cannot

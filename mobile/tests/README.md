@@ -52,6 +52,7 @@ node tests/offline.browser.cjs /tmp/one-concept-offline \
   --no-event --retry-error --signout-inflight
 node tests/offline.browser.cjs /tmp/one-concept-offline --midnight
 node tests/offline.browser.cjs /tmp/one-concept-offline --partial-connectivity
+node tests/offline.browser.cjs /tmp/one-concept-offline --large-collections --require-compact
 ```
 
 The flags exercise timer-only reconnection, a 503 during replay, and a request
@@ -61,6 +62,13 @@ queues Save behind it, and verifies persistence through offline restart and repl
 `--partial-connectivity` serves progress but fails topics, checks that requests
 back off, and restores topics to verify automatic recovery without a browser event.
 The scheduler unit tests check the full 5–30 second delay progression.
+`--large-collections` serves 50 recent records from a 365-item account. It checks
+full Stats totals, older Saved search/category filters, page failures/retry,
+manual retry immediately after connectivity returns,
+unopened downloaded lessons offline, offline completion/unsave, and sign-out
+while a page is in flight. `--require-compact` checks state-bearing requests opt
+into the compact API contract; it can be added to the other scenarios too.
+`COLLECTION_SCREENSHOT_PATH` optionally captures the older-item search result.
 For the unchanged pre-fix export, `--baseline` asserts the original #133 failures.
 The test uses port 4781 and closes its server/browser afterward. Optional
 `OFFLINE_SCREENSHOT_PATH` saves the offline detail view for visual inspection.

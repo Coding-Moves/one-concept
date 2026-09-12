@@ -7,32 +7,23 @@ claims as completed work.
 
 ## Current status
 
-- Active scope: [#150](https://github.com/Coding-Moves/one-concept/issues/150),
-  the next open issue in ascending order. Branch `codex/150-bounded-startup-state`
-  starts at refreshed `origin/develop` (`a9aab63`); PR #184 is merged.
-- Plan: reproduce growing state payloads; add capped startup metadata and cursor
-  endpoints; adapt mobile Stats/Saved without losing totals, search, or offline
-  data; validate and open one PR into `develop`. Keep the existing last-ten History
-  UI (#159 is separate). Older clients retain the legacy contract; updated JS
-  opts into compact state. No new APK, dependency, migration, or release planned.
-- Read the exact Expo SDK 57 documentation before mobile changes. Each coherent
-  backend, mobile, and documentation change will retain its own commit/tests.
-- Completed implementation: [#149](https://github.com/Coding-Moves/one-concept/issues/149),
-  reducing database reconnect work on requests after idle time. Validated and
-  published in [PR #184](https://github.com/Coding-Moves/one-concept/pull/184)
-  into `develop`.
-- Branch: `codex/149-db-connection-warmup`, from refreshed `origin/develop`
-  at `f34ba77`. PR #183, including both review fixes for #133, is merged.
-- Delivered: idle-expiry reproduction, bounded/configurable warm-up with lifecycle
-  and reconnect coverage, and operational instructions. Connection safety checks
-  and current pooler mode remain. No mobile, migration, or production changes.
-- The issue's production 600 ms figure has not been independently reproduced.
-  All regression tests and before/after experiments use disposable test services.
-- Release #179 and card follow-up #180 are merged; #181 synchronized `main`
-  back into `develop`. This task does not authorize another production release.
+- Implemented and validated [#150](https://github.com/Coding-Moves/one-concept/issues/150),
+  the next open issue in ascending order, on `codex/150-bounded-startup-state`
+  from refreshed `origin/develop` (`a9aab63`). Publishing one PR into `develop`.
+- Compact startup includes 50 learned/saved detail records, exact totals, and
+  cursor access to older records. Saved search/filter and offline reading remain
+  available; full History UI (#159) is separate. Existing clients retain their
+  legacy response until updated. No new APK, migration, or production release.
+- The owner reinforced the preference for more focused commits in **all future
+  PRs** for this project. Saved in `AGENTS.md`; retain individual commits and
+  related tests without artificial splits or empty commits.
+- PRs #183 (#133) and #184 (#149) are merged into `develop`. Release #179,
+  card follow-up #180, and branch sync #181 are also merged. Their handoffs below
+  record the status at the time; this task does not authorize a production release.
 
 ## Bounded startup state (#150) — 2026-09-12
 
+- Read the exact Expo SDK 57 documentation before mobile edits.
 - Confirmed before implementation with disposable PostgreSQL 16 and 365 completed
   and saved concepts: both the existing request and `?compact=true` returned all
   365 detail rows in each list, about 151 KB. The new regression failed at the
@@ -40,6 +31,47 @@ claims as completed work.
 - Keep legacy state responses for older clients during backend/OTA rollout. The
   updated client will request compact metadata, retain exact aggregate totals,
   and load older Saved metadata in pages when needed. Full History UI is separate.
+
+- Delivered opt-in compact state on GET state, PUT topics, and PATCH profile;
+  updated mobile requests use it. Both cursor endpoints default to 50 and allow
+  1–100 items. Like counts are enriched after limiting rows; full membership and
+  streak/aggregate work still grow with activity. Saved timestamp/UUID ordering
+  handles ties and deletion between pages, with all queries scoped to the JWT user.
+- Stats combines older-topic aggregates with recent/optimistic learned rows.
+  Saved paints recent/cached rows, then loads older metadata in bounded pages;
+  previously downloaded bodies provide older titles offline even before the first
+  Saved visit. The new account-keyed cache clears at sign-out and fences late pages.
+- Final review reproduced a manual Retry that sent no request after connectivity
+  returned. Fixed it in a follow-up commit and retained the failing-before/passing-
+  after browser scenario. Equivalent state refreshes do not spin failed page loads.
+- **Validation:** all 112 backend tests passed against disposable PostgreSQL 16,
+  with no skips; 33 Node 24 tests, TypeScript, Ruff (`F,E9`), and whitespace checks
+  passed. Android/web production exports succeeded using dummy configuration.
+  The first restricted export stalled; it was stopped and completed with local
+  worker communication enabled. Documentation links/new source paths were checked.
+- The 365-record PostgreSQL fixture returned 151,007 bytes through the legacy
+  contract and 55,676 bytes through compact state, about 63% smaller, with exactly
+  50 learned and 50 saved details. Pagination recovered all 365 without duplicates.
+  Tests cover limits/invalid cursors, user isolation, exact window boundaries,
+  mutations, tied saves, deletion between pages, own-like exclusion, and totals.
+- Browser coverage passed for the 365-item account: full Stats/category totals,
+  older Saved search/category filters and reading, offline restart before Saved
+  was ever opened, page failure/retry without a request loop, manual reconnect
+  retry, offline completion/unsave, and sign-out during a pending successful page.
+  Inspected the mobile-sized search screenshot. Existing timer-only sync, 503
+  replay recovery, saved-body/topic persistence, midnight save, and partial-
+  connectivity recovery scenarios also passed without browser runtime errors.
+- **Limits:** no physical-device run or production benchmark/deployment. Android
+  validation is a JS export, not a new APK. Old clients keep the unbounded legacy
+  response until OTA adoption; membership arrays remain complete. Saved still
+  downloads all older metadata when opened to preserve full search, and offline
+  full text requires its completed body download. Pagination is a live view;
+  refresh startup state for new rows above an existing cursor.
+- Commits: `64afb6d` scope/reproduction; `09f4b22` future commit preference;
+  `ce38299` backend contract/endpoints/tests; `32cc70a` Stats compatibility/tests;
+  `b62ab19` Saved paging/cache/browser checks; `50b7f88` compact request activation;
+  `2d83b7a` manual reconnect retry. Documentation handoff:
+  `docs: document compact state rollout and validation`.
 
 ## Database connections after idle (#149) — 2026-09-12
 

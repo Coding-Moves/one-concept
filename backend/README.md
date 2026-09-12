@@ -52,7 +52,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 | GET | `/v1/topics` | yes | Active topics, concept counts, and whether you follow each. |
 | GET | `/v1/daily` | yes | Today's concept. Creates the assignment on first call, idempotent after. |
 | POST | `/v1/daily/complete` | yes | Mark today learned. Server sets the timestamp and the day it counts for. |
-| GET | `/v1/me/state` | yes | Everything the app renders: follows, history, likes, saves, streaks. One query. |
+| GET | `/v1/me/state?compact=true` | yes | Startup state with at most 50 learned/saved detail rows, full membership and totals, and today's lesson. |
+| GET | `/v1/me/history` | yes | Completed concepts, newest assigned day first; cursor pagination. |
+| GET | `/v1/me/saved` | yes | Saved metadata, newest save first; cursor pagination. |
 | GET | `/v1/me/stats` | yes | Streaks alone, for other consumers. |
 | PUT | `/v1/me/topics` | yes | Replace the followed set (whole-list semantics, so retries are safe). |
 | PATCH | `/v1/me` | yes | Display name and timezone. Unknown zones are rejected. |
@@ -65,6 +67,33 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 `GET /v1/daily` returns `409` with `reason: "catalog_exhausted"` once a user has
 been assigned every published concept — it never repeats one. Phase 6 hooks
 Gemini generation in at that point.
+
+## Startup and collection pagination
+
+Updated mobile clients send `compact=true` on `GET /v1/me/state`,
+`PUT /v1/me/topics`, and `PATCH /v1/me`. Each response embeds at most 50 learned
+and 50 saved detail records. Full `likes` and `bookmarks` slug arrays, streaks,
+and `stats.total_learned` remain authoritative. `learned_before_window` groups
+older completions by topic name; add those counts to the recent learned rows
+for category totals, including any optimistic offline completion.
+
+Continue from `history_next_cursor` or `saved_next_cursor` using the matching
+collection endpoint. Each returns `{items, next_cursor}`; a null cursor means
+there are no more rows. Both accept `limit` (default 50, range 1–100) and an
+optional `cursor`. History uses the last assigned date; Saved uses an opaque
+save-timestamp/UUID cursor so tied timestamps and deletions do not skip rows.
+Keep cursors unchanged and URL-encode them. All queries use the verified user.
+Pages are live reads: refresh startup state to see new saves/completions made
+above an existing cursor while paging.
+
+The limit applies before per-concept like-count enrichment. Bare membership
+arrays and aggregate calculations still grow with account activity. Older
+clients that omit `compact=true` keep the full legacy detail response during
+backend/OTA rollout; their startup cost is unchanged until updated. The mobile
+History screen still shows the last ten lessons; its full-history UI is separate.
+Saved loads older metadata only when opened, preserving search/category filters,
+and caches it for offline use. Downloaded lesson bodies also supply missing
+metadata offline, even if Saved was never opened before.
 
 ## Authentication
 
@@ -136,9 +165,10 @@ Measured against a Supabase project in `ap-northeast-1` from Europe, a single
 round trip is 160–1100 ms — so the code is written to minimise the *number* of
 statements rather than their complexity:
 
-- `/v1/me/state` is **one query**. It returns follows, history, likes, saves,
-  today's assignment, and streaks together, and bootstrapping only runs when
-  that query finds no profile.
+- The state aggregate is **one query**, returning follows, recent detail rows,
+  membership, assignment slug, and full streaks/totals. Bootstrapping only runs
+  when no profile exists. The `/v1/me/state` handler separately resolves today's
+  lesson, folding it into the same HTTP response.
 - Follow updates are one statement (a data-modifying CTE), not one per topic.
 - Connection pooling is on. Without it every request paid a fresh TCP + TLS +
   auth handshake to the database region, which cost seconds.

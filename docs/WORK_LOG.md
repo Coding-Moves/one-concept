@@ -7,43 +7,57 @@ claims as completed work.
 
 ## Current status
 
-- Active follow-up: fix release #191's failed migration check on
-  `codex/1-8-0-migration-check` from `develop` (`a5e972c`). Both failed runs
-  report only missing `0010_generation_daily_usage.sql`; the latest preview OTA
-  passed. Scope commit: `df377b0`.
-- Rechecked production read-only: `public.generation_daily_usage` is absent.
-  Reviewed the exact SQL and prepared verification of columns, primary key,
-  nonnegative counter constraint, RLS, and absence of client policies.
-- Automatic approval review again rejected executing the migration before it
-  ran: asking to fix the CI check does not specifically authorize a production
-  schema mutation. No SQL was executed, no ledger entry was added, and CI was
-  not weakened. Explicit owner approval to apply migration 0010 to production
-  is required. The SQL only creates the new backend usage table and enables RLS;
-  it does not modify existing tables or rows.
-- `docs: record migration authorization blocker` records this handoff. After
-  approval, apply and verify the SQL, commit the ledger, merge the focused fix
-  into `develop`, and confirm the release check. No fix PR was opened while its
-  required production step remains blocked; release #191 stays open.
-
-- Opened [release PR #191](https://github.com/Coding-Moves/one-concept/pull/191),
-  **develop → main**, for version **1.8.0**. Feature/fix PRs #183, #184, #185,
-  #186, #188, and #189 are included. Runtime remains **1.3.0** for this
-  JavaScript-only mobile release.
-- The version and six-benefit What's New card landed through
-  [preparation PR #190](https://github.com/Coding-Moves/one-concept/pull/190),
-  merged as `fa2b7a7` with all five commits preserved. Production release merging
-  remains pending.
-- Production read-only inspection confirmed migration 0010 is missing. Automatic
-  approval review rejected applying it because the release-PR request did not
-  separately authorize a production schema change. No migration was executed and
-  `backend/migrations/applied.txt` is unchanged. Explicit owner authorization is
-  needed for this step before merging the release. After being informed of the
-  blocker, the owner explicitly requested opening the release PR now; #191 is
-  open with the migration prominently marked as pending. This changes the usual
-  runbook ordering for this release only, not the applied-ledger requirement.
+- [Release PR #191](https://github.com/Coding-Moves/one-concept/pull/191) is open
+  from **develop → main** for **1.8.0**, with the six-benefit one-time card and
+  runtime **1.3.0**. Feature/fix PRs #183–#186, #188, and #189 are included;
+  preparation #190 and release bookkeeping #192 are merged.
+- The owner explicitly approved applying migration 0010 to production after
+  the earlier automatic-approval rejections. The exact migration is now applied
+  and its committed schema was independently verified. The ledger entry was
+  added only afterward, in `01a532e`.
+- [Fix PR #193](https://github.com/Coding-Moves/one-concept/pull/193) brings the
+  verified ledger and handoff into `develop`, updating release #191. Confirm its
+  merge and the release's latest required check on GitHub before production merge.
+  The unchanged migration workflow passes locally for all ten migrations.
+- No production app release was merged or deployed in this follow-up. The shared
+  generation-budget first-day rollout and consistent API/worker caps still need
+  the release-time handling documented in `backend/README.md`.
 - Resend setup remains deferred in [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187).
   The owner reports installing all three merged email templates and enabling the
   password-change notification in Supabase; actual inbox delivery is unverified.
+
+## Release migration check follow-up — 2026-09-13
+
+- **Problem:** both failed runs on #191 reported only
+  `0010_generation_daily_usage.sql`; the latest preview OTA passed. Read-only
+  production inspection confirmed the table was absent, so adding an unverified
+  ledger entry or weakening CI would not fix the deployment prerequisite.
+- **Authorization:** automatic review initially rejected the production mutation.
+  The owner then explicitly approved the exact migration, verification, and PR
+  update. Previous blocked attempts did not run SQL.
+- **Application:** executed the unchanged migration against the configured One
+  Concept production Supabase database using its validated session connection.
+  It creates only `public.generation_daily_usage` and enables RLS; existing tables
+  and rows are unchanged. The initial helper's post-commit assertion failed;
+  no retry of the migration was performed. A separate read-only connection
+  verified the committed schema with explicit text casts for constraint kinds.
+- **Verification:** `budget_day` is a nonnullable date primary key; `calls_used`
+  is a nonnullable integer defaulting to zero with a nonnegative check. RLS is
+  enabled and no client policies exist. Recorded the migration only after all
+  these assertions passed. No test data was inserted into production.
+- **Commits:** `df377b0` records scope; `402f520` records the previous authorization
+  blocker; `01a532e` records verified production application in the ledger;
+  `docs: record verified release migration and handoff` records the result and
+  updates the codebase map. Preserve all commits in #193.
+- **Checks:** the unchanged CI shell check passes locally; all ten SQL filenames
+  are recorded with no unknown ledger entries. Migration SQL and workflow are
+  unchanged. Reviewed staged changes and checked whitespace/local documentation
+  paths. No application tests were rerun for this ledger/documentation follow-up;
+  the release's prior 145 backend tests used this same SQL on disposable
+  PostgreSQL 16 and passed without skips.
+- **Handoff:** merge #193 into `develop`, confirm the required migration check on
+  #191, and update that release's checklist with the verified application. GitHub
+  records the resulting merge/check state. Release merging remains with the owner.
 
 ## Version 1.8.0 preparation — 2026-09-13
 
@@ -75,13 +89,10 @@ claims as completed work.
   delivery were not exercised. This release reran backend/unit/card checks;
   #189's documented password and full offline-collection acceptance checks remain
   the coverage for those unchanged flows.
-- **Database prerequisite:** a read-only query against the configured One Concept
-  production project found no `public.generation_daily_usage` table. Automatic
-  approval review rejected executing `0010_generation_daily_usage.sql` before it
-  ran; neither production nor the applied ledger was changed. The prepared SQL
-  creates a backend-only usage table with its primary key, nonnegative counter
-  constraint, and row-level security. Obtain explicit owner authorization, apply
-  and verify it, then record its filename through a focused PR into `develop`.
+- **Database prerequisite at preparation:** production initially lacked the
+  usage table and automatic approval blocked applying it. Resolved after the
+  owner's explicit approval in the migration-check follow-up above; #193 records
+  verified production application.
 - **Deployment handoff:** the shared generation-budget rollout in
   [backend/README.md](../backend/README.md#shared-generation-budget) still
   requires consistent caps across API/workers and pausing old generators during
@@ -91,11 +102,11 @@ claims as completed work.
   merged into `develop` as `fa2b7a7`, preserving all five commits. Release
   [#191](https://github.com/Coding-Moves/one-concept/pull/191) is open from
   `develop` to `main` at the owner's explicit request to open it now. The release
-  description marks migration 0010 and generation rollout handling as pending.
+  description initially marked migration 0010 and generation rollout as pending.
   `docs: record 1.8.0 release PR handoff` records this outcome.
-- **Next step:** obtain authorization, apply/verify migration 0010, and only then
-  update the ledger. Require the migration check to pass before production merge.
-  Opening the PR did not apply the migration or publish a production release.
+- **Next step:** require the latest migration check to pass after #193 lands
+  before production merge. Opening #191 did not itself apply the migration or
+  publish a production release.
 
 ## Saved reading offline and password visibility (#182) — 2026-09-12
 

@@ -198,11 +198,11 @@ enforce one daily assignment and no concept repeats per user. RLS adds isolation
 | `0009_like_count_index.sql` | Index for public like counts. |
 | `0010_generation_daily_usage.sql` | Backend-only daily Gemini call reservations shared by all generation paths. |
 
-The first nine filenames are recorded in `migrations/applied.txt` in this checkout;
-`0010_generation_daily_usage.sql` is pending production application. The ledger
-is repository evidence, not an independent check of production. Application
-connections use the transaction pooler; migration DDL uses `DIRECT_URL` and the
-session pooler. Applied migrations must not be rewritten.
+All ten filenames are recorded in `migrations/applied.txt`; migration 0010 was
+applied and independently verified in production during the 1.8.0 release
+follow-up. The ledger is repository evidence, not a live check of production.
+Application connections use the transaction pooler; migration DDL uses `DIRECT_URL`
+and the session pooler. Applied migrations must not be rewritten.
 
 ## Builds, checks, and releases
 

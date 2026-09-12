@@ -45,6 +45,13 @@ requires the exact Expo SDK 57 documentation before writing mobile code.
   a branch. Check the available base revision; do not assume local refs are current.
 - `main` is production. A production release uses a `develop` to `main` PR and
   the release runbook. Merging there triggers deployment and release automation.
+- Every release PR must include a one-time What's New card. During release
+  preparation, automatically add a nonempty entry in `mobile/src/data/whatsNew.ts`
+  matching `mobile/app.config.js`'s version; do not wait for the owner to remind you.
+  Focus on new features and user-visible improvements: what's new and what's
+  better. Describe actual benefits, not error lists, technical diagnostics, or
+  internal maintenance. Use the existing dismissal mechanism so it appears once
+  per version on each device after dismissal.
 - PR descriptions explain the resulting behavior, list meaningful changes and
   validation, and disclose remaining limitations. Keep the PR scope aligned
   with the assigned chunk while retaining its commit history.

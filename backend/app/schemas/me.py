@@ -28,6 +28,16 @@ class LearnedOut(BaseModel):
     like_count: int = 0
 
 
+class HistoryPageOut(BaseModel):
+    items: list[LearnedOut]
+    next_cursor: str | None = None
+
+
+class SavedPageOut(BaseModel):
+    items: list[SavedConceptOut]
+    next_cursor: str | None = None
+
+
 class StateOut(BaseModel):
     display_name: str | None = None
     timezone: str
@@ -38,6 +48,11 @@ class StateOut(BaseModel):
     bookmarks: list[str]
     saved: list[SavedConceptOut] = Field(default_factory=list)
     stats: StreakOut
+    # Present for compact clients. Counts exclude the embedded recent window,
+    # so optimistic/offline completions can still be added by the client.
+    learned_before_window: dict[str, int] | None = None
+    history_next_cursor: str | None = None
+    saved_next_cursor: str | None = None
     assignment_slug: str | None = None
     # Today's concept, folded in so the app needs a single round trip at startup
     # (issue #102). Null when the catalog is exhausted for this user. This GET

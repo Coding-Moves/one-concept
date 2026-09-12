@@ -10,8 +10,9 @@ claims as completed work.
 - Preparing version **1.8.0** on `codex/1-8-0-release-prep`, from refreshed
   `develop` (`15aad70`). Feature/fix PRs #183, #184, #185, #186, #188, and #189
   are merged. Runtime remains **1.3.0** for this JavaScript-only mobile release.
-- The version and six-benefit What's New card are implemented and verified.
-  Publish/merge the small preparation PR into `develop`, then open the single
+- The version and six-benefit What's New card are implemented and verified in
+  [preparation PR #190](https://github.com/Coding-Moves/one-concept/pull/190).
+  Merge it into `develop`, then open the single
   `develop` → `main` release PR after the database prerequisite is satisfied.
   Production merge/deployment is not part of this request.
 - Production read-only inspection confirmed migration 0010 is missing. Automatic
@@ -65,7 +66,11 @@ claims as completed work.
   requires consistent caps across API/workers and pausing old generators during
   rollout. Enable the new generators at the next Pacific reset, or seed today's
   usage conservatively while paused. No live worker settings were changed.
-- **Next step:** publish the preparation PR, complete the authorized database
+- **PR:** [#190](https://github.com/Coding-Moves/one-concept/pull/190), ready for
+  review into `develop`, preserves the focused preparation commits.
+  `docs: link 1.8.0 preparation PR` records publication; check GitHub for its
+  resulting merge state. The production release PR has not been opened.
+- **Next step:** merge #190, obtain authorization and complete the database
   prerequisite, then open `develop` → `main` without merging production.
 
 ## Saved reading offline and password visibility (#182) — 2026-09-12

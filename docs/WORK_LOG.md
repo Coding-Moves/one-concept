@@ -12,10 +12,13 @@ claims as completed work.
   setup and branded authentication emails. Branch `codex/152-171-resend-auth-email`
   starts from refreshed `origin/develop` (`65eb21d`). Published as
   [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187) into `develop`.
-- Owner chose Resend and has no domain. Prepare all repository files and exact
-  manual setup steps now; domain registration, account configuration, and live
-  delivery verification remain pending. Owner subsequently specified a $0
-  budget: no domain purchase. Both issues belong to this same PR.
+- Owner requires a $0 setup and has chosen their existing Gmail account for
+  Supabase SMTP. The owner is performing dashboard setup; saving the settings
+  and actual inbox delivery remain unverified. Resend preparation stays in draft.
+- Current follow-up: redesign the two HTML emails with shorter copy and polished
+  One Concept text branding. The configured mobile images are Expo starter assets;
+  the owner explicitly selected text branding instead. Preserve verification URLs
+  and deliver replacement HTML in the same draft PR, with no dashboard changes.
 - PR #185 (#150) is merged. [PR #186](https://github.com/Coding-Moves/one-concept/pull/186)
   remains open; its independent review found no actionable issue and reran all
   63 generation tests with no skips. Its generation-budget changes are separate.
@@ -27,6 +30,25 @@ claims as completed work.
   record the status at the time; this task does not authorize a production release.
 
 ## Resend authentication email (#152 and #171) — 2026-09-12
+
+### Template redesign follow-up
+
+- Owner requested professional replacement HTML for signup and password recovery,
+  with less generic copy and the official logo if available. Inspected app config,
+  theme, authentication flow, and all six image assets' filenames; viewed the
+  configured icon and Android foreground. No separate One Concept logo was found.
+  Owner selected polished text branding after the starter-icon finding.
+- Planned focused commits: record revised scope; redesign signup and verify its
+  layout; apply the same design to recovery and verify its copy/links; update the
+  installation notes and record final visual checks. Preserve prior commits.
+- Rechecked Supabase template variables and Gmail CSS guidance. Keep account
+  actions as HTML text/links, inline styles, table layout, scalable typography,
+  and a full copyable verification URL. No image generation or remote logo needed.
+- Delivery remains manual: the owner will paste the replacement HTML into the
+  matching Supabase templates. Do not enable providers, send emails, or mark the
+  draft ready without verified delivery. Browser checks are not inbox tests.
+
+### Original preparation
 
 - Verified the mobile app uses Supabase `signUp` and `resetPasswordForEmail`;
   FastAPI supplies the existing `/confirmed` and `/reset-password` landing pages.
@@ -78,7 +100,7 @@ claims as completed work.
   `develop`, with closing references for both #152 and #171. Both issues remain
   open until the live activation checklist passes and the PR merges. Publication
   bookkeeping: `docs: link combined authentication email pull request`.
-- **Owner handoff:** create the free Resend account and decide whether NIC.UA's
+- **Original owner handoff (superseded by Gmail choice above):** create the free Resend account and decide whether NIC.UA's
   card-verification/public-contact terms are acceptable before registering any
   free domain. The question remains pending; no consent was inferred. Complete
   the exact DNS/SMTP/template steps in `docs/EMAIL_SETUP.md` once a suitable domain

@@ -7,14 +7,23 @@ claims as completed work.
 
 ## Current status
 
-- Active follow-up: fix the failed check on release #191, as requested after the
-  missing production migration was identified. Both failed runs report migration
-  0010; the latest preview OTA passed. Work on `codex/1-8-0-migration-check` from
-  refreshed `develop` (`a5e972c`). Verify/apply the exact pending SQL, record the
-  ledger only after production verification, then merge the focused fix into
-  `develop` and confirm the release check. Production release merging remains
-  outside this follow-up. Planned commits: scope; verified migration ledger;
-  validation and release handoff.
+- Active follow-up: fix release #191's failed migration check on
+  `codex/1-8-0-migration-check` from `develop` (`a5e972c`). Both failed runs
+  report only missing `0010_generation_daily_usage.sql`; the latest preview OTA
+  passed. Scope commit: `df377b0`.
+- Rechecked production read-only: `public.generation_daily_usage` is absent.
+  Reviewed the exact SQL and prepared verification of columns, primary key,
+  nonnegative counter constraint, RLS, and absence of client policies.
+- Automatic approval review again rejected executing the migration before it
+  ran: asking to fix the CI check does not specifically authorize a production
+  schema mutation. No SQL was executed, no ledger entry was added, and CI was
+  not weakened. Explicit owner approval to apply migration 0010 to production
+  is required. The SQL only creates the new backend usage table and enables RLS;
+  it does not modify existing tables or rows.
+- `docs: record migration authorization blocker` records this handoff. After
+  approval, apply and verify the SQL, commit the ledger, merge the focused fix
+  into `develop`, and confirm the release check. No fix PR was opened while its
+  required production step remains blocked; release #191 stays open.
 
 - Opened [release PR #191](https://github.com/Coding-Moves/one-concept/pull/191),
   **develop → main**, for version **1.8.0**. Feature/fix PRs #183, #184, #185,

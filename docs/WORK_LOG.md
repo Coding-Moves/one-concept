@@ -13,6 +13,9 @@ claims as completed work.
 - Version preparation [#178](https://github.com/Coding-Moves/one-concept/pull/178)
   is merged. Release [#179](https://github.com/Coding-Moves/one-concept/pull/179)
   is open; its migration check and version-preparation preview OTA passed.
+- Card and standing-policy follow-up:
+  [#180](https://github.com/Coding-Moves/one-concept/pull/180), targeting `develop`
+  so it is included in release #179. Its PR records the final merge/check status.
 - [PR #177](https://github.com/Coding-Moves/one-concept/pull/177) is merged; its
   [preview OTA](https://github.com/Coding-Moves/one-concept/actions/runs/34677521802)
   passed. Its completed browser checks also covered retry after reconnecting,

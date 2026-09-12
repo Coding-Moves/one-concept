@@ -86,7 +86,8 @@ typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 - `data/concepts.ts`, `services/dailyConcept.ts`, `dates.ts`, `streak.ts`, and
   `topics.ts` support the bundled catalog, local selection, dates, and mappings.
 - `data/whatsNew.ts`, `hooks/useWhatsNew.ts`, and `services/whatsNewStore.ts` control
-  version announcements. Release entries are features only, per `RELEASING.md`.
+  version announcements. Every release includes a matching one-time card focused
+  on new features and user-visible improvements, per `RELEASING.md`.
 - `src/types/index.ts` defines shared concept, progress, daily, history, and
   streak types. API payloads also have types near their service consumers.
 

@@ -7,20 +7,43 @@ claims as completed work.
 
 ## Current status
 
-- Implemented and validated [#150](https://github.com/Coding-Moves/one-concept/issues/150),
-  the next open issue in ascending order, on `codex/150-bounded-startup-state`
-  from refreshed `origin/develop` (`a9aab63`). Published as
-  [PR #185](https://github.com/Coding-Moves/one-concept/pull/185) into `develop`.
-- Compact startup includes 50 learned/saved detail records, exact totals, and
-  cursor access to older records. Saved search/filter and offline reading remain
-  available; full History UI (#159) is separate. Existing clients retain their
-  legacy response until updated. No new APK, migration, or production release.
+- Preparing one PR for [#152](https://github.com/Coding-Moves/one-concept/issues/152)
+  and [#171](https://github.com/Coding-Moves/one-concept/issues/171): Resend delivery
+  setup and branded authentication emails. Branch `codex/152-171-resend-auth-email`
+  starts from refreshed `origin/develop` (`65eb21d`).
+- Owner chose Resend and has no domain. Prepare all repository files and exact
+  manual setup steps now; domain registration, account configuration, and live
+  delivery verification remain pending. Both issues belong to this same PR.
+- PR #185 (#150) is merged. [PR #186](https://github.com/Coding-Moves/one-concept/pull/186)
+  remains open; its independent review found no actionable issue and reran all
+  63 generation tests with no skips. Its generation-budget changes are separate.
 - The owner reinforced the preference for more focused commits in **all future
   PRs** for this project. Saved in `AGENTS.md`; retain individual commits and
   related tests without artificial splits or empty commits.
 - PRs #183 (#133) and #184 (#149) are merged into `develop`. Release #179,
   card follow-up #180, and branch sync #181 are also merged. Their handoffs below
   record the status at the time; this task does not authorize a production release.
+
+## Resend authentication email (#152 and #171) — 2026-09-12
+
+- Verified the mobile app uses Supabase `signUp` and `resetPasswordForEmail`;
+  FastAPI supplies the existing `/confirmed` and `/reset-password` landing pages.
+  There is no committed email template/setup runbook. Live SMTP configuration
+  and actual delivery are unverified; source inspection cannot establish them.
+- Owner selected Resend and requested one PR covering both overlapping issues.
+  Prepare signup and recovery templates using the existing confirmation URLs,
+  with a Resend/Supabase/DNS guide and a concrete activation checklist. Magic-link
+  sign-in is not currently offered in the app and is outside this chunk.
+- Read the official Resend SMTP/domain and Supabase SMTP/template documentation.
+  A verified owned domain is required for real-user Resend delivery; the free
+  sending plan does not include purchasing a domain. Owner will perform the
+  purchase and account steps. No credentials belong in source or the PR.
+- Planned commits: scope/verification; signup email; password recovery email;
+  installation and operational guide; validation and PR handoff. Preserve small
+  meaningful commits, owner authorship, and the existing authentication flow.
+- The PR will track both issues, with live activation explicitly pending.
+  Keep it in draft until both delivery flows have passed real-inbox checks;
+  repository changes alone do not establish that either issue is resolved.
 
 ## Bounded startup state (#150) — 2026-09-12
 

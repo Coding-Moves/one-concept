@@ -7,6 +7,7 @@ const appVersion = require('../app.config.js').expo.version;
 const root = process.argv[2];
 if (!root || !fs.existsSync(path.join(root, 'index.html'))) throw new Error('Pass an Expo web export directory as the first argument.');
 const baseline = process.argv.includes('--baseline');
+const midnight = process.argv.includes('--midnight');
 const date = new Date().toISOString().slice(0, 10);
 const concept = (slug, title) => ({ id: slug, slug, title, summary: `Full explanation of ${title}.`, example: `A concrete example of ${title}.`, topic_slug: 'computer-science', topic_name: 'Computer Science', like_count: 2 });
 const daily = concept('fixture-daily', 'Daily fixture');
@@ -18,7 +19,7 @@ let failLikes = false;
 let holdLike = false, releaseLike;
 const writes = [];
 const errors = [];
-const session = { access_token:'fixture', refresh_token:'fixture-refresh', token_type:'bearer', expires_in:3600, expires_at:Math.floor(Date.now()/1000)+3600, user:{ id:'11111111-1111-1111-1111-111111111111', email:'fixture@example.invalid', aud:'authenticated', role:'authenticated', app_metadata:{}, user_metadata:{}, created_at:'2026-01-01T00:00:00Z' } };
+const session = { access_token:'fixture', refresh_token:'fixture-refresh', token_type:'bearer', expires_in:864000, expires_at:Math.floor(Date.now()/1000)+864000, user:{ id:'11111111-1111-1111-1111-111111111111', email:'fixture@example.invalid', aud:'authenticated', role:'authenticated', app_metadata:{}, user_metadata:{}, created_at:'2026-01-01T00:00:00Z' } };
 const server = http.createServer((req,res) => {
   const relative = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
   const file = path.join(root, relative === '/' ? 'index.html' : relative);
@@ -29,7 +30,7 @@ const server = http.createServer((req,res) => {
  await new Promise(r => server.listen(4781, '127.0.0.1', r));
  const browser = await chromium.launch({ executablePath:process.env.PLAYWRIGHT_CHROMIUM_PATH, headless:true, args:['--no-sandbox'] });
  try {
-  const context = await browser.newContext({viewport:{width:390,height:844}});
+  const context = await browser.newContext({viewport:{width:390,height:844},timezoneId:'UTC'});
   await context.addInitScript(({session, appVersion}) => {
     Object.defineProperty(navigator, 'share', {configurable:true,value:async data=>{window.fixtureShared=data;}});
     if (!localStorage.getItem('fixture-seeded')) {
@@ -65,8 +66,30 @@ const server = http.createServer((req,res) => {
   const profile=async()=>page.getByText('Profile',{exact:true}).last().click();
   const close=async()=>page.getByRole('button',{name:'Close',exact:true}).last().click();
   const queue=async()=>page.evaluate(()=>JSON.parse(localStorage.getItem('one-concept/mutation-queue/v1')||'{}'));
+  if (midnight) await page.clock.setFixedTime(new Date(date+'T23:59:00Z'));
   await page.goto('http://127.0.0.1:4781');
   await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+  if (midnight) {
+    holdLike=true;
+    await page.getByRole('button',{name:'Like',exact:true}).click();
+    await expect.poll(()=>Boolean(releaseLike)).toBe(true);
+    await page.clock.setFixedTime(new Date(new Date(date+'T23:59:00Z').getTime()+120000));
+    await page.getByRole('button',{name:'Save for later',exact:true}).click();
+    // Let the date-change effect run while Save is waiting behind Like.
+    await page.waitForTimeout(300);
+    online=false; holdLike=false; releaseLike(); releaseLike=undefined;
+    await expect.poll(async()=>(await queue())['save:fixture-daily']?.desired).toBe(true);
+    await expect(page.getByRole('button',{name:'Remove from saved',exact:true})).toBeVisible();
+    await page.reload();
+    await expect(page.getByRole('button',{name:'Remove from saved',exact:true})).toBeVisible();
+    online=true; await page.evaluate(()=>window.dispatchEvent(new Event('online')));
+    await expect.poll(async()=>Object.keys(await queue()).length).toBe(0);
+    assert(state.bookmarks.includes(daily.slug));
+    assert(writes.some(w=>w.endpoint==='/v1/concepts/fixture-daily/save' && w.method==='PUT'));
+    assert.deepEqual(errors,[]);
+    console.log('PASS: save queued across midnight survives restart and syncs');
+    return;
+  }
   await profile(); await page.getByText('Saved concepts',{exact:true}).click();
   await page.getByRole('button',{name:'Open Saved fixture',exact:true}).click();
   await expect(page.getByText(saved.summary,{exact:true})).toBeVisible();

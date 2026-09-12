@@ -82,25 +82,27 @@ export function ProgressProvider({ children, repository: override }: Props) {
   const accountEpoch = useRef(0);
   const confirmed = useRef<ProgressState | null>(null);
 
+  // Only an account/source change invalidates queued actions. A new calendar
+  // day refreshes the assignment without cancelling taps still in flight.
   useEffect(() => {
-    let cancelled = false;
     accountEpoch.current += 1;
     pending.current = 0;
     confirmed.current = null;
     setLoading(true);
     setProgress(EMPTY_PROGRESS);
+    return () => { accountEpoch.current += 1; };
+  }, [repository, userId]);
+
+  useEffect(() => {
+    let cancelled = false;
     chain.current = chain.current.then(async () => {
       if (cancelled) return;
-      // The repository just swapped (sign-in or sign-out). The old account's
-      // state must not stay on screen while the new source loads — wiping the
-      // caches below is not enough when the leak lives in React state.
-
       // Paint from the last known state immediately — on a slow connection
       // the difference between this and waiting on the network is the whole
       // perceived speed of the app. The fresh load replaces it silently.
       const cached = await repository.loadCached?.();
       if (cached && !cancelled) {
-        setProgress(cached);
+        if (pending.current === 0) setProgress(cached);
         setLoading(false);
       }
 
@@ -118,10 +120,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
       setLoading(false);
       if (userId && getConnectivity()) void fetchTopics().catch(() => {});
     }).catch(() => { if (!cancelled) setLoading(false); });
-    return () => {
-      cancelled = true;
-      accountEpoch.current += 1;
-    };
+    return () => { cancelled = true; };
   }, [repository, today, userId]);
 
   // The day's assignment is pinned once made, even if the concept's topic is

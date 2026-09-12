@@ -29,6 +29,7 @@ backend/
 │   │   └── users.py         profile bootstrap (safety net for the DB trigger)
 │   └── api/v1/              health, topics, daily
 ├── migrations/          # plain SQL, applied in filename order
+├── email-templates/     # account email HTML installed manually in Supabase Auth
 ├── tests/               # 25 tests: token verification, selection, HTTP
 ├── Dockerfile           # what Railway builds
 └── .env.example         # copy to .env — never commit the filled copy
@@ -105,6 +106,11 @@ confusion attacks, both of which are covered by tests.
 
 `user_id` is taken from the verified token's `sub` claim and from nowhere else.
 No endpoint accepts a user id as a parameter.
+
+Supabase Auth sends signup, recovery, and enabled security notifications using
+the project's configured sender. See [Email templates](../docs/EMAIL_TEMPLATES.md)
+for the three branded HTML files and manual installation steps. An app deployment
+does not publish these templates or change SMTP settings.
 
 ## Content generation
 

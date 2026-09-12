@@ -7,9 +7,12 @@ claims as completed work.
 
 ## Current status
 
-- Assigned scope: prepare version `1.7.1`, merge the small preparation PR into
-  `develop`, then open the `develop` to `main` release PR for owner review.
-- Branch: `codex/prepare-1-7-1`, based on `develop` at `f14a614`.
+- Assigned scope: add the explicitly requested one-time What's New card for
+  `1.7.1` to the open release PR.
+- Branch: `codex/1-7-1-whats-new`, based on `develop` at `0596f6d`.
+- Version preparation [#178](https://github.com/Coding-Moves/one-concept/pull/178)
+  is merged. Release [#179](https://github.com/Coding-Moves/one-concept/pull/179)
+  is open; its migration check and version-preparation preview OTA passed.
 - [PR #177](https://github.com/Coding-Moves/one-concept/pull/177) is merged; its
   [preview OTA](https://github.com/Coding-Moves/one-concept/actions/runs/34677521802)
   passed. Its completed browser checks also covered retry after reconnecting,
@@ -178,6 +181,28 @@ release is included in this task.
 - **PRs:** version preparation and release PR publication follow these checks.
 - **Handoff:** open the release PR after the preparation PR merges; do not merge
   `main` or trigger production publication as part of this task.
+
+## Version 1.7.1 card follow-up — 2026-09-12
+
+- The owner explicitly requested a one-time card for this release after learning
+  that the maintenance-only entry had been omitted, then made this a standing
+  rule: every release PR includes the card automatically, focused on new features
+  and user-visible improvements rather than errors or technical diagnostics.
+- Saved the standing rule in root `AGENTS.md`, `RELEASING.md`, and the release
+  data's content-policy comment. It supersedes the earlier features-only rule.
+- Add three concise highlights in `mobile/src/data/whatsNew.ts` covering cached
+  session recovery, animated offline screens with retry, and clear auth errors.
+- Reuse the existing version-keyed card and dismissal storage: show after sign-in
+  until dismissed, then keep it hidden for this version on the device.
+- Commits: `654a3aa` adds the version entry; a separate policy/copy commit saves
+  the owner's standing rule; final bookkeeping records validation and handoff.
+- Deliver through a small PR into `develop`, then merge it so release PR #179
+  includes the card. Production release remains open for owner approval.
+- Validation: TypeScript and the web export passed. The browser check with a
+  mocked account verified all three `1.7.1` highlights display, Got it persists
+  dismissal, and reloading keeps the card hidden. No uncaught browser errors.
+- Policy/copy commit: `e77f80e`. This validation and handoff are recorded in
+  `docs: record release-card policy and dismissal verification`.
 
 ## Template for the next chunk
 

@@ -190,7 +190,7 @@ session pooler. Applied migrations must not be rewritten.
   findings as issues. `cleanup.yml` manages stale issues; Dependabot schedules
   dependency updates with Expo-managed version restrictions. The checked-in
   workflows do not include a general PR pytest job.
-- `mobile/app.config.js` currently has app version `1.7.0` and native runtime
+- `mobile/app.config.js` currently has app version `1.7.1` and native runtime
   `1.3.0`; `package.json`'s `1.0.0` is not the release-version authority.
 
 ## Documentation drift to remember

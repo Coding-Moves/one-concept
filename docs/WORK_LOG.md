@@ -7,14 +7,14 @@ claims as completed work.
 
 ## Current status
 
-- Assigned scope: resolve UI issues #166 and #167 in one focused PR into
-  `develop`, ahead of the owner's later release PR.
-- Branch: `codex/offline-ui-recovery`, based on refreshed `develop` at `e4d3997`.
-- Prior work is complete: setup #176 and bot PRs #172, #173, #174 are merged;
-  the final combined preview OTA succeeded.
-- PR: [#177](https://github.com/Coding-Moves/one-concept/pull/177), targeting
-  `develop`; implementation is complete. Production release preparation
-  and the `develop` to `main` PR follow after this feature/fix PR is merged.
+- Assigned scope: prepare version `1.7.1`, merge the small preparation PR into
+  `develop`, then open the `develop` to `main` release PR for owner review.
+- Branch: `codex/prepare-1-7-1`, based on `develop` at `f14a614`.
+- [PR #177](https://github.com/Coding-Moves/one-concept/pull/177) is merged; its
+  [preview OTA](https://github.com/Coding-Moves/one-concept/actions/runs/34677521802)
+  passed. Its completed browser checks also covered retry after reconnecting,
+  dark/reduced-motion mode, and friendly offline sign-in errors.
+- Production merge/publication remains the owner's next step after release review.
 
 ## Working agreement — 2026-09-11
 
@@ -158,6 +158,26 @@ release is included in this task.
   and handoff are recorded in `docs: record offline UI validation and handoff`.
 - **Next step:** owner reviews and merges this PR into `develop`, then prepares
   the version bump/eligible What's New entry and opens the release PR.
+
+## Version 1.7.1 preparation — 2026-09-12
+
+- **Scope:** the owner approved preparing the patch version and opening the
+  release PR. Keep native runtime `1.3.0`; only JavaScript, dependencies, and
+  documentation changed since `1.7.0`.
+- **Planned commits:** marketing version bump; release bookkeeping and map update.
+- **What's New:** no `1.7.1` entry. This maintenance release contains offline
+  fixes and UI improvements; the features-only card policy excludes those.
+- **Migrations:** no differences between `main` and `develop`; all nine existing
+  filenames are recorded in the applied ledger. No production schema writes are needed.
+- **Validation:** version/runtime assertions, migration diff/ledger check,
+  10 regression tests, TypeScript, and whitespace checks passed. The merged
+  application already passed Android/web exports and browser recovery checks
+  in #177, followed by successful preview OTA on `f14a614`.
+- **Commits:** `56e92fc` bumps the version; `docs: record 1.7.1 release preparation`
+  updates this log and the codebase map. GitHub PRs record final merge/check state.
+- **PRs:** version preparation and release PR publication follow these checks.
+- **Handoff:** open the release PR after the preparation PR merges; do not merge
+  `main` or trigger production publication as part of this task.
 
 ## Template for the next chunk
 

@@ -28,10 +28,44 @@ claims as completed work.
 - Planned atomic commits: persistent full-concept reading with account cleanup
   and tests; cached topic catalog and queued follows with tests; automatic sync
   triggers with tests; validation, codebase map, and PR handoff.
-- Clarification pending: keep the current APK with sync while open/reopened, or
-  add native OS background scheduling (new APK, OS-controlled execution timing).
+- Owner chose to keep the current APK: automatically retry while the app is open
+  or reopened. No OS background worker, native dependency, or version/runtime bump.
 - Read the exact Expo SDK 57 documentation before mobile edits. Other issues,
   including #182's password-visibility request, remain outside this PR.
+- Additional replay checks reproduced two related failures before their fixes:
+  a 503 reverted a queued unlike in the UI; a request failing after sign-out
+  recreated the old action queue. Preserve pending choices during reconciliation
+  and fence late request callbacks/token resolution after account cleanup.
+- Implemented full per-lesson storage and missing saved-lesson downloads;
+  shared cached topics with durable follows; serialized outbox writes; automatic
+  foreground retry with 5–30 second backoff, immediate browser/foreground wakeup,
+  and no idle polling once reachable with an empty queue. Saved reading requires
+  the lesson to have finished downloading during an online session.
+- **Validation:** all 28 Node 24 regression tests, TypeScript, Android/web Expo
+  production exports, and whitespace checks passed. The mocked Chromium flow
+  passed offline restart, unopened saved-lesson downloads, cached sharing, follows,
+  likes/saves, timer-only and browser-event reconnect, 503 retention/recovery,
+  and sign-out with a request in flight. Inspected the offline detail screenshot.
+  No live backend, physical phone, native share sheet, or production deployment
+  was tested; no backend code changed and backend tests were not run.
+- **Repeatability:** `mobile/tests/offline.browser.cjs` and its README retain the
+  before/after reproduction flow, dummy public configuration, and optional race
+  checks. New focused Node tests cover storage, outbox, topics, reconciliation,
+  and scheduler behavior without adding dependencies.
+
+| Change | Commit |
+| --- | --- |
+| Baseline reproduction and scope | `0e82f03` |
+| Full offline lesson storage and saved downloads | `0085285` |
+| Cached topics and queued follow choices | `41da1ab` |
+| Serialized durable outbox | `f8d1ca6` |
+| Automatic foreground synchronization | `1a82c2e` |
+| Preserve pending choices during reconciliation | `cfa24ea` |
+| Sign-out request fence and browser regression | `d19e1fe` |
+| Validation and navigation guide | `docs: record issue 133 validation and handoff` |
+
+- **Handoff:** publish one PR into `develop` for owner review. Preserve the
+  individual commits; do not merge the PR or prepare a release in this task.
 
 ## Working agreement — 2026-09-11
 

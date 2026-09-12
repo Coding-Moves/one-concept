@@ -1,5 +1,6 @@
 from functools import lru_cache
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -16,6 +17,10 @@ class Settings(BaseSettings):
     # Transaction-mode pooler (port 6543). Migrations use DIRECT_URL instead.
     database_url: str
     direct_url: str | None = None
+
+    # Best-effort API pool warm-up; zero disables it. Workers do not start it.
+    db_keepalive_interval_seconds: float = Field(default=30, ge=0, allow_inf_nan=False)
+    db_keepalive_timeout_seconds: float = Field(default=5, gt=0, allow_inf_nan=False)
 
     supabase_url: str
     supabase_jwks_url: str

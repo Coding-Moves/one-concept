@@ -48,7 +48,9 @@ export function useSavedConcepts(progress: ProgressState) {
       let cursor = snapshot.cursor;
       const seen = new Set<string>();
       try {
-        while (cursor && active() && getConnectivity()) {
+        // An explicit retry probes the network even if the last request was
+        // offline; automatic loads can keep using downloaded metadata.
+        while (cursor && active() && (getConnectivity() || attempt > 0)) {
           if (seen.has(cursor)) throw new Error('Repeated saved cursor');
           seen.add(cursor);
           const page = await fetchSavedPage(cursor);

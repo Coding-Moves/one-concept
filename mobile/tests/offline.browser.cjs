@@ -128,6 +128,14 @@ const server = http.createServer((req,res) => {
     await page.getByRole('button',{name:'Back',exact:true}).click();
     // Force page loading to prove that search/filter do not merely rely on cached bodies.
     await page.evaluate(()=>{for(const k of Object.keys(localStorage)) if(k.startsWith('one-concept/concepts/') || k.startsWith('one-concept/saved-list/')) localStorage.removeItem(k);});
+    await page.getByText('Saved concepts',{exact:true}).click();
+    const offlineRetry = page.getByText('Showing downloaded concepts. Connect and tap to load more.',{exact:true});
+    await expect(offlineRetry).toBeVisible();
+    const beforeManualRetry=savedRequests;
+    online=true; await offlineRetry.click();
+    await expect.poll(()=>savedRequests-beforeManualRetry,{timeout:2000}).toBe(7);
+    await page.getByRole('button',{name:'Back',exact:true}).click();
+    console.log('PASS: manual retry probes restored connectivity without waiting for background sync');
     online=true; failSaved=true;
     await page.reload(); await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
     await profile(); await page.getByText('Saved concepts',{exact:true}).click();

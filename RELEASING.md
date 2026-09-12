@@ -15,8 +15,13 @@ Production release flow. Keep it boring and repeatable.
    - **runtimeVersion** (`expo.runtimeVersion`) is the native-ABI identity. Leave it
      UNCHANGED for a JS-only release; bump it ONLY on a native change (new native
      module, URL scheme, permission, config plugin) — that requires a new APK.
-2. **What's New card.** Add an entry to `mobile/src/data/whatsNew.ts` for the new
-   version. **Features only** — no bug fixes / UI tweaks / removals (issue #97).
+2. **What's New card — required for every release.** Automatically add a nonempty
+   entry to `mobile/src/data/whatsNew.ts` matching the new version during release
+   preparation. Focus on **new features and user-visible improvements**: what's
+   new and what's better. Describe real benefits in a few short bullets, not error
+   lists, technical diagnostics, or internal maintenance. Reuse the existing
+   version-based dismissal so the card stays hidden after the user dismisses it.
+   This owner instruction supersedes the earlier features-only policy in issue #97.
 3. **Apply pending DB migrations to production** (see below) **before opening the
    release PR.**
 4. Open the release PR **develop → main**. It must pass the required

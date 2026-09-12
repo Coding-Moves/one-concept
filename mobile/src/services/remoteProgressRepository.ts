@@ -2,6 +2,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError, apiRequest } from '../api/client';
 import { Category, DailyPayload, ProgressState } from '../types';
 import { todayKey } from './dates';
+import { cacheSavedConcepts, conceptCache } from './conceptApi';
+import { toConcept } from './dailyApi';
 import { clearQueue, dequeue, enqueue, keyOf, pending, QueuedMutation } from './mutationQueue';
 import { ProgressRepository } from './progressRepository';
 import { EMPTY_PROGRESS } from './storage';
@@ -94,6 +96,16 @@ export class RemoteProgressRepository implements ProgressRepository {
   }
 
   private async fromState(payload: StatePayload, epoch: number): Promise<ProgressState> {
+    if (epoch !== this.epoch) return EMPTY_PROGRESS;
+    // Keep each day's full text for later History/Saved reading, and download
+    // saved bodies without holding up the initial screen.
+    const contentEpoch = conceptCache.epoch;
+    if (payload.daily) {
+      const concept = toConcept(payload.daily);
+      await conceptCache.set(concept.id, concept, contentEpoch).catch(() => {});
+    }
+    if (epoch !== this.epoch) return EMPTY_PROGRESS;
+    void cacheSavedConcepts(payload.bookmarks, contentEpoch);
     return this.remember(toProgressState(payload), epoch);
   }
 
@@ -107,10 +119,17 @@ export class RemoteProgressRepository implements ProgressRepository {
 
   async loadCached(): Promise<ProgressState | null> {
     const epoch = this.epoch;
+    const contentEpoch = conceptCache.epoch;
     const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
     if (!raw || epoch !== this.epoch) return null;
     try {
       this.cache = JSON.parse(raw) as ProgressState;
+      // Also upgrade an existing installation's cached Today while offline.
+      if (this.cache.serverDaily?.status === 'ok') {
+        const concept = toConcept(this.cache.serverDaily.payload);
+        await conceptCache.set(concept.id, concept, contentEpoch).catch(() => {});
+      }
+      if (epoch !== this.epoch) return null;
       return this.cache;
     } catch {
       return null;

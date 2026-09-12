@@ -7,9 +7,10 @@ claims as completed work.
 
 ## Current status
 
-- Assigned scope: only [#133](https://github.com/Coding-Moves/one-concept/issues/133).
-  Confirm the problems first, then open one PR into `develop` for offline reading,
-  personalization persistence, and automatic action synchronization.
+- Completed scope: only [#133](https://github.com/Coding-Moves/one-concept/issues/133).
+  [PR #183](https://github.com/Coding-Moves/one-concept/pull/183) is open into
+  `develop` for offline reading, personalization persistence, and automatic
+  action synchronization. Problems were reproduced before implementation.
 - Branch: `codex/133-offline-reading-sync`, based on refreshed `origin/develop`
   at `89a8fb8`. The starting tree matches the tested baseline.
 - Release #179 and card follow-up #180 are merged; #181 synchronized `main`
@@ -64,8 +65,11 @@ claims as completed work.
 | Sign-out request fence and browser regression | `d19e1fe` |
 | Validation and navigation guide | `docs: record issue 133 validation and handoff` |
 
-- **Handoff:** publish one PR into `develop` for owner review. Preserve the
-  individual commits; do not merge the PR or prepare a release in this task.
+- **PR:** [#183](https://github.com/Coding-Moves/one-concept/pull/183), opened
+  into `develop` with all individual commits and the owner's configured identity.
+  Publication bookkeeping: `docs: link issue 133 pull request`.
+- **Handoff:** ready for owner review. The PR remains open; merging and release
+  preparation are the owner's next steps, outside this task.
 
 ## Working agreement — 2026-09-11
 

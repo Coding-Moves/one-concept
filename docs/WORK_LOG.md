@@ -7,6 +7,16 @@ claims as completed work.
 
 ## Current status
 
+- Current chunk: extract the three branded Supabase email templates into a
+  separate ready-for-review PR from `origin/develop` (`a6e81f1`) on
+  `codex/branded-auth-email-templates`. Keep Resend delivery preparation in
+  [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187).
+  Template installation is independent of purchasing a domain or an app release.
+- Preserve the original focused template commits; add a provider-independent
+  installation guide, verify the final HTML, and narrow the draft to delivery.
+  No SMTP settings, live templates, notifications, or production release are
+  changed by this repository-only chunk. Inbox activation remains a manual step.
+
 - Implemented and validated [#151](https://github.com/Coding-Moves/one-concept/issues/151),
   shared daily Gemini generation budget, on `codex/151-shared-generation-budget`
   from refreshed `origin/develop` (`65eb21d`). Published

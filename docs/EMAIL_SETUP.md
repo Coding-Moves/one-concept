@@ -1,4 +1,4 @@
-# Authentication email with Resend
+# Authentication email setup
 
 This is the shared delivery and branding setup for [#152](https://github.com/Coding-Moves/one-concept/issues/152)
 and [#171](https://github.com/Coding-Moves/one-concept/issues/171).
@@ -6,12 +6,37 @@ and [#171](https://github.com/Coding-Moves/one-concept/issues/171).
 Keep the implementation PR in draft until the acceptance checks below pass.
 
 The app already asks Supabase Auth to send signup and password-recovery emails.
-Supabase owns verification tokens; Resend transports the messages through custom
-SMTP. FastAPI serves the existing confirmation and password-reset pages. The
+Supabase owns verification tokens; the configured provider transports messages
+through custom SMTP. FastAPI serves the existing confirmation and password-reset pages. The
 HTML files in this repository must be installed in Supabase; deploying or merging
 them does not install them. Daily reminders remain push notifications.
 
-## What the owner needs to do
+## Replace the existing templates
+
+The owner has chosen their existing Gmail account for SMTP, with a $0 budget and
+no domain purchase. The HTML works with either Gmail or Resend: follow
+[template installation](#6-install-the-two-templates) to replace the two bodies,
+then [verify delivery](#7-verify-real-delivery-before-completing-either-issue).
+SMTP credentials belong only in Supabase's SMTP settings, never in the HTML.
+Saving the templates changes future emails immediately; no app update is needed.
+
+Use the complete raw source, not a rendered preview. The redesign keeps the same
+subjects and confirmation placeholders, so existing redirect settings still apply.
+The owner chose One Concept text branding because the app currently contains
+Expo starter icons rather than a separate official logo. No logo URL is needed.
+The masthead's "Coding Moves" text links once per email to the verified
+[GitHub organization](https://github.com/Coding-Moves). Authentication buttons
+and fallback links still use Supabase's own confirmation URL.
+
+Gmail is a limited personal sender; successful tests do not establish capacity
+for a large rollout. Live SMTP authentication and inbox delivery remain unverified.
+The existing draft PR stays open while those checks are pending.
+
+## Optional Resend setup
+
+Steps 1–4 below preserve the original Resend preparation. They are not required
+for the owner's current Gmail setup. The later redirect, template, and acceptance
+steps apply to either provider.
 
 The owner has set a **$0 budget, with no domain purchase**. Complete the numbered
 steps below only using free services. If registration, identity verification,
@@ -159,8 +184,11 @@ use the same supported variable, but Supabase supplies the appropriate signup
 or recovery verification URL for the selected template. Subjects are separate
 dashboard fields; the HTML comments do not configure them.
 
-The templates use inline styles, table layouts, system fonts, visible fallback
-links, and a text wordmark. They require no external images or JavaScript.
+The templates use a dark masthead with a text wordmark, short account-specific
+copy, one full-width action button, and a separate fallback-link area. Inline
+styles, tables, and system fonts keep the design usable without remote images,
+fonts, or JavaScript. Recovery's heading includes an optional soft hyphen so
+enlarged text can break the word "password" cleanly on narrow screens.
 They do not claim an expiry duration, which is controlled by Supabase settings.
 The app has no magic-link sign-in button, so the optional magic-link template
 from #171 is deferred; no new authentication method is enabled by this PR.
@@ -188,26 +216,30 @@ delivery status, and outcome in the PR's activation checklist.
   DKIM, and DMARC results; resolve failures before calling the setup complete.
 - [ ] **Fallback link:** use a fresh email and copy its fallback URL into the
   browser; verify that it completes the same action as the button.
-- [ ] **Provider evidence:** Resend logs show successful delivery for signup and
-  recovery, and Supabase Auth logs show no SMTP failure. Provider acceptance
-  alone does not prove inbox delivery or working links.
+- [ ] **Provider evidence:** Supabase Auth logs show no SMTP failure and both
+  messages arrive in the recipient inboxes. If using Resend, check its delivery
+  logs too. Provider acceptance alone does not prove inbox delivery or working links.
 
 When these pass, record the actual results, mark the PR ready, and merge the
 single PR that closes both #152 and #171. Do not close either as completed while
-domain verification or real delivery is still pending.
+required provider verification or real delivery is still pending. Record Gmail's
+limited-volume tradeoff explicitly; do not describe it as a verified production
+transactional service merely because the HTML has been installed.
 
 ## Operating and troubleshooting
 
-Use **Resend → Emails/Logs** for delivery, bounce, suppression, and quota details;
-use **Supabase → Logs → Auth** for request and SMTP errors. FastAPI does not send
-these messages and cannot establish delivery from its own logs. Check remaining
-Resend allowance before a signup campaign, and review failures after activation.
+Use **Supabase → Logs → Auth** for request and SMTP errors. With Gmail, check
+the recipient inbox/spam folder and any delivery failures in the sender mailbox.
+For Resend, use **Resend → Emails/Logs** for delivery, bounce, suppression, and
+quota details. FastAPI does not send these messages and cannot establish delivery
+from its own logs. Check the selected provider's allowance before a signup
+campaign, and review failures after activation.
 
 | Symptom | Check |
 | --- | --- |
-| Only team members receive mail | Correct Supabase project, custom SMTP saved, domain verified, Send Email hook status. |
-| SMTP authentication/sender error | Dedicated key, sending-domain scope, exact From address, host and port. |
-| Rate-limit error or missing messages | Both Supabase's hourly limit and Resend's daily/monthly allowance; use a new request after limits permit. |
+| Only team members receive mail | Correct Supabase project, custom SMTP saved, Send Email hook status; domain verification if using Resend. |
+| SMTP authentication/sender error | Gmail: matching sender/username and a valid app password. Resend: dedicated key and domain scope. Check host and port for the chosen provider. |
+| Rate-limit error or missing messages | Both Supabase's hourly limit and the selected provider's allowance; use a new request after limits permit. |
 | Email arrives, link fails | Tracking disabled, correct template slot, intact placeholder, existing backend redirects; request a fresh link. Some inbox scanners consume one-time links. |
 | Reset page says it is unavailable | Existing backend `SUPABASE_ANON_KEY` and deployment configuration; see [RELEASING.md](../RELEASING.md). |
 | Password reset gives no account-specific detail | Expected: the app deliberately avoids disclosing whether an account exists. |

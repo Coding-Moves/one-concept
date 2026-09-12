@@ -47,6 +47,33 @@ claims as completed work.
 - Delivery remains manual: the owner will paste the replacement HTML into the
   matching Supabase templates. Do not enable providers, send emails, or mark the
   draft ready without verified delivery. Browser checks are not inbox tests.
+- Delivered a dark One Concept masthead, shorter account-specific messages,
+  full-width buttons, and a quieter fallback area. Signup HTML is 3,176 bytes
+  (18.2% smaller); recovery is 3,309 bytes (17.3% smaller). Each is 41 lines.
+  Both retain all three `{{ .ConfirmationURL }}` occurrences and need no images.
+- Owner also requested a clickable Coding Moves attribution. Verified
+  `https://github.com/Coding-Moves` through GitHub's organization API and linked
+  the masthead text once in each email. The authentication destinations are unchanged.
+- **Validation:** 48 final Chromium scenarios passed: two templates, four widths
+  (320/390/600/960), normal/doubled/stripped text styles, and normal/long dummy
+  verification URLs. Checked exact link destinations, copyable full URLs, no
+  network resources, styled overflow, readable line heights, and 44px+ actions.
+  Inspected mobile, desktop, and doubled-text renders. Recovery's heading keeps
+  "password" together normally and permits a soft hyphen at enlarged sizes. All authored
+  text/button color pairs exceed 6:1 contrast. Local Markdown file links and
+  whitespace checks passed. Actual Gmail/Outlook rendering and delivery remain
+  unverified; backend/mobile tests were not run for standalone HTML/doc changes.
+- Preview artifacts and the local browser harness are under
+  `/tmp/one-concept-email-redesign/`, outside Git. They use dummy links only;
+  the owner must copy the repository HTML, not a preview with example URLs.
+- Commits: `4c75b72` records scope; `ac02745` redesigns signup; `fded7b1` redesigns
+  recovery; `e09ad7a` improves heading wrapping. The organization link is recorded
+  by `feat: link email branding to Coding Moves GitHub organization`.
+  Installation/map changes and this handoff are recorded by
+  `docs: update replacement email instructions and visual validation`.
+- **Handoff:** update the same draft PR #187; replace the two HTML bodies using
+  the unchanged subjects in `docs/EMAIL_SETUP.md`. Gmail setup and both inbox
+  acceptance flows still require verification. No Supabase settings were changed.
 
 ### Original preparation
 
@@ -100,7 +127,8 @@ claims as completed work.
   `develop`, with closing references for both #152 and #171. Both issues remain
   open until the live activation checklist passes and the PR merges. Publication
   bookkeeping: `docs: link combined authentication email pull request`.
-- **Original owner handoff (superseded by Gmail choice above):** create the free Resend account and decide whether NIC.UA's
+- **Original owner handoff (superseded by Gmail choice above):** create the free
+  Resend account and decide whether NIC.UA's
   card-verification/public-contact terms are acceptable before registering any
   free domain. The question remains pending; no consent was inferred. Complete
   the exact DNS/SMTP/template steps in `docs/EMAIL_SETUP.md` once a suitable domain

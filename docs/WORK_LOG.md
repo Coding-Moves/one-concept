@@ -7,6 +7,17 @@ claims as completed work.
 
 ## Current status
 
+- Current chunk: [#182](https://github.com/Coding-Moves/one-concept/issues/182),
+  saved reading offline and password visibility, on
+  `codex/182-offline-saved-password` from refreshed `develop` (`58e9b1d`).
+  Source inspection confirms the missing toggle. The full-lesson disk cache
+  already exists on `develop` but is absent from production `main`; verify the
+  exported UI before deciding whether any further offline implementation is needed.
+- Read the exact Expo SDK 57 and React Native 0.86 input/button documentation.
+  Planned commits: scope; password toggle with behavior regression; offline
+  acceptance coverage if useful; documentation and PR handoff. Keep the change
+  JS-only, preserve existing cache cleanup, and open one PR into `develop`.
+
 - Published the three branded Supabase templates in non-draft
   [PR #188](https://github.com/Coding-Moves/one-concept/pull/188) into `develop`,
   from `a6e81f1` on `codex/branded-auth-email-templates`. GitHub reports the PR

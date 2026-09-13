@@ -77,7 +77,12 @@ _EXISTING = text("""
 # within that topic.
 _CANDIDATE = text("""
     with pool as (
-        select c.id, c.topic_id
+        select c.id, c.topic_id,coalesce(c.difficulty,1) as level,
+               (select count(*) from jsonb_array_elements_text(coalesce(c.curriculum->'prerequisites','[]'::jsonb)) required(slug)
+                where not exists(select 1 from public.daily_assignments learned
+                  join public.concepts prior on prior.id=learned.concept_id
+                  where learned.user_id=:uid and learned.completed_at is not null
+                    and prior.slug=required.slug)) as unmet
           from public.concepts c
           join public.topics t on t.id=c.topic_id and t.is_active
          where c.status = 'published'
@@ -97,7 +102,7 @@ _CANDIDATE = text("""
     select p.id
       from pool p
       left join last_seen ls on ls.topic_id = p.topic_id
-     order by ls.seen_on asc nulls first, random()
+     order by ls.seen_on asc nulls first, p.unmet asc, p.level asc, random()
      limit 1
 """)
 
@@ -164,7 +169,11 @@ def _row_to_result(row, outside: bool) -> DailyResult:
 
 
 async def _select_new(
-    session: AsyncSession, user_id: uuid.UUID, *, today: date | None = None
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    today: date | None = None,
+    prefetch_topics: set[uuid.UUID],
 ) -> DailyResult:
     """`today` is derived from the user's timezone in production.
 
@@ -195,7 +204,7 @@ async def _select_new(
         ).scalar_one_or_none()
         if stale_topic is not None:
             await signal_reader(session, user_id, stale_topic, commit=False)
-            request_prefetch(stale_topic)
+            prefetch_topics.add(stale_topic)
 
         outside = True
         concept_id = (
@@ -239,7 +248,7 @@ async def _select_new(
             and watermark.unread <= get_settings().content_low_watermark
         ):
             await signal_reader(session, user_id, watermark.topic_id, commit=False)
-            request_prefetch(watermark.topic_id)
+            prefetch_topics.add(watermark.topic_id)
 
     row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).one()
     return _row_to_result(row, outside=outside)
@@ -265,8 +274,15 @@ async def get_or_create_daily(
             if allow_review
             else DailyResult(status="exhausted", assigned_for=today)
         )
-    result = await _select_new(session, user_id, today=today)
+    prefetch_topics: set[uuid.UUID] = set()
+    result = await _select_new(
+        session, user_id, today=today, prefetch_topics=prefetch_topics
+    )
     if result.status == "exhausted" and allow_review:
         result = await choose_review(session, user_id, today) or result
     await session.commit()
+    # Publish the durable target before waking another session. Starting the
+    # task earlier can see the old bootstrap floor and immediately stop.
+    for topic_id in prefetch_topics:
+        request_prefetch(topic_id)
     return result

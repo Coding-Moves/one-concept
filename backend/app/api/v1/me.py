@@ -87,8 +87,14 @@ async def get_state(
     """Everything the app needs to render, in one request.
 
     Bootstrapping only runs when the state query finds no profile, so the
-    common path costs a single round trip.
+    profile lock keeps the state totals consistent with concurrent completions.
     """
+    # Keep completion totals and the folded activity from the same point in
+    # time when another device completes a review during startup.
+    await db.execute(
+        text("select id from public.profiles where id=:uid for update"),
+        {"uid": user.id},
+    )
     state = await load_state(db, user.id, compact=compact)
     if state is None:
         await ensure_bootstrapped(db, user.id, user.email)

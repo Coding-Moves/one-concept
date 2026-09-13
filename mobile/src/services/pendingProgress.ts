@@ -21,6 +21,8 @@ export function withPendingProgress(
         if (mutation.desired && row) saved.push(row);
         state = { ...state, savedConcepts: saved };
       }
+    } else if (mutation.kind === 'review') {
+      state = withCompletedReview(state, mutation.reviewId);
     } else if (mutation.kind === 'learn' && mutation.date === state.assignment?.date) {
       const record = previous.learned.find(row => row.date === mutation.date);
       if (record && !state.learned.some(row => row.date === mutation.date)) {
@@ -29,4 +31,20 @@ export function withPendingProgress(
     }
   }
   return state;
+}
+
+
+/** Apply once to the matching server-assigned activity, never a new lesson.
+ * The payload date identifies the learning day; no device timestamp is sent. */
+export function withCompletedReview(state: ProgressState, reviewId: string): ProgressState {
+  const daily = state.serverDaily;
+  if (daily?.status !== 'review' || daily.payload.review_id !== reviewId || daily.payload.learned) return state;
+  const alreadyLearnedDay = state.learned.some(row => row.date === daily.payload.assigned_for);
+  const stats = state.stats ? {
+    ...state.stats,
+    current: state.stats.current + (alreadyLearnedDay ? 0 : 1),
+    longest: Math.max(state.stats.longest, state.stats.current + (alreadyLearnedDay ? 0 : 1)),
+    totalReviews: (state.stats.totalReviews ?? 0) + 1,
+  } : undefined;
+  return { ...state, stats, serverDaily: { ...daily, payload: { ...daily.payload, learned: true } } };
 }

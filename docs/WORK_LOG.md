@@ -7,6 +7,17 @@ claims as completed work.
 
 ## Current status
 
+### PR #198 cursor review follow-up
+
+- `b38fd15` fixes the confirmed History query mismatch (`before` vs backend
+  `cursor`) in the same PR, with the browser fixture matching the real contract.
+- Before the fix, the corrected fixture reproduced 50/120 records and a retry
+  error instead of loading the next page. After the fix, all 120 records load.
+- Validation: Node 24 typecheck, all 39 unit tests, web export and the corrected
+  History browser test passed (paging, retry, offline restart/detail, sign-out
+  and late responses). Whitespace checks passed. No backend changes; native
+  gesture/device checks remain unverified as recorded below.
+
 ## Learning experience batch (#158, #159, #160)
 
 - Implemented one PR from merged `develop` (`3937927`), branch

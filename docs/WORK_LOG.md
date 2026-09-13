@@ -9,16 +9,49 @@ claims as completed work.
 
 ## Sustainable learning (#195) — 2026-09-13
 
-- Implement all five content-lifecycle work areas in one PR, with a portable
-  subject registry supporting the existing five subjects and future additions/
-  retirement. Work in isolated `/tmp/one-concept-195` on
-  `codex/195-sustainable-learning` from `develop` (`3cc5af3`).
-- Preserve the unrelated handbook checkout and its local edits. Read Expo SDK
-  57 documentation before mobile changes. No production migration, generation,
-  app version bump or deployment is part of this implementation PR.
-- Architecture and planned focused commits are in `CONTENT_ARCHITECTURE.md`.
-  Validate durable refill, curriculum/publication, review/streak/offline behaviour,
-  subject lifecycle and operational reporting before publishing the PR.
+- Implemented all five lifecycle work areas in one feature PR targeting `develop`:
+  durable reader-based refill; portable subject/curriculum imports; reviewed,
+  versioned shared content; daily review with offline replay; protected operations.
+  The existing five subjects remain; future addition/retirement uses data imports.
+- Work is isolated in `/tmp/one-concept-195`, branch
+  `codex/195-sustainable-learning`, based on `develop` (`3cc5af3`). The original
+  handbook checkout and its unrelated edits remain untouched. Expo SDK 57 docs
+  were read before mobile work. No app version/runtime change was made.
+- Reproduced the 25-lesson refill ceiling with actual selection/prefetch against
+  disposable PostgreSQL and mocked drafting. The regression now passes. Review
+  also caught and fixed a worker wake before its durable target committed.
+- Commits: `e0eb494` architecture scope; `11adafc` refill; `1a106c0` curriculum;
+  `72e3a9b` editorial gate; `c5d305e` review API/streaks; `ebf4c28` review outbox;
+  `9bc36a8` operations; `49ad80f` generation concurrency/recovery;
+  `64285a4` selection consistency; `bd166ed` cache cleanup; `5a569b0` review UI;
+  `465a47a` year simulation/restore. Further preservation/handoff commits are
+  identified by their subjects; preserve every meaningful commit when merging.
+- Validation: full backend suite **171 passed, no skips**, using disposable
+  PostgreSQL 16 with live HTTP blocked. Added legacy-snapshot regression afterward:
+  publication suite **4 passed** (172 backend tests now collected). The yearly
+  simulation covers three readers, five subjects, queue extension and a prolonged
+  drafting outage; each reader reaches 365 learning days without inflating unique
+  learned totals. Backup dump/restore passed in a second disposable database.
+- Mobile: Node 24 typecheck and **36 tests passed, no skips**; Android/iOS/web
+  exports passed. Mocked browser checks passed in both themes, narrow/enlarged
+  text, review offline restart/reconnect, future-subject exploration, timer replay,
+  transient failure, in-flight sign-out and all 365 saved bodies. Inspected review
+  screenshots. Physical-device font scaling, screen readers, native storage and
+  real two-device acceptance remain manual; backend concurrency tests cover races.
+- Read-only production classification found 26 old failures: 18 throttling,
+  four validation, four unclassified. None was retried/reset. No production writes,
+  model generation, scheduler configuration or deployment occurred. Migrations
+  0011–0015 remain intentionally absent from the applied ledger; apply/verify them
+  before backend rollout, then deliver the JS update. Pause old generation workers
+  during migration/deployment so they cannot bypass the editorial gate.
+- Architecture and operating procedures: [CONTENT_ARCHITECTURE.md](CONTENT_ARCHITECTURE.md)
+  and [CONTENT_OPERATIONS.md](CONTENT_OPERATIONS.md). Human curriculum expansion
+  and source review are required; title-similarity checks do not prove originality.
+  Operational transitions appear in protected job output, with no external alerts
+  configured. Production backup/Auth restore remains a separate live rehearsal.
+- PR publication and final local documentation checks are pending below.
+
+## Previous release status
 
 - [Release PR #191](https://github.com/Coding-Moves/one-concept/pull/191) is open
   from **develop → main** for **1.8.0**, with the six-benefit one-time card and

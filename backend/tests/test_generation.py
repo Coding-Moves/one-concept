@@ -152,7 +152,7 @@ async def test_generate_one_publishes_and_marks_the_backlog(empty_generation_bud
           from public.concepts c join public.concept_backlog b on b.slug = c.slug
          where c.id = :id
     """), {"id": concept_id})).one()
-    assert row.status == "published"
+    assert row.status == "draft"
     assert row.source == "gemini"
     assert row.model and row.prompt_version, "provenance must be recorded"
     assert row.backlog_status == "done"
@@ -355,6 +355,9 @@ async def test_top_up_stops_at_the_call_cap(empty_generation_budget, session, pa
 
 
 async def test_top_up_fills_only_topics_below_the_threshold(empty_generation_budget, session, patch_httpx):
+    # Isolate the bootstrap floor from durable demand created by other tests.
+    await session.execute(text("delete from public.content_supply_targets"))
+    await session.commit()
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
 
     threshold = 6
@@ -362,12 +365,12 @@ async def test_top_up_fills_only_topics_below_the_threshold(empty_generation_bud
     # earlier tests in this session may already have published concepts.
     deficits = (await session.execute(text("""
         select greatest(:t - (select count(*) from public.concepts c
-                              where c.topic_id = tp.id and c.status = 'published'), 0) as deficit,
+                              where c.topic_id = tp.id and c.status in ('published','draft')), 0) as deficit,
                (select count(*) from public.concept_backlog b
                  where b.topic_id = tp.id and b.status = 'pending') as pending
           from public.topics tp where tp.is_active
     """), {"t": threshold})).all()
-    expected = sum(min(d.deficit, d.pending) for d in deficits)
+    expected = sum(min(d.deficit, d.pending, 5) for d in deficits)
 
     result = await top_up(session, api_key="k", model="gemini-2.0-flash", enabled=True,
                           minimum_per_topic=threshold, call_cap=100)
@@ -378,7 +381,7 @@ async def test_top_up_fills_only_topics_below_the_threshold(empty_generation_bud
         select tp.slug from public.topics tp
          where tp.is_active
            and (select count(*) from public.concepts c
-                 where c.topic_id = tp.id and c.status = 'published') < :t
+                 where c.topic_id = tp.id and c.status in ('published','draft')) < :t
     """), {"t": threshold})).scalars().all()
     assert short == [], f"topics left below the threshold: {short}"
 

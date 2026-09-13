@@ -1,9 +1,9 @@
 """Run with: python -m app.workers.rewrite_catalog
 
 One-off (but re-runnable) pass that rewrites every published concept with the
-current prompt. Skips lessons already written by the current PROMPT_VERSION,
+current prompt as review drafts. Skips lessons with pending drafts or the current PROMPT_VERSION,
 so an interrupted run resumes where it stopped. Titles, slugs, ids, and every
-user's history stay untouched — only the words change.
+user's history and published words stay untouched until explicit approval.
 """
 
 import asyncio
@@ -13,12 +13,15 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.db.session import SessionLocal, engine
-from app.services.generation_budget import GenerationBudgetExhausted, reserve_generation_call
 from app.services.generation import (
     PROMPT_VERSION,
     GenerationError,
     RateLimitedError,
     generate_concept,
+)
+from app.services.generation_budget import (
+    GenerationBudgetExhausted,
+    reserve_generation_call,
 )
 
 log = logging.getLogger(__name__)
@@ -27,23 +30,29 @@ PACE_SECONDS = 6.0
 BACKOFF_START, BACKOFF_MAX, MAX_RATE_LIMIT_STREAK = 15.0, 120.0, 5
 
 _TODO = text("""
-    select c.id, c.title, t.name as topic_name
+    select c.id, c.title, c.content_version, c.curriculum, t.name as topic_name
       from public.concepts c join public.topics t on t.id = c.topic_id
      where c.status = 'published'
+       and t.is_active
        and coalesce(c.prompt_version, '') <> :pv
+       and not exists (select 1 from public.concept_revisions r where r.concept_id=c.id
+         and r.status='draft')
      order by c.created_at
 """)
 
 _UPDATE = text("""
-    update public.concepts
-       set summary = :summary, example = :example,
-           model = :model, prompt_version = :pv, source = 'gemini'
-     where id = :id
+    insert into public.concept_revisions(concept_id,base_version,body)
+    select id,content_version,jsonb_build_object('title',title,'summary',cast(:summary as text),
+      'example',cast(:example as text),'curriculum',curriculum,'model',cast(:model as text),'prompt_version',cast(:pv as text))
+    from public.concepts where id=:id and content_version=:version
+      and not exists(select 1 from public.concept_revisions r where r.concept_id=:id and r.status='draft')
 """)
 
 
 async def main() -> None:
-    logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+    logging.basicConfig(
+        level=logging.INFO, format="%(levelname)s %(name)s: %(message)s"
+    )
     settings = get_settings()
 
     try:
@@ -67,24 +76,39 @@ async def main() -> None:
             for row in todo:
                 while True:
                     try:
-                        await reserve_generation_call(session, settings.generation_daily_call_cap)
+                        await reserve_generation_call(
+                            session, settings.generation_daily_call_cap
+                        )
                         await session.commit()
                         result = await generate_concept(
-                            title=row.title, topic_name=row.topic_name, angle=None,
-                            api_key=settings.gemini_api_key, model=settings.gemini_model,
+                            title=row.title,
+                            topic_name=row.topic_name,
+                            angle=None,
+                            api_key=settings.gemini_api_key,
+                            model=settings.gemini_model,
                         )
                     except GenerationBudgetExhausted:
                         await session.rollback()
-                        log.info("daily call cap reached: rewritten %s, failed %s (resume on a later day)", rewritten, failed)
+                        log.info(
+                            "daily call cap reached: rewritten %s, failed %s (resume on a later day)",
+                            rewritten,
+                            failed,
+                        )
                         return
                     except RateLimitedError as exc:
                         streak += 1
                         if streak >= MAX_RATE_LIMIT_STREAK:
                             log.warning("giving up: %s consecutive rate limits", streak)
-                            log.info("rewritten %s, failed %s (resume by re-running)", rewritten, failed)
+                            log.info(
+                                "rewritten %s, failed %s (resume by re-running)",
+                                rewritten,
+                                failed,
+                            )
                             return
                         delay = max(exc.retry_after or 0.0, backoff)
-                        log.warning("rate limited; retrying %s in %.0fs", row.title, delay)
+                        log.warning(
+                            "rate limited; retrying %s in %.0fs", row.title, delay
+                        )
                         await asyncio.sleep(delay)
                         backoff = min(backoff * 2, BACKOFF_MAX)
                         continue
@@ -94,13 +118,25 @@ async def main() -> None:
                         failed += 1
                         break
                     streak, backoff = 0, BACKOFF_START
-                    await session.execute(_UPDATE, {
-                        "id": row.id, "summary": result.summary, "example": result.example,
-                        "model": result.model, "pv": result.prompt_version,
-                    })
+                    await session.execute(
+                        _UPDATE,
+                        {
+                            "id": row.id,
+                            "version": row.content_version,
+                            "summary": result.summary,
+                            "example": result.example,
+                            "model": result.model,
+                            "pv": result.prompt_version,
+                        },
+                    )
                     await session.commit()
                     rewritten += 1
-                    log.info("rewrote %s (%s/%s)", row.title, rewritten, len(todo))
+                    log.info(
+                        "staged revision for %s (%s/%s)",
+                        row.title,
+                        rewritten,
+                        len(todo),
+                    )
                     break
                 await asyncio.sleep(PACE_SECONDS)
 

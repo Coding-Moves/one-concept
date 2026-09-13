@@ -36,6 +36,7 @@ async def topic(session, monkeypatch):
     )).bindparams(tid=tid))
     yield tid
     await session.rollback()
+    await session.execute(text("delete from public.concept_revisions where concept_id in (select id from public.concepts where topic_id=:id)"), {"id": tid})
     await session.execute(text("delete from public.concepts where topic_id = :id"), {"id": tid})
     await session.execute(text("delete from public.topics where id = :id"), {"id": tid})
     await session.commit()
@@ -243,7 +244,7 @@ async def rewrite_config(topic, session, generator, sessionmaker_for_test, monke
 
 async def rewritten_count(session, topic):
     return await session.scalar(text("""
-        select count(*) from public.concepts where topic_id = :tid and prompt_version = :pv
+        select count(*) from public.concept_revisions r join public.concepts c on c.id=r.concept_id where c.topic_id = :tid and r.body->>'prompt_version' = :pv
     """), {"tid": topic, "pv": rewrite.PROMPT_VERSION})
 
 

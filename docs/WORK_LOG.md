@@ -7,6 +7,25 @@ claims as completed work.
 
 ## Current status
 
+## App engineering handbook — 2026-09-13
+
+- **Outcome:** create a complete printable PDF explaining the app from beginner
+  to advanced level, with layer diagrams, daily selection examples, catalog
+  exhaustion/refill, notifications, email, credentials by purpose, release flow,
+  tradeoffs, and a seven-day study digest.
+- **Scope:** documentation and a reproducible PDF source only; no application,
+  production configuration, content generation, or messaging changes.
+- **Branch/base:** `codex/app-engineering-handbook` from freshly fetched
+  `origin/develop` at `3cc5af3`. GitHub read-only checks confirm #191 and #193
+  merged; `main` is `2e537f6`. Older release status below is historical.
+- **Planned commits:** scope; source-based handbook; PDF builder and navigation;
+  validation and PR handoff. Generated PDFs/previews remain untracked outputs.
+- **Evidence:** inspect current implementation before prose, verify relevant
+  provider documentation, distinguish code/defaults from live service settings,
+  and omit credential values. Render and inspect every final PDF page.
+
+## Previous release handoff (historical)
+
 - [Release PR #191](https://github.com/Coding-Moves/one-concept/pull/191) is open
   from **develop → main** for **1.8.0**, with the six-benefit one-time card and
   runtime **1.3.0**. Feature/fix PRs #183–#186, #188, and #189 are included;

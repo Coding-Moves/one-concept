@@ -77,3 +77,63 @@ async def test_curriculum_rejects_cycles_missing_prerequisites_and_duplicate_obj
     with pytest.raises(ValueError, match="Exact duplicate"):
         await import_lessons(session, [first, second])
     await session.rollback()
+
+
+async def test_revising_a_failed_plan_preserves_attempts_and_requires_explicit_retry(
+    session,
+):
+    slug = "revision-" + uuid.uuid4().hex
+    await import_subjects(session, [Subject(slug=slug, name="Revision fixture")])
+    item = plan(slug, slug)
+    await import_lessons(session, [item])
+    await session.execute(
+        text(
+            "update public.concept_backlog set attempts=3,status='failed' where slug=:s"
+        ),
+        {"s": slug},
+    )
+    item.angle = "Clarify the known validation failure without changing identity."
+    with pytest.raises(ValueError, match="explicitly"):
+        await import_lessons(session, [item])
+    await import_lessons(session, [item], revise=True)
+    row = (
+        await session.execute(
+            text(
+                "select attempts,status,angle from public.concept_backlog where slug=:s"
+            ),
+            {"s": slug},
+        )
+    ).one()
+    assert tuple(row) == (3, "failed", item.angle)
+    await session.rollback()
+
+
+async def test_checked_in_registry_and_extension_examples_import_without_changing_subject_ids(
+    session,
+):
+    from pathlib import Path
+    from pydantic import TypeAdapter
+
+    folder = Path(__file__).resolve().parents[1] / "content"
+    before = (
+        await session.execute(
+            text("select slug,id from public.topics where is_active order by slug")
+        )
+    ).all()
+    subjects = TypeAdapter(list[Subject]).validate_json(
+        (folder / "subjects.json").read_text()
+    )
+    lessons = TypeAdapter(list[PlannedLesson]).validate_json(
+        (folder / "curriculum.example.json").read_text()
+    )
+    await import_subjects(session, subjects)
+    assert len(subjects) == len(lessons) == 5
+    await import_lessons(session, lessons)
+    await import_lessons(session, lessons)
+    after = (
+        await session.execute(
+            text("select slug,id from public.topics where is_active order by slug")
+        )
+    ).all()
+    assert before == after
+    await session.rollback()

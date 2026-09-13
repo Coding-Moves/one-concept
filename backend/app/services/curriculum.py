@@ -83,8 +83,8 @@ async def import_subjects(session: AsyncSession, items: list[Subject]) -> int:
 async def validate_graph(session: AsyncSession, additions: dict[str, dict]) -> None:
     rows = (
         await session.execute(
-            text("""select slug,curriculum from public.concepts
-      union all select slug,curriculum from public.concept_backlog""")
+            text("""select slug,curriculum from public.concept_backlog
+      union all select slug,curriculum from public.concepts""")
         )
     ).all()
     graph = {r.slug: r.curriculum.get("prerequisites", []) for r in rows}
@@ -111,7 +111,7 @@ async def validate_graph(session: AsyncSession, additions: dict[str, dict]) -> N
 
 
 async def import_lessons(
-    session: AsyncSession, items: list[PlannedLesson]
+    session: AsyncSession, items: list[PlannedLesson], *, revise: bool = False
 ) -> list[str]:
     """Idempotent exact re-import; changed existing plans need explicit editorial work."""
     import json
@@ -158,22 +158,38 @@ async def import_lessons(
             raise ValueError(f"Unknown or retired subject {item.topic_slug}")
         previous = (
             await session.execute(
-                text("select * from public.concept_backlog where slug=:s"),
+                text("select * from public.concept_backlog where slug=:s for update"),
                 {"s": item.slug},
             )
         ).first()
         data = item.curriculum.model_dump(mode="json")
         if previous:
+            if previous.topic_id != topic:
+                raise ValueError("A plan cannot move between subject identities")
             if (
                 previous.topic_id,
                 previous.title,
                 previous.angle or "",
                 previous.curriculum,
             ) != (topic, item.title, item.angle, data):
-                raise ValueError(
-                    f"{item.slug} already exists with a different plan; review it explicitly"
+                if not revise or previous.status not in ("pending", "failed"):
+                    raise ValueError(
+                        f"{item.slug} already exists with a different plan; only pending/failed plans can be revised explicitly"
+                    )
+                await session.execute(
+                    text("""update public.concept_backlog set title=:title,angle=:angle,
+                  difficulty=:difficulty,curriculum=cast(:data as jsonb) where id=:id"""),
+                    {
+                        "id": previous.id,
+                        "title": item.title,
+                        "angle": item.angle,
+                        "difficulty": item.curriculum.difficulty,
+                        "data": json.dumps(data),
+                    },
                 )
             continue
+        if revise:
+            raise ValueError(f"No existing plan for {item.slug}")
         if any(row.slug == item.slug for row in existing):
             raise ValueError(f"{item.slug} already exists in the catalog")
         await session.execute(

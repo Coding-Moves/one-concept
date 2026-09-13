@@ -40,8 +40,10 @@ class Settings(BaseSettings):
     content_reserve_per_topic: int = Field(default=60, ge=1, le=365)
     content_low_watermark: int = Field(default=5, ge=0, le=30)
     content_active_days: int = Field(default=90, ge=1, le=365)
+    content_planned_reserve: int = Field(default=90, ge=1, le=1000)
     content_generation_batch: int = Field(default=5, ge=1, le=25)
     # Shared by all generation paths; zero prevents new reservations.
+    generation_max_concurrent: int = Field(default=3, ge=1, le=20)
     generation_daily_call_cap: int = Field(default=200, ge=0)
     # Seconds between worker calls; the free tier allows ~10 requests a minute.
     generation_pace_seconds: float = 6.0

@@ -1,0 +1,95 @@
+[
+  {
+    "slug": "evaluation-data-leakage",
+    "topic_slug": "artificial-intelligence",
+    "title": "Evaluation Data Leakage",
+    "angle": "Use one concrete example and verify the distinction against the reference.",
+    "curriculum": {
+      "objective": "Identify information that must stay outside model fitting and explain why leaking it makes evaluation misleading.",
+      "difficulty": 1,
+      "prerequisites": [
+        "cross-validation"
+      ],
+      "references": [
+        {
+          "title": "scikit-learn: Common pitfalls",
+          "url": "https://scikit-learn.org/stable/common_pitfalls.html"
+        }
+      ]
+    }
+  },
+  {
+    "slug": "read-committed-snapshots",
+    "topic_slug": "software-engineering",
+    "title": "Read Committed Snapshots",
+    "angle": "Use one concrete example and verify the distinction against the reference.",
+    "curriculum": {
+      "objective": "Explain why two queries in one Read Committed transaction can observe different committed data.",
+      "difficulty": 2,
+      "prerequisites": [
+        "acid-transactions"
+      ],
+      "references": [
+        {
+          "title": "PostgreSQL 16: Transaction isolation",
+          "url": "https://www.postgresql.org/docs/16/transaction-iso.html"
+        }
+      ]
+    }
+  },
+  {
+    "slug": "double-ended-queues",
+    "topic_slug": "computer-science",
+    "title": "Double-ended Queues",
+    "angle": "Use one concrete example and verify the distinction against the reference.",
+    "curriculum": {
+      "objective": "Choose a deque when a workload frequently inserts and removes elements at both ends.",
+      "difficulty": 2,
+      "prerequisites": [
+        "stacks-and-queues"
+      ],
+      "references": [
+        {
+          "title": "Python: collections.deque",
+          "url": "https://docs.python.org/3/library/collections.html#collections.deque"
+        }
+      ]
+    }
+  },
+  {
+    "slug": "probability-sample-spaces",
+    "topic_slug": "mathematics",
+    "title": "Probability Sample Spaces",
+    "angle": "Use one concrete example and verify the distinction against the reference.",
+    "curriculum": {
+      "objective": "List a sample space and distinguish an individual outcome from an event containing several outcomes.",
+      "difficulty": 1,
+      "prerequisites": [],
+      "references": [
+        {
+          "title": "OpenStax: Probability terminology",
+          "url": "https://openstax.org/books/introductory-statistics-2e/pages/3-1-terminology"
+        }
+      ]
+    }
+  },
+  {
+    "slug": "redirection-evaluation-order",
+    "topic_slug": "linux-systems",
+    "title": "Redirection Evaluation Order",
+    "angle": "Use one concrete example and verify the distinction against the reference.",
+    "curriculum": {
+      "objective": "Trace how left-to-right redirection changes which destination receives a command’s standard error.",
+      "difficulty": 3,
+      "prerequisites": [
+        "pipes-and-redirection"
+      ],
+      "references": [
+        {
+          "title": "GNU Bash: Redirections",
+          "url": "https://www.gnu.org/software/bash/manual/html_node/Redirections.html"
+        }
+      ]
+    }
+  }
+]

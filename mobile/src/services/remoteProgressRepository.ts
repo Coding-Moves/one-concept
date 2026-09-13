@@ -4,7 +4,7 @@ import { Category, DailyPayload, ReviewPayload, ProgressState } from '../types';
 import { todayKey } from './dates';
 import { cacheSavedConcepts, conceptCache } from './conceptApi';
 import { toConcept } from './dailyApi';
-import { withPendingProgress, withCompletedReview } from './pendingProgress';
+import { withPendingProgress, withCompletedReview, withRejectedReview } from './pendingProgress';
 import { clearQueue, dequeue, enqueue, keyOf, pending, QueuedMutation } from './mutationQueue';
 import { ProgressRepository } from './progressRepository';
 import { OfflineCache } from './offlineCache';
@@ -267,7 +267,7 @@ export class RemoteProgressRepository implements ProgressRepository {
       }>(`/v1/reviews/${encodeURIComponent(reviewId)}/complete`, { method: 'POST' });
       if (epoch !== this.epoch) return EMPTY_PROGRESS;
       await dequeue(`review:${reviewId}`);
-      return this.remember({ ...this.cache, stats: {
+      return this.remember({ ...this.cache, pendingReviewStats: undefined, stats: {
         current: done.stats.current, longest: done.stats.longest,
         totalLearned: done.stats.total_learned, totalReviews: done.stats.total_reviews,
       } }, epoch);
@@ -279,7 +279,7 @@ export class RemoteProgressRepository implements ProgressRepository {
       await dequeue(`review:${reviewId}`);
       // Restore the uncompleted snapshot even if the reconciliation request
       // also fails; an expired review must not keep an invented completed day.
-      await this.remember({ ...this.cache, serverDaily: before.serverDaily, stats: before.stats }, epoch);
+      await this.remember({ ...this.cache, serverDaily: before.serverDaily, stats: before.stats, pendingReviewStats: undefined }, epoch);
       return this.load();
     }
   }
@@ -416,6 +416,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     const entries = await pending();
     if (entries.length === 0) return null;
 
+    let rejectedReview = false;
     const today = todayKey();
     for (const m of entries) {
       if (epoch !== this.epoch) return null; // signed out mid-flush
@@ -433,8 +434,17 @@ export class RemoteProgressRepository implements ProgressRepository {
         await dequeue(keyOf(m), m); // guarded: don't clobber a newer same-key intent
       } catch (err) {
         if (epoch !== this.epoch) return null;
-        if (isOffline(err)) return null; // still offline — keep the rest queued
+        if (isOffline(err)) return rejectedReview ? this.cache : null; // keep remaining intents queued
         if (err instanceof ApiError && (err.status >= 500 || err.status === 429)) continue; // transient — retry next time
+        if (m.kind === 'review') {
+          const restored = withRejectedReview(this.cache, m.reviewId);
+          // Persist the rollback BEFORE deleting the intent. A storage failure
+          // must leave the action retryable, and sign-out still fences the write.
+          await this.disk.set('v1', restored, epoch);
+          if (epoch !== this.epoch) return null;
+          this.cache = restored;
+          rejectedReview = true;
+        }
         await dequeue(keyOf(m), m); // 4xx: unfixable, drop so it can't block forever
       }
     }
@@ -443,7 +453,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     try {
       return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
-      return null;
+      return epoch === this.epoch && rejectedReview ? this.cache : null;
     }
   }
 

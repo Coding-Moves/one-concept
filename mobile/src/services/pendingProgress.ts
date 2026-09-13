@@ -46,5 +46,20 @@ export function withCompletedReview(state: ProgressState, reviewId: string): Pro
     longest: Math.max(state.stats.longest, state.stats.current + (alreadyLearnedDay ? 0 : 1)),
     totalReviews: (state.stats.totalReviews ?? 0) + 1,
   } : undefined;
-  return { ...state, stats, serverDaily: { ...daily, payload: { ...daily.payload, learned: true } } };
+  return { ...state, stats, pendingReviewStats: { reviewId, stats: state.stats }, serverDaily: { ...daily, payload: { ...daily.payload, learned: true } } };
+}
+
+/** Undo only this pending review; a rejection must not replace a newer activity. */
+export function withRejectedReview(state: ProgressState, reviewId: string): ProgressState {
+  const daily = state.serverDaily;
+  if (daily?.status !== 'review' || daily.payload.review_id !== reviewId || !daily.payload.learned) return state;
+  const snapshot = state.pendingReviewStats;
+  return {
+    ...state,
+    // Older pre-release caches may lack a snapshot. Invalidate their unverified
+    // aggregate instead of retaining an invented review/streak count.
+    stats: snapshot?.reviewId === reviewId ? snapshot.stats : undefined,
+    pendingReviewStats: undefined,
+    serverDaily: { ...daily, payload: { ...daily.payload, learned: false, completed_at: null } },
+  };
 }

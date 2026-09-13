@@ -114,6 +114,8 @@ export interface ProgressState {
    * Absent for purely local state, where the client derives them instead.
    */
   stats?: StreakStats;
+  /** Pre-completion totals, retained until a queued review is acknowledged. */
+  pendingReviewStats?: { reviewId: string; stats?: StreakStats };
   /**
    * Today's concept, folded into the server state so startup needs one request
    * (#102). Present only for server-backed state; the signed-out demo picks the

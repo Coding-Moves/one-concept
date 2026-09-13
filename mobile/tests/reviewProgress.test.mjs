@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { withCompletedReview, withPendingProgress } from '../src/services/pendingProgress.ts';
+import { withCompletedReview, withPendingProgress, withRejectedReview } from '../src/services/pendingProgress.ts';
 import { MutationOutbox } from '../src/services/mutationOutbox.ts';
 
 const state = {
@@ -36,4 +36,16 @@ test('review outbox survives restart, coalesces two taps, and clears on account 
   assert.deepEqual(await restarted.pending(),[action]);
   await restarted.clear();
   assert.deepEqual(await restarted.pending(),[]);
+});
+
+test('rejected review restores exact totals after disk restart without touching saved work', () => {
+  const optimistic=withCompletedReview({...state,stats:{...state.stats,current:10,longest:10}},'review-1');
+  const restarted=JSON.parse(JSON.stringify(optimistic));
+  const rejected=withRejectedReview({...restarted,bookmarks:['another-lesson']},'review-1');
+  assert.equal(rejected.serverDaily.payload.learned,false);
+  assert.deepEqual(rejected.stats,{...state.stats,current:10,longest:10});
+  assert.deepEqual(rejected.bookmarks,['another-lesson']);
+  assert.equal(rejected.pendingReviewStats,undefined);
+  assert.equal(withRejectedReview(rejected,'review-1'),rejected);
+  assert.equal(withRejectedReview(state,'old-review'),state);
 });

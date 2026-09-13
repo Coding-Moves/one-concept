@@ -7,6 +7,25 @@ claims as completed work.
 
 ## Current status
 
+### Requested 1.9.1 release and visible What's New verification
+
+- Owner requested another version/release PR after 1.9.0 merged but was not
+  published to phones. This is a new version/card entry, not a claim that another
+  feature implementation is needed or that a version bump publishes an OTA.
+- Prepare 1.9.1 with four concrete learning benefits, retaining the existing
+  modal and per-version dismissal. Runtime stays 1.3.0; 1.9.0 highlights remain.
+- Intended commits: matching app version/card, then verification and handoff.
+  Production release stays separate from the backend deployment confirmation.
+- `3feaed4` adds the requested version and highlights. Node 24 typecheck and all
+  39 tests passed. Clean Android/iOS/web exports passed; mocked browser checks
+  in both themes confirmed four highlights for 1.8.0/1.9.0 upgrades and persistent
+  dismissal after reload. Preview screenshots were inspected.
+- Initial web verification exposed stale local Metro version metadata; clearing
+  the shared build cache produced the correct 1.9.1 manifest. No app behavior
+  was changed to compensate for a local cache. Physical OTA remains untested
+  until backend verification and publication. Preparation PR #204.
+
+
 ### Release #200 readiness and deployment ordering
 
 - Owner requested a merge-ready release, with production merge left for approval.

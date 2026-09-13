@@ -36,7 +36,11 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.1-flash-lite"
     generation_enabled: bool = False
-    min_pool_per_topic: int = 25
+    min_pool_per_topic: int = Field(default=25, ge=0)
+    content_reserve_per_topic: int = Field(default=60, ge=1, le=365)
+    content_low_watermark: int = Field(default=5, ge=0, le=30)
+    content_active_days: int = Field(default=90, ge=1, le=365)
+    content_generation_batch: int = Field(default=5, ge=1, le=25)
     # Shared by all generation paths; zero prevents new reservations.
     generation_daily_call_cap: int = Field(default=200, ge=0)
     # Seconds between worker calls; the free tier allows ~10 requests a minute.

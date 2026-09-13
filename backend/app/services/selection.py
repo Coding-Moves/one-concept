@@ -23,7 +23,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.prefetch import LOW_WATERMARK, request_prefetch
+from app.services.prefetch import request_prefetch
+from app.config import get_settings
+from app.services.supply import signal_reader
 
 
 @dataclass
@@ -75,6 +77,7 @@ _CANDIDATE = text("""
     with pool as (
         select c.id, c.topic_id
           from public.concepts c
+          join public.topics t on t.id=c.topic_id and t.is_active
          where c.status = 'published'
            and (:ignore_follows or c.topic_id in (
                  select topic_id from public.user_topics where user_id = :uid))
@@ -188,6 +191,7 @@ async def get_or_create_daily(
             await session.execute(_FOLLOWED_TOPIC_BY_STALENESS, {"uid": user_id})
         ).scalar_one_or_none()
         if stale_topic is not None:
+            await signal_reader(session, user_id, stale_topic)
             request_prefetch(stale_topic)
 
         outside = True
@@ -225,7 +229,8 @@ async def get_or_create_daily(
         watermark = (
             await session.execute(_TOPIC_UNREAD, {"uid": user_id, "cid": concept_id})
         ).first()
-        if watermark and watermark.topic_id is not None and watermark.unread <= LOW_WATERMARK:
+        if watermark and watermark.topic_id is not None and watermark.unread <= get_settings().content_low_watermark:
+            await signal_reader(session, user_id, watermark.topic_id)
             request_prefetch(watermark.topic_id)
 
     row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).one()

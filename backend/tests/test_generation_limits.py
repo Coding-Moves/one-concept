@@ -23,7 +23,7 @@ async def topic(session, monkeypatch):
     tid = uuid.uuid4()
     await session.execute(text("""
         insert into public.topics (id, slug, name, is_active)
-        values (:id, :slug, 'Budget fixture', false)
+        values (:id, :slug, 'Budget fixture', true)
     """), {"id": tid, "slug": f"budget-{tid}"})
     await session.execute(text("""
         insert into public.concept_backlog (topic_id, slug, title)
@@ -162,7 +162,8 @@ def test_negative_daily_cap_is_rejected():
 @pytest.fixture
 def prefetch_config(monkeypatch, sessionmaker_for_test):
     config = SimpleNamespace(generation_enabled=True, generation_on_demand=True,
-                             gemini_api_key="test", gemini_model="test", generation_daily_call_cap=2)
+                             gemini_api_key="test", gemini_model="test", generation_daily_call_cap=2,
+                             content_generation_batch=5)
     monkeypatch.setattr(prefetch, "get_settings", lambda: config)
     monkeypatch.setattr(prefetch, "SessionLocal", sessionmaker_for_test)
     return config

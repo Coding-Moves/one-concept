@@ -10,6 +10,7 @@ import logging
 from app.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.services.pool import top_up
+from app.services.supply import plan_active_readers
 
 
 async def main() -> None:
@@ -17,6 +18,7 @@ async def main() -> None:
     settings = get_settings()
 
     async with SessionLocal() as session:
+        await plan_active_readers(session)
         result = await top_up(
             session,
             api_key=settings.gemini_api_key,

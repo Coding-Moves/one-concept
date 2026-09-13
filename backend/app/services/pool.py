@@ -16,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.services.generation_budget import GenerationBudgetExhausted, reserve_generation_call
 from app.services.generation import GenerationError, RateLimitedError, generate_concept
+from app.services.supply import target_for
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +76,7 @@ _CLAIM = text("""
      where b.id = (
          select b2.id from public.concept_backlog b2
           where b2.status = 'pending'
+            and exists(select 1 from public.topics active where active.id=b2.topic_id and active.is_active)
             and (cast(:topic_id as uuid) is null or b2.topic_id = cast(:topic_id as uuid))
             and b2.attempts < 3
           order by b2.created_at
@@ -133,11 +135,20 @@ class TopUpResult:
 
 async def generate_one(
     session: AsyncSession, api_key: str, model: str, topic_id: uuid.UUID | None = None,
-    *, call_cap: int | None = None,
+    *, call_cap: int | None = None, supply_target: int | None = None,
 ) -> uuid.UUID | None:
     """Claim a title and daily budget together, then generate outside the transaction."""
     cap = get_settings().generation_daily_call_cap if call_cap is None else call_cap
     try:
+        if supply_target is not None and topic_id is not None:
+            # Serialize capacity checks and claims, then release before model I/O.
+            active = await session.scalar(text('select is_active from public.topics where id=:t for update'), {'t':topic_id})
+            inventory = await session.scalar(text("""select
+              (select count(*) from public.concepts where topic_id=:t and status in ('published','draft')) +
+              (select count(*) from public.concept_backlog where topic_id=:t and status='generating')"""), {'t':topic_id})
+            if not active or inventory >= supply_target:
+                await session.commit()
+                return None
         claimed = (await session.execute(_CLAIM, {"topic_id": topic_id})).first()
         if claimed is not None:
             await reserve_generation_call(session, cap)
@@ -225,13 +236,14 @@ async def top_up(
     backoff = BACKOFF_START_SECONDS
     rate_limit_streak = 0
     for topic in (await session.execute(_POOL_COUNTS)).all():
-        deficit = minimum_per_topic - topic.published
+        target = await target_for(session, topic.id, minimum_per_topic)
+        deficit = target - topic.published
         if deficit <= 0:
             continue
         remaining = min(deficit, topic.pending)
         while remaining > 0:
             try:
-                concept_id = await generate_one(session, api_key, model, topic.id, call_cap=call_cap)
+                concept_id = await generate_one(session, api_key, model, topic.id, call_cap=call_cap, supply_target=target)
             except GenerationBudgetExhausted:
                 log.info("stopping: shared daily call cap of %s reached", call_cap)
                 return TopUpResult(generated, failed, "daily call cap reached")

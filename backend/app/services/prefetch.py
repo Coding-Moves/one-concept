@@ -20,6 +20,7 @@ from app.db.session import SessionLocal
 from app.services.generation import RateLimitedError
 from app.services.generation_budget import GenerationBudgetExhausted
 from app.services.pool import generate_one
+from app.services.supply import target_for
 
 log = logging.getLogger(__name__)
 
@@ -29,9 +30,9 @@ _PUBLISHED_IN_TOPIC = text("""
      where topic_id = :topic_id and status = 'published'
 """)
 
-# Start topping a topic up once a user's unread published concepts in it fall to
-# this many; a run generates until the topic reaches TARGET_PUBLISHED, capped by
-# PREFETCH_BATCH lessons so one trigger can't run away.
+# Legacy callers without a durable reader signal retain this small bootstrap
+# floor. Reader-aware calls use the shared, advancing supply target instead.
+# Each run is bounded by the configured batch and the shared daily call budget.
 LOW_WATERMARK = 5
 PREFETCH_BATCH = 5
 TARGET_PUBLISHED = LOW_WATERMARK + PREFETCH_BATCH
@@ -74,7 +75,7 @@ async def _run(topic_id: uuid.UUID) -> None:
         # Its own session: the request's session is closed the moment the
         # response returns, long before this finishes.
         async with SessionLocal() as session:
-            for _ in range(PREFETCH_BATCH):
+            for _ in range(settings.content_generation_batch):
                 # Re-check against a shared target each iteration so a prefetch
                 # in another process (its lessons land in the same catalog) can
                 # satisfy the topic and let this one stop early — bounding the
@@ -82,12 +83,13 @@ async def _run(topic_id: uuid.UUID) -> None:
                 published = await session.scalar(
                     _PUBLISHED_IN_TOPIC, {"topic_id": topic_id}
                 )
-                if published is not None and published >= TARGET_PUBLISHED:
+                target = await target_for(session, topic_id, TARGET_PUBLISHED)
+                if published is not None and published >= target:
                     break
                 try:
                     concept_id = await generate_one(
                         session, settings.gemini_api_key, settings.gemini_model, topic_id,
-                        call_cap=settings.generation_daily_call_cap,
+                        call_cap=settings.generation_daily_call_cap, supply_target=target,
                     )
                 except GenerationBudgetExhausted:
                     log.info("prefetch for topic %s stopped: daily call cap reached", topic_id)

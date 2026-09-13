@@ -180,11 +180,10 @@ async def test_failed_generation_leaves_the_item_retryable(empty_generation_budg
 
 async def test_repeated_failures_retire_the_item(empty_generation_budget, session, patch_httpx):
     patch_httpx(_stub_transport({}, status=500))
-    # An inactive topic of its own, so this cannot disturb the shared backlog
-    # that the other tests draw from.
+    # Use an active isolated topic; retire it after exercising provider failure.
     topic_id = (await session.execute(text("""
         insert into public.topics (slug, name, is_active, sort_order)
-        values ('test-cursed', 'Cursed Topic', false, 99)
+        values ('test-cursed', 'Cursed Topic', true, 99)
         returning id
     """))).scalar_one()
     await session.execute(text("""
@@ -200,6 +199,8 @@ async def test_repeated_failures_retire_the_item(empty_generation_budget, sessio
         "select status, attempts from public.concept_backlog where slug = 'cursed-title'"))).one()
     assert row.status == "failed", "a title that never works must stop blocking the queue"
     assert row.attempts == 3
+    await session.execute(text('update public.topics set is_active=false where id=:id'), {'id':topic_id})
+    await session.commit()
 
 
 async def test_rate_limit_releases_the_claim_and_refunds_the_attempt(empty_generation_budget, session, patch_httpx):
@@ -266,7 +267,7 @@ async def test_slug_collision_does_not_mark_the_backlog_done(empty_generation_bu
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
     topic_id = (await session.execute(text("""
         insert into public.topics (slug, name, is_active, sort_order)
-        values ('test-collision', 'Collision Topic', false, 97)
+        values ('test-collision', 'Collision Topic', true, 97)
         returning id
     """))).scalar_one()
     # A published concept already owns the slug the backlog row will generate.
@@ -290,6 +291,8 @@ async def test_slug_collision_does_not_mark_the_backlog_done(empty_generation_bu
     count = await session.scalar(
         text("select count(*) from public.concepts where slug = 'dup-slug'"))
     assert count == 1
+    await session.execute(text('update public.topics set is_active=false where id=:id'), {'id':topic_id})
+    await session.commit()
     response = httpx.Response(429, headers={"retry-after": "30"}, text="{}")
     assert generation._retry_after_seconds(response) == 30.0
     assert generation._retry_after_seconds(httpx.Response(429, text="{}")) is None

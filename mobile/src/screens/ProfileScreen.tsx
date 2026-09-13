@@ -1,3 +1,4 @@
+import { useRefreshControl } from '../hooks/useRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
@@ -27,10 +28,11 @@ export type ProfileStackParamList = {
 export function ProfileScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileHome'>>();
-  const { progress, streaks } = useProgress();
+  const { progress, streaks, refresh } = useProgress();
   const { email, signOut } = useAuth();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const refreshUI = useRefreshControl('profile', refresh);
 
   // The list itself now lives on a dedicated Saved screen (issue #131); the
   // Profile only needs the count. Use bookmarks.length — the same source as the
@@ -69,7 +71,8 @@ export function ProfileScreen() {
   }, [prefs]);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
+      {refreshUI.action}
       <View style={styles.header}>
         <View style={styles.avatar}>
           <Ionicons name="person" size={scaleIcon(26)} color={colors.primary} />

@@ -1,3 +1,4 @@
+import { useRefreshControl } from '../hooks/useRefreshControl';
 import { useNavigation, NavigationProp, NavigatorScreenParams } from '@react-navigation/native';
 import type { ProfileStackParamList } from './ProfileScreen';
 import { Ionicons } from '@expo/vector-icons';
@@ -32,6 +33,7 @@ export function TodayScreen() {
   const online = useOnline();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const refreshUI = useRefreshControl('today', refresh);
 
   const navigation = useNavigation<NavigationProp<{Profile: NavigatorScreenParams<ProfileStackParamList>}>>();
   const explore = () => navigation.navigate('Profile', {screen: 'Personalization'});
@@ -57,7 +59,8 @@ export function TodayScreen() {
     outcome?.status === 'ok' && outcome.payload.outside_followed_topics;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
+      {refreshUI.action}
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.appName}>One Concept</Text>

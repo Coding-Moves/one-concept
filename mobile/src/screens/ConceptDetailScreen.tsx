@@ -1,6 +1,7 @@
+import { useRefreshControl } from '../hooks/useRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
@@ -27,18 +28,25 @@ export function ConceptDetailScreen() {
   const [status, setStatus] = useState<Status>('loading');
   const [attempt, setAttempt] = useState(0);
   const online = useOnline();
+  const request = useRef(0);
+  const refreshUI = useRefreshControl('lesson', async () => {
+    const current = ++request.current;
+    const next = await fetchConcept(conceptId, undefined, true);
+    if (request.current === current) { setConcept(next); setStatus('ready'); }
+  });
 
   useEffect(() => {
     let active = true;
+    const current = ++request.current;
     setStatus('loading');
     fetchConcept(conceptId, (cached) => {
-      if (active) {
+      if (active && current === request.current) {
         setConcept(cached);
         setStatus('ready');
       }
     })
       .then((c) => {
-        if (active) {
+        if (active && current === request.current) {
           setConcept(c);
           setStatus('ready');
         }
@@ -47,7 +55,7 @@ export function ConceptDetailScreen() {
         // Offline or not found: the bundled catalog covers the signed-out demo
         // set; anything else we can't show, so say so rather than hang.
         const local = CONCEPTS_BY_ID.get(conceptId);
-        if (!active) return;
+        if (!active || current !== request.current) return;
         if (local) {
           setConcept(local);
           setStatus('ready');
@@ -57,6 +65,7 @@ export function ConceptDetailScreen() {
       });
     return () => {
       active = false;
+      request.current++;
     };
   }, [conceptId, attempt]);
 
@@ -89,7 +98,8 @@ export function ConceptDetailScreen() {
           />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
+          {refreshUI.action}
           <ConceptCard concept={concept} />
           <ConceptActions concept={concept} />
         </ScrollView>

@@ -40,12 +40,13 @@ async function downloadConcept(slug: string): Promise<Concept> {
 export async function fetchConcept(
   slug: string,
   onCached?: (concept: Concept) => void,
+  forceRefresh = false,
 ): Promise<Concept> {
   const epoch = conceptCache.epoch;
   const cached = await conceptCache.get(slug, epoch);
   if (cached) {
     onCached?.(cached);
-    if (!getConnectivity()) return cached;
+    if (!getConnectivity() && !forceRefresh) return cached;
   }
   try {
     const concept = await downloadConcept(slug);

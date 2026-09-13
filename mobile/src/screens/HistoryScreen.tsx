@@ -1,3 +1,4 @@
+import { useRefreshControl } from '../hooks/useRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -65,6 +66,7 @@ export function HistoryScreen() {
   const online = useOnline();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const refreshUI = useRefreshControl('history', refresh);
   // Composite: History is a tab screen that reaches up to the root stack's
   // concept-detail modal (#124).
   const navigation =
@@ -88,6 +90,7 @@ export function HistoryScreen() {
   return (
     <View style={styles.screen}>
       <FlatList
+        refreshControl={refreshUI.control}
         data={loading ? [] : records}
         keyExtractor={(r) => `${r.date}-${r.conceptId}`}
         renderItem={({ item }) => (
@@ -102,6 +105,7 @@ export function HistoryScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={styles.title}>History</Text>
+            {refreshUI.action}
             <Text style={styles.subtitle}>{history.records.length} of {progress.stats?.totalLearned ?? history.records.length} learned concepts loaded.</Text>
             <TextInput value={query} onChangeText={setQuery} style={styles.search}
               placeholder="Search loaded history" placeholderTextColor={colors.textSecondary}

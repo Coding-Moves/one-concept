@@ -124,3 +124,25 @@ review and exact pre-tap totals before and after restart, in both themes.
 
 Physical-device font scaling, screen readers and native storage still require
 manual acceptance. Syncing remains foreground/reopen JS work on the current APK.
+
+
+## Learning experience (#158–#160)
+
+Using the same dummy-config export and Playwright environment above, run these
+scripts sequentially (each uses port 4781):
+
+```sh
+node tests/history.browser.cjs /path/to/export
+node tests/learning-ui.browser.cjs /path/to/export
+```
+
+History checks 120 lessons with 50-item pages, retry after 503, search within the
+loaded pages, offline page/detail reading after restart, and sign-out during a
+page request. Older metadata is requested only when Load older lessons is used;
+search explicitly covers loaded history. Lesson bodies must have been opened or
+saved online to be available offline.
+
+UI checks manual refresh, disabled controls during a request, retained offline
+content, actual banner contrast in both themes, and an enlarged profile at
+320px. Native pull gestures, OS Dynamic Type, TalkBack and VoiceOver still need
+physical-device acceptance. Refresh buttons provide an accessible alternative.

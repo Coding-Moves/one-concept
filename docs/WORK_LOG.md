@@ -7,6 +7,36 @@ claims as completed work.
 
 ## Current status
 
+## Learning experience batch (#158, #159, #160)
+
+- Implemented one PR from merged `develop` (`3937927`), branch
+  `codex/learning-experience-polish`, isolated in `/tmp/one-concept-next`.
+- Confirmed History still stopped at ten, refresh gestures were absent, and
+  offline banner contrast was insufficient. Existing explicit retry screens
+  were already present and remain available.
+- `e2eed9b`: full History through the existing 50-item cursor API, explicit older
+  page loading, search within loaded records, account-scoped page caching and
+  sign-out cleanup. Startup remains compact; previously opened lesson bodies
+  remain readable offline. `afa8e96`: high-contrast offline colors, wrapping
+  profile identity and a compact detail header with a 44px close target.
+- `feat: add deliberate refresh controls across learning screens`: shared native
+  pull controls and accessible buttons, disabled during active refresh, preserving
+  offline content and allowing explicit detail refresh to probe reconnection.
+- Validation: Node 24 typecheck and **39 tests passed**, no skips; Android/iOS/web
+  exports passed. Mocked browser checks passed for 120-item History, 503 retry,
+  offline restart/pages/detail, explicit detail reconnection and in-flight sign-out;
+  rejected-review replay in both themes; refresh busy state, offline content,
+  banner contrast and 320px enlarged profile in both themes. Inspected screenshots.
+  Banner contrast measured **9.93:1 light / 10.72:1 dark**. Local links and whitespace
+  checked. Backend code and schema are unchanged; backend tests were not rerun.
+- Browser footer activation was made deterministic with keyboard interaction
+  after a scroll-timing flake; request tracing confirmed page boundaries and
+  stale-response fencing. Temporary instrumentation was removed from the source.
+- Native pull gestures, Dynamic Type, TalkBack/VoiceOver still need device checks.
+  Search covers loaded History pages; older bodies require prior download.
+  PR closes the three issues when merged. No manual issue closure or release yet.
+  Release preparation and its one-time What's New card follow the feature merge.
+
 ### PR #197 review correction
 
 - Fixed rejected offline review replay in the same PR. Pre-completion statistics

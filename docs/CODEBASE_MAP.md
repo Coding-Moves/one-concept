@@ -32,7 +32,7 @@ inside a root stack, with a concept-detail modal above them.
 | Screen | Responsibility |
 | --- | --- |
 | `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states. |
-| `HistoryScreen.tsx` | Learned records and navigation to concept details. |
+| `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Streak and topic statistics. |
 | `ProfileScreen.tsx` | Account, reminder preferences, theme, sign-out, and links to profile subpages. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
@@ -48,6 +48,11 @@ like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `src/theme/index.ts` defines colors, spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 `src/navigation.ts` types the root stack.
+
+History uses `hooks/useHistory.ts` and `services/historyApi.ts` to load one
+50-item page per request from the existing history endpoint. Page caches join
+account cleanup; the startup progress aggregate remains compact. Data screens
+share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons.
 
 ## Mobile state, persistence, and API boundaries
 

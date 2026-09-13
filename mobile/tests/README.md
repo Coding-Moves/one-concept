@@ -105,3 +105,22 @@ downloads, while explicit sign-out clears account caches. The mocked browser
 checks cover web storage and app behavior; native keyboard/autofill and device
 storage still require the preview checks above. A production release is needed
 to deliver the changes to installations still running the older `main` build.
+
+
+## Daily review and continued learning (#195)
+
+`reviewProgress.test.mjs` checks review outbox persistence and pending-state
+reconciliation without increasing unique learned totals. The actual exported
+app can be exercised with `node tests/review.browser.cjs /path/to/web-export`
+using the same Playwright environment variables as the other browser scripts.
+Use dummy API/Auth configuration pointing to `http://127.0.0.1:4781` (API path
+`/api`); no live user or provider is needed. The scenario covers light/dark,
+review labelling, future-subject discovery, offline completion/restart,
+reconnect, separate Stats totals, and enlarged text at a narrow viewport.
+
+Add `--reject-review` to exercise an expired offline completion (409) followed
+by a failed state refresh (503). The UI and disk must restore the uncompleted
+review and exact pre-tap totals before and after restart, in both themes.
+
+Physical-device font scaling, screen readers and native storage still require
+manual acceptance. Syncing remains foreground/reopen JS work on the current APK.

@@ -1,6 +1,6 @@
 # Codebase map
 
-Source inspection: 2026-09-11. This is a navigation guide to the implementation,
+Source inspection: 2026-09-13. This is a navigation guide to the implementation,
 not a claim that deployed services or every runtime behavior have been verified.
 Refresh the relevant sections when the code changes.
 
@@ -14,6 +14,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Mobile | `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
+| Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
 | Content engine | `backend/app/services/generation.py`, `pool.py`, `prefetch.py`; Gemini lessons from a curated backlog. |
 | Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
@@ -162,7 +163,7 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   viewer's own like; the mobile UI adds that one locally.
 - `services/generation.py` builds versioned prompts, calls Gemini through httpx,
   validates output, and exposes rate-limit errors. `pool.py` claims backlog work
-  with `FOR UPDATE SKIP LOCKED`, publishes validated rows, refunds throttled
+  with `FOR UPDATE SKIP LOCKED`, stages generated concepts and editorial revisions, refunds throttled
   attempts and reclaims stale work. Claims and daily call reservations commit
   together before contacting the provider; quota denial rolls back the claim.
 - `services/generation_budget.py` atomically reserves from the shared
@@ -170,7 +171,7 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   API prefetch, scheduled refill, and manual rewrite calls share this budget.
   Failed/uncertain calls retain their reservation; restarts do not reset it.
 - `services/prefetch.py` schedules bounded background top-ups, with a low unread
-  watermark, a published-count target, and per-process in-flight topic tracking.
+  watermark, durable per-topic targets, and per-process in-flight topic tracking.
   Exhausted shared budget is a normal stop condition.
 - `services/reminders.py` claims due user/day/time slots before sending Expo push
   batches, handles timezone and midnight windows, suppresses completed days, and
@@ -180,12 +181,41 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   lessons through Gemini with the shared budget and generation kill switch;
   do not run it merely to inspect the project.
 
+## Sustainable learning additions (#195)
+
+- `services/curriculum.py` validates subject/plan imports, duplicate candidates
+  and prerequisite graphs. `backend/content/subjects.json` retains the five
+  subjects; `curriculum.example.json` shows future data-only expansion.
+- `services/supply.py` persists assigned-count-plus-reserve demand and plans for
+  active readers. `pool.py` counts drafts/in-flight claims in capacity and calls
+  the shared quota/concurrency checks before committing any provider request.
+  `prefetch.py` starts only after the demand transaction commits.
+- `services/publication.py` stages corrections, validates explicit approval and
+  increments versions while preserving identities and prior bodies.
+  `workers/rewrite_catalog.py` now drafts revisions under durable claims.
+- `services/reviews.py` and `api/v1/reviews.py` select/complete separate review
+  records. `selection.py` locks profiles across daily choice; `streaks.py`,
+  `state.py` and reminders count completed review days without increasing unique
+  learned totals. `me/state?reviews=true` opts into a separate review payload.
+- `workers/content.py` exposes maintainer-only imports, revision inspection,
+  approval, failed-plan correction/retry and health reports. `content_health.py`
+  computes supply/queue/quota/worker conditions and deduplicates transitions.
+  This uses backend credentials, with no public administration API.
+- Mobile review payloads and versioned concept bodies use the existing caches;
+  review IDs key durable outbox intents. `pendingProgress.ts` merges pending
+  completion without new learned rows. Today labels review/exploration and
+  Stats separates review totals. Dynamic subject labels use existing generic UI.
+- Added regressions cover imports, publication races, two-device review, grace,
+  refill/call bounds, a 365-day three-reader simulation, protected health changes,
+  backup restoration, and browser offline/reconnect in both themes.
+
 ## Schema and migrations
 
 `db/models.py` mirrors the SQL schema; migrations are the schema authority.
-The eleven tables cover profiles, topics, concepts, user topics, daily assignments,
+The seventeen tables cover profiles, topics, concepts, user topics, daily assignments,
 concept interactions, notification preferences, device tokens, the concept
-backlog, reminder logs, and shared daily generation usage. Unique constraints
+backlog, reminder logs, shared daily generation usage, supply targets, editorial
+revisions/retry logs, daily reviews, worker runs and health conditions. Unique constraints
 enforce one daily assignment and no concept repeats per user. RLS adds isolation behind backend identity checks.
 
 | Migration | Purpose |
@@ -198,8 +228,14 @@ enforce one daily assignment and no concept repeats per user. RLS adds isolation
 | `0008_backlog_claimed_at.sql` | Timestamp for reclaiming abandoned generation. |
 | `0009_like_count_index.sql` | Index for public like counts. |
 | `0010_generation_daily_usage.sql` | Backend-only daily Gemini call reservations shared by all generation paths. |
+| `0011_content_supply.sql` | Durable, coalesced demand beyond bootstrap inventory. |
+| `0012_curriculum_publication.sql` | Structured curriculum, content versions, review drafts and audited retry grants. |
+| `0013_daily_reviews.sql` | Separate review activities; preserves new-assignment uniqueness. |
+| `0014_content_operations.sql` | Worker heartbeat and deduplicated condition state. |
+| `0015_revision_generation_claims.sql` | Durable claims for correction drafting. |
 
-All ten filenames are recorded in `migrations/applied.txt`; migration 0010 was
+Only migrations 0001–0010 are recorded in `migrations/applied.txt`; new migrations
+0011–0015 are unapplied in production at this PR handoff. Migration 0010 was
 applied and independently verified in production during the 1.8.0 release
 follow-up. The ledger is repository evidence, not a live check of production.
 Application connections use the transaction pooler; migration DDL uses `DIRECT_URL`

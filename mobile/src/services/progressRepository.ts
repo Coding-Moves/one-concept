@@ -30,6 +30,9 @@ export interface ProgressRepository {
     topicName?: string
   ): Promise<ProgressState>;
 
+  /** Complete the identified review; never changes unique learned records. */
+  completeReview?(reviewId: string): Promise<ProgressState>;
+
   /** Follow / unfollow a topic. Server-side: PUT /v1/me/topics. */
   toggleTopic(category: Category): Promise<ProgressState>;
 

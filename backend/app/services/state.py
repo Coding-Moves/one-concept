@@ -121,7 +121,8 @@ _STATE = text("""
          where a.user_id = :uid and a.assigned_for = (select today from prof)
     ),
     -- Gaps and islands: consecutive dates share (date - row_number()).
-    days as (select distinct assigned_for as d from learned_rows),
+    days as (select assigned_for as d from learned_rows
+      union select assigned_for from public.daily_reviews where user_id=:uid and completed_at is not null),
     grouped as (select d, d - (row_number() over (order by d))::int as grp from days),
     runs as (select grp, count(*)::int as len, max(d) as ends_on from grouped group by grp)
     select
@@ -140,7 +141,8 @@ _STATE = text("""
                  where ends_on in (prof.today, prof.today - 1)
                  order by ends_on desc limit 1), 0) as current_streak,
       coalesce((select max(len) from runs), 0)      as longest_streak,
-      (select count(*)::int from days)              as total_learned
+      (select count(*)::int from learned_rows) as total_learned,
+      (select count(*)::int from public.daily_reviews where user_id=:uid and completed_at is not null) as total_reviews
       from prof, followed, learned, interactions, saved
 """)
 
@@ -184,6 +186,7 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID, *, compact: bool
             current=row.current_streak,
             longest=row.longest_streak,
             total_learned=row.total_learned,
+            total_reviews=row.total_reviews,
         ),
         learned_before_window=dict(row.learned_before_window) if compact else None,
         history_next_cursor=(row.learned[-1]["on"]

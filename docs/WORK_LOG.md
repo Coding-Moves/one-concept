@@ -7,6 +7,73 @@ claims as completed work.
 
 ## Current status
 
+### PR #197 review correction
+
+- Fixed rejected offline review replay in the same PR. Pre-completion statistics
+  now survive restart; a terminal replay rejection restores the matching activity
+  and its exact totals on disk before removing the queued intent. A failed refresh
+  returns the corrected cache immediately. Newer activities and unrelated saves
+  are preserved; sign-out keeps its existing write fence.
+- The new `--reject-review` browser regression fails on the original export and
+  passes on the fixed export in both themes, including failed refresh and restart.
+  The normal successful replay browser scenario also passed in both themes.
+- Validation: Node 24 typecheck, **37 tests passed with no skips**, web export,
+  browser scenarios and `git diff --check`. Backend/native code is unchanged;
+  backend tests and physical-device checks were not rerun for this JS-only fix.
+- Focused implementation/test commit: `fix: roll back rejected offline reviews
+  before removing queued intent`. Test instructions and this handoff are a
+  separate documentation commit. No merge, release or production change.
+
+## Sustainable learning (#195) — 2026-09-13
+
+- Implemented all five lifecycle work areas in one feature PR targeting `develop`:
+  durable reader-based refill; portable subject/curriculum imports; reviewed,
+  versioned shared content; daily review with offline replay; protected operations.
+  The existing five subjects remain; future addition/retirement uses data imports.
+- Work is isolated in `/tmp/one-concept-195`, branch
+  `codex/195-sustainable-learning`, based on `develop` (`3cc5af3`). The original
+  handbook checkout and its unrelated edits remain untouched. Expo SDK 57 docs
+  were read before mobile work. No app version/runtime change was made.
+- Reproduced the 25-lesson refill ceiling with actual selection/prefetch against
+  disposable PostgreSQL and mocked drafting. The regression now passes. Review
+  also caught and fixed a worker wake before its durable target committed.
+- Commits: `e0eb494` architecture scope; `11adafc` refill; `1a106c0` curriculum;
+  `72e3a9b` editorial gate; `c5d305e` review API/streaks; `ebf4c28` review outbox;
+  `9bc36a8` operations; `49ad80f` generation concurrency/recovery;
+  `64285a4` selection consistency; `bd166ed` cache cleanup; `5a569b0` review UI;
+  `465a47a` year simulation/restore. Further preservation/handoff commits are
+  identified by their subjects; preserve every meaningful commit when merging.
+- Validation: full backend suite **171 passed, no skips**, using disposable
+  PostgreSQL 16 with live HTTP blocked. Added legacy-snapshot regression afterward:
+  publication suite **4 passed** (172 backend tests now collected). The yearly
+  simulation covers three readers, five subjects, queue extension and a prolonged
+  drafting outage; each reader reaches 365 learning days without inflating unique
+  learned totals. Backup dump/restore passed in a second disposable database.
+- Mobile: Node 24 typecheck and **36 tests passed, no skips**; Android/iOS/web
+  exports passed. Mocked browser checks passed in both themes, narrow/enlarged
+  text, review offline restart/reconnect, future-subject exploration, timer replay,
+  transient failure, in-flight sign-out and all 365 saved bodies. Inspected review
+  screenshots. Physical-device font scaling, screen readers, native storage and
+  real two-device acceptance remain manual; backend concurrency tests cover races.
+- Read-only production classification found 26 old failures: 18 throttling,
+  four validation, four unclassified. None was retried/reset. No production writes,
+  model generation, scheduler configuration or deployment occurred. Migrations
+  0011–0015 remain intentionally absent from the applied ledger; apply/verify them
+  before backend rollout, then deliver the JS update. Pause old generation workers
+  during migration/deployment so they cannot bypass the editorial gate.
+- Architecture and operating procedures: [CONTENT_ARCHITECTURE.md](CONTENT_ARCHITECTURE.md)
+  and [CONTENT_OPERATIONS.md](CONTENT_OPERATIONS.md). Human curriculum expansion
+  and source review are required; title-similarity checks do not prove originality.
+  Operational transitions appear in protected job output, with no external alerts
+  configured. Production backup/Auth restore remains a separate live rehearsal.
+- [PR #197](https://github.com/Coding-Moves/one-concept/pull/197) is open for review
+  from `codex/195-sustainable-learning` into `develop`, with the full architecture,
+  validation and rollout detail. Local documentation links and whitespace checks
+  passed. No merge or production release was performed. The final bookkeeping
+  commit is `docs: record sustainable learning PR handoff`. Merged the latest
+  documentation-only `develop` (`88eb2de`) afterward, preserving both handbook
+  and feature log entries; no application code changed during conflict resolution.
+
 ## App engineering handbook — 2026-09-13
 
 - **Outcome:** create a complete printable PDF explaining the app from beginner

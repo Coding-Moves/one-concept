@@ -36,3 +36,28 @@ async def reserve_generation_call(session: AsyncSession, call_cap: int) -> None:
     used = (await session.execute(_RESERVE, {"cap": call_cap})).scalar_one_or_none()
     if used is None:
         raise GenerationBudgetExhausted("daily generation call cap reached")
+
+
+class GenerationBusy(RuntimeError):
+    """All shared provider slots are in use; retry on a later worker run."""
+
+
+async def check_generation_capacity(session: AsyncSession) -> None:
+    """Call AFTER reserving quota and BEFORE committing a durable work claim.
+
+    The day's quota row lock serializes this count with all other claimers.
+    Uncommitted claims do not reach a provider. Denial rolls back both the claim
+    and its reservation; finished work immediately releases its counted slot.
+    """
+    from app.config import get_settings
+
+    await session.execute(text("select pg_advisory_xact_lock(195,3)"))
+    count = await session.scalar(
+        text("""select
+      (select count(*) from public.concept_backlog where status='generating'
+        and claimed_at>=now()-interval '30 minutes') +
+      (select count(*) from public.concept_revisions where status='generating'
+        and created_at>=now()-interval '30 minutes')""")
+    )
+    if count > get_settings().generation_max_concurrent:
+        raise GenerationBusy("shared generation concurrency limit reached")

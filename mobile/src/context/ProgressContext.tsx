@@ -22,6 +22,7 @@ import { createSyncLoop } from '../services/syncLoop';
 import { fetchTopics } from '../services/topicsApi';
 import { useAuth } from './AuthContext';
 import { EMPTY_PROGRESS } from '../services/storage';
+import { withCompletedReview } from '../services/pendingProgress';
 import { computeStreaks, StreakStats } from '../services/streak';
 
 export interface ProgressContextValue {
@@ -41,6 +42,7 @@ export interface ProgressContextValue {
    *  signed in) so the recorded concept, title, and topic match it; falls back
    *  to the locally-selected concept when omitted. */
   markLearned: (target?: Concept) => void;
+  completeReview: (reviewId: string) => void;
   toggleTopic: (category: Category) => void;
   toggleLike: (conceptId: string) => void;
   toggleBookmark: (conceptId: string, title?: string, topicName?: string) => void;
@@ -265,6 +267,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
           ...prev,
           learned,
           stats: {
+            ...prev.stats,
             current,
             longest: Math.max(prev.stats?.longest ?? 0, current),
             totalLearned: (prev.stats?.totalLearned ?? prev.learned.length) + 1,
@@ -285,6 +288,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
         learned: prev.learned.filter((r) => r.date !== today),
         stats: prev.stats
           ? {
+              ...prev.stats,
               current: Math.max(0, prev.stats.current - 1),
               longest: prev.stats.longest,
               totalLearned: Math.max(0, prev.stats.totalLearned - 1),
@@ -293,6 +297,16 @@ export function ProgressProvider({ children, repository: override }: Props) {
       })
     );
   }, [apply, concept, repository, today]);
+
+  const completeReview = useCallback((reviewId: string) => {
+    if (!repository.completeReview) return;
+    const before = progress;
+    void apply(
+      state => withCompletedReview(state, reviewId),
+      () => repository.completeReview!(reviewId),
+      state => ({ ...state, serverDaily: before.serverDaily, stats: before.stats }),
+    );
+  }, [apply, repository, progress]);
 
   const toggleTopic = useCallback(
     (category: Category) => {
@@ -351,6 +365,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
       hasLearned,
       streaks,
       markLearned,
+      completeReview,
       toggleTopic,
       toggleLike,
       toggleBookmark,
@@ -365,6 +380,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
       hasLearned,
       streaks,
       markLearned,
+      completeReview,
       toggleTopic,
       toggleLike,
       toggleBookmark,

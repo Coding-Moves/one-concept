@@ -10,7 +10,8 @@ export type QueuedMutation =
   | { kind: 'topics'; slugs: string[] }
   // The date it was completed: /v1/daily/complete only completes "today", so a
   // 'learn' queued on a previous day must be dropped, not replayed (#133).
-  | { kind: 'learn'; date: string };
+  | { kind: 'learn'; date: string }
+  | { kind: 'review'; reviewId: string; date: string };
 
 /** Stable coalescing key — one pending intent per (kind, target). */
 export function keyOf(m: QueuedMutation): string {
@@ -23,6 +24,8 @@ export function keyOf(m: QueuedMutation): string {
       return 'topics';
     case 'learn':
       return 'learn';
+    case 'review':
+      return `review:${m.reviewId}`;
   }
 }
 

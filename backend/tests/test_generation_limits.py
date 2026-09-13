@@ -23,7 +23,7 @@ async def topic(session, monkeypatch):
     tid = uuid.uuid4()
     await session.execute(text("""
         insert into public.topics (id, slug, name, is_active)
-        values (:id, :slug, 'Budget fixture', false)
+        values (:id, :slug, 'Budget fixture', true)
     """), {"id": tid, "slug": f"budget-{tid}"})
     await session.execute(text("""
         insert into public.concept_backlog (topic_id, slug, title)
@@ -36,6 +36,7 @@ async def topic(session, monkeypatch):
     )).bindparams(tid=tid))
     yield tid
     await session.rollback()
+    await session.execute(text("delete from public.concept_revisions where concept_id in (select id from public.concepts where topic_id=:id)"), {"id": tid})
     await session.execute(text("delete from public.concepts where topic_id = :id"), {"id": tid})
     await session.execute(text("delete from public.topics where id = :id"), {"id": tid})
     await session.commit()
@@ -162,7 +163,8 @@ def test_negative_daily_cap_is_rejected():
 @pytest.fixture
 def prefetch_config(monkeypatch, sessionmaker_for_test):
     config = SimpleNamespace(generation_enabled=True, generation_on_demand=True,
-                             gemini_api_key="test", gemini_model="test", generation_daily_call_cap=2)
+                             gemini_api_key="test", gemini_model="test", generation_daily_call_cap=2,
+                             content_generation_batch=5)
     monkeypatch.setattr(prefetch, "get_settings", lambda: config)
     monkeypatch.setattr(prefetch, "SessionLocal", sessionmaker_for_test)
     return config
@@ -242,7 +244,7 @@ async def rewrite_config(topic, session, generator, sessionmaker_for_test, monke
 
 async def rewritten_count(session, topic):
     return await session.scalar(text("""
-        select count(*) from public.concepts where topic_id = :tid and prompt_version = :pv
+        select count(*) from public.concept_revisions r join public.concepts c on c.id=r.concept_id where c.topic_id = :tid and r.body->>'prompt_version' = :pv
     """), {"tid": topic, "pv": rewrite.PROMPT_VERSION})
 
 
@@ -300,3 +302,40 @@ async def test_rewrite_cancelled_provider_keeps_budget_and_cleans_up(topic, gene
     assert await calls_used(session) == 1
     assert await rewritten_count(session, topic) == 0
     rewrite.engine.dispose.assert_awaited_once()
+
+
+async def test_two_rewrite_workers_claim_one_revision_before_reserving(topic,generator,session,rewrite_config,sessionmaker_for_test):
+    row=(await session.execute(rewrite._TODO,{'pv':rewrite.PROMPT_VERSION})).first()
+    await session.commit()
+    async def claim():
+        async with sessionmaker_for_test() as other:
+            return await rewrite._claim(other,row,10)
+    claims=await asyncio.gather(*(claim() for _ in range(8)))
+    assert sum(c is not None for c in claims)==1
+    assert await calls_used(session)==1
+    generator.assert_not_awaited()
+
+
+async def test_global_concurrency_denial_refunds_unstarted_call(topic,generator,session,monkeypatch,sessionmaker_for_test):
+    from app.config import get_settings
+    from app.services.generation_budget import GenerationBusy
+    monkeypatch.setattr(get_settings(),'generation_max_concurrent',1)
+    entered,release=asyncio.Event(),asyncio.Event()
+    async def blocked(**kwargs):
+        entered.set()
+        await release.wait()
+        return GeneratedConcept(summary='Fixture',example='Fixture',model='fixture')
+    generator.side_effect=blocked
+    async def run():
+        async with sessionmaker_for_test() as other:
+            return await pool.generate_one(other,'k','m',topic,call_cap=10)
+    first=asyncio.create_task(run())
+    await asyncio.wait_for(entered.wait(),5)
+    try:
+        with pytest.raises(GenerationBusy):
+            await run()
+        assert await calls_used(session)==1
+    finally:
+        release.set()
+        await first
+    assert generator.await_count==1

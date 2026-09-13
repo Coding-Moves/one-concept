@@ -13,6 +13,17 @@ Status: **Phase 7 — reminders.** Reads, writes, Gemini generation from a
 curated backlog, and timezone-aware push reminders that stop once the day is
 learned.
 
+## Sustainable content lifecycle
+
+See [the architecture](../docs/CONTENT_ARCHITECTURE.md) and
+[the operator runbook](../docs/CONTENT_OPERATIONS.md). Content now uses durable
+reader-aware supply targets, structured curriculum imports, explicit reviewed
+publication, and separate daily reviews when new lessons are exhausted.
+Run `python -m app.workers.content --help` for maintainer operations.
+Migrations 0011–0015 must precede this backend; keep old generators disabled
+during rollout. Daily review clients opt into `reviews=true` on `/v1/me/state`
+and complete an identified activity through `/v1/reviews/{id}/complete`.
+
 ## Layout
 
 ```

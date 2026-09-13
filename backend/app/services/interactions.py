@@ -51,6 +51,8 @@ _COMPLETE = text("""
          select id from public.daily_assignments
           where user_id = :uid
             and assigned_for in (cast(:today as date), cast(:today as date) - 1)
+            and not exists (select 1 from public.daily_reviews r where r.user_id=:uid
+              and r.assigned_for >= daily_assignments.assigned_for)
           order by assigned_for desc
           limit 1
      )
@@ -71,6 +73,7 @@ async def complete_today(session: AsyncSession, user_id: uuid.UUID, today) -> Co
     The completion timestamp is the server's, not the client's; the returned
     `assigned_for` is the day it counts towards.
     """
+    await session.execute(text("select id from public.profiles where id=:uid for update"), {"uid":user_id})
     row = (await session.execute(_COMPLETE, {"uid": user_id, "today": today})).first()
     if row is None:
         raise HTTPException(

@@ -1,0 +1,7 @@
+[
+  {"slug":"artificial-intelligence","name":"Artificial Intelligence","description":"Machine learning, deep learning, LLMs, computer vision, and NLP.","sort_order":1},
+  {"slug":"software-engineering","name":"Software Engineering","description":"Architecture, APIs, databases, testing, design patterns, and delivery.","sort_order":2},
+  {"slug":"computer-science","name":"Computer Science","description":"Algorithms, data structures, operating systems, networks, and compilers.","sort_order":3},
+  {"slug":"mathematics","name":"Mathematics","description":"Algebra, calculus, probability, statistics, and the mathematics behind AI.","sort_order":4},
+  {"slug":"linux-systems","name":"Linux & Systems","description":"The kernel, processes, filesystems, networking, and system administration.","sort_order":5}
+]

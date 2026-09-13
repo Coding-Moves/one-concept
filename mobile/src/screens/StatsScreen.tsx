@@ -106,6 +106,10 @@ export function StatsScreen() {
       ) : (
         <>
           <StreakBadge streaks={streaks} />
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Reviews completed: {progress.stats?.totalReviews ?? 0}</Text>
+            <Text style={styles.subtitle}>New lessons and completed reviews count toward your learning streak. Reviews do not increase concepts learned.</Text>
+          </View>
 
           {error && topics.length === 0 ? (
             <UnavailableState

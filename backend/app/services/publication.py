@@ -103,6 +103,20 @@ async def publish_revision(
             raise ValueError(
                 f"Exact duplicate of {other.slug}; resolve overlap before publication"
             )
+    # Preserve the pre-correction version, including migrated seed lessons that
+    # predate editorial records. Do not invent an original reviewer or date.
+    await session.execute(
+        text("""insert into public.concept_revisions
+      (concept_id,base_version,body,status,review_note)
+      select c.id,c.content_version-1,jsonb_build_object('title',c.title,
+        'summary',c.summary,'example',c.example,'curriculum',c.curriculum,
+        'model',c.model,'prompt_version',c.prompt_version),'published',
+        'Legacy version captured before correction; original review was not recorded.'
+      from public.concepts c where c.id=:id and c.content_version>0
+      and not exists(select 1 from public.concept_revisions r where r.concept_id=c.id
+        and r.status='published' and r.base_version=c.content_version-1)"""),
+        {"id": row.concept_id},
+    )
     await session.execute(
         text("""update public.concepts set title=:title,summary=:summary,
       example=:example,curriculum=cast(:curriculum as jsonb),difficulty=:difficulty,

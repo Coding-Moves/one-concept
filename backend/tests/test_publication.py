@@ -185,3 +185,23 @@ async def test_retired_subject_cannot_publish_and_incomplete_metadata_cannot_byp
             "Review must include a learning objective and references.",
         )
     await session.rollback()
+
+
+async def test_legacy_correction_keeps_original_text_without_inventing_review(session, draft):
+    slug, cid = draft
+    original = (await session.execute(
+        text("select id,body from public.concept_revisions where concept_id=:id"),
+        {"id": cid},
+    )).one()
+    await publish_revision(session, original.id, "Maintainer", "Checked original against references.")
+    # Simulate a migrated published lesson which predates revision records.
+    await session.execute(text("delete from public.concept_revisions where concept_id=:id"), {"id": cid})
+    body = LessonBody.model_validate(original.body)
+    body.summary = "A corrected explanation with a stable concept identity. " * 3
+    revision = await stage_revision(session, slug, body)
+    assert await publish_revision(session, revision, "Maintainer", "Checked corrected example and source.") == 2
+    legacy = (await session.execute(text("select body,reviewed_by,reviewed_at,review_note from public.concept_revisions where concept_id=:id and base_version=0"), {"id": cid})).one()
+    assert legacy.body["summary"] == original.body["summary"].strip()
+    assert legacy.reviewed_by is None and legacy.reviewed_at is None
+    assert "original review was not recorded" in legacy.review_note
+    await session.commit()

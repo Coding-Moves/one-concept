@@ -15,6 +15,7 @@ interface ConceptResponse {
   topic_slug: string;
   topic_name: string;
   like_count?: number;
+  content_version?: number;
 }
 
 /**
@@ -31,6 +32,7 @@ async function downloadConcept(slug: string): Promise<Concept> {
     summary: c.summary,
     example: c.example ?? undefined,
     likeCount: c.like_count ?? 0,
+    contentVersion: c.content_version ?? 1,
   };
 }
 
@@ -38,12 +40,13 @@ async function downloadConcept(slug: string): Promise<Concept> {
 export async function fetchConcept(
   slug: string,
   onCached?: (concept: Concept) => void,
+  forceRefresh = false,
 ): Promise<Concept> {
   const epoch = conceptCache.epoch;
   const cached = await conceptCache.get(slug, epoch);
   if (cached) {
     onCached?.(cached);
-    if (!getConnectivity()) return cached;
+    if (!getConnectivity() && !forceRefresh) return cached;
   }
   try {
     const concept = await downloadConcept(slug);

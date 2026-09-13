@@ -6,10 +6,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
-from app.schemas.daily import ConceptOut, DailyOut
+from app.schemas.daily import ConceptOut, DailyOut, ReviewOut
 from app.schemas.me import (
-    HistoryPageOut, LearnedOut, ProfileIn, SavedConceptOut, SavedPageOut, StateOut,
-    StreakOut, TopicsIn,
+    HistoryPageOut,
+    LearnedOut,
+    ProfileIn,
+    SavedConceptOut,
+    SavedPageOut,
+    StateOut,
+    StreakOut,
+    TopicsIn,
 )
 from app.schemas.notifications import NotificationPrefs, PushTokenIn
 from app.services.collections import history_page, saved_page
@@ -40,6 +46,7 @@ def _daily_out_or_none(result: DailyResult) -> DailyOut | None:
         concept=ConceptOut(
             id=c.id, slug=c.slug, title=c.title, summary=c.summary, example=c.example,
             topic_slug=c.topic_slug, topic_name=c.topic_name, like_count=c.like_count,
+            content_version=c.content_version,
         ),
     )
 
@@ -73,14 +80,21 @@ def _to_state_out(state) -> StateOut:
 @router.get("/state", response_model=StateOut)
 async def get_state(
     compact: bool = False,
+    reviews: bool = False,
     user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StateOut:
     """Everything the app needs to render, in one request.
 
     Bootstrapping only runs when the state query finds no profile, so the
-    common path costs a single round trip.
+    profile lock keeps the state totals consistent with concurrent completions.
     """
+    # Keep completion totals and the folded activity from the same point in
+    # time when another device completes a review during startup.
+    await db.execute(
+        text("select id from public.profiles where id=:uid for update"),
+        {"uid": user.id},
+    )
     state = await load_state(db, user.id, compact=compact)
     if state is None:
         await ensure_bootstrapped(db, user.id, user.email)
@@ -89,7 +103,15 @@ async def get_state(
     out = _to_state_out(state)
     # Fold today's concept in so the app needs one startup round trip (#102).
     # Same create-on-first-call behaviour as GET /v1/daily.
-    out.daily = _daily_out_or_none(await get_or_create_daily(db, user.id))
+    result = await get_or_create_daily(db, user.id, allow_review=reviews)
+    out.daily = _daily_out_or_none(result)
+    if result.status == "review":
+        out.review = ReviewOut(
+            review_id=result.review_id,assigned_for=result.assigned_for,
+            assigned_at=result.assigned_at,completed_at=result.completed_at,
+            learned=result.completed_at is not None,
+            concept=ConceptOut(**vars(result.concept)),
+        )
     return out
 
 

@@ -1,0 +1,17 @@
+name: Release guard validation
+on:
+  pull_request:
+    paths:
+      - '.github/scripts/check-release-revision*'
+      - '.github/workflows/release*.yml'
+      - '.github/workflows/eas-update.yml'
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+      - run: bash -n .github/scripts/check-release-revision.sh
+      - run: node --test --test-isolation=none .github/scripts/check-release-revision.test.cjs

@@ -7,6 +7,221 @@ claims as completed work.
 
 ## Current status
 
+### Release #200 readiness and deployment ordering
+
+- Owner requested a merge-ready release, with production merge left for approval.
+  Railway screenshot confirms main auto-deploy with `/backend` root directory.
+- Separating the backend merge/deploy from mobile publication. Release becomes
+  manual on main with a required full deployed-commit attestation; a guard rejects
+  wrong branches, missing/mismatched SHAs and a main revision changed since dispatch.
+  Standalone EAS Update remains preview-only so it cannot bypass the release gate.
+- This attestation is not automatic Railway verification. After merging main,
+  inspect API/worker deployments and health before dispatching Release. Keep
+  generation paused until compatible workers are confirmed. No production merge,
+  mobile publication or backend deployment is performed by this preparation.
+- Local backup was created by the owner on their computer. Its index was checked;
+  nothing was uploaded/restored. Production SQL migrations were applied directly
+  by the owner and independently verified; they did not reload the backup.
+- Validation: nine release-guard cases passed, including rejected stale/missing
+  revisions and non-main branches; shell syntax, all workflow YAML parsing and
+  production/preview wiring checks passed. No application code changed; retain
+  prior app test/export evidence. GitHub checks are verified at handoff.
+
+
+### Version 1.9.0 production migration verification
+
+- Owner reported generation paused and manually applied migrations 0011–0015
+  in order through SQL Editor, each reporting success.
+- Independently verified the original production project through a read-only
+  session-pooler transaction: six new tables, RLS enabled with no client policies,
+  four added columns, five indexes, foreign keys/checks, daily-review uniqueness,
+  final revision-status constraint and published-lesson timestamp backfill.
+- Record all five migrations only after that verification. No production writes
+  were performed by this verification; migration files remain immutable.
+- Local pre-release dump exists and its archive index is readable. Full restore
+  remains untested; owner explicitly deferred the separate cloud Backup project.
+- Backend/worker rollout and ordering before OTA remain outstanding. Keep
+  generation paused and release #200 draft; do not merge main yet.
+- Validation: migration file/ledger comparison and whitespace checks passed.
+  No application code changed; application tests were not rerun for this entry.
+
+### Version 1.9.0 release preparation
+
+- Preparing the merged #197/#198 work for a `develop` to `main` release.
+- Version 1.9.0 includes a matching one-time What's New card; native runtime
+  stays at 1.3.0. Preserve the existing per-device dismissal behavior.
+- Release must remain draft until production backup, generator pause and verified
+  application of migrations 0011–0015 are complete. No production operations or
+  ledger claims are included in this preparation.
+- `6166d80` adds version/card together. Node 24 typecheck and all 39 tests
+  passed; Android/iOS/web exports and whitespace checks passed. Physical-device
+  checks remain outstanding. The release PR is intentionally draft pending the
+  production rollout; its migration check will fail until verified application.
+
+
+### PR #198 cursor review follow-up
+
+- `b38fd15` fixes the confirmed History query mismatch (`before` vs backend
+  `cursor`) in the same PR, with the browser fixture matching the real contract.
+- Before the fix, the corrected fixture reproduced 50/120 records and a retry
+  error instead of loading the next page. After the fix, all 120 records load.
+- Validation: Node 24 typecheck, all 39 unit tests, web export and the corrected
+  History browser test passed (paging, retry, offline restart/detail, sign-out
+  and late responses). Whitespace checks passed. No backend changes; native
+  gesture/device checks remain unverified as recorded below.
+
+## Learning experience batch (#158, #159, #160)
+
+- Implemented one PR from merged `develop` (`3937927`), branch
+  `codex/learning-experience-polish`, isolated in `/tmp/one-concept-next`.
+- Confirmed History still stopped at ten, refresh gestures were absent, and
+  offline banner contrast was insufficient. Existing explicit retry screens
+  were already present and remain available.
+- `e2eed9b`: full History through the existing 50-item cursor API, explicit older
+  page loading, search within loaded records, account-scoped page caching and
+  sign-out cleanup. Startup remains compact; previously opened lesson bodies
+  remain readable offline. `afa8e96`: high-contrast offline colors, wrapping
+  profile identity and a compact detail header with a 44px close target.
+- `feat: add deliberate refresh controls across learning screens`: shared native
+  pull controls and accessible buttons, disabled during active refresh, preserving
+  offline content and allowing explicit detail refresh to probe reconnection.
+- Validation: Node 24 typecheck and **39 tests passed**, no skips; Android/iOS/web
+  exports passed. Mocked browser checks passed for 120-item History, 503 retry,
+  offline restart/pages/detail, explicit detail reconnection and in-flight sign-out;
+  rejected-review replay in both themes; refresh busy state, offline content,
+  banner contrast and 320px enlarged profile in both themes. Inspected screenshots.
+  Banner contrast measured **9.93:1 light / 10.72:1 dark**. Local links and whitespace
+  checked. Backend code and schema are unchanged; backend tests were not rerun.
+- Browser footer activation was made deterministic with keyboard interaction
+  after a scroll-timing flake; request tracing confirmed page boundaries and
+  stale-response fencing. Temporary instrumentation was removed from the source.
+- Native pull gestures, Dynamic Type, TalkBack/VoiceOver still need device checks.
+  Search covers loaded History pages; older bodies require prior download.
+  [PR #198](https://github.com/Coding-Moves/one-concept/pull/198) targets `develop`
+  and closes the three issues when merged. No manual issue closure or release yet.
+  Release preparation and its one-time What's New card follow the feature merge.
+
+### PR #197 review correction
+
+- Fixed rejected offline review replay in the same PR. Pre-completion statistics
+  now survive restart; a terminal replay rejection restores the matching activity
+  and its exact totals on disk before removing the queued intent. A failed refresh
+  returns the corrected cache immediately. Newer activities and unrelated saves
+  are preserved; sign-out keeps its existing write fence.
+- The new `--reject-review` browser regression fails on the original export and
+  passes on the fixed export in both themes, including failed refresh and restart.
+  The normal successful replay browser scenario also passed in both themes.
+- Validation: Node 24 typecheck, **37 tests passed with no skips**, web export,
+  browser scenarios and `git diff --check`. Backend/native code is unchanged;
+  backend tests and physical-device checks were not rerun for this JS-only fix.
+- Focused implementation/test commit: `fix: roll back rejected offline reviews
+  before removing queued intent`. Test instructions and this handoff are a
+  separate documentation commit. No merge, release or production change.
+
+## Sustainable learning (#195) — 2026-09-13
+
+- Implemented all five lifecycle work areas in one feature PR targeting `develop`:
+  durable reader-based refill; portable subject/curriculum imports; reviewed,
+  versioned shared content; daily review with offline replay; protected operations.
+  The existing five subjects remain; future addition/retirement uses data imports.
+- Work is isolated in `/tmp/one-concept-195`, branch
+  `codex/195-sustainable-learning`, based on `develop` (`3cc5af3`). The original
+  handbook checkout and its unrelated edits remain untouched. Expo SDK 57 docs
+  were read before mobile work. No app version/runtime change was made.
+- Reproduced the 25-lesson refill ceiling with actual selection/prefetch against
+  disposable PostgreSQL and mocked drafting. The regression now passes. Review
+  also caught and fixed a worker wake before its durable target committed.
+- Commits: `e0eb494` architecture scope; `11adafc` refill; `1a106c0` curriculum;
+  `72e3a9b` editorial gate; `c5d305e` review API/streaks; `ebf4c28` review outbox;
+  `9bc36a8` operations; `49ad80f` generation concurrency/recovery;
+  `64285a4` selection consistency; `bd166ed` cache cleanup; `5a569b0` review UI;
+  `465a47a` year simulation/restore. Further preservation/handoff commits are
+  identified by their subjects; preserve every meaningful commit when merging.
+- Validation: full backend suite **171 passed, no skips**, using disposable
+  PostgreSQL 16 with live HTTP blocked. Added legacy-snapshot regression afterward:
+  publication suite **4 passed** (172 backend tests now collected). The yearly
+  simulation covers three readers, five subjects, queue extension and a prolonged
+  drafting outage; each reader reaches 365 learning days without inflating unique
+  learned totals. Backup dump/restore passed in a second disposable database.
+- Mobile: Node 24 typecheck and **36 tests passed, no skips**; Android/iOS/web
+  exports passed. Mocked browser checks passed in both themes, narrow/enlarged
+  text, review offline restart/reconnect, future-subject exploration, timer replay,
+  transient failure, in-flight sign-out and all 365 saved bodies. Inspected review
+  screenshots. Physical-device font scaling, screen readers, native storage and
+  real two-device acceptance remain manual; backend concurrency tests cover races.
+- Read-only production classification found 26 old failures: 18 throttling,
+  four validation, four unclassified. None was retried/reset. No production writes,
+  model generation, scheduler configuration or deployment occurred. Migrations
+  0011–0015 remain intentionally absent from the applied ledger; apply/verify them
+  before backend rollout, then deliver the JS update. Pause old generation workers
+  during migration/deployment so they cannot bypass the editorial gate.
+- Architecture and operating procedures: [CONTENT_ARCHITECTURE.md](CONTENT_ARCHITECTURE.md)
+  and [CONTENT_OPERATIONS.md](CONTENT_OPERATIONS.md). Human curriculum expansion
+  and source review are required; title-similarity checks do not prove originality.
+  Operational transitions appear in protected job output, with no external alerts
+  configured. Production backup/Auth restore remains a separate live rehearsal.
+- [PR #197](https://github.com/Coding-Moves/one-concept/pull/197) is open for review
+  from `codex/195-sustainable-learning` into `develop`, with the full architecture,
+  validation and rollout detail. Local documentation links and whitespace checks
+  passed. No merge or production release was performed. The final bookkeeping
+  commit is `docs: record sustainable learning PR handoff`. Merged the latest
+  documentation-only `develop` (`88eb2de`) afterward, preserving both handbook
+  and feature log entries; no application code changed during conflict resolution.
+
+## App engineering handbook — 2026-09-13
+
+- **Outcome:** create a complete printable PDF explaining the app from beginner
+  to advanced level, with layer diagrams, daily selection examples, catalog
+  exhaustion/refill, notifications, email, credentials by purpose, release flow,
+  tradeoffs, and a seven-day study digest.
+- **Scope:** documentation and a reproducible PDF source only; no application,
+  production configuration, content generation, or messaging changes.
+- **Branch/base:** `codex/app-engineering-handbook` from freshly fetched
+  `origin/develop` at `3cc5af3`. GitHub read-only checks confirm #191 and #193
+  merged; `main` is `2e537f6`. Older release status below is historical.
+- **Planned commits:** scope; source-based handbook; PDF builder and navigation;
+  validation and PR handoff. Generated PDFs/previews remain untracked outputs.
+- **Evidence:** inspect current implementation before prose, verify relevant
+  provider documentation, distinguish code/defaults from live service settings,
+  and omit credential values. Render and inspect every final PDF page.
+- **Scope addition:** the owner requested discussion of future issue #195 and
+  concluding before/after Q&A. Read the open issue and its dated production
+  inventory; explain its five proposed work areas, benefits, tradeoffs and
+  undecided parameters. This is design documentation, not authorization to
+  implement #195, generate content, change production or close that issue.
+- **Delivered:** a 49-page handbook with 47 chapters and 29 vector diagrams,
+  clickable contents/bookmarks, pinned source links, credential names/purposes
+  without values, a seven-day study guide, and final before/after Q&A. Current
+  refill behavior is distinguished from the proposed sustainable design in #195.
+  Reproducible source and build instructions are in `docs/handbook/`; the local
+  output is `output/pdf/one-concept-engineering-handbook.pdf` (ignored by Git).
+- **Commits:** `d04df36` records scope; `15fd0a3` explains the current app;
+  `159b564` adds the #195 comparison and Q&A; `eff0673` adds the PDF renderer,
+  diagrams, build guide and navigation. This validation entry is committed as
+  `docs: record handbook validation and handoff`.
+- **Validation (passed):** rebuilt and rendered all 49 pages with Poppler;
+  visually reviewed every page and individually rechecked revised diagrams.
+  Final automated checks confirm 29 figures, 291 link annotations, 176 valid
+  local source-path references, correct chapter order, text within page bounds,
+  valid build-script syntax and no secret-looking token patterns. README local
+  links and `git diff --check` pass. Minimum body/table fonts are 9.13/8.1 pt.
+- **Limits / not run:** application tests were not rerun for documentation/layout
+  work. Live database contents, actual cron/SMTP settings, inbox delivery and
+  physical-device push delivery were not tested. The handbook labels historical
+  test evidence, dated issue inventory and future-design decisions explicitly.
+- **Handoff:** [PR #196](https://github.com/Coding-Moves/one-concept/pull/196)
+  targets `develop` with the focused commits above plus validation `6df5ffc`.
+  Preserve the commits; #195 remains open for its separate implementation.
+  The PDF is delivered locally and the PR provides its reproducible source.
+  Another task's appended issue-creation note remains unstaged and preserved.
+- **Publication:** the initial automatic-review destination concern was resolved
+  by verifying the existing public origin, owner ADMIN access and public-source
+  scope without credential values. The approved push used the existing GitHub
+  credential helper after plain HTTPS authentication was unavailable. No merge,
+  deployment or production mutation was performed.
+
+## Previous release handoff (historical)
+
 - [Release PR #191](https://github.com/Coding-Moves/one-concept/pull/191) is open
   from **develop → main** for **1.8.0**, with the six-benefit one-time card and
   runtime **1.3.0**. Feature/fix PRs #183–#186, #188, and #189 are included;

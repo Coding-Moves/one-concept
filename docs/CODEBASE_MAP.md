@@ -1,6 +1,6 @@
 # Codebase map
 
-Source inspection: 2026-09-11. This is a navigation guide to the implementation,
+Source inspection: 2026-09-13. This is a navigation guide to the implementation,
 not a claim that deployed services or every runtime behavior have been verified.
 Refresh the relevant sections when the code changes.
 
@@ -14,11 +14,13 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Mobile | `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
+| Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
 | Content engine | `backend/app/services/generation.py`, `pool.py`, `prefetch.py`; Gemini lessons from a curated backlog. |
 | Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
+| Engineering handbook | `docs/handbook/ONE_CONCEPT_HANDBOOK.md` explains the full stack and learning lifecycle; `docs/handbook/build_pdf.py` renders the printable guide with vector diagrams. Build and verification instructions are in `docs/handbook/README.md`. |
 
 ## Mobile navigation and presentation
 
@@ -30,7 +32,7 @@ inside a root stack, with a concept-detail modal above them.
 | Screen | Responsibility |
 | --- | --- |
 | `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states. |
-| `HistoryScreen.tsx` | Learned records and navigation to concept details. |
+| `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Streak and topic statistics. |
 | `ProfileScreen.tsx` | Account, reminder preferences, theme, sign-out, and links to profile subpages. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
@@ -46,6 +48,11 @@ like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `src/theme/index.ts` defines colors, spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 `src/navigation.ts` types the root stack.
+
+History uses `hooks/useHistory.ts` and `services/historyApi.ts` to load one
+50-item page per request from the existing history endpoint. Page caches join
+account cleanup; the startup progress aggregate remains compact. Data screens
+share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons.
 
 ## Mobile state, persistence, and API boundaries
 
@@ -161,7 +168,7 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   viewer's own like; the mobile UI adds that one locally.
 - `services/generation.py` builds versioned prompts, calls Gemini through httpx,
   validates output, and exposes rate-limit errors. `pool.py` claims backlog work
-  with `FOR UPDATE SKIP LOCKED`, publishes validated rows, refunds throttled
+  with `FOR UPDATE SKIP LOCKED`, stages generated concepts and editorial revisions, refunds throttled
   attempts and reclaims stale work. Claims and daily call reservations commit
   together before contacting the provider; quota denial rolls back the claim.
 - `services/generation_budget.py` atomically reserves from the shared
@@ -169,7 +176,7 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   API prefetch, scheduled refill, and manual rewrite calls share this budget.
   Failed/uncertain calls retain their reservation; restarts do not reset it.
 - `services/prefetch.py` schedules bounded background top-ups, with a low unread
-  watermark, a published-count target, and per-process in-flight topic tracking.
+  watermark, durable per-topic targets, and per-process in-flight topic tracking.
   Exhausted shared budget is a normal stop condition.
 - `services/reminders.py` claims due user/day/time slots before sending Expo push
   batches, handles timezone and midnight windows, suppresses completed days, and
@@ -179,12 +186,41 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   lessons through Gemini with the shared budget and generation kill switch;
   do not run it merely to inspect the project.
 
+## Sustainable learning additions (#195)
+
+- `services/curriculum.py` validates subject/plan imports, duplicate candidates
+  and prerequisite graphs. `backend/content/subjects.json` retains the five
+  subjects; `curriculum.example.json` shows future data-only expansion.
+- `services/supply.py` persists assigned-count-plus-reserve demand and plans for
+  active readers. `pool.py` counts drafts/in-flight claims in capacity and calls
+  the shared quota/concurrency checks before committing any provider request.
+  `prefetch.py` starts only after the demand transaction commits.
+- `services/publication.py` stages corrections, validates explicit approval and
+  increments versions while preserving identities and prior bodies.
+  `workers/rewrite_catalog.py` now drafts revisions under durable claims.
+- `services/reviews.py` and `api/v1/reviews.py` select/complete separate review
+  records. `selection.py` locks profiles across daily choice; `streaks.py`,
+  `state.py` and reminders count completed review days without increasing unique
+  learned totals. `me/state?reviews=true` opts into a separate review payload.
+- `workers/content.py` exposes maintainer-only imports, revision inspection,
+  approval, failed-plan correction/retry and health reports. `content_health.py`
+  computes supply/queue/quota/worker conditions and deduplicates transitions.
+  This uses backend credentials, with no public administration API.
+- Mobile review payloads and versioned concept bodies use the existing caches;
+  review IDs key durable outbox intents. `pendingProgress.ts` merges pending
+  completion without new learned rows. Today labels review/exploration and
+  Stats separates review totals. Dynamic subject labels use existing generic UI.
+- Added regressions cover imports, publication races, two-device review, grace,
+  refill/call bounds, a 365-day three-reader simulation, protected health changes,
+  backup restoration, and browser offline/reconnect in both themes.
+
 ## Schema and migrations
 
 `db/models.py` mirrors the SQL schema; migrations are the schema authority.
-The eleven tables cover profiles, topics, concepts, user topics, daily assignments,
+The seventeen tables cover profiles, topics, concepts, user topics, daily assignments,
 concept interactions, notification preferences, device tokens, the concept
-backlog, reminder logs, and shared daily generation usage. Unique constraints
+backlog, reminder logs, shared daily generation usage, supply targets, editorial
+revisions/retry logs, daily reviews, worker runs and health conditions. Unique constraints
 enforce one daily assignment and no concept repeats per user. RLS adds isolation behind backend identity checks.
 
 | Migration | Purpose |
@@ -197,10 +233,16 @@ enforce one daily assignment and no concept repeats per user. RLS adds isolation
 | `0008_backlog_claimed_at.sql` | Timestamp for reclaiming abandoned generation. |
 | `0009_like_count_index.sql` | Index for public like counts. |
 | `0010_generation_daily_usage.sql` | Backend-only daily Gemini call reservations shared by all generation paths. |
+| `0011_content_supply.sql` | Durable, coalesced demand beyond bootstrap inventory. |
+| `0012_curriculum_publication.sql` | Structured curriculum, content versions, review drafts and audited retry grants. |
+| `0013_daily_reviews.sql` | Separate review activities; preserves new-assignment uniqueness. |
+| `0014_content_operations.sql` | Worker heartbeat and deduplicated condition state. |
+| `0015_revision_generation_claims.sql` | Durable claims for correction drafting. |
 
-All ten filenames are recorded in `migrations/applied.txt`; migration 0010 was
-applied and independently verified in production during the 1.8.0 release
-follow-up. The ledger is repository evidence, not a live check of production.
+Migrations 0001–0015 are recorded in `migrations/applied.txt`. The owner applied
+0011–0015 during 1.9.0 release preparation, and a separate read-only production
+connection verified their tables, RLS, columns, indexes, constraints and backfill.
+The backend/worker rollout remains pending; the ledger does not prove deployment.
 Application connections use the transaction pooler; migration DDL uses `DIRECT_URL`
 and the session pooler. Applied migrations must not be rewritten.
 
@@ -223,9 +265,11 @@ and the session pooler. Applied migrations must not be rewritten.
   on port 55433, applies every migration, and disables live generation. HTTP calls
   to Gemini/Expo are mocked. Database-dependent tests skip if Podman cannot start.
 - `.github/workflows/eas-update.yml` publishes preview OTA on qualifying mobile
-  pushes to `develop`; manual dispatch can select a channel. `eas-build.yml` is
+  pushes to `develop`; manual dispatch also publishes preview only. `eas-build.yml` is
   a manual Android build workflow.
-- `release.yml` runs on `main`, publishes production then preview OTA, creates a
+- `release.yml` is manually dispatched on `main` after operator confirmation of
+  the deployed backend/worker SHA; its guard rejects missing/mismatched revisions
+  and non-main dispatches. It publishes production then preview OTA, creates a
   version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
   is gated on native `runtimeVersion` changes. Railway deploys the backend
   independently; follow `RELEASING.md` for migration and release ordering.

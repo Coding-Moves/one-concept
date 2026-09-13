@@ -105,3 +105,44 @@ downloads, while explicit sign-out clears account caches. The mocked browser
 checks cover web storage and app behavior; native keyboard/autofill and device
 storage still require the preview checks above. A production release is needed
 to deliver the changes to installations still running the older `main` build.
+
+
+## Daily review and continued learning (#195)
+
+`reviewProgress.test.mjs` checks review outbox persistence and pending-state
+reconciliation without increasing unique learned totals. The actual exported
+app can be exercised with `node tests/review.browser.cjs /path/to/web-export`
+using the same Playwright environment variables as the other browser scripts.
+Use dummy API/Auth configuration pointing to `http://127.0.0.1:4781` (API path
+`/api`); no live user or provider is needed. The scenario covers light/dark,
+review labelling, future-subject discovery, offline completion/restart,
+reconnect, separate Stats totals, and enlarged text at a narrow viewport.
+
+Add `--reject-review` to exercise an expired offline completion (409) followed
+by a failed state refresh (503). The UI and disk must restore the uncompleted
+review and exact pre-tap totals before and after restart, in both themes.
+
+Physical-device font scaling, screen readers and native storage still require
+manual acceptance. Syncing remains foreground/reopen JS work on the current APK.
+
+
+## Learning experience (#158–#160)
+
+Using the same dummy-config export and Playwright environment above, run these
+scripts sequentially (each uses port 4781):
+
+```sh
+node tests/history.browser.cjs /path/to/export
+node tests/learning-ui.browser.cjs /path/to/export
+```
+
+History checks 120 lessons with 50-item pages, retry after 503, search within the
+loaded pages, offline page/detail reading after restart, and sign-out during a
+page request. Older metadata is requested only when Load older lessons is used;
+search explicitly covers loaded history. Lesson bodies must have been opened or
+saved online to be available offline.
+
+UI checks manual refresh, disabled controls during a request, retained offline
+content, actual banner contrast in both themes, and an enlarged profile at
+320px. Native pull gestures, OS Dynamic Type, TalkBack and VoiceOver still need
+physical-device acceptance. Refresh buttons provide an accessible alternative.

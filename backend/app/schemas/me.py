@@ -2,13 +2,14 @@ from datetime import date
 
 from pydantic import BaseModel, Field
 
-from app.schemas.daily import DailyOut
+from app.schemas.daily import DailyOut, ReviewOut
 
 
 class StreakOut(BaseModel):
     current: int
     longest: int
     total_learned: int
+    total_reviews: int = 0
 
 
 class SavedConceptOut(BaseModel):
@@ -58,6 +59,7 @@ class StateOut(BaseModel):
     # (issue #102). Null when the catalog is exhausted for this user. This GET
     # creates the day's assignment on first call, exactly like GET /v1/daily.
     daily: DailyOut | None = None
+    review: ReviewOut | None = None
 
 
 class TopicsIn(BaseModel):

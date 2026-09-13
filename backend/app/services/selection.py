@@ -23,7 +23,9 @@ from sqlalchemy import text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.prefetch import LOW_WATERMARK, request_prefetch
+from app.config import get_settings
+from app.services.prefetch import request_prefetch
+from app.services.supply import signal_reader
 
 
 @dataclass
@@ -38,11 +40,13 @@ class ConceptPayload:
     # Likes from OTHER users; the client adds the viewer's own like on top, so a
     # like/unlike is an instant +/-1 with no server round trip to see it.
     like_count: int = 0
+    content_version: int = 1
 
 
 @dataclass
 class DailyResult:
-    status: str  # "ok" | "exhausted"
+    status: str  # "ok" | "review" | "exhausted"
+    review_id: uuid.UUID | None = None
     assigned_for: date | None = None
     assigned_at: datetime | None = None
     completed_at: datetime | None = None
@@ -53,12 +57,12 @@ class DailyResult:
 
 _TODAY = text("""
     select timezone, (now() at time zone timezone)::date as today
-      from public.profiles where id = :uid
+      from public.profiles where id = :uid for update
 """)
 
 _EXISTING = text("""
     select a.assigned_for, a.assigned_at, a.completed_at,
-           c.id, c.slug, c.title, c.summary, c.example,
+           c.id, c.slug, c.title, c.summary, c.example, c.content_version,
            t.slug as topic_slug, t.name as topic_name,
            (select count(*) from public.concept_interactions ci
              where ci.concept_id = c.id and ci.liked_at is not null
@@ -73,8 +77,14 @@ _EXISTING = text("""
 # within that topic.
 _CANDIDATE = text("""
     with pool as (
-        select c.id, c.topic_id
+        select c.id, c.topic_id,coalesce(c.difficulty,1) as level,
+               (select count(*) from jsonb_array_elements_text(coalesce(c.curriculum->'prerequisites','[]'::jsonb)) required(slug)
+                where not exists(select 1 from public.daily_assignments learned
+                  join public.concepts prior on prior.id=learned.concept_id
+                  where learned.user_id=:uid and learned.completed_at is not null
+                    and prior.slug=required.slug)) as unmet
           from public.concepts c
+          join public.topics t on t.id=c.topic_id and t.is_active
          where c.status = 'published'
            and (:ignore_follows or c.topic_id in (
                  select topic_id from public.user_topics where user_id = :uid))
@@ -92,7 +102,7 @@ _CANDIDATE = text("""
     select p.id
       from pool p
       left join last_seen ls on ls.topic_id = p.topic_id
-     order by ls.seen_on asc nulls first, random()
+     order by ls.seen_on asc nulls first, p.unmet asc, p.level asc, random()
      limit 1
 """)
 
@@ -116,8 +126,6 @@ _FOLLOWED_TOPIC_BY_STALENESS = text("""
            group by c.topic_id
       ) ls on ls.topic_id = ut.topic_id
      where ut.user_id = :uid
-       and exists (select 1 from public.concept_backlog b
-                    where b.topic_id = ut.topic_id and b.status = 'pending')
      order by ls.seen_on asc nulls first
      limit 1
 """)
@@ -154,13 +162,18 @@ def _row_to_result(row, outside: bool) -> DailyResult:
             topic_slug=row.topic_slug,
             topic_name=row.topic_name,
             like_count=row.like_count,
+            content_version=row.content_version,
         ),
         outside_followed_topics=outside,
     )
 
 
-async def get_or_create_daily(
-    session: AsyncSession, user_id: uuid.UUID, *, today: date | None = None
+async def _select_new(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    today: date | None = None,
+    prefetch_topics: set[uuid.UUID],
 ) -> DailyResult:
     """`today` is derived from the user's timezone in production.
 
@@ -170,7 +183,9 @@ async def get_or_create_daily(
     if today is None:
         today = (await session.execute(_TODAY, {"uid": user_id})).one().today
 
-    existing = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).first()
+    existing = (
+        await session.execute(_EXISTING, {"uid": user_id, "today": today})
+    ).first()
     if existing:
         return _row_to_result(existing, outside=False)
 
@@ -188,7 +203,8 @@ async def get_or_create_daily(
             await session.execute(_FOLLOWED_TOPIC_BY_STALENESS, {"uid": user_id})
         ).scalar_one_or_none()
         if stale_topic is not None:
-            request_prefetch(stale_topic)
+            await signal_reader(session, user_id, stale_topic, commit=False)
+            prefetch_topics.add(stale_topic)
 
         outside = True
         concept_id = (
@@ -207,14 +223,15 @@ async def get_or_create_daily(
                 _INSERT, {"uid": user_id, "cid": concept_id, "today": today}
             )
         ).scalar_one_or_none()
-        await session.commit()
     except IntegrityError:
         # Another device won the race, or the concept was assigned concurrently.
         await session.rollback()
         inserted = None
 
     if inserted is None:
-        row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).first()
+        row = (
+            await session.execute(_EXISTING, {"uid": user_id, "today": today})
+        ).first()
         if row:
             return _row_to_result(row, outside=False)
         return DailyResult(status="exhausted", assigned_for=today)
@@ -225,8 +242,47 @@ async def get_or_create_daily(
         watermark = (
             await session.execute(_TOPIC_UNREAD, {"uid": user_id, "cid": concept_id})
         ).first()
-        if watermark and watermark.topic_id is not None and watermark.unread <= LOW_WATERMARK:
-            request_prefetch(watermark.topic_id)
+        if (
+            watermark
+            and watermark.topic_id is not None
+            and watermark.unread <= get_settings().content_low_watermark
+        ):
+            await signal_reader(session, user_id, watermark.topic_id, commit=False)
+            prefetch_topics.add(watermark.topic_id)
 
     row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).one()
     return _row_to_result(row, outside=outside)
+
+
+async def get_or_create_daily(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    *,
+    today: date | None = None,
+    allow_review: bool = False,
+) -> DailyResult:
+    """Serialize the day's choice across devices and old/new client versions."""
+    from app.services.reviews import choose_review, existing_review
+
+    clock = (await session.execute(_TODAY, {"uid": user_id})).one()
+    today = today or clock.today
+    review = await existing_review(session, user_id, today)
+    if review:
+        await session.commit()
+        return (
+            review
+            if allow_review
+            else DailyResult(status="exhausted", assigned_for=today)
+        )
+    prefetch_topics: set[uuid.UUID] = set()
+    result = await _select_new(
+        session, user_id, today=today, prefetch_topics=prefetch_topics
+    )
+    if result.status == "exhausted" and allow_review:
+        result = await choose_review(session, user_id, today) or result
+    await session.commit()
+    # Publish the durable target before waking another session. Starting the
+    # task earlier can see the old bootstrap floor and immediately stop.
+    for topic_id in prefetch_topics:
+        request_prefetch(topic_id)
+    return result

@@ -6,6 +6,7 @@ keeps Gemini off the request path.
 """
 
 import asyncio
+import json
 import logging
 import uuid
 from dataclasses import dataclass
@@ -14,8 +15,14 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
-from app.services.generation_budget import GenerationBudgetExhausted, reserve_generation_call
 from app.services.generation import GenerationError, RateLimitedError, generate_concept
+from app.services.generation_budget import (
+    GenerationBudgetExhausted,
+    GenerationBusy,
+    check_generation_capacity,
+    reserve_generation_call,
+)
+from app.services.supply import target_for
 
 log = logging.getLogger(__name__)
 
@@ -30,7 +37,7 @@ MAX_CONSECUTIVE_RATE_LIMITS = 5
 _POOL_COUNTS = text("""
     select t.id, t.slug, t.name,
            (select count(*) from public.concepts c
-             where c.topic_id = t.id and c.status = 'published')::int as published,
+             where c.topic_id = t.id and c.status in ('published','draft'))::int as published,
            (select count(*) from public.concept_backlog b
              where b.topic_id = t.id and b.status = 'pending')::int   as pending
       from public.topics t
@@ -61,7 +68,7 @@ STALE_CLAIM_MINUTES = 30
 # too rather than leaving them stuck forever.
 _REAP_STALE = text("""
     update public.concept_backlog
-       set status = 'pending', claimed_at = null
+       set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end, claimed_at = null
      where status = 'generating'
        and (claimed_at is null
             or claimed_at < now() - make_interval(mins => :max_minutes))
@@ -75,14 +82,15 @@ _CLAIM = text("""
      where b.id = (
          select b2.id from public.concept_backlog b2
           where b2.status = 'pending'
+            and exists(select 1 from public.topics active where active.id=b2.topic_id and active.is_active)
             and (cast(:topic_id as uuid) is null or b2.topic_id = cast(:topic_id as uuid))
-            and b2.attempts < 3
+            and b2.attempts < 3 + (select count(*) from public.content_retry_log r where r.backlog_id=b2.id)
           order by b2.created_at
           for update skip locked
           limit 1
      )
        and t.id = b.topic_id
-    returning b.id, b.slug, b.title, b.angle, b.difficulty, b.topic_id,
+    returning b.id, b.slug, b.title, b.angle, b.difficulty, b.topic_id, b.curriculum,
               t.name as topic_name
 """)
 
@@ -90,11 +98,16 @@ _PUBLISH = text("""
     with inserted as (
         insert into public.concepts
             (topic_id, slug, title, summary, example, difficulty,
-             status, source, model, prompt_version)
+             status, source, model, prompt_version, curriculum, content_version)
         values (:topic_id, :slug, :title, :summary, :example, :difficulty,
-                'published', 'gemini', :model, :prompt_version)
+                'draft', 'gemini', :model, :prompt_version, cast(:curriculum as jsonb), 0)
         on conflict (slug) do nothing
-        returning id
+        returning *
+    ), revision as (
+        insert into public.concept_revisions(concept_id,base_version,body)
+        select id,0,jsonb_build_object('title',title,'summary',summary,'example',example,
+          'curriculum',curriculum,'model',model,'prompt_version',prompt_version)
+        from inserted returning id
     )
     update public.concept_backlog
        -- Mark done ONLY when a concept was actually inserted. A slug collision
@@ -110,7 +123,7 @@ _PUBLISH = text("""
 
 _FAIL = text("""
     update public.concept_backlog
-       set status = case when attempts >= 3 then 'failed' else 'pending' end,
+       set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end,
            last_error = :error, claimed_at = null
      where id = :backlog_id
 """)
@@ -132,15 +145,36 @@ class TopUpResult:
 
 
 async def generate_one(
-    session: AsyncSession, api_key: str, model: str, topic_id: uuid.UUID | None = None,
-    *, call_cap: int | None = None,
+    session: AsyncSession,
+    api_key: str,
+    model: str,
+    topic_id: uuid.UUID | None = None,
+    *,
+    call_cap: int | None = None,
+    supply_target: int | None = None,
 ) -> uuid.UUID | None:
     """Claim a title and daily budget together, then generate outside the transaction."""
     cap = get_settings().generation_daily_call_cap if call_cap is None else call_cap
     try:
+        if supply_target is not None and topic_id is not None:
+            # Serialize capacity checks and claims, then release before model I/O.
+            active = await session.scalar(
+                text("select is_active from public.topics where id=:t for update"),
+                {"t": topic_id},
+            )
+            inventory = await session.scalar(
+                text("""select
+              (select count(*) from public.concepts where topic_id=:t and status in ('published','draft')) +
+              (select count(*) from public.concept_backlog where topic_id=:t and status='generating')"""),
+                {"t": topic_id},
+            )
+            if not active or inventory >= supply_target:
+                await session.commit()
+                return None
         claimed = (await session.execute(_CLAIM, {"topic_id": topic_id})).first()
         if claimed is not None:
             await reserve_generation_call(session, cap)
+            await check_generation_capacity(session)
         await session.commit()
     except BaseException:
         # Quota denial/DB failure/cancellation must undo the claim and its attempt.
@@ -156,7 +190,19 @@ async def generate_one(
         result = await generate_concept(
             title=claimed.title,
             topic_name=claimed.topic_name,
-            angle=claimed.angle,
+            angle="\n".join(
+                filter(
+                    None,
+                    [
+                        claimed.angle,
+                        f"Learning objective: {claimed.curriculum['objective']}"
+                        if claimed.curriculum.get("objective")
+                        else None,
+                        f"Difficulty: {claimed.difficulty or 1}. Prerequisites: {claimed.curriculum.get('prerequisites', [])}",
+                        f"Editorial references: {claimed.curriculum.get('references', [])}",
+                    ],
+                )
+            ),
             api_key=api_key,
             model=model,
         )
@@ -167,8 +213,10 @@ async def generate_one(
     except GenerationError as exc:
         # Leave it pending for another attempt; give up after three so one bad
         # title cannot block the queue forever.
-        log.warning("generation failed for %s: %s", claimed.slug, exc)
-        await session.execute(_FAIL, {"backlog_id": claimed.id, "error": str(exc)[:500]})
+        log.warning("generation failed for %s (%s); inspect the protected backlog", claimed.slug, type(exc).__name__)
+        await session.execute(
+            _FAIL, {"backlog_id": claimed.id, "error": str(exc)[:500]}
+        )
         await session.commit()
         return None
 
@@ -185,12 +233,13 @@ async def generate_one(
                 "model": result.model,
                 "prompt_version": result.prompt_version,
                 "backlog_id": claimed.id,
+                "curriculum": json.dumps(claimed.curriculum),
             },
         )
     ).scalar_one_or_none()
     await session.commit()
     if concept_id is not None:
-        log.info("published %s", claimed.slug)
+        log.info("drafted %s", claimed.slug)
     else:
         # The insert was a no-op (slug already exists); _PUBLISH marked the row
         # failed rather than done, so the title is flagged, not silently retired.
@@ -216,7 +265,9 @@ async def top_up(
 
     # Start every run by reclaiming rows a previous worker abandoned mid-flight,
     # so a crash cannot permanently lose a title from the pool (issue #37).
-    reaped = (await session.execute(_REAP_STALE, {"max_minutes": STALE_CLAIM_MINUTES})).all()
+    reaped = (
+        await session.execute(_REAP_STALE, {"max_minutes": STALE_CLAIM_MINUTES})
+    ).all()
     await session.commit()
     if reaped:
         log.warning("reclaimed %s stale 'generating' backlog rows", len(reaped))
@@ -225,20 +276,32 @@ async def top_up(
     backoff = BACKOFF_START_SECONDS
     rate_limit_streak = 0
     for topic in (await session.execute(_POOL_COUNTS)).all():
-        deficit = minimum_per_topic - topic.published
+        target = await target_for(session, topic.id, minimum_per_topic)
+        deficit = target - topic.published
         if deficit <= 0:
             continue
-        remaining = min(deficit, topic.pending)
+        remaining = min(deficit, topic.pending, get_settings().content_generation_batch)
         while remaining > 0:
             try:
-                concept_id = await generate_one(session, api_key, model, topic.id, call_cap=call_cap)
+                concept_id = await generate_one(
+                    session,
+                    api_key,
+                    model,
+                    topic.id,
+                    call_cap=call_cap,
+                    supply_target=target,
+                )
+            except GenerationBusy:
+                return TopUpResult(generated, failed, "generation capacity busy")
             except GenerationBudgetExhausted:
                 log.info("stopping: shared daily call cap of %s reached", call_cap)
                 return TopUpResult(generated, failed, "daily call cap reached")
             except RateLimitedError as exc:
                 rate_limit_streak += 1
                 if rate_limit_streak >= MAX_CONSECUTIVE_RATE_LIMITS:
-                    log.warning("stopping: %s consecutive rate limits", rate_limit_streak)
+                    log.warning(
+                        "stopping: %s consecutive rate limits", rate_limit_streak
+                    )
                     return TopUpResult(generated, failed, "rate limited")
                 delay = max(exc.retry_after or 0.0, backoff)
                 log.warning("rate limited; retrying %s in %.0fs", topic.slug, delay)

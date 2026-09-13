@@ -47,7 +47,8 @@ requires the exact Expo SDK 57 documentation before writing mobile code.
   Use a descriptive `codex/` branch for a new chunk unless the owner specifies
   a branch. Check the available base revision; do not assume local refs are current.
 - `main` is production. A production release uses a `develop` to `main` PR and
-  the release runbook. Merging there triggers deployment and release automation.
+  the release runbook. Merging deploys the backend; publish the mobile release
+  separately after verifying the deployed API and worker revision.
 - Every release PR must include a one-time What's New card. During release
   preparation, automatically add a nonempty entry in `mobile/src/data/whatsNew.ts`
   matching `mobile/app.config.js`'s version; do not wait for the owner to remind you.

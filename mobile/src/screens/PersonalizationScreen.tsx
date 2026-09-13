@@ -1,3 +1,5 @@
+import { useRefreshControl } from '../hooks/useRefreshControl';
+import { fetchTopics } from '../services/topicsApi';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
@@ -13,11 +15,13 @@ export function PersonalizationScreen() {
   const navigation = useNavigation();
   const { loading, error, retry, topics, toggle } = useTopics();
   const online = useOnline();
+  const refreshUI = useRefreshControl('subjects', fetchTopics);
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
+      {refreshUI.action}
       <View style={styles.topBar}>
         <Text style={styles.title}>Personalization</Text>
         <Pressable

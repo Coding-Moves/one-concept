@@ -44,7 +44,7 @@ async def test_never_repeats_and_reports_exhaustion(session, user):
     generation can legitimately add concepts.
     """
     catalog = await session.scalar(
-        text("select count(*) from public.concepts where status = 'published'")
+        text("select count(*) from public.concepts c join public.topics t on t.id=c.topic_id where c.status = 'published' and t.is_active")
     )
     seen = []
     for offset in range(catalog):
@@ -148,3 +148,20 @@ async def test_completion_is_reflected(session, user):
     again = await get_or_create_daily(session, user, today=DAY)
     assert again.concept.id == result.concept.id
     assert again.completed_at is not None
+
+
+async def test_curriculum_prefers_foundations_before_advanced_applications(session,user):
+    import uuid
+    slug='ordered-'+uuid.uuid4().hex
+    tid=await session.scalar(text("insert into public.topics(slug,name) values (:s,'Ordered fixture') returning id"),{'s':slug})
+    await session.execute(text("delete from public.user_topics where user_id=:u"),{'u':user})
+    await session.execute(text("insert into public.user_topics(user_id,topic_id) values (:u,:t)"),{'u':user,'t':tid})
+    for level in [3,2,1]:
+        await session.execute(text("insert into public.concepts(topic_id,slug,title,summary,difficulty) values (:t,:s,'Fixture','Body',:level)"),{'t':tid,'s':f'{slug}-{level}','level':level})
+    await session.commit()
+    try:
+        first=await get_or_create_daily(session,user,today=DAY)
+        assert first.concept.slug==f'{slug}-1'
+    finally:
+        await session.execute(text('update public.topics set is_active=false where id=:t'),{'t':tid})
+        await session.commit()

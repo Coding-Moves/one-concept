@@ -152,7 +152,7 @@ async def test_generate_one_publishes_and_marks_the_backlog(empty_generation_bud
           from public.concepts c join public.concept_backlog b on b.slug = c.slug
          where c.id = :id
     """), {"id": concept_id})).one()
-    assert row.status == "published"
+    assert row.status == "draft"
     assert row.source == "gemini"
     assert row.model and row.prompt_version, "provenance must be recorded"
     assert row.backlog_status == "done"
@@ -180,11 +180,10 @@ async def test_failed_generation_leaves_the_item_retryable(empty_generation_budg
 
 async def test_repeated_failures_retire_the_item(empty_generation_budget, session, patch_httpx):
     patch_httpx(_stub_transport({}, status=500))
-    # An inactive topic of its own, so this cannot disturb the shared backlog
-    # that the other tests draw from.
+    # Use an active isolated topic; retire it after exercising provider failure.
     topic_id = (await session.execute(text("""
         insert into public.topics (slug, name, is_active, sort_order)
-        values ('test-cursed', 'Cursed Topic', false, 99)
+        values ('test-cursed', 'Cursed Topic', true, 99)
         returning id
     """))).scalar_one()
     await session.execute(text("""
@@ -200,6 +199,8 @@ async def test_repeated_failures_retire_the_item(empty_generation_budget, sessio
         "select status, attempts from public.concept_backlog where slug = 'cursed-title'"))).one()
     assert row.status == "failed", "a title that never works must stop blocking the queue"
     assert row.attempts == 3
+    await session.execute(text('update public.topics set is_active=false where id=:id'), {'id':topic_id})
+    await session.commit()
 
 
 async def test_rate_limit_releases_the_claim_and_refunds_the_attempt(empty_generation_budget, session, patch_httpx):
@@ -246,7 +247,10 @@ async def test_stale_generating_rows_are_reclaimed(empty_generation_budget, sess
     """), {"tid": topic_id})
     await session.commit()
 
-    # minimum_per_topic=0 → no generation happens; only the reaper runs.
+    # Clear reader demand too: the bootstrap floor alone no longer controls
+    # ongoing refill. This test exercises only the stale-claim reaper.
+    await session.execute(text('delete from public.content_supply_targets'))
+    await session.commit()
     await top_up(session, api_key="k", model="m", enabled=True,
                  minimum_per_topic=0, call_cap=100)
 
@@ -257,6 +261,11 @@ async def test_stale_generating_rows_are_reclaimed(empty_generation_budget, sess
     assert rows["stranded"] == "pending", "the abandoned claim must be reclaimed"
     assert rows["pre-migration"] == "pending", "a NULL-claimed leftover is stale too"
     assert rows["in-flight"] == "generating", "a fresh claim must be left alone"
+    # This artificial live claim must not occupy a global provider slot for
+    # later tests in the shared database.
+    await session.execute(text('delete from public.concept_backlog where topic_id=:tid'), {'tid':topic_id})
+    await session.execute(text('delete from public.topics where id=:tid'), {'tid':topic_id})
+    await session.commit()
 
 
 async def test_slug_collision_does_not_mark_the_backlog_done(empty_generation_budget, session, patch_httpx):
@@ -266,7 +275,7 @@ async def test_slug_collision_does_not_mark_the_backlog_done(empty_generation_bu
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
     topic_id = (await session.execute(text("""
         insert into public.topics (slug, name, is_active, sort_order)
-        values ('test-collision', 'Collision Topic', false, 97)
+        values ('test-collision', 'Collision Topic', true, 97)
         returning id
     """))).scalar_one()
     # A published concept already owns the slug the backlog row will generate.
@@ -290,6 +299,8 @@ async def test_slug_collision_does_not_mark_the_backlog_done(empty_generation_bu
     count = await session.scalar(
         text("select count(*) from public.concepts where slug = 'dup-slug'"))
     assert count == 1
+    await session.execute(text('update public.topics set is_active=false where id=:id'), {'id':topic_id})
+    await session.commit()
     response = httpx.Response(429, headers={"retry-after": "30"}, text="{}")
     assert generation._retry_after_seconds(response) == 30.0
     assert generation._retry_after_seconds(httpx.Response(429, text="{}")) is None
@@ -352,6 +363,9 @@ async def test_top_up_stops_at_the_call_cap(empty_generation_budget, session, pa
 
 
 async def test_top_up_fills_only_topics_below_the_threshold(empty_generation_budget, session, patch_httpx):
+    # Isolate the bootstrap floor from durable demand created by other tests.
+    await session.execute(text("delete from public.content_supply_targets"))
+    await session.commit()
     patch_httpx(_stub_transport(_gemini_response(GOOD_SUMMARY, GOOD_EXAMPLE)))
 
     threshold = 6
@@ -359,12 +373,12 @@ async def test_top_up_fills_only_topics_below_the_threshold(empty_generation_bud
     # earlier tests in this session may already have published concepts.
     deficits = (await session.execute(text("""
         select greatest(:t - (select count(*) from public.concepts c
-                              where c.topic_id = tp.id and c.status = 'published'), 0) as deficit,
+                              where c.topic_id = tp.id and c.status in ('published','draft')), 0) as deficit,
                (select count(*) from public.concept_backlog b
                  where b.topic_id = tp.id and b.status = 'pending') as pending
           from public.topics tp where tp.is_active
     """), {"t": threshold})).all()
-    expected = sum(min(d.deficit, d.pending) for d in deficits)
+    expected = sum(min(d.deficit, d.pending, 5) for d in deficits)
 
     result = await top_up(session, api_key="k", model="gemini-2.0-flash", enabled=True,
                           minimum_per_topic=threshold, call_cap=100)
@@ -375,7 +389,7 @@ async def test_top_up_fills_only_topics_below_the_threshold(empty_generation_bud
         select tp.slug from public.topics tp
          where tp.is_active
            and (select count(*) from public.concepts c
-                 where c.topic_id = tp.id and c.status = 'published') < :t
+                 where c.topic_id = tp.id and c.status in ('published','draft')) < :t
     """), {"t": threshold})).scalars().all()
     assert short == [], f"topics left below the threshold: {short}"
 

@@ -1,16 +1,17 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError, apiRequest } from '../api/client';
-import { Category, DailyPayload, ProgressState } from '../types';
+import { Category, DailyPayload, ReviewPayload, ProgressState } from '../types';
 import { todayKey } from './dates';
 import { cacheSavedConcepts, conceptCache } from './conceptApi';
 import { toConcept } from './dailyApi';
-import { withPendingProgress } from './pendingProgress';
+import { withPendingProgress, withCompletedReview, withRejectedReview } from './pendingProgress';
 import { clearQueue, dequeue, enqueue, keyOf, pending, QueuedMutation } from './mutationQueue';
 import { ProgressRepository } from './progressRepository';
+import { OfflineCache } from './offlineCache';
 import { EMPTY_PROGRESS } from './storage';
 import { toCategory, toSlug } from './topics';
 
-const CACHE_KEY = 'one-concept/server-state/v1';
+const CACHE_PREFIX = 'one-concept/server-state/';
 
 /** True for a network failure (no response) — the signal to queue offline. */
 function isOffline(err: unknown): boolean {
@@ -34,9 +35,11 @@ interface StatePayload {
   saved?: { concept_slug: string; title?: string; topic_name?: string; like_count?: number }[];
   learned_before_window?: Record<string, number> | null;
   saved_next_cursor?: string | null;
-  stats: { current: number; longest: number; total_learned: number };
+  history_next_cursor?: string | null;
+  stats: { current: number; longest: number; total_learned: number; total_reviews?: number };
   assignment_slug: string | null;
   daily?: DailyPayload | null;
+  review?: ReviewPayload | null;
 }
 
 function toProgressState(payload: StatePayload): ProgressState {
@@ -64,18 +67,22 @@ function toProgressState(payload: StatePayload): ProgressState {
     })),
     learnedBeforeWindow: payload.learned_before_window ?? undefined,
     savedNextCursor: payload.saved_next_cursor,
+    historyNextCursor: payload.history_next_cursor,
     // Server-computed, so the day boundary comes from the user's stored
     // timezone rather than whatever the device clock happens to say.
     stats: {
       current: payload.stats.current,
       longest: payload.stats.longest,
       totalLearned: payload.stats.total_learned,
+      totalReviews: payload.stats.total_reviews ?? 0,
     },
     // Today's concept, folded in (#102). A fresh fetch is never "stale"; the
     // offline flag is set only when load() falls back to cache after a failure.
     serverDaily: payload.daily
       ? { status: 'ok', payload: payload.daily, stale: false }
-      : { status: 'exhausted' },
+      : payload.review
+        ? { status: 'review', payload: payload.review, stale: false }
+        : { status: 'exhausted' },
   };
 }
 
@@ -92,12 +99,15 @@ export class RemoteProgressRepository implements ProgressRepository {
   // wipe happened while its request was in flight, its late result must not
   // be re-persisted — that would resurrect the signed-out account's data.
   private epoch = 0;
+  private disk = new OfflineCache<ProgressState>(AsyncStorage, CACHE_PREFIX);
 
   private async remember(state: ProgressState, epoch: number): Promise<ProgressState> {
-    if (epoch !== this.epoch) return state;
+    if (epoch !== this.epoch) return EMPTY_PROGRESS;
     this.cache = state;
-    AsyncStorage.setItem(CACHE_KEY, JSON.stringify(state)).catch(() => {});
-    return state;
+    // Preserve the v1 disk format, using the same tested write fence as lesson
+    // bodies. Sign-out waits for an in-flight write before removing account data.
+    await this.disk.set('v1', state, epoch).catch(() => {});
+    return epoch === this.epoch ? state : EMPTY_PROGRESS;
   }
 
   private async fromState(payload: StatePayload, epoch: number): Promise<ProgressState> {
@@ -107,8 +117,8 @@ export class RemoteProgressRepository implements ProgressRepository {
     // Keep each day's full text for later History/Saved reading, and download
     // saved bodies without holding up the initial screen.
     const contentEpoch = conceptCache.epoch;
-    if (payload.daily) {
-      const concept = toConcept(payload.daily);
+    if (payload.daily || payload.review) {
+      const concept = toConcept((payload.daily ?? payload.review)!);
       await conceptCache.set(concept.id, concept, contentEpoch).catch(() => {});
     }
     if (epoch !== this.epoch) return EMPTY_PROGRESS;
@@ -118,21 +128,23 @@ export class RemoteProgressRepository implements ProgressRepository {
 
   /** Drop the in-memory state; the module singleton outlives a sign-out. The
    *  offline queue is account data too, so it goes with it. */
-  forget(): Promise<void> {
+  async forget(): Promise<void> {
     this.epoch += 1;
     this.cache = EMPTY_PROGRESS;
-    return clearQueue();
+    await Promise.all([clearQueue(), this.disk.clear()]);
   }
 
   async loadCached(): Promise<ProgressState | null> {
     const epoch = this.epoch;
     const contentEpoch = conceptCache.epoch;
-    const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
-    if (!raw || epoch !== this.epoch) return null;
+    const parsed = await this.disk.get('v1', epoch);
+    if (!parsed || epoch !== this.epoch) return null;
     try {
-      this.cache = JSON.parse(raw) as ProgressState;
+      const restored = withPendingProgress(parsed, parsed, await pending());
+      if (epoch !== this.epoch) return null;
+      this.cache = restored;
       // Also upgrade an existing installation's cached Today while offline.
-      if (this.cache.serverDaily?.status === 'ok') {
+      if (this.cache.serverDaily?.status === 'ok' || this.cache.serverDaily?.status === 'review') {
         const concept = toConcept(this.cache.serverDaily.payload);
         await conceptCache.set(concept.id, concept, contentEpoch).catch(() => {});
       }
@@ -146,17 +158,18 @@ export class RemoteProgressRepository implements ProgressRepository {
   async load(): Promise<ProgressState> {
     const epoch = this.epoch;
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true'), epoch);
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
-      const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
-      if (raw && epoch === this.epoch) {
-        const cached = JSON.parse(raw) as ProgressState;
+      const parsed = await this.disk.get('v1', epoch);
+      if (parsed && epoch === this.epoch) {
+        const cached = withPendingProgress(parsed, parsed, await pending());
+        if (epoch !== this.epoch) return EMPTY_PROGRESS;
         // Genuinely offline: the fetch failed and we're serving the saved copy,
         // so flag the daily stale — that's what drives the "Offline" banner. The
         // cache-first preview (loadCached) leaves it not-stale, so the banner
         // still doesn't flash during a normal load (#92).
         const offline: ProgressState =
-          cached.serverDaily?.status === 'ok'
+          (cached.serverDaily?.status === 'ok' || cached.serverDaily?.status === 'review')
             ? { ...cached, serverDaily: { ...cached.serverDaily, stale: true } }
             : cached;
         this.cache = offline;
@@ -181,7 +194,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     let done: {
       completed: boolean;
       assigned_for: string;
-      stats: { current: number; longest: number; total_learned: number };
+      stats: { current: number; longest: number; total_learned: number; total_reviews?: number };
     };
     try {
       done = await apiRequest('/v1/daily/complete', { method: 'POST' });
@@ -200,6 +213,7 @@ export class RemoteProgressRepository implements ProgressRepository {
           already || !this.cache.stats
             ? this.cache.stats
             : {
+                ...this.cache.stats,
                 current: this.cache.stats.current + 1,
                 longest: Math.max(this.cache.stats.longest, this.cache.stats.current + 1),
                 totalLearned: this.cache.stats.totalLearned + 1,
@@ -216,7 +230,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     // guess (the caller's concept id, no title). Without this the History tab
     // only caught up on a full reload, i.e. an app restart (issue #91).
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true'), epoch);
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
       // The completion already persisted; a failed reload must not roll it back.
       // Patch in place using the caller's concept id (the cached assignment can
@@ -232,8 +246,43 @@ export class RemoteProgressRepository implements ProgressRepository {
           current: done.stats.current,
           longest: done.stats.longest,
           totalLearned: done.stats.total_learned,
+          totalReviews: done.stats.total_reviews ?? this.cache.stats?.totalReviews ?? 0,
         },
       }, epoch);
+    }
+  }
+
+  async completeReview(reviewId: string): Promise<ProgressState> {
+    const epoch = this.epoch;
+    const daily = this.cache.serverDaily;
+    if (daily?.status !== 'review' || daily.payload.review_id !== reviewId) return this.cache;
+    // Persist intent before I/O. A successful server write followed by a lost
+    // response or process restart is safe to replay using this exact review ID.
+    await enqueue({ kind: 'review', reviewId, date: daily.payload.assigned_for });
+    if (epoch !== this.epoch) return EMPTY_PROGRESS;
+    const before = this.cache;
+    const optimistic = withCompletedReview(before, reviewId);
+    await this.remember(optimistic, epoch);
+    try {
+      const done = await apiRequest<{
+        stats: {current: number; longest: number; total_learned: number; total_reviews: number};
+      }>(`/v1/reviews/${encodeURIComponent(reviewId)}/complete`, { method: 'POST' });
+      if (epoch !== this.epoch) return EMPTY_PROGRESS;
+      await dequeue(`review:${reviewId}`);
+      return this.remember({ ...this.cache, pendingReviewStats: undefined, stats: {
+        current: done.stats.current, longest: done.stats.longest,
+        totalLearned: done.stats.total_learned, totalReviews: done.stats.total_reviews,
+      } }, epoch);
+    } catch (error) {
+      if (epoch !== this.epoch) return EMPTY_PROGRESS;
+      if (isOffline(error) || (error instanceof ApiError && (error.status >= 500 || error.status === 429))) {
+        return optimistic; // durable retry; do not turn an uncertain write into a lost tap
+      }
+      await dequeue(`review:${reviewId}`);
+      // Restore the uncompleted snapshot even if the reconciliation request
+      // also fails; an expired review must not keep an invented completed day.
+      await this.remember({ ...this.cache, serverDaily: before.serverDaily, stats: before.stats, pendingReviewStats: undefined }, epoch);
+      return this.load();
     }
   }
 
@@ -350,7 +399,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     // by the UI. Fall back to patching in place; the saved list catches up on
     // the next successful load.
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true'), epoch);
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
       return this.remember(patched(), epoch);
     }
@@ -369,6 +418,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     const entries = await pending();
     if (entries.length === 0) return null;
 
+    let rejectedReview = false;
     const today = todayKey();
     for (const m of entries) {
       if (epoch !== this.epoch) return null; // signed out mid-flush
@@ -386,17 +436,26 @@ export class RemoteProgressRepository implements ProgressRepository {
         await dequeue(keyOf(m), m); // guarded: don't clobber a newer same-key intent
       } catch (err) {
         if (epoch !== this.epoch) return null;
-        if (isOffline(err)) return null; // still offline — keep the rest queued
-        if (err instanceof ApiError && err.status >= 500) continue; // transient — retry next time
+        if (isOffline(err)) return rejectedReview ? this.cache : null; // keep remaining intents queued
+        if (err instanceof ApiError && (err.status >= 500 || err.status === 429)) continue; // transient — retry next time
+        if (m.kind === 'review') {
+          const restored = withRejectedReview(this.cache, m.reviewId);
+          // Persist the rollback BEFORE deleting the intent. A storage failure
+          // must leave the action retryable, and sign-out still fences the write.
+          await this.disk.set('v1', restored, epoch);
+          if (epoch !== this.epoch) return null;
+          this.cache = restored;
+          rejectedReview = true;
+        }
         await dequeue(keyOf(m), m); // 4xx: unfixable, drop so it can't block forever
       }
     }
 
     if (epoch !== this.epoch) return null;
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true'), epoch);
+      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
-      return null;
+      return epoch === this.epoch && rejectedReview ? this.cache : null;
     }
   }
 
@@ -415,6 +474,9 @@ export class RemoteProgressRepository implements ProgressRepository {
       case 'topics':
         await apiRequest('/v1/me/topics?compact=true', { method: 'PUT', body: { topics: m.slugs } });
         return;
+      case 'review':
+        await apiRequest(`/v1/reviews/${encodeURIComponent(m.reviewId)}/complete`, { method: 'POST' });
+        return;
       case 'learn':
         await apiRequest('/v1/daily/complete', { method: 'POST' });
         return;
@@ -427,8 +489,5 @@ export const remoteProgressRepository = new RemoteProgressRepository();
 /** Forget everything: the disk cache AND the singleton's in-memory copy.
  *  Called on sign-out so the next account can never see this one's data. */
 export async function clearServerStateCache(): Promise<void> {
-  await Promise.all([
-    remoteProgressRepository.forget(),
-    AsyncStorage.removeItem(CACHE_KEY),
-  ]);
+  await remoteProgressRepository.forget();
 }

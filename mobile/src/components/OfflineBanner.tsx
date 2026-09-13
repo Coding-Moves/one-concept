@@ -20,7 +20,7 @@ export function OfflineBanner() {
       accessibilityLabel="You are offline. Changes will sync when you reconnect."
     >
       <View style={styles.row}>
-        <Ionicons name="cloud-offline-outline" size={scaleIcon(14)} color={colors.onPrimary} />
+        <Ionicons name="cloud-offline-outline" size={scaleIcon(14)} color={colors.offlineText} />
         <Text style={styles.text}>Offline — changes will sync when you reconnect</Text>
       </View>
     </View>
@@ -29,7 +29,7 @@ export function OfflineBanner() {
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    container: { backgroundColor: colors.textMuted },
+    container: { backgroundColor: colors.offlineBackground },
     row: {
       flexDirection: 'row',
       alignItems: 'center',
@@ -38,5 +38,5 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: spacing.xs + 2,
       paddingHorizontal: spacing.md,
     },
-    text: { fontSize: scaleFont(12), fontWeight: '600', color: colors.onPrimary },
+    text: { flexShrink: 1, fontSize: scaleFont(14), fontWeight: '600', color: colors.offlineText },
   });

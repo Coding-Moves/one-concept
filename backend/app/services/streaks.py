@@ -19,6 +19,7 @@ class StreakStats:
     current: int
     longest: int
     total_learned: int
+    total_reviews: int = 0
 
 
 # Gaps and islands: consecutive dates share (date - row_number()), so each
@@ -28,6 +29,8 @@ _STREAKS = text("""
         select distinct assigned_for as d
           from public.daily_assignments
          where user_id = :uid and completed_at is not null
+        union select assigned_for from public.daily_reviews
+         where user_id=:uid and completed_at is not null
     ), grouped as (
         select d, d - (row_number() over (order by d))::int as grp from days
     ), runs as (
@@ -39,7 +42,8 @@ _STREAKS = text("""
                  where ends_on in (:today, :yesterday)
                  order by ends_on desc limit 1), 0) as current,
       coalesce((select max(len) from runs), 0)      as longest,
-      (select count(*)::int from days)              as total_learned
+      (select count(*)::int from public.daily_assignments where user_id=:uid and completed_at is not null) as total_learned,
+      (select count(*)::int from public.daily_reviews where user_id=:uid and completed_at is not null) as total_reviews
 """)
 
 _TODAY = text("""
@@ -65,4 +69,4 @@ async def compute_streaks(
     ).one()
     # A run ending yesterday still counts as current, so an unfinished today
     # never shows the user a broken streak before the day is over.
-    return StreakStats(current=row.current, longest=row.longest, total_learned=row.total_learned)
+    return StreakStats(current=row.current, longest=row.longest, total_learned=row.total_learned, total_reviews=row.total_reviews)

@@ -17,9 +17,9 @@ const CATEGORY_BY_SLUG: Record<string, Category> = Object.fromEntries(
 ) as Record<string, Category>;
 
 export function toCategory(slug: string): Category | null {
-  return CATEGORY_BY_SLUG[slug] ?? null;
+  return CATEGORY_BY_SLUG[slug] ?? slug;
 }
 
 export function toSlug(category: Category): string {
-  return SLUG_BY_CATEGORY[category];
+  return SLUG_BY_CATEGORY[category] ?? category;
 }

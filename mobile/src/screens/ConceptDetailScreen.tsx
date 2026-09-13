@@ -1,6 +1,7 @@
+import { useRefreshControl } from '../hooks/useRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import { RouteProp, useNavigation, useRoute } from '@react-navigation/native';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
@@ -19,7 +20,7 @@ type Status = 'loading' | 'ready' | 'error';
 export function ConceptDetailScreen() {
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<RootStackParamList, 'ConceptDetail'>>();
-  const { conceptId, title } = params;
+  const { conceptId } = params;
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -27,18 +28,25 @@ export function ConceptDetailScreen() {
   const [status, setStatus] = useState<Status>('loading');
   const [attempt, setAttempt] = useState(0);
   const online = useOnline();
+  const request = useRef(0);
+  const refreshUI = useRefreshControl('lesson', async () => {
+    const current = ++request.current;
+    const next = await fetchConcept(conceptId, undefined, true);
+    if (request.current === current) { setConcept(next); setStatus('ready'); }
+  });
 
   useEffect(() => {
     let active = true;
+    const current = ++request.current;
     setStatus('loading');
     fetchConcept(conceptId, (cached) => {
-      if (active) {
+      if (active && current === request.current) {
         setConcept(cached);
         setStatus('ready');
       }
     })
       .then((c) => {
-        if (active) {
+        if (active && current === request.current) {
           setConcept(c);
           setStatus('ready');
         }
@@ -47,7 +55,7 @@ export function ConceptDetailScreen() {
         // Offline or not found: the bundled catalog covers the signed-out demo
         // set; anything else we can't show, so say so rather than hang.
         const local = CONCEPTS_BY_ID.get(conceptId);
-        if (!active) return;
+        if (!active || current !== request.current) return;
         if (local) {
           setConcept(local);
           setStatus('ready');
@@ -57,14 +65,15 @@ export function ConceptDetailScreen() {
       });
     return () => {
       active = false;
+      request.current++;
     };
   }, [conceptId, attempt]);
 
   return (
     <View style={styles.screen}>
       <View style={styles.topBar}>
-        <Text style={styles.heading} numberOfLines={1}>
-          {title ?? 'Concept'}
+        <Text style={styles.heading} maxFontSizeMultiplier={1.5}>
+          Concept
         </Text>
         <Pressable
           onPress={() => navigation.goBack()}
@@ -89,7 +98,8 @@ export function ConceptDetailScreen() {
           />
         </View>
       ) : (
-        <ScrollView contentContainerStyle={styles.content}>
+        <ScrollView contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
+          {refreshUI.action}
           <ConceptCard concept={concept} />
           <ConceptActions concept={concept} />
         </ScrollView>
@@ -109,7 +119,7 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.lg,
     },
     heading: { ...typography.title, fontSize: scaleFont(22), color: colors.text, flexShrink: 1 },
-    closeButton: { padding: spacing.xs },
+    closeButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
     content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.xl },
   });

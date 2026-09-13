@@ -128,3 +128,18 @@ async def empty_generation_budget(session):
     await session.rollback()
     await session.execute(text("delete from public.generation_daily_usage"))
     await session.commit()
+
+
+@pytest.fixture(autouse=True)
+def no_live_http(monkeypatch):
+    """All HTTP integration uses ASGI/MockTransport; never contact a real provider."""
+    import httpx
+
+    async def reject_async(self, request):
+        raise AssertionError('Live HTTP transport is disabled in tests; use a mock transport')
+
+    def reject_sync(self, request):
+        raise AssertionError('Live HTTP transport is disabled in tests; use a mock transport')
+
+    monkeypatch.setattr(httpx.AsyncHTTPTransport, 'handle_async_request', reject_async)
+    monkeypatch.setattr(httpx.HTTPTransport, 'handle_request', reject_sync)

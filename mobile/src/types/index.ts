@@ -9,14 +9,11 @@ export interface Concept {
   example?: string;
   /** Likes from other users; the viewer's own like is added on top for display. */
   likeCount?: number;
+  contentVersion?: number;
 }
 
-export type Category =
-  | 'Artificial Intelligence'
-  | 'Software Engineering'
-  | 'Computer Science'
-  | 'Mathematics'
-  | 'Linux & Systems';
+/** Display labels come from the subject registry. The bundled five are demo data. */
+export type Category = string;
 
 export const CATEGORIES: Category[] = [
   'Artificial Intelligence',
@@ -65,12 +62,16 @@ export interface DailyPayload {
     topic_slug: string;
     topic_name: string;
     like_count?: number;
+    content_version?: number;
   };
 }
 
 /** The server's daily result: today's concept, exhausted, or unavailable. */
+export interface ReviewPayload extends DailyPayload { review_id: string }
+
 export type DailyOutcome =
   | { status: 'ok'; payload: DailyPayload; stale: boolean }
+  | { status: 'review'; payload: ReviewPayload; stale: boolean }
   | { status: 'exhausted' }
   | { status: 'unavailable' };
 
@@ -85,6 +86,7 @@ export interface StreakStats {
   current: number;
   longest: number;
   totalLearned: number;
+  totalReviews?: number;
 }
 
 /** Everything the app persists locally. */
@@ -107,11 +109,14 @@ export interface ProgressState {
   learnedBeforeWindow?: Record<string, number>;
   /** Continuation after the embedded saved window; absent on legacy responses. */
   savedNextCursor?: string | null;
+  historyNextCursor?: string | null;
   /**
    * Streaks as computed by the server, when the state came from the server.
    * Absent for purely local state, where the client derives them instead.
    */
   stats?: StreakStats;
+  /** Pre-completion totals, retained until a queued review is acknowledged. */
+  pendingReviewStats?: { reviewId: string; stats?: StreakStats };
   /**
    * Today's concept, folded into the server state so startup needs one request
    * (#102). Present only for server-backed state; the signed-out demo picks the

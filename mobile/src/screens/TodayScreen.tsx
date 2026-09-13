@@ -1,3 +1,6 @@
+import { useRefreshControl } from '../hooks/useRefreshControl';
+import { useNavigation, NavigationProp, NavigatorScreenParams } from '@react-navigation/native';
+import type { ProfileStackParamList } from './ProfileScreen';
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -23,17 +26,22 @@ export function TodayScreen() {
     learnedToday,
     streaks,
     markLearned,
+    completeReview,
     refresh,
   } = useProgress();
   const { session } = useAuth();
   const online = useOnline();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const refreshUI = useRefreshControl('today', refresh);
 
+  const navigation = useNavigation<NavigationProp<{Profile: NavigatorScreenParams<ProfileStackParamList>}>>();
+  const explore = () => navigation.navigate('Profile', {screen: 'Personalization'});
   const outcome = serverDaily;
+  const review = outcome?.status === 'review';
   // An authenticated user can read a cached assignment, never an invented demo lesson.
   const serverConcept =
-    outcome && outcome.status === 'ok' ? toConcept(outcome.payload) : null;
+    outcome && (outcome.status === 'ok' || outcome.status === 'review') ? toConcept(outcome.payload) : null;
   const concept = serverConcept ?? (session ? null : localConcept);
 
   // The shown concept is done if today's date is marked (the instant
@@ -43,15 +51,16 @@ export function TodayScreen() {
   // server concept qualifies: the local fallback (selectDailyConcept) can
   // recycle an already-learned concept once the bundled pool is exhausted,
   // and that must still show the button.
-  const done = learnedToday || (!!serverConcept && hasLearned(serverConcept.id));
+  const done = review ? outcome.payload.learned : learnedToday || (!!serverConcept && hasLearned(serverConcept.id));
   const loading = localLoading;
   const exhausted = outcome?.status === 'exhausted';
-  const offline = outcome?.status === 'ok' && outcome.stale;
+  const offline = (outcome?.status === 'ok' || outcome?.status === 'review') && outcome.stale;
   const outsideTopics =
     outcome?.status === 'ok' && outcome.payload.outside_followed_topics;
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
+      {refreshUI.action}
       <View style={styles.header}>
         <View style={styles.headerText}>
           <Text style={styles.appName}>One Concept</Text>
@@ -74,7 +83,7 @@ export function TodayScreen() {
       {loading ? (
         <>
           <SkeletonBlock style={{ width: '100%', height: 64, borderRadius: radius.md }} />
-          <Text style={styles.sectionLabel}>Today’s concept</Text>
+          <Text style={styles.sectionLabel}>{review ? "Today’s review" : "Today’s concept"}</Text>
           <SkeletonConceptCard />
           <SkeletonBlock style={{ width: '100%', height: 50, borderRadius: radius.md }} />
         </>
@@ -82,7 +91,7 @@ export function TodayScreen() {
         <>
           <StreakBadge streaks={streaks} />
 
-          <Text style={styles.sectionLabel}>Today’s concept</Text>
+          <Text style={styles.sectionLabel}>{review ? "Today’s review" : "Today’s concept"}</Text>
 
           {offline ? (
             <View style={styles.offlineRow}>
@@ -104,7 +113,16 @@ export function TodayScreen() {
             <View style={styles.noteBox}>
               <Ionicons name="checkmark-done-outline" size={scaleIcon(16)} color={colors.success} />
               <Text style={styles.noteText}>
-                You’ve learned every concept available. New ones are on the way.
+                No new lesson is available for you right now. Complete a lesson to build your review library, or explore the subjects.
+              </Text>
+            </View>
+          ) : null}
+
+          {review ? (
+            <View style={styles.noteBox}>
+              <Ionicons name="refresh-outline" size={scaleIcon(18)} color={colors.textSecondary} />
+              <Text style={styles.noteText}>
+                Review a previous lesson. Recall the idea before rereading, then explain the example in your own words. Completing this review counts toward your streak.
               </Text>
             </View>
           ) : null}
@@ -125,15 +143,21 @@ export function TodayScreen() {
           {concept && (done ? (
             <View style={styles.doneBox}>
               <Ionicons name="checkmark-circle" size={scaleIcon(20)} color={colors.success} />
-              <Text style={styles.doneText}>Learned today — see you tomorrow!</Text>
+              <Text style={styles.doneText}>{review ? "Review complete — your learning day counts." : "Learned today — see you tomorrow!"}</Text>
             </View>
           ) : (
             <PrimaryButton
-              label="Mark as learned"
-              onPress={() => markLearned(concept ?? undefined)}
+              label={review ? "Complete review" : "Mark as learned"}
+              onPress={() => review ? completeReview(outcome.payload.review_id) : markLearned(concept ?? undefined)}
               disabled={!concept}
             />
           ))}
+          {exhausted || review ? (
+            <>
+              <PrimaryButton label="Explore another subject" onPress={explore} />
+              {exhausted ? <PrimaryButton label="Check for new lessons" onPress={refresh} /> : null}
+            </>
+          ) : null}
         </>
       )}
     </ScrollView>

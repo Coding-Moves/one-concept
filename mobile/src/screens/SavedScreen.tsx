@@ -1,3 +1,4 @@
+import { useRefreshControl } from '../hooks/useRefreshControl';
 import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
@@ -38,6 +39,7 @@ export function SavedScreen() {
   const { savedConcepts, loading, failed, retry } = useSavedConcepts(progress);
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const refreshUI = useRefreshControl('saved lessons', async () => { await refresh(); retry(); });
 
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>(ALL);
@@ -88,6 +90,7 @@ export function SavedScreen() {
 
   return (
     <View style={styles.screen}>
+      <View style={{paddingHorizontal: spacing.md}}>{refreshUI.action}</View>
       <View style={styles.topBar}>
         <Pressable
           onPress={() => navigation.goBack()}
@@ -174,6 +177,7 @@ export function SavedScreen() {
           ) : null}
 
           <FlatList
+            refreshControl={refreshUI.control}
             data={filtered}
             keyExtractor={(c) => c.id}
             contentContainerStyle={styles.listContent}

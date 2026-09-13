@@ -1,3 +1,5 @@
+import { fetchTopics } from '../services/topicsApi';
+import { useRefreshControl } from '../hooks/useRefreshControl';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SkeletonBlock } from '../components/Skeleton';
@@ -65,12 +67,13 @@ function ProgressBar({ fraction, styles }: { fraction: number; styles: Styles })
 }
 
 export function StatsScreen() {
-  const { loading, progress, streaks } = useProgress();
+  const { loading, progress, streaks, refresh } = useProgress();
   const { loading: topicsLoading, topics, error, retry } = useTopics();
   const { session } = useAuth();
   const online = useOnline();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const refreshUI = useRefreshControl('stats', async () => { await refresh(); await fetchTopics(); });
 
   // A failed catalog request must not substitute demo totals for a real account.
   const serverMode = !!session;
@@ -92,7 +95,8 @@ export function StatsScreen() {
       };
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
+      {refreshUI.action}
       <View style={styles.header}>
         <Text style={styles.title}>Stats</Text>
         <Text style={styles.subtitle}>Your learning progress over time.</Text>
@@ -106,6 +110,10 @@ export function StatsScreen() {
       ) : (
         <>
           <StreakBadge streaks={streaks} />
+          <View style={styles.card}>
+            <Text style={styles.cardTitle}>Reviews completed: {progress.stats?.totalReviews ?? 0}</Text>
+            <Text style={styles.subtitle}>New lessons and completed reviews count toward your learning streak. Reviews do not increase concepts learned.</Text>
+          </View>
 
           {error && topics.length === 0 ? (
             <UnavailableState

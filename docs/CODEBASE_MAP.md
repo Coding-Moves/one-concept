@@ -239,10 +239,10 @@ enforce one daily assignment and no concept repeats per user. RLS adds isolation
 | `0014_content_operations.sql` | Worker heartbeat and deduplicated condition state. |
 | `0015_revision_generation_claims.sql` | Durable claims for correction drafting. |
 
-Only migrations 0001–0010 are recorded in `migrations/applied.txt`; new migrations
-0011–0015 are unapplied in production at this PR handoff. Migration 0010 was
-applied and independently verified in production during the 1.8.0 release
-follow-up. The ledger is repository evidence, not a live check of production.
+Migrations 0001–0015 are recorded in `migrations/applied.txt`. The owner applied
+0011–0015 during 1.9.0 release preparation, and a separate read-only production
+connection verified their tables, RLS, columns, indexes, constraints and backfill.
+The backend/worker rollout remains pending; the ledger does not prove deployment.
 Application connections use the transaction pooler; migration DDL uses `DIRECT_URL`
 and the session pooler. Applied migrations must not be rewritten.
 

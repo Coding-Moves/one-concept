@@ -7,6 +7,19 @@ claims as completed work.
 
 ## Current status
 
+## Sustainable learning (#195) — 2026-09-13
+
+- Implement all five content-lifecycle work areas in one PR, with a portable
+  subject registry supporting the existing five subjects and future additions/
+  retirement. Work in isolated `/tmp/one-concept-195` on
+  `codex/195-sustainable-learning` from `develop` (`3cc5af3`).
+- Preserve the unrelated handbook checkout and its local edits. Read Expo SDK
+  57 documentation before mobile changes. No production migration, generation,
+  app version bump or deployment is part of this implementation PR.
+- Architecture and planned focused commits are in `CONTENT_ARCHITECTURE.md`.
+  Validate durable refill, curriculum/publication, review/streak/offline behaviour,
+  subject lifecycle and operational reporting before publishing the PR.
+
 - [Release PR #191](https://github.com/Coding-Moves/one-concept/pull/191) is open
   from **develop → main** for **1.8.0**, with the six-benefit one-time card and
   runtime **1.3.0**. Feature/fix PRs #183–#186, #188, and #189 are included;

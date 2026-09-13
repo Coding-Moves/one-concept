@@ -7,6 +7,20 @@ claims as completed work.
 
 ## Current status
 
+### Version 1.9.0 release preparation
+
+- Preparing the merged #197/#198 work for a `develop` to `main` release.
+- Version 1.9.0 includes a matching one-time What's New card; native runtime
+  stays at 1.3.0. Preserve the existing per-device dismissal behavior.
+- Release must remain draft until production backup, generator pause and verified
+  application of migrations 0011–0015 are complete. No production operations or
+  ledger claims are included in this preparation.
+- `6166d80` adds version/card together. Node 24 typecheck and all 39 tests
+  passed; Android/iOS/web exports and whitespace checks passed. Physical-device
+  checks remain outstanding. The release PR is intentionally draft pending the
+  production rollout; its migration check will fail until verified application.
+
+
 ### PR #198 cursor review follow-up
 
 - `b38fd15` fixes the confirmed History query mismatch (`before` vs backend

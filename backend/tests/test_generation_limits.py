@@ -302,3 +302,40 @@ async def test_rewrite_cancelled_provider_keeps_budget_and_cleans_up(topic, gene
     assert await calls_used(session) == 1
     assert await rewritten_count(session, topic) == 0
     rewrite.engine.dispose.assert_awaited_once()
+
+
+async def test_two_rewrite_workers_claim_one_revision_before_reserving(topic,generator,session,rewrite_config,sessionmaker_for_test):
+    row=(await session.execute(rewrite._TODO,{'pv':rewrite.PROMPT_VERSION})).first()
+    await session.commit()
+    async def claim():
+        async with sessionmaker_for_test() as other:
+            return await rewrite._claim(other,row,10)
+    claims=await asyncio.gather(*(claim() for _ in range(8)))
+    assert sum(c is not None for c in claims)==1
+    assert await calls_used(session)==1
+    generator.assert_not_awaited()
+
+
+async def test_global_concurrency_denial_refunds_unstarted_call(topic,generator,session,monkeypatch,sessionmaker_for_test):
+    from app.config import get_settings
+    from app.services.generation_budget import GenerationBusy
+    monkeypatch.setattr(get_settings(),'generation_max_concurrent',1)
+    entered,release=asyncio.Event(),asyncio.Event()
+    async def blocked(**kwargs):
+        entered.set()
+        await release.wait()
+        return GeneratedConcept(summary='Fixture',example='Fixture',model='fixture')
+    generator.side_effect=blocked
+    async def run():
+        async with sessionmaker_for_test() as other:
+            return await pool.generate_one(other,'k','m',topic,call_cap=10)
+    first=asyncio.create_task(run())
+    await asyncio.wait_for(entered.wait(),5)
+    try:
+        with pytest.raises(GenerationBusy):
+            await run()
+        assert await calls_used(session)==1
+    finally:
+        release.set()
+        await first
+    assert generator.await_count==1

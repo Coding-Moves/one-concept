@@ -18,6 +18,8 @@ from app.config import get_settings
 from app.services.generation import GenerationError, RateLimitedError, generate_concept
 from app.services.generation_budget import (
     GenerationBudgetExhausted,
+    GenerationBusy,
+    check_generation_capacity,
     reserve_generation_call,
 )
 from app.services.supply import target_for
@@ -66,7 +68,7 @@ STALE_CLAIM_MINUTES = 30
 # too rather than leaving them stuck forever.
 _REAP_STALE = text("""
     update public.concept_backlog
-       set status = 'pending', claimed_at = null
+       set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end, claimed_at = null
      where status = 'generating'
        and (claimed_at is null
             or claimed_at < now() - make_interval(mins => :max_minutes))
@@ -172,6 +174,7 @@ async def generate_one(
         claimed = (await session.execute(_CLAIM, {"topic_id": topic_id})).first()
         if claimed is not None:
             await reserve_generation_call(session, cap)
+            await check_generation_capacity(session)
         await session.commit()
     except BaseException:
         # Quota denial/DB failure/cancellation must undo the claim and its attempt.
@@ -210,7 +213,7 @@ async def generate_one(
     except GenerationError as exc:
         # Leave it pending for another attempt; give up after three so one bad
         # title cannot block the queue forever.
-        log.warning("generation failed for %s: %s", claimed.slug, exc)
+        log.warning("generation failed for %s (%s); inspect the protected backlog", claimed.slug, type(exc).__name__)
         await session.execute(
             _FAIL, {"backlog_id": claimed.id, "error": str(exc)[:500]}
         )
@@ -288,6 +291,8 @@ async def top_up(
                     call_cap=call_cap,
                     supply_target=target,
                 )
+            except GenerationBusy:
+                return TopUpResult(generated, failed, "generation capacity busy")
             except GenerationBudgetExhausted:
                 log.info("stopping: shared daily call cap of %s reached", call_cap)
                 return TopUpResult(generated, failed, "daily call cap reached")

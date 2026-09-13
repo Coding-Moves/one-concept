@@ -18,7 +18,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.db.session import SessionLocal
 from app.services.generation import RateLimitedError
-from app.services.generation_budget import GenerationBudgetExhausted
+from app.services.generation_budget import GenerationBudgetExhausted, GenerationBusy
 from app.services.pool import generate_one
 from app.services.supply import target_for
 
@@ -88,11 +88,24 @@ async def _run(topic_id: uuid.UUID) -> None:
                     break
                 try:
                     concept_id = await generate_one(
-                        session, settings.gemini_api_key, settings.gemini_model, topic_id,
-                        call_cap=settings.generation_daily_call_cap, supply_target=target,
+                        session,
+                        settings.gemini_api_key,
+                        settings.gemini_model,
+                        topic_id,
+                        call_cap=settings.generation_daily_call_cap,
+                        supply_target=target,
                     )
+                except GenerationBusy:
+                    log.info(
+                        "prefetch for topic %s stopped: generation capacity busy",
+                        topic_id,
+                    )
+                    break
                 except GenerationBudgetExhausted:
-                    log.info("prefetch for topic %s stopped: daily call cap reached", topic_id)
+                    log.info(
+                        "prefetch for topic %s stopped: daily call cap reached",
+                        topic_id,
+                    )
                     break
                 except RateLimitedError:
                     log.info("prefetch for topic %s stopped: rate limited", topic_id)

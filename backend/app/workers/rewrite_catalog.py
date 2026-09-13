@@ -21,6 +21,8 @@ from app.services.generation import (
 )
 from app.services.generation_budget import (
     GenerationBudgetExhausted,
+    GenerationBusy,
+    check_generation_capacity,
     reserve_generation_call,
 )
 
@@ -36,17 +38,51 @@ _TODO = text("""
        and t.is_active
        and coalesce(c.prompt_version, '') <> :pv
        and not exists (select 1 from public.concept_revisions r where r.concept_id=c.id
-         and r.status='draft')
+         and r.status in ('draft','generating'))
      order by c.created_at
 """)
 
-_UPDATE = text("""
-    insert into public.concept_revisions(concept_id,base_version,body)
-    select id,content_version,jsonb_build_object('title',title,'summary',cast(:summary as text),
-      'example',cast(:example as text),'curriculum',curriculum,'model',cast(:model as text),'prompt_version',cast(:pv as text))
-    from public.concepts where id=:id and content_version=:version
-      and not exists(select 1 from public.concept_revisions r where r.concept_id=:id and r.status='draft')
+_CLAIM = text("""
+    insert into public.concept_revisions(concept_id,base_version,body,status)
+    select id,content_version,'{}'::jsonb,'generating' from public.concepts c
+    where id=:id and content_version=:version and status='published'
+      and exists(select 1 from public.topics t where t.id=c.topic_id and t.is_active)
+      and not exists(select 1 from public.concept_revisions r where r.concept_id=c.id
+        and r.status in ('draft','generating')) returning id
 """)
+
+_UPDATE = text("""
+    update public.concept_revisions r set body=jsonb_build_object('title',c.title,
+      'summary',cast(:summary as text),'example',cast(:example as text),
+      'curriculum',c.curriculum,'model',cast(:model as text),'prompt_version',cast(:pv as text)),
+      status='draft'
+    from public.concepts c where r.id=:revision and r.concept_id=c.id
+      and r.status='generating' and c.content_version=r.base_version
+""")
+
+
+async def _claim(session, row, cap):
+    await session.execute(
+        text("select id from public.concepts where id=:id for update"), {"id": row.id}
+    )
+    revision = await session.scalar(
+        _CLAIM, {"id": row.id, "version": row.content_version}
+    )
+    if revision:
+        await reserve_generation_call(session, cap)
+        await check_generation_capacity(session)
+    await session.commit()
+    return revision
+
+
+async def _release(session, revision):
+    await session.execute(
+        text(
+            "delete from public.concept_revisions where id=:id and status='generating'"
+        ),
+        {"id": revision},
+    )
+    await session.commit()
 
 
 async def main() -> None:
@@ -63,6 +99,11 @@ async def main() -> None:
             log.info("no API key configured; catalog unchanged")
             return
         async with SessionLocal() as session:
+            await session.execute(
+                text(
+                    "delete from public.concept_revisions where status='generating' and created_at<now()-interval '30 minutes'"
+                )
+            )
             todo = (await session.execute(_TODO, {"pv": PROMPT_VERSION})).all()
             # Close the read transaction before the paced generation loop begins:
             # otherwise this initial SELECT's transaction stays open across every
@@ -76,10 +117,11 @@ async def main() -> None:
             for row in todo:
                 while True:
                     try:
-                        await reserve_generation_call(
-                            session, settings.generation_daily_call_cap
+                        revision = await _claim(
+                            session, row, settings.generation_daily_call_cap
                         )
-                        await session.commit()
+                        if not revision:
+                            break
                         result = await generate_concept(
                             title=row.title,
                             topic_name=row.topic_name,
@@ -87,6 +129,10 @@ async def main() -> None:
                             api_key=settings.gemini_api_key,
                             model=settings.gemini_model,
                         )
+                    except GenerationBusy:
+                        await session.rollback()
+                        log.info("shared generation capacity busy; resume on a later run")
+                        return
                     except GenerationBudgetExhausted:
                         await session.rollback()
                         log.info(
@@ -96,6 +142,7 @@ async def main() -> None:
                         )
                         return
                     except RateLimitedError as exc:
+                        await _release(session, revision)
                         streak += 1
                         if streak >= MAX_RATE_LIMIT_STREAK:
                             log.warning("giving up: %s consecutive rate limits", streak)
@@ -113,8 +160,9 @@ async def main() -> None:
                         backoff = min(backoff * 2, BACKOFF_MAX)
                         continue
                     except GenerationError as exc:
+                        await _release(session, revision)
                         # Leave it on the old prompt version; a later run retries it.
-                        log.warning("skipping %s: %s", row.title, exc)
+                        log.warning("skipping %s (%s)", row.title, type(exc).__name__)
                         failed += 1
                         break
                     streak, backoff = 0, BACKOFF_START
@@ -122,7 +170,7 @@ async def main() -> None:
                         _UPDATE,
                         {
                             "id": row.id,
-                            "version": row.content_version,
+                            "revision": revision,
                             "summary": result.summary,
                             "example": result.example,
                             "model": result.model,

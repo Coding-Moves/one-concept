@@ -247,7 +247,10 @@ async def test_stale_generating_rows_are_reclaimed(empty_generation_budget, sess
     """), {"tid": topic_id})
     await session.commit()
 
-    # minimum_per_topic=0 → no generation happens; only the reaper runs.
+    # Clear reader demand too: the bootstrap floor alone no longer controls
+    # ongoing refill. This test exercises only the stale-claim reaper.
+    await session.execute(text('delete from public.content_supply_targets'))
+    await session.commit()
     await top_up(session, api_key="k", model="m", enabled=True,
                  minimum_per_topic=0, call_cap=100)
 
@@ -258,6 +261,11 @@ async def test_stale_generating_rows_are_reclaimed(empty_generation_budget, sess
     assert rows["stranded"] == "pending", "the abandoned claim must be reclaimed"
     assert rows["pre-migration"] == "pending", "a NULL-claimed leftover is stale too"
     assert rows["in-flight"] == "generating", "a fresh claim must be left alone"
+    # This artificial live claim must not occupy a global provider slot for
+    # later tests in the shared database.
+    await session.execute(text('delete from public.concept_backlog where topic_id=:tid'), {'tid':topic_id})
+    await session.execute(text('delete from public.topics where id=:tid'), {'tid':topic_id})
+    await session.commit()
 
 
 async def test_slug_collision_does_not_mark_the_backlog_done(empty_generation_budget, session, patch_httpx):

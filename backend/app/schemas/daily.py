@@ -14,6 +14,7 @@ class ConceptOut(BaseModel):
     topic_name: str
     # Likes from other users; the client adds the viewer's own like.
     like_count: int = 0
+    content_version: int = 1
 
 
 class DailyOut(BaseModel):
@@ -31,3 +32,7 @@ class DailyExhaustedOut(BaseModel):
     assigned_for: date
     reason: str = "catalog_exhausted"
     detail: str = "You have already been assigned every available concept."
+
+
+class ReviewOut(DailyOut):
+    review_id: uuid.UUID

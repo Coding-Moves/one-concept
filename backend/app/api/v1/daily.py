@@ -60,6 +60,7 @@ async def get_daily(
             topic_slug=concept.topic_slug,
             topic_name=concept.topic_name,
             like_count=concept.like_count,
+            content_version=concept.content_version,
         ),
     )
 

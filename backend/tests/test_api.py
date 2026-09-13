@@ -372,3 +372,21 @@ async def test_state_folds_in_todays_concept(client, sessionmaker_for_test, user
     # The assignment was created by this call — the daily endpoint now agrees.
     daily = (await client.get("/v1/daily")).json()
     assert daily["concept"]["slug"] == state["daily"]["concept"]["slug"]
+
+
+async def test_review_opt_in_and_completion_contract(client, session, user):
+    await session.execute(text("""insert into public.daily_assignments(user_id,concept_id,assigned_for,completed_at)
+      select :u,id,date '2000-01-01'+(row_number() over(order by id))::int,now()
+      from public.concepts where status='published'"""), {'u':user})
+    await session.commit()
+    legacy = (await client.get('/v1/me/state?compact=true')).json()
+    assert legacy['daily'] is None and legacy['review'] is None
+    body = (await client.get('/v1/me/state?compact=true&reviews=true')).json()
+    assert body['daily'] is None and body['review']['learned'] is False
+    review_id = body['review']['review_id']
+    response = await client.post(f'/v1/reviews/{review_id}/complete',json={'user_id':str(uuid.uuid4()),'assigned_for':'2000-01-01'})
+    assert response.status_code == 200, response.text
+    assert response.json()['assigned_for']==body['today']
+    assert response.json()['stats']['total_learned']==body['stats']['total_learned']
+    assert response.json()['stats']['total_reviews']==1
+    assert (await client.get('/v1/daily')).status_code==409

@@ -44,7 +44,7 @@ async def test_never_repeats_and_reports_exhaustion(session, user):
     generation can legitimately add concepts.
     """
     catalog = await session.scalar(
-        text("select count(*) from public.concepts where status = 'published'")
+        text("select count(*) from public.concepts c join public.topics t on t.id=c.topic_id where c.status = 'published' and t.is_active")
     )
     seen = []
     for offset in range(catalog):

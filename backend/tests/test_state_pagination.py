@@ -55,7 +55,7 @@ async def test_compact_state_bounds_details_without_losing_totals(collection_cli
     assert len(before["learned"]) == len(before["saved"]) == 365
     assert len(after["learned"]) == len(after["saved"]) == 50
     assert len(after["likes"]) == len(after["bookmarks"]) == 365
-    assert after["stats"] == before["stats"] == {"current": 365, "longest": 365, "total_learned": 365}
+    assert after["stats"] == before["stats"] == {"current": 365, "longest": 365, "total_learned": 365, "total_reviews": 0}
     assert after["learned_before_window"] == {"Computer Science": 315}
     assert after["history_next_cursor"] and after["saved_next_cursor"]
     assert len(compact.content) < len(legacy.content) / 2

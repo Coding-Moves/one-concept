@@ -74,6 +74,8 @@ _CLAIM_DUE = text("""
                 where da.user_id = o.user_id
                   and da.assigned_for = o.local_date
                   and da.completed_at is not null)
+           and not exists (select 1 from public.daily_reviews r
+               where r.user_id=o.user_id and r.assigned_for=o.local_date and r.completed_at is not null)
            and not exists (
                -- A finished CURRENT day also silences yesterday's late slot: the
                -- push says "today's concept is waiting", and past midnight the
@@ -82,6 +84,8 @@ _CLAIM_DUE = text("""
                 where da.user_id = o.user_id
                   and da.assigned_for = o.local_now::date
                   and da.completed_at is not null)
+           and not exists (select 1 from public.daily_reviews r
+               where r.user_id=o.user_id and r.assigned_for=o.local_now::date and r.completed_at is not null)
     )
     insert into public.reminder_log (user_id, local_date, slot)
     select user_id, local_date, slot from due

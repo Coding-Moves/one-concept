@@ -31,7 +31,11 @@ _SIGNAL = text("""
 
 
 async def signal_reader(
-    session: AsyncSession, user_id: uuid.UUID, topic_id: uuid.UUID
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    topic_id: uuid.UUID,
+    *,
+    commit: bool = True,
 ) -> None:
     settings = get_settings()
     await session.execute(
@@ -44,7 +48,8 @@ async def signal_reader(
             "active_days": settings.content_active_days,
         },
     )
-    await session.commit()
+    if commit:
+        await session.commit()
 
 
 async def plan_active_readers(session: AsyncSession) -> None:
@@ -54,6 +59,8 @@ async def plan_active_readers(session: AsyncSession) -> None:
         text("""
       with active as (
         select distinct user_id from public.daily_assignments
+        where assigned_at>=now()-make_interval(days=>:days)
+        union select user_id from public.daily_reviews
         where assigned_at>=now()-make_interval(days=>:days)
       ), demand as (
         select ut.topic_id, coalesce(max(seen.n),0)::int+:reserve as target
@@ -67,7 +74,8 @@ async def plan_active_readers(session: AsyncSession) -> None:
       )
       insert into public.content_supply_targets(topic_id,target_count,expires_at)
       select topic_id,target,now()+make_interval(days=>:days) from demand
-      on conflict(topic_id) do update set target_count=excluded.target_count,
+      on conflict(topic_id) do update set target_count=greatest(excluded.target_count,
+        case when content_supply_targets.expires_at>now() then content_supply_targets.target_count else 0 end),
         requested_at=now(),expires_at=excluded.expires_at
     """),
         {

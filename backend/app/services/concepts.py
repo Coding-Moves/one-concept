@@ -46,4 +46,5 @@ async def get_concept_out(db: AsyncSession, user_id, slug: str) -> ConceptOut | 
         topic_slug=topic_slug,
         topic_name=topic_name,
         like_count=likes,
+        content_version=concept.content_version,
     )

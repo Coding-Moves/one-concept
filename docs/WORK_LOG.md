@@ -28,6 +28,29 @@ claims as completed work.
   inventory; explain its five proposed work areas, benefits, tradeoffs and
   undecided parameters. This is design documentation, not authorization to
   implement #195, generate content, change production or close that issue.
+- **Delivered:** a 49-page handbook with 47 chapters and 29 vector diagrams,
+  clickable contents/bookmarks, pinned source links, credential names/purposes
+  without values, a seven-day study guide, and final before/after Q&A. Current
+  refill behavior is distinguished from the proposed sustainable design in #195.
+  Reproducible source and build instructions are in `docs/handbook/`; the local
+  output is `output/pdf/one-concept-engineering-handbook.pdf` (ignored by Git).
+- **Commits:** `d04df36` records scope; `15fd0a3` explains the current app;
+  `159b564` adds the #195 comparison and Q&A; `eff0673` adds the PDF renderer,
+  diagrams, build guide and navigation. This validation entry is committed as
+  `docs: record handbook validation and handoff`.
+- **Validation (passed):** rebuilt and rendered all 49 pages with Poppler;
+  visually reviewed every page and individually rechecked revised diagrams.
+  Final automated checks confirm 29 figures, 291 link annotations, 176 valid
+  local source-path references, correct chapter order, text within page bounds,
+  valid build-script syntax and no secret-looking token patterns. README local
+  links and `git diff --check` pass. Minimum body/table fonts are 9.13/8.1 pt.
+- **Limits / not run:** application tests were not rerun for documentation/layout
+  work. Live database contents, actual cron/SMTP settings, inbox delivery and
+  physical-device push delivery were not tested. The handbook labels historical
+  test evidence, dated issue inventory and future-design decisions explicitly.
+- **Handoff:** prepare one documentation PR into `develop`, preserve its focused
+  commits and leave #195 open for its separate implementation. Another task's
+  appended issue-creation note in this shared log remains unstaged and preserved.
 
 ## Previous release handoff (historical)
 

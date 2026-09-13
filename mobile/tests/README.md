@@ -118,5 +118,9 @@ Use dummy API/Auth configuration pointing to `http://127.0.0.1:4781` (API path
 review labelling, future-subject discovery, offline completion/restart,
 reconnect, separate Stats totals, and enlarged text at a narrow viewport.
 
+Add `--reject-review` to exercise an expired offline completion (409) followed
+by a failed state refresh (503). The UI and disk must restore the uncompleted
+review and exact pre-tap totals before and after restart, in both themes.
+
 Physical-device font scaling, screen readers and native storage still require
 manual acceptance. Syncing remains foreground/reopen JS work on the current APK.

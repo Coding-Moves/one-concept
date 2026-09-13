@@ -7,6 +7,23 @@ claims as completed work.
 
 ## Current status
 
+### PR #197 review correction
+
+- Fixed rejected offline review replay in the same PR. Pre-completion statistics
+  now survive restart; a terminal replay rejection restores the matching activity
+  and its exact totals on disk before removing the queued intent. A failed refresh
+  returns the corrected cache immediately. Newer activities and unrelated saves
+  are preserved; sign-out keeps its existing write fence.
+- The new `--reject-review` browser regression fails on the original export and
+  passes on the fixed export in both themes, including failed refresh and restart.
+  The normal successful replay browser scenario also passed in both themes.
+- Validation: Node 24 typecheck, **37 tests passed with no skips**, web export,
+  browser scenarios and `git diff --check`. Backend/native code is unchanged;
+  backend tests and physical-device checks were not rerun for this JS-only fix.
+- Focused implementation/test commit: `fix: roll back rejected offline reviews
+  before removing queued intent`. Test instructions and this handoff are a
+  separate documentation commit. No merge, release or production change.
+
 ## Sustainable learning (#195) — 2026-09-13
 
 - Implemented all five lifecycle work areas in one feature PR targeting `develop`:

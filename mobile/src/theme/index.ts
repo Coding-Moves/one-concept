@@ -17,6 +17,8 @@ export interface ThemeColors {
   primary: string;
   primaryPressed: string;
   onPrimary: string;
+  offlineBackground: string;
+  offlineText: string;
   success: string;
   successSurface: string;
   streak: string;
@@ -37,6 +39,8 @@ export const lightColors: ThemeColors = {
   primary: '#6366F1',
   primaryPressed: '#4F46E5',
   onPrimary: '#FFFFFF',
+  offlineBackground: '#3730A3',
+  offlineText: '#FFFFFF',
   success: '#16A34A',
   successSurface: '#E9F8EF',
   streak: '#F97316',
@@ -56,6 +60,8 @@ export const darkColors: ThemeColors = {
   primary: '#818CF8',
   primaryPressed: '#6366F1',
   onPrimary: '#FFFFFF',
+  offlineBackground: '#C7D2FE',
+  offlineText: '#1E1B4B',
   success: '#34D399',
   successSurface: '#10291F',
   streak: '#FB923C',

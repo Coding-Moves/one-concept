@@ -19,7 +19,7 @@ type Status = 'loading' | 'ready' | 'error';
 export function ConceptDetailScreen() {
   const navigation = useNavigation();
   const { params } = useRoute<RouteProp<RootStackParamList, 'ConceptDetail'>>();
-  const { conceptId, title } = params;
+  const { conceptId } = params;
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
@@ -63,8 +63,8 @@ export function ConceptDetailScreen() {
   return (
     <View style={styles.screen}>
       <View style={styles.topBar}>
-        <Text style={styles.heading} numberOfLines={1}>
-          {title ?? 'Concept'}
+        <Text style={styles.heading} maxFontSizeMultiplier={1.5}>
+          Concept
         </Text>
         <Pressable
           onPress={() => navigation.goBack()}
@@ -109,7 +109,7 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.lg,
     },
     heading: { ...typography.title, fontSize: scaleFont(22), color: colors.text, flexShrink: 1 },
-    closeButton: { padding: spacing.xs },
+    closeButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
     content: { paddingHorizontal: spacing.lg, paddingBottom: spacing.xl, gap: spacing.md },
     center: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.xl },
   });

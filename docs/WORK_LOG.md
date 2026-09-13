@@ -53,9 +53,63 @@ claims as completed work.
   from `codex/195-sustainable-learning` into `develop`, with the full architecture,
   validation and rollout detail. Local documentation links and whitespace checks
   passed. No merge or production release was performed. The final bookkeeping
-  commit is `docs: record sustainable learning PR handoff`.
+  commit is `docs: record sustainable learning PR handoff`. Merged the latest
+  documentation-only `develop` (`88eb2de`) afterward, preserving both handbook
+  and feature log entries; no application code changed during conflict resolution.
 
-## Previous release status
+## App engineering handbook — 2026-09-13
+
+- **Outcome:** create a complete printable PDF explaining the app from beginner
+  to advanced level, with layer diagrams, daily selection examples, catalog
+  exhaustion/refill, notifications, email, credentials by purpose, release flow,
+  tradeoffs, and a seven-day study digest.
+- **Scope:** documentation and a reproducible PDF source only; no application,
+  production configuration, content generation, or messaging changes.
+- **Branch/base:** `codex/app-engineering-handbook` from freshly fetched
+  `origin/develop` at `3cc5af3`. GitHub read-only checks confirm #191 and #193
+  merged; `main` is `2e537f6`. Older release status below is historical.
+- **Planned commits:** scope; source-based handbook; PDF builder and navigation;
+  validation and PR handoff. Generated PDFs/previews remain untracked outputs.
+- **Evidence:** inspect current implementation before prose, verify relevant
+  provider documentation, distinguish code/defaults from live service settings,
+  and omit credential values. Render and inspect every final PDF page.
+- **Scope addition:** the owner requested discussion of future issue #195 and
+  concluding before/after Q&A. Read the open issue and its dated production
+  inventory; explain its five proposed work areas, benefits, tradeoffs and
+  undecided parameters. This is design documentation, not authorization to
+  implement #195, generate content, change production or close that issue.
+- **Delivered:** a 49-page handbook with 47 chapters and 29 vector diagrams,
+  clickable contents/bookmarks, pinned source links, credential names/purposes
+  without values, a seven-day study guide, and final before/after Q&A. Current
+  refill behavior is distinguished from the proposed sustainable design in #195.
+  Reproducible source and build instructions are in `docs/handbook/`; the local
+  output is `output/pdf/one-concept-engineering-handbook.pdf` (ignored by Git).
+- **Commits:** `d04df36` records scope; `15fd0a3` explains the current app;
+  `159b564` adds the #195 comparison and Q&A; `eff0673` adds the PDF renderer,
+  diagrams, build guide and navigation. This validation entry is committed as
+  `docs: record handbook validation and handoff`.
+- **Validation (passed):** rebuilt and rendered all 49 pages with Poppler;
+  visually reviewed every page and individually rechecked revised diagrams.
+  Final automated checks confirm 29 figures, 291 link annotations, 176 valid
+  local source-path references, correct chapter order, text within page bounds,
+  valid build-script syntax and no secret-looking token patterns. README local
+  links and `git diff --check` pass. Minimum body/table fonts are 9.13/8.1 pt.
+- **Limits / not run:** application tests were not rerun for documentation/layout
+  work. Live database contents, actual cron/SMTP settings, inbox delivery and
+  physical-device push delivery were not tested. The handbook labels historical
+  test evidence, dated issue inventory and future-design decisions explicitly.
+- **Handoff:** [PR #196](https://github.com/Coding-Moves/one-concept/pull/196)
+  targets `develop` with the focused commits above plus validation `6df5ffc`.
+  Preserve the commits; #195 remains open for its separate implementation.
+  The PDF is delivered locally and the PR provides its reproducible source.
+  Another task's appended issue-creation note remains unstaged and preserved.
+- **Publication:** the initial automatic-review destination concern was resolved
+  by verifying the existing public origin, owner ADMIN access and public-source
+  scope without credential values. The approved push used the existing GitHub
+  credential helper after plain HTTPS authentication was unavailable. No merge,
+  deployment or production mutation was performed.
+
+## Previous release handoff (historical)
 
 - [Release PR #191](https://github.com/Coding-Moves/one-concept/pull/191) is open
   from **develop → main** for **1.8.0**, with the six-benefit one-time card and

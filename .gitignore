@@ -18,3 +18,7 @@ venv/
 
 # Firebase service-account keys are real secrets — never commit them
 *firebase-adminsdk*.json
+
+# Generated handbook PDFs and render/QA intermediates
+/output/pdf/
+/tmp/pdfs/

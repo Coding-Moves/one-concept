@@ -22,6 +22,15 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.9.1',
+    highlights: [
+      'Keep your learning streak going with daily reviews when no new lesson is available.',
+      'Explore your full learning history, load older lessons, and search what you have loaded.',
+      'Pull or tap to refresh your learning screens, with downloaded lessons available offline.',
+      'Enjoy clearer offline notices and profile details that adapt to larger text.',
+    ],
+  },
+  {
     version: '1.9.0',
     highlights: [
       'Keep learning with daily reviews when you have explored the available new lessons.',

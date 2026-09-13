@@ -34,7 +34,8 @@ claims as completed work.
   stale-response fencing. Temporary instrumentation was removed from the source.
 - Native pull gestures, Dynamic Type, TalkBack/VoiceOver still need device checks.
   Search covers loaded History pages; older bodies require prior download.
-  PR closes the three issues when merged. No manual issue closure or release yet.
+  [PR #198](https://github.com/Coding-Moves/one-concept/pull/198) targets `develop`
+  and closes the three issues when merged. No manual issue closure or release yet.
   Release preparation and its one-time What's New card follow the feature merge.
 
 ### PR #197 review correction

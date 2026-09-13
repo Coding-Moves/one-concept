@@ -7,6 +7,19 @@ claims as completed work.
 
 ## Current status
 
+### Permanent release/card requirement and 1.9.1 handoff
+
+- Owner reiterated that every release PR must contain both the version bump and
+  its matching one-time What's New card, and explicitly document both in that PR.
+  Strengthened AGENTS.md and RELEASING.md with final-diff verification; this applies
+  automatically to future releases without another reminder.
+- Release [#205](https://github.com/Coding-Moves/one-concept/pull/205) includes
+  version 1.9.1, its four highlights, and this durable rule. The existing dismissal
+  remains once per version; preview/card checks are recorded below. Main is not
+  merged and no production OTA is published by this work.
+- Documentation validation: referenced paths exist and whitespace checks passed.
+
+
 ### Requested 1.9.1 release and visible What's New verification
 
 - Owner requested another version/release PR after 1.9.0 merged but was not

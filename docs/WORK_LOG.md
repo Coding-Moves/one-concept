@@ -49,7 +49,11 @@ claims as completed work.
   and source review are required; title-similarity checks do not prove originality.
   Operational transitions appear in protected job output, with no external alerts
   configured. Production backup/Auth restore remains a separate live rehearsal.
-- PR publication and final local documentation checks are pending below.
+- [PR #197](https://github.com/Coding-Moves/one-concept/pull/197) is open for review
+  from `codex/195-sustainable-learning` into `develop`, with the full architecture,
+  validation and rollout detail. Local documentation links and whitespace checks
+  passed. No merge or production release was performed. The final bookkeeping
+  commit is `docs: record sustainable learning PR handoff`.
 
 ## Previous release status
 

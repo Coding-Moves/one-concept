@@ -7,6 +7,29 @@ claims as completed work.
 
 ## Current status
 
+### #207 XML parser patch and mobile publication status
+
+- Owner requested a fix PR and the new version/card on the phone and GitHub.
+- Confirmed the audit's high finding in @xmldom/xmldom 0.8.14, used by
+  expo-updates → @expo/plist. A targeted lockfile update selects compatible
+  0.8.15 without changing Expo, native runtime or app version (still 1.9.1).
+- Audit before: one high, zero critical, 18 moderate. After: zero high/critical,
+  18 moderate; the XML finding is absent. Moderate findings remain disclosed.
+- `7f6169b` patches the dependency. Clean npm install, Node 24 TypeScript checks,
+  all 39 tests and clean Android/iOS/web exports passed. A focused runtime check
+  confirmed malformed PI rejection with the supported serializer options and
+  preserved Expo plist roundtrip values. Initial ad-hoc checks used the wrong
+  API signature/default export; corrected checks pass. No app source changed.
+- Browser checks in both themes passed: upgrades from 1.8.0/1.9.0 show four
+  1.9.1 highlights and dismissal survives reload. Physical-device OTA unverified.
+- PR [#208](https://github.com/Coding-Moves/one-concept/pull/208) targets develop;
+  the fix and this validation record use separate commits. GitHub default-branch
+  dependency alerts remain a separate scope from the mobile npm audit result.
+- Production 1.9.1 release publication is still pending. Owner sees green Railway
+  deployments but cannot confirm all worker revisions; in-app Railway view stalls.
+  Never attest an unverified worker revision merely to dispatch the release.
+
+
 ### Permanent release/card requirement and 1.9.1 handoff
 
 - Owner reiterated that every release PR must contain both the version bump and
@@ -14,9 +37,10 @@ claims as completed work.
   Strengthened AGENTS.md and RELEASING.md with final-diff verification; this applies
   automatically to future releases without another reminder.
 - Release [#205](https://github.com/Coding-Moves/one-concept/pull/205) includes
-  version 1.9.1, its four highlights, and this durable rule. The existing dismissal
-  remains once per version; preview/card checks are recorded below. Main is not
-  merged and no production OTA is published by this work.
+  version 1.9.1 and its four highlights. The durable rule landed on develop
+  through #206 after #205 was merged by the owner. The existing dismissal
+  remains once per version; preview/card checks are recorded below. Main now
+  includes 1.9.1, but no production OTA has been published for it.
 - Documentation validation: referenced paths exist and whitespace checks passed.
 
 

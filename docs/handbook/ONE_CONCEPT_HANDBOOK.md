@@ -843,7 +843,7 @@ Use this as a one-week self-study plan. It is part of the PDF, not an automation
 | 4 - Catalog and AI | 18-21 | Reproduce the 25-concept example on paper. Explain why unread=0 does not mean published=0. |
 | 5 - Notifications | 22-25 | Draw registration and delivery separately. Walk through the three reminder times and an offline completion. |
 | 6 - Offline and release | 26-30 | Trace an offline save through restart/replay, then a change from develop to compatible production OTA. |
-| 7 - Engineering judgment | 31-39 | Explain costs, current limits and evidence boundaries. Present a prioritized improvement proposal. |
+| 7 - Engineering judgment | 31-47 | Explain current limits, then trace issue #195's future design and answer the before/after scenarios. Allow extra study time for this final day. |
 
 **Weekly recap to keep:** the mobile app is the presentation and cache; Supabase Auth establishes identity; FastAPI owns application rules; PostgreSQL owns durable records and concurrency constraints; Gemini writes shared content; Python workers decide refills/reminders; Expo and platform push services deliver notifications; GitHub/EAS/Railway deliver software.
 
@@ -955,6 +955,7 @@ Sources: `docs/CODEBASE_MAP.md`; `docs/WORK_LOG.md`.
 | Source inspected | Mobile stack/screens/state, Auth, API, SQL, selection, generation, reminders, caches and release workflows |
 | GitHub checked live | #191 and #193 merged; v1.8.0 exists; release/migration/APK workflow success; audit workflow failure; #187 open draft |
 | Historical record | 1.8.0 tests, migration 0010 production verification, owner-reported template installation |
+| Issue #195 checked live | Open future plan; its dated 125-lesson inventory is attributed to the issue in chapter 40, not independently re-queried here |
 | Not verified live | Railway deployment/cron settings, current catalog counts, model/key overrides, provider limits for this account, SMTP delivery, push credentials/receipts, phone adoption |
 | Not executed | Production SQL, real Gemini generation, real reminders/emails, mobile/backend regression suites for this documentation-only task |
 
@@ -972,3 +973,210 @@ Provider documentation checked on the snapshot date supports the platform behavi
 Diagrams are explanatory models drawn from these flows, not screenshots or measurements of live infrastructure. User names, week schedules and numeric runway exercises are examples. Recommendations are separated from implemented behavior. The most important finding is the distinction between shared published stock and each learner's unassigned stock.
 
 Sources: `docs/WORK_LOG.md`; `docs/CODEBASE_MAP.md`; `mobile/app.config.js`; `backend/app/config.py`.
+
+# 40 | Issue #195: sustainable learning beyond exhaustion
+
+**Status: proposed future design, open issue, not implemented by this handbook.** Issue #195 is titled "[P1] Sustain daily learning with continuous replenishment, curriculum growth, and review." It addresses the finite-catalog failure as a content lifecycle problem, rather than increasing 25 to another fixed ceiling.
+
+The issue reports a read-only production inventory dated 13 September 2026. This table reproduces that issue's reported snapshot; this PDF task did not independently query production. It does not prove the current worker schedule or generation switches are enabled.
+
+| Subject | Published | Pending titles | Failed items |
+| --- | --- | --- | --- |
+| Artificial Intelligence | 25 | 5 | 4 |
+| Computer Science | 25 | 3 | 6 |
+| Linux & Systems | 25 | 3 | 6 |
+| Mathematics | 25 | 5 | 4 |
+| Software Engineering | 25 | 3 | 6 |
+| Total | 125 | 19 | 26 |
+
+The 150-title original queue consists of 105 generated entries, 19 pending and 26 failed entries. Together with the 20 initial seeded lessons, that explains 125 published lessons. Pending and failed rows are not ready-to-read stock. The supply is finite even if every remaining title could eventually be published.
+
+<!-- diagram: future_lifecycle -->
+
+The five work areas are: ongoing replenishment based on reader availability; an expandable reviewed curriculum; useful review/exploration when fresh content is unavailable; preservation of the shared library and bounded costs; and protected operational reporting with actionable alerts.
+
+**Benefit for learners:** a temporary writing or provider outage need not turn Today into a dead end. **Benefit for the owner:** content demand, queue health and publishing become visible and manageable. **Benefit for engineering:** the proposal preserves JWT identity, backend writes, no repeated new assignments and shared budgets, while introducing explicit records for the new behaviors.
+
+The issue requests eventual implementation in one cohesive PR into develop with focused commits and regression coverage. This handbook only explains that design; its documentation PR is not the implementation PR for #195.
+
+Future-design source: [Issue #195](https://github.com/Coding-Moves/one-concept/issues/195), read 13 September 2026; no comments were present.
+
+# 41 | Future replenishment: reserve, demand and cadence
+
+**The proposed change:** keep the initial published-catalog target separate from ongoing reader supply. Use the daily selector's eligibility rule when measuring unseen content: previously assigned concepts do not count as new, even when they were skipped.
+
+<!-- diagram: runway -->
+
+The issue suggests considering a **60-90-day reserve per subject for experienced active readers**. This is a starting proposal, not a configured guarantee. The implementation must choose an affordable target, an active-reader definition, consumption assumptions, and the warning threshold before enabling generation.
+
+| Measure | Illustrative meaning, not a chosen production setting |
+| --- | --- |
+| Remaining eligible stock | 12 approved concepts never assigned to an experienced reader in a subject |
+| Consumption assumption | 1 new concept from that subject per day for a subject-only daily reader |
+| Estimated reserve | 12 / 1 = 12 days; a reader with several follows consumes each subject differently |
+| Reserve target | A chosen goal such as 60 days; the issue also suggests considering 90 |
+| Refill gap | At 1/day, growing 12 to 60 requires 48 additional eligible approved concepts |
+| Sustainable cadence | Ongoing approved publication must match or exceed relevant consumption, or the reserve shrinks |
+
+If consumption is one/day and approved publication is one/day, the reserve stays roughly level; it does not build a depleted reserve back to 60. If publication is two/day during recovery, net growth is one/day before failed drafts and other constraints. These are simple planning examples, not projected real throughput. With no approved output, a 60-day reserve buys about 60 such consumption days, not unlimited new content.
+
+**Durable coalescing:** store one bounded subject refill goal/work request, or use an equivalent durable scheduled mechanism. Ten users and three API processes reporting low supply should update the same bounded objective, rather than add thirteen new batches or repeatedly raise the target. Workers claim work safely and consume the existing shared budget.
+
+**Avoid misleading averages:** new accounts may have 125 unseen concepts while long-time readers have zero. An average across all users hides that failure. The final design needs a definition of experienced active readers and an explicit aggregation rule, such as a selected low-availability cohort or percentile. Those are design options, not decisions already made in #195.
+
+Daily API reads continue returning stored content quickly. Supply aggregation belongs in bounded background work, not a scan of every user's history on every phone open.
+
+Future-design source: [Issue #195, work areas 1 and 4](https://github.com/Coding-Moves/one-concept/issues/195).
+
+# 42 | Future curriculum: plan, draft, review, publish
+
+The proposal replaces a finite list of titles with a repeatable curriculum-maintenance process. Each subject can contain foundations, intermediate concepts and advanced applications, with learning objectives, stable identities, difficulty and prerequisites where useful.
+
+<!-- diagram: editorial -->
+
+| Stage | What an operator does | What becomes learner-visible |
+| --- | --- | --- |
+| Plan/import titles | Extend subject coverage in reviewed batches; check exact and likely semantic duplicates | Nothing yet; a title is not a lesson |
+| Draft | Use AI assistance or editorial writing with references and version information | Draft stays separate from published material |
+| Review | Check explanation/example accuracy, usefulness, objective and overlap | Only approved content becomes eligible |
+| Publish | Release an approved version into the shared catalog | Eligible users can receive it on later selections |
+| Correct | Review a revision while existing content remains available | Stable references survive; approved correction can replace the current reading version |
+
+Different titles can describe the same idea. Unique slugs catch exact identifiers but do not establish semantic novelty. The proposed workflow should flag likely overlaps for review instead of counting a reworded duplicate as another day of meaningful new learning.
+
+**Handling the 26 failed items:** group failures by cause, inspect the relevant records and fix the cause before retrying. A stale claim, duplicate slug, provider failure and invalid text need different responses. Preserve attempts and budget rules; blindly resetting every failed row would risk repeated spending without improving quality.
+
+**Stable identities and versions:** keep existing concept IDs/slugs, saved references and assignment history. A corrected explanation should not create a fake "new concept" just to gain another catalog count. Explicit content versions make it possible to reason about cached older text, editorial history and what a learner reviewed. The exact version schema and cache invalidation policy remain implementation decisions.
+
+The issue asks for a responsible operator and recurring content maintenance. Sustainable generation also requires sustainable title planning and review capacity. Producing hundreds of unreviewed drafts does not satisfy a reserve of approved lessons.
+
+Prerequisites in curriculum metadata do not automatically create an ordered or adaptive daily selector. The implementation must define how, if at all, prerequisites affect eligibility and existing users. The issue establishes structured curriculum goals; it does not specify a complete adaptive teaching algorithm.
+
+Future-design source: [Issue #195, work area 2](https://github.com/Coding-Moves/one-concept/issues/195).
+
+# 43 | Future daily practice and honest progress metrics
+
+When a fresh lesson is unavailable, Today should offer **Review a previous lesson** and **Explore another subject** when those options exist. Reviews should draw from previously completed lessons, favor ideas not reviewed recently, and clearly identify the activity as review.
+
+<!-- diagram: review_schema -->
+
+| Metric or record | Today | Proposed #195 behavior |
+| --- | --- | --- |
+| New assignment | One new concept per user/date; never repeat a concept for that user | Preserve these constraints |
+| Review activity | No distinct durable review model | Add a separate persistent activity/review record |
+| Unique concepts learned | Completed new assignments | Review does not increase this count |
+| Review total | Not tracked separately | Count completed review activities separately |
+| Daily learning streak | Consecutive completed assignment dates | A completed new lesson or qualifying review can satisfy the day's activity |
+| Mere card open | Not learned | Still not a completed activity |
+
+**Example:** Ali has 125 unique concepts learned and a 10-day streak. On day 11 there is no fresh eligible lesson, so he completes a labeled review. The intended result is 125 unique concepts, one additional completed review, and an 11-day activity streak. Sara receives a fresh lesson and completes it; her unique count rises by one. Their activities differ, but both practiced that day.
+
+A useful conceptual model is a separate activity ledger referencing the user, concept, activity kind, assigned local date and completion state. That is an explanatory model, not a final table or API contract. Exact SQL/API design is not fixed in the issue. The important guarantees are durable identity, stable daily activity, idempotent completion and no duplicate new-concept assignment.
+
+Changing streak semantics requires explicit documentation and compatibility handling. Preserve past assignments and completed days. For the new metric, completed new/review activities can contribute a distinct set of local dates; two completions on the same date must not earn two streak days. Show the difference between unique knowledge coverage and repeated practice.
+
+If a user has no completed history, there may be nothing eligible to review. The app must show an honest unavailable state and retry/exploration options rather than invent content or promise a new lesson at an unverified time. The no-repeat promise still applies to **new assignments**, while repeats are intentional and labeled in review.
+
+Future-design source: [Issue #195, work area 3](https://github.com/Coding-Moves/one-concept/issues/195).
+
+# 44 | Future review flow: two devices, offline and rollout
+
+<!-- diagram: review_flow -->
+
+The intended review experience should retain the app's current responsiveness without weakening server authority. A completed review needs one logical identity that can survive retries, two-device access and offline replay. A client timestamp must not become permission to backdate arbitrary learning.
+
+| Scenario | Proposed required behavior |
+| --- | --- |
+| Two devices open the same day's activity | Both resolve a stable activity; no competing daily choices that overwrite one another. |
+| A completion is tapped twice | One logical completion and one day's streak credit. |
+| A cached review is completed offline | Persist account-scoped intent and reconcile safely when allowed by the defined day/grace rules. |
+| New content appears during review | Keep the activity in progress stable; do not swap cards or count the day twice. |
+| Sign-out occurs during replay | Clear account data and reject late old-account callbacks. |
+| Reviewed lesson is corrected | Preserve concept references and apply an explicit content-version/cache policy. |
+| Neither fresh content nor a cached review body exists | Honest unavailable/retry state; no invented lesson body. |
+
+**Decisions still needed:** whether offline review eligibility/activity identity is prepared during an earlier online session; exactly how review day/grace rules map to the current completion behavior; whether one active activity is allowed per user/day or more activities share one daily credit; how delayed completions are reconciled. Issue #195 demands consistent, idempotent behavior but does not settle every protocol detail.
+
+A practical rollout sequence would be: add new immutable migrations and backward-compatible backend support; preserve legacy assignments and metrics; release the new client/cache/outbox behavior; verify controlled scenarios; enable the new replenishment/review policy gradually with measured limits. This sequence is an engineering recommendation, not a deployment performed here.
+
+Old APKs and offline queues must retain valid semantics during the transition. Existing `POST /daily/complete` behavior cannot silently start completing unrelated reviews for legacy clients. New activity contracts should make the target clear. Native changes, if implementation introduces them, require the native release procedure; a review feature does not automatically mean a new APK is required.
+
+The issue requires at least a year of simulated multi-user activity with outages, replenished planning queues, different follows and bounded generation. That long simulation checks whether the design stays useful beyond the original catalog, not just whether day 126 happens to pass.
+
+Future-design source: [Issue #195, work area 3 and implementation plan](https://github.com/Coding-Moves/one-concept/issues/195).
+
+# 45 | Future content operations: visible and bounded
+
+Sustainability needs both product behavior and an operating process. Issue #195 asks for a minimal protected operator report/view, a responsible maintainer and a runbook. It does not require a separate large analytics platform; broader crash/metrics work remains linked to #161.
+
+<!-- diagram: content_ops -->
+
+| Signal | What it helps the owner decide |
+| --- | --- |
+| Published/approved supply and reader availability | Whether content exists but engaged readers have exhausted it |
+| Estimated reserve days and low watermark | Whether planned publication can keep pace with consumption |
+| Planned/pending/failed/stale work | Whether the bottleneck is ideas, writing, validation or a stopped worker |
+| Last successful generation and publication | Whether drafts are being produced but no approved content is reaching users |
+| Daily reserved calls, retry/limit state | Whether provider spending or quota is stopping progress |
+| Generation enabled and schedule health | Whether the system is deliberately paused or unexpectedly inactive |
+
+Alerts should identify actionable conditions, deduplicate repeated failures and report recovery. A routine healthy pass should not repeatedly notify the operator. This is proposed **operator alerting**, separate from current learner reminders and Supabase account emails. The issue does not select an alert transport/provider or authorize sending new messages today.
+
+The runbook should cover title import, review/publication, correction, failure inspection, schedule/config verification, pausing generation and restoration from a tested backup. Reports must be restricted to authorized maintainers and avoid exposed credentials, sensitive raw errors and user-identifying details.
+
+**Cost tradeoff:** reviews let the product stay useful without forcing a paid model call whenever a learner opens Today. New approved lessons still serve every eligible reader. A reserve and extra editorial stages increase storage, operator effort and planned generation. The shared Pacific-day ledger remains in place; a 60-90-day goal does not override an affordable daily cap.
+
+**How I would judge success:** experienced readers have a monitored supply buffer; supply failures produce clear operational causes; outages allow eligible review practice; unique learning counts remain honest; repeated opens/workers cannot grow jobs without bound. A permanently empty title queue plus an ever-growing counter is not sustainability. Neither is a large pile of unreviewed drafts.
+
+Future-design source: [Issue #195, work areas 4 and 5](https://github.com/Coding-Moves/one-concept/issues/195).
+
+# 46 | Before and after: the design comparison
+
+The right-hand column describes the intended outcome of issue #195 after a complete, validated implementation. It is not the current app and should not be presented to learners as an already-shipped promise.
+
+| Concern | Before: current source | After: intended #195 design |
+| --- | --- | --- |
+| Meaning of 25 | Shared target can stop refilling | Initial catalog size separated from continuing reserve/cadence |
+| Content supply signal | Global stock plus a personal trigger with a global stop gate | Experienced active readers' eligible supply, measured in background |
+| Many users run low | Process-local prefetch deduplication | Durable coalesced per-subject work with a bounded persistent goal |
+| Planned curriculum | Finite seeded titles | Repeatable reviewed import/extension workflow |
+| AI quality | Format/style checks then publication | Draft separated from approved publication, with factual/usefulness review |
+| Same idea, different title | Unique slugs alone do not detect semantic overlap | Likely duplicates surfaced for review |
+| Fresh catalog exhausted | Global fallback, then no daily activity | Honest review/explore choices when available |
+| Repetition | Cannot create a repeat new assignment | Preserve that rule; intentional labeled reviews use separate records |
+| Streak during content gap | No assignment completion can break the run | A completed eligible review can provide daily activity credit |
+| Unique learned total | New completions | Still unique new completions; review total shown separately |
+| Content corrections | Shared body can change on refresh | Stable concept identity plus explicit review/version history |
+| Offline review | No distinct review workflow | Cached bodies and account-scoped idempotent review replay |
+| Model outage | Existing unseen content works until exhausted | Stored fresh content or eligible review; no synchronous model wait |
+| Owner visibility | Logs and existing counters | Protected supply/queue/budget/worker report and actionable alerts |
+| Spending control | Existing shared cap, switches and claims | Preserve them; reserve goals cannot create unbounded calls |
+
+**Decisions to document before enabling the future system:** the active/experienced-reader definition; reserve target and publication assumptions; semantic-duplicate review process; approval ownership; activity identity and timezone/grace contract; metric names; compatibility and cache-version policy; alert transport and thresholds; rollout/backup/disable procedure.
+
+**Benefit with a limit:** the proposal makes learning more resilient and content maintenance more deliberate. It cannot guarantee an endless stream of accurate fresh lessons with no editorial labor, no provider budget and no planned curriculum. Reviews are a useful fallback and learning activity, not evidence that new supply is healthy.
+
+Future-design source: [Issue #195](https://github.com/Coding-Moves/one-concept/issues/195); interpretations and rollout suggestions in chapters 41-45 are explicitly labeled.
+
+# 47 | Final Q&A: before and after issue #195
+
+| Question | Before: what happens now? | After: what #195 intends |
+| --- | --- | --- |
+| I finish all 25 AI lessons. What is tomorrow? | Other eligible followed/global content, or exhaustion. Refill can stop because shared stock is already 25. | Reader availability can drive bounded refill; if fresh content is not ready, offer eligible review/exploration. |
+| Do Ali and Sara still get different lessons? | They can; their follows and histories produce separate assignments. | Yes, progress stays personal and content stays shared. Review and new activities may also differ. |
+| Do we generate a new lesson separately for each person? | No, content is shared. | Still no. Grow the curriculum once and reuse each approved concept across eligible readers. |
+| What if everyone runs low together? | Several processes can trigger work; database claims protect backlog rows and budget. | Coalesce demand into durable bounded subject goals as well as preserving claim/budget protection. |
+| Can the app repeat something I learned? | Not as another new daily assignment. Saved reading is manual revisiting. | Yes as an explicit review activity, using a separate record. New-assignment no-repeat stays intact. |
+| Does a review turn 125 learned into 126? | There is no separate review completion. | No. Unique learned stays 125; the review total changes and the day can count toward activity streak. |
+| Will my streak survive a Gemini outage? | Only while a new eligible assignment can be completed; exhaustion has no practice completion. | A qualifying completed review can preserve activity continuity. No review history/body may still mean unavailable. |
+| Can I just open a review and get credit? | Opening is not a completed learned action. | Still no. Explicit completion is required. |
+| What if a new lesson appears during review? | No separate review session exists. | Keep the active review stable. Use fresh content on a later eligible selection without double credit. |
+| Can I review offline on two devices? | Existing offline queue handles current likes/saves/follows and same-day learned actions. | The new review protocol must support durable identity, safe replay and one logical completion under defined date rules. |
+| Does 90 days of reserve mean infinite lessons? | No reserve-day policy exists. | No. It is a proposed buffer that shrinks if approved publication falls behind consumption. |
+| Will this add a weekly learning email? | No learning-email digest exists. | #195 does not request that feature. Its operational alerts and review practice are different. |
+| Will finishing a review stop reminders? | Current reminders check completed assignments only. | Reminder eligibility must be explicitly integrated with qualifying activity completion if it should stop after review; the exact contract must be decided and tested. |
+| Is this future design built already? | No; issue #195 is open. | Only a complete implementation, migration/compatibility rollout and acceptance evidence can make these outcomes real. |
+
+**What to remember:** today the app protects a daily new-concept assignment. Issue #195 would preserve that guarantee while adding sustainable supply management and a separate daily practice path. The final reminder answer identifies an integration decision needed to keep the new streak/activity meaning consistent across the product; it is not a feature already specified in detail or implemented.
+
+Future-design source: [Issue #195](https://github.com/Coding-Moves/one-concept/issues/195), including its acceptance criteria.

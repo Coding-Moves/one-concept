@@ -23,6 +23,11 @@ claims as completed work.
 - **Evidence:** inspect current implementation before prose, verify relevant
   provider documentation, distinguish code/defaults from live service settings,
   and omit credential values. Render and inspect every final PDF page.
+- **Scope addition:** the owner requested discussion of future issue #195 and
+  concluding before/after Q&A. Read the open issue and its dated production
+  inventory; explain its five proposed work areas, benefits, tradeoffs and
+  undecided parameters. This is design documentation, not authorization to
+  implement #195, generate content, change production or close that issue.
 
 ## Previous release handoff (historical)
 

@@ -48,9 +48,16 @@ claims as completed work.
   work. Live database contents, actual cron/SMTP settings, inbox delivery and
   physical-device push delivery were not tested. The handbook labels historical
   test evidence, dated issue inventory and future-design decisions explicitly.
-- **Handoff:** prepare one documentation PR into `develop`, preserve its focused
-  commits and leave #195 open for its separate implementation. Another task's
-  appended issue-creation note in this shared log remains unstaged and preserved.
+- **Handoff:** [PR #196](https://github.com/Coding-Moves/one-concept/pull/196)
+  targets `develop` with the focused commits above plus validation `6df5ffc`.
+  Preserve the commits; #195 remains open for its separate implementation.
+  The PDF is delivered locally and the PR provides its reproducible source.
+  Another task's appended issue-creation note remains unstaged and preserved.
+- **Publication:** the initial automatic-review destination concern was resolved
+  by verifying the existing public origin, owner ADMIN access and public-source
+  scope without credential values. The approved push used the existing GitHub
+  credential helper after plain HTTPS authentication was unavailable. No merge,
+  deployment or production mutation was performed.
 
 ## Previous release handoff (historical)
 

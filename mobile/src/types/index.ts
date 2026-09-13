@@ -109,6 +109,7 @@ export interface ProgressState {
   learnedBeforeWindow?: Record<string, number>;
   /** Continuation after the embedded saved window; absent on legacy responses. */
   savedNextCursor?: string | null;
+  historyNextCursor?: string | null;
   /**
    * Streaks as computed by the server, when the state came from the server.
    * Absent for purely local state, where the client derives them instead.

@@ -13,7 +13,7 @@ export async function fetchHistoryPage(userId: string, cursor: string, epoch: nu
     const page = await apiRequest<{
       items: { concept_slug: string; learned_on: string; title: string; topic_name: string; like_count: number }[];
       next_cursor: string | null;
-    }>(`/v1/me/history?limit=50&before=${encodeURIComponent(cursor)}`);
+    }>(`/v1/me/history?limit=50&cursor=${encodeURIComponent(cursor)}`);
     if (page.next_cursor && page.next_cursor >= cursor) throw new Error('History cursor did not advance');
     const result = {
       items: page.items.map(row => ({ conceptId: row.concept_slug, date: row.learned_on,

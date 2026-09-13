@@ -35,7 +35,9 @@ const server=http.createServer((req,res)=>{
     pageRequests++;assert.equal(url.searchParams.get('limit'),'50');
     if(holdPage) await new Promise(r=>{releasePage=r;});
     if(failPage) return route.fulfill({status:503,contentType:'application/json',body:'{}'});
-    const remaining=records.filter(r=>r.learned_on<url.searchParams.get('before'));
+    // Match FastAPI's public cursor parameter; unknown query keys are ignored.
+    const cursor=url.searchParams.get('cursor');
+    const remaining=records.filter(r=>!cursor || r.learned_on<cursor);
     const items=remaining.slice(0,50);body={items,next_cursor:remaining.length>50?items.at(-1).learned_on:null};
    } else if(endpoint==='/v1/topics') body=[{slug:'computer-science',name:'Computer Science',concept_count:125,following:true}];
    else if(endpoint==='/v1/me/notifications') body={enabled:false,reminder_times:['08:00']};

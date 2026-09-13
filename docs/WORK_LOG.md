@@ -7,6 +7,23 @@ claims as completed work.
 
 ## Current status
 
+### Version 1.9.0 production migration verification
+
+- Owner reported generation paused and manually applied migrations 0011–0015
+  in order through SQL Editor, each reporting success.
+- Independently verified the original production project through a read-only
+  session-pooler transaction: six new tables, RLS enabled with no client policies,
+  four added columns, five indexes, foreign keys/checks, daily-review uniqueness,
+  final revision-status constraint and published-lesson timestamp backfill.
+- Record all five migrations only after that verification. No production writes
+  were performed by this verification; migration files remain immutable.
+- Local pre-release dump exists and its archive index is readable. Full restore
+  remains untested; owner explicitly deferred the separate cloud Backup project.
+- Backend/worker rollout and ordering before OTA remain outstanding. Keep
+  generation paused and release #200 draft; do not merge main yet.
+- Validation: migration file/ledger comparison and whitespace checks passed.
+  No application code changed; application tests were not rerun for this entry.
+
 ### Version 1.9.0 release preparation
 
 - Preparing the merged #197/#198 work for a `develop` to `main` release.

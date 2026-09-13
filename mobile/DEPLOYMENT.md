@@ -61,11 +61,11 @@ The `production` profile builds an AAB for Play Store submission; use
 
 ## OTA update (JS, UI, styling, assets — no reinstall)
 
-```bash
-cd mobile
-npm run update:production        # eas update --channel production
-npm run update:preview           # eas update --channel preview
-```
+For production, follow [the release runbook](../RELEASING.md): merge the release,
+verify the new backend and workers, then manually run **Release** on `main` with
+the verified full commit SHA. Merging alone does not publish a mobile update.
+Use **EAS Update (OTA)** for preview updates. Direct local production publishing
+bypasses the deployment check and is not the normal release procedure.
 
 Installed apps fetch the update on next launch (`checkAutomatically: ON_LOAD`).
 
@@ -80,12 +80,11 @@ OTA cannot ship native code. Instead:
 
 ## GitHub automation
 
-Two workflows in [.github/workflows](../.github/workflows), both need the
-`EXPO_TOKEN` repository secret (expo.dev → Account settings → Access tokens;
-add at GitHub → Settings → Secrets and variables → Actions):
+Workflows in [.github/workflows](../.github/workflows) use the `EXPO_TOKEN`
+repository secret for EAS:
 
-- **eas-update.yml** — every push to `main` touching `mobile/**` publishes an
-  OTA update to the **production** channel automatically. Manual dispatch lets
-  you pick `preview` instead.
-- **eas-build.yml** — manual dispatch only (builds cost quota); choose the
-  profile.
+- **release.yml** — manual production release after backend/worker verification,
+  followed by preview OTA, release tagging and native-gated APK dispatch.
+- **eas-update.yml** — qualifying mobile pushes to `develop` and manual runs
+  publish preview only.
+- **eas-build.yml** — manual build; choose the profile.

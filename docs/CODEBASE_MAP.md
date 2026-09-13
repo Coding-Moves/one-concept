@@ -265,9 +265,11 @@ and the session pooler. Applied migrations must not be rewritten.
   on port 55433, applies every migration, and disables live generation. HTTP calls
   to Gemini/Expo are mocked. Database-dependent tests skip if Podman cannot start.
 - `.github/workflows/eas-update.yml` publishes preview OTA on qualifying mobile
-  pushes to `develop`; manual dispatch can select a channel. `eas-build.yml` is
+  pushes to `develop`; manual dispatch also publishes preview only. `eas-build.yml` is
   a manual Android build workflow.
-- `release.yml` runs on `main`, publishes production then preview OTA, creates a
+- `release.yml` is manually dispatched on `main` after operator confirmation of
+  the deployed backend/worker SHA; its guard rejects missing/mismatched revisions
+  and non-main dispatches. It publishes production then preview OTA, creates a
   version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
   is gated on native `runtimeVersion` changes. Railway deploys the backend
   independently; follow `RELEASING.md` for migration and release ordering.

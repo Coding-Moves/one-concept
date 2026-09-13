@@ -7,10 +7,11 @@ import { toConcept } from './dailyApi';
 import { withPendingProgress, withCompletedReview } from './pendingProgress';
 import { clearQueue, dequeue, enqueue, keyOf, pending, QueuedMutation } from './mutationQueue';
 import { ProgressRepository } from './progressRepository';
+import { OfflineCache } from './offlineCache';
 import { EMPTY_PROGRESS } from './storage';
 import { toCategory, toSlug } from './topics';
 
-const CACHE_KEY = 'one-concept/server-state/v1';
+const CACHE_PREFIX = 'one-concept/server-state/';
 
 /** True for a network failure (no response) — the signal to queue offline. */
 function isOffline(err: unknown): boolean {
@@ -96,12 +97,15 @@ export class RemoteProgressRepository implements ProgressRepository {
   // wipe happened while its request was in flight, its late result must not
   // be re-persisted — that would resurrect the signed-out account's data.
   private epoch = 0;
+  private disk = new OfflineCache<ProgressState>(AsyncStorage, CACHE_PREFIX);
 
   private async remember(state: ProgressState, epoch: number): Promise<ProgressState> {
-    if (epoch !== this.epoch) return state;
+    if (epoch !== this.epoch) return EMPTY_PROGRESS;
     this.cache = state;
-    AsyncStorage.setItem(CACHE_KEY, JSON.stringify(state)).catch(() => {});
-    return state;
+    // Preserve the v1 disk format, using the same tested write fence as lesson
+    // bodies. Sign-out waits for an in-flight write before removing account data.
+    await this.disk.set('v1', state, epoch).catch(() => {});
+    return epoch === this.epoch ? state : EMPTY_PROGRESS;
   }
 
   private async fromState(payload: StatePayload, epoch: number): Promise<ProgressState> {
@@ -122,19 +126,21 @@ export class RemoteProgressRepository implements ProgressRepository {
 
   /** Drop the in-memory state; the module singleton outlives a sign-out. The
    *  offline queue is account data too, so it goes with it. */
-  forget(): Promise<void> {
+  async forget(): Promise<void> {
     this.epoch += 1;
     this.cache = EMPTY_PROGRESS;
-    return clearQueue();
+    await Promise.all([clearQueue(), this.disk.clear()]);
   }
 
   async loadCached(): Promise<ProgressState | null> {
     const epoch = this.epoch;
     const contentEpoch = conceptCache.epoch;
-    const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
-    if (!raw || epoch !== this.epoch) return null;
+    const parsed = await this.disk.get('v1', epoch);
+    if (!parsed || epoch !== this.epoch) return null;
     try {
-      this.cache = JSON.parse(raw) as ProgressState;
+      const restored = withPendingProgress(parsed, parsed, await pending());
+      if (epoch !== this.epoch) return null;
+      this.cache = restored;
       // Also upgrade an existing installation's cached Today while offline.
       if (this.cache.serverDaily?.status === 'ok' || this.cache.serverDaily?.status === 'review') {
         const concept = toConcept(this.cache.serverDaily.payload);
@@ -152,9 +158,10 @@ export class RemoteProgressRepository implements ProgressRepository {
     try {
       return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
-      const raw = await AsyncStorage.getItem(CACHE_KEY).catch(() => null);
-      if (raw && epoch === this.epoch) {
-        const cached = JSON.parse(raw) as ProgressState;
+      const parsed = await this.disk.get('v1', epoch);
+      if (parsed && epoch === this.epoch) {
+        const cached = withPendingProgress(parsed, parsed, await pending());
+        if (epoch !== this.epoch) return EMPTY_PROGRESS;
         // Genuinely offline: the fetch failed and we're serving the saved copy,
         // so flag the daily stale — that's what drives the "Offline" banner. The
         // cache-first preview (loadCached) leaves it not-stale, so the banner
@@ -470,8 +477,5 @@ export const remoteProgressRepository = new RemoteProgressRepository();
 /** Forget everything: the disk cache AND the singleton's in-memory copy.
  *  Called on sign-out so the next account can never see this one's data. */
 export async function clearServerStateCache(): Promise<void> {
-  await Promise.all([
-    remoteProgressRepository.forget(),
-    AsyncStorage.removeItem(CACHE_KEY),
-  ]);
+  await remoteProgressRepository.forget();
 }

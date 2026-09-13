@@ -35,6 +35,7 @@ interface StatePayload {
   saved?: { concept_slug: string; title?: string; topic_name?: string; like_count?: number }[];
   learned_before_window?: Record<string, number> | null;
   saved_next_cursor?: string | null;
+  history_next_cursor?: string | null;
   stats: { current: number; longest: number; total_learned: number; total_reviews?: number };
   assignment_slug: string | null;
   daily?: DailyPayload | null;
@@ -66,6 +67,7 @@ function toProgressState(payload: StatePayload): ProgressState {
     })),
     learnedBeforeWindow: payload.learned_before_window ?? undefined,
     savedNextCursor: payload.saved_next_cursor,
+    historyNextCursor: payload.history_next_cursor,
     // Server-computed, so the day boundary comes from the user's stored
     // timezone rather than whatever the device clock happens to say.
     stats: {

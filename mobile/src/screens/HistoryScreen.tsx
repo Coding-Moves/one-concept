@@ -2,8 +2,10 @@ import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp, ParamListBase, useNavigation } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useMemo } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { FlatList, Pressable, TextInput, StyleSheet, Text, View } from 'react-native';
+import { useHistory } from '../hooks/useHistory';
+import { PrimaryButton } from '../components/PrimaryButton';
 import { CategoryChip } from '../components/CategoryChip';
 import { LikeCount } from '../components/LikeCount';
 import { SkeletonRow } from '../components/Skeleton';
@@ -17,8 +19,6 @@ import { formatDateKey } from '../services/dates';
 import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 import { Category, LearnedRecord } from '../types';
 
-// Keep the feed focused on recent activity (issue #124).
-const HISTORY_LIMIT = 10;
 
 function prettify(slug: string): string {
   return slug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
@@ -75,10 +75,11 @@ export function HistoryScreen() {
       >
     >();
 
-  // Newest first, capped at the last HISTORY_LIMIT to keep the feed focused.
-  const records = [...progress.learned]
-    .sort((a, b) => (a.date < b.date ? 1 : -1))
-    .slice(0, HISTORY_LIMIT);
+  const history = useHistory(progress);
+  const [query, setQuery] = useState('');
+  const records = history.records.filter(record =>
+    `${record.title ?? prettify(record.conceptId)} ${record.topicName ?? ''}`
+      .toLowerCase().includes(query.trim().toLowerCase()));
   const likedIds = useMemo(() => new Set(progress.likes), [progress.likes]);
 
   const open = (conceptId: string, title: string) =>
@@ -101,7 +102,10 @@ export function HistoryScreen() {
         ListHeaderComponent={
           <View style={styles.header}>
             <Text style={styles.title}>History</Text>
-            <Text style={styles.subtitle}>Your last {HISTORY_LIMIT} concepts.</Text>
+            <Text style={styles.subtitle}>{history.records.length} of {progress.stats?.totalLearned ?? history.records.length} learned concepts loaded.</Text>
+            <TextInput value={query} onChangeText={setQuery} style={styles.search}
+              placeholder="Search loaded history" placeholderTextColor={colors.textSecondary}
+              accessibilityLabel="Search loaded history" autoCapitalize="none" autoCorrect={false} />
           </View>
         }
         ListEmptyComponent={
@@ -111,6 +115,8 @@ export function HistoryScreen() {
               <SkeletonRow />
               <SkeletonRow />
             </View>
+          ) : query.trim() ? (
+            <Text style={styles.subtitle}>No matches in loaded history. Load older lessons to keep looking.</Text>
           ) : !online && !progress.stats ? (
             <UnavailableState offline message="Connect to load your learning history on this device." onRetry={refresh} />
           ) : (
@@ -123,6 +129,14 @@ export function HistoryScreen() {
             </View>
           )
         }
+        ListFooterComponent={history.hasMore ? (
+          <View style={styles.footer}>
+            {history.failed ? <Text style={styles.subtitle}>Older lessons couldn’t be loaded. Downloaded pages remain available offline.</Text> : null}
+            <PrimaryButton label={history.loading ? 'Loading older lessons…' : history.failed ? 'Retry older lessons' : 'Load older lessons'}
+              disabled={history.loading} onPress={history.loadMore} />
+          </View>
+        ) : null}
+        keyboardShouldPersistTaps="handled"
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
       />
     </View>
@@ -133,6 +147,8 @@ type Styles = ReturnType<typeof createStyles>;
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
+    search: { color: colors.text, borderColor: colors.border, borderWidth: 1, borderRadius: radius.sm, padding: spacing.md, fontSize: scaleFont(16) },
+    footer: { paddingVertical: spacing.lg, gap: spacing.sm },
     screen: {
       flex: 1,
       backgroundColor: colors.background,

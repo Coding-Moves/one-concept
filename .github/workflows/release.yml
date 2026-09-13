@@ -1,13 +1,14 @@
-# Merging a release PR into main cuts a versioned release. The production OTA
-# publishes FIRST; the tag and GitHub Release are created only if that publish
-# succeeds, so a Release can never claim a version that never reached phones.
-# (Railway deploys the backend independently on the same push — see
-# mobile/DEPLOYMENT.md; it is not gated here.)
+# Railway deploys main independently. Publish only after the operator verifies
+# the same commit on the API and workers and checks production health.
 name: Release
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
+    inputs:
+      backend_revision:
+        description: 'Full main commit SHA verified on healthy production API and workers'
+        required: true
+        type: string
 
 # One release at a time: two quick merges must not race the tag check.
 concurrency:
@@ -26,6 +27,14 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v7
+
+      - name: Verify deployed revision before publishing
+        env:
+          VERIFIED_BACKEND_SHA: ${{ inputs.backend_revision }}
+        run: |
+          REMOTE_MAIN_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
+          export REMOTE_MAIN_SHA
+          bash ../.github/scripts/check-release-revision.sh
 
       - uses: actions/setup-node@v7
         with:

@@ -7,7 +7,8 @@ Production release flow. Keep it boring and repeatable.
   (This is our internal flow — the project doesn't take outside PRs; see
   [CONTRIBUTING.md](CONTRIBUTING.md).)
 - `main` is production. A release is a single PR **develop → main** (no `release/*` branch).
-- Merging to `main` triggers `.github/workflows/release.yml`.
+- Merging to `main` triggers Railway backend deployment. Mobile publication is
+  a separate manual run of `.github/workflows/release.yml` after verification.
 
 ## Cutting a release
 1. **Bump the version on `develop` first.** Edit `mobile/app.config.js` → `expo.version`
@@ -26,9 +27,19 @@ Production release flow. Keep it boring and repeatable.
    release PR.**
 4. Open the release PR **develop → main**. It must pass the required
    **"Migrations applied check"** and get its approval, then merge.
-5. On merge, `release.yml` publishes the production + preview OTA, cuts the `vX.Y.Z`
-   tag + GitHub Release, and dispatches the APK build (which **skips** unless
-   runtimeVersion changed). Railway auto-deploys the `api` service from `main`.
+5. On merge, Railway auto-deploys the API from `main`. Keep generation paused
+   during backend/worker transitions. Verify the new main commit is deployed to
+   the API and workers, `/health` succeeds, and the release-specific smoke checks
+   pass. Do not resume old generators against the new editorial schema.
+6. Open **GitHub Actions → Release → Run workflow**, select **main**, and enter
+   the full 40-character main commit SHA you verified on production API/workers
+   in `backend_revision`. This is an operator attestation; the workflow does not
+   inspect Railway deployments itself. Do not submit it until checks are complete.
+7. The workflow rejects another branch, an older deployment or a main revision
+   that advanced before validation. It then publishes production + preview OTA,
+   cuts the version tag/GitHub Release, and dispatches the native-gated APK build.
+   Do not merge another release while publication is running. The standalone
+   EAS Update workflow publishes preview only; production uses this release path.
 
 ## Database migrations — MANUAL, every release
 The deploy does **not** auto-migrate. Files in `backend/migrations/*.sql` must be run

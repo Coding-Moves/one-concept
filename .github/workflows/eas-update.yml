@@ -1,5 +1,5 @@
 # Preview-channel OTA for the develop branch (the developer's own devices),
-# plus a manual dispatch that publishes the chosen channel. Production OTA
+# plus a manual preview dispatch. Production OTA
 # for a release lives in release.yml, so the release tag is only cut after
 # that publish succeeds. Native changes need a new build — see
 # mobile/DEPLOYMENT.md.
@@ -15,12 +15,6 @@ on:
       - "mobile/**"
       - "!mobile/**.md"
   workflow_dispatch:
-    inputs:
-      channel:
-        description: "Update channel (manual runs only)"
-        type: choice
-        default: preview
-        options: [preview, production]
 
 jobs:
   update:
@@ -46,18 +40,7 @@ jobs:
 
       # --environment pulls the EXPO_PUBLIC_* variables from EAS into the
       # bundle; without it the update ships with empty config and crashes.
-      - name: Publish OTA update (production)
-        if: github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'production'
-        env:
-          MSG: ${{ github.event.head_commit.message || 'manual dispatch' }}
-        run: eas update --channel production --environment production --message "$MSG" --non-interactive
-
-      # A push to develop refreshes preview; a manual run publishes only the
-      # chosen channel.
       - name: Publish OTA update (preview)
-        if: >-
-          (github.event_name == 'push') ||
-          (github.event_name == 'workflow_dispatch' && github.event.inputs.channel == 'preview')
         env:
           MSG: ${{ github.event.head_commit.message || 'manual dispatch' }}
         run: eas update --channel preview --environment preview --message "$MSG" --non-interactive

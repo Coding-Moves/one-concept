@@ -7,6 +7,27 @@ claims as completed work.
 
 ## Current status
 
+### Release #200 readiness and deployment ordering
+
+- Owner requested a merge-ready release, with production merge left for approval.
+  Railway screenshot confirms main auto-deploy with `/backend` root directory.
+- Separating the backend merge/deploy from mobile publication. Release becomes
+  manual on main with a required full deployed-commit attestation; a guard rejects
+  wrong branches, missing/mismatched SHAs and a main revision changed since dispatch.
+  Standalone EAS Update remains preview-only so it cannot bypass the release gate.
+- This attestation is not automatic Railway verification. After merging main,
+  inspect API/worker deployments and health before dispatching Release. Keep
+  generation paused until compatible workers are confirmed. No production merge,
+  mobile publication or backend deployment is performed by this preparation.
+- Local backup was created by the owner on their computer. Its index was checked;
+  nothing was uploaded/restored. Production SQL migrations were applied directly
+  by the owner and independently verified; they did not reload the backup.
+- Validation: nine release-guard cases passed, including rejected stale/missing
+  revisions and non-main branches; shell syntax, all workflow YAML parsing and
+  production/preview wiring checks passed. No application code changed; retain
+  prior app test/export evidence. GitHub checks are verified at handoff.
+
+
 ### Version 1.9.0 production migration verification
 
 - Owner reported generation paused and manually applied migrations 0011–0015

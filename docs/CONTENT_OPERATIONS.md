@@ -51,7 +51,13 @@ target, not an automatic guarantee. A five-call daily cap can limit initial
 spend; validation failures consume calls and may reduce approved output. The
 configured cap is not proof of the provider's quota or pricing.
 
-Configure the existing hosting scheduler to run:
+For the VM migration, [VM_DEPLOYMENT.md](VM_DEPLOYMENT.md) supplies supervised
+schedules (04:00 UTC daily supply, hourly observations) and the protected
+`sudo one-concept content ...` / `sudo one-concept rewrite` entry points.
+Provisioning and activation remain deferred; the deploy key cannot publish
+content. Commands below remain valid for a separately configured maintainer.
+
+Configure the chosen hosting scheduler to run:
 
 - `python -m app.workers.pool_topup` at least daily, before the editorial review session.
 - `python -m app.workers.content report --observe` hourly, retaining job output.

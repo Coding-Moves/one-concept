@@ -54,6 +54,8 @@ CI=1 EXPO_NO_DOTENV=1 EXPO_NO_TELEMETRY=1 EXPO_OFFLINE=1 \
   npx expo export --platform web --clear --output-dir /tmp/one-concept-offline
 node tests/offline.browser.cjs /tmp/one-concept-offline \
   --no-event --retry-error --signout-inflight
+node tests/offline.browser.cjs /tmp/one-concept-offline --paused-retry
+node tests/offline.browser.cjs /tmp/one-concept-offline --flush-race
 node tests/offline.browser.cjs /tmp/one-concept-offline --midnight
 node tests/offline.browser.cjs /tmp/one-concept-offline --partial-connectivity
 node tests/offline.browser.cjs /tmp/one-concept-offline --large-collections --require-compact
@@ -161,3 +163,11 @@ earned/locked cards, details and contrast, narrow/enlarged text, offline restart
 and a delayed old-account request after signing into a different account. No
 real credentials or production services are used. Native TalkBack, system font
 scaling and physical Android Back remain manual device checks.
+
+`--paused-retry` accelerates time through eight 503 failures, checks durable pause
+and absence of further writes, restarts the app, and uses Retry saved changes to
+recover. `--flush-race` delays the reconnect snapshot while a later Save is
+optimistic, then rejects Unlike while Unsave is pending. It verifies unrelated
+state survives and the pending counter drains. These extend the account-safe
+retry and queue unit tests; `--partial-connectivity` also covers successful
+achievement requests while the topic endpoint is unreachable.

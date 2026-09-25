@@ -61,6 +61,15 @@ test('cached catalog paints before a stalled fetch completes', async () => {
   await loading;
 });
 
+test('a replay freshness check reports failure while retaining readable cached topics', async () => {
+  const {store, deps} = setup();
+  await store.load();
+  deps.fetch = async () => { throw new Error('topic endpoint unreachable'); };
+  await assert.rejects(store.load(true), /unreachable/);
+  assert.deepEqual(store.getSnapshot(), topics);
+  assert.deepEqual(await store.load(), topics);
+});
+
 test('account reset suppresses late topic fetches and queued follow writes', async () => {
   const {store, deps, calls} = setup();
   await store.load();

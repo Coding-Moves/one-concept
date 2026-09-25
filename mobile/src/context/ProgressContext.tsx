@@ -206,6 +206,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
   useEffect(() => {
     if (!repository.flushQueue || !isApiConfigured()) return;
     let active = true;
+    let topicsNeedRefresh = false;
     const loop = createSyncLoop(async () => {
       let retry = true;
       await apply(null, async () => {
@@ -213,16 +214,21 @@ export function ProgressProvider({ children, repository: override }: Props) {
         const entries = await queuedMutations();
         let next: ProgressState | null = null;
         if (entries.length) next = await repository.flushQueue!();
-        else if (!getConnectivity()) next = await repository.load();
+        else if (!getConnectivity() || topicsNeedRefresh) next = await repository.load();
         if (!active) return null;
-        if (next && getConnectivity()) await fetchTopics().catch(() => {});
-        retry = !getConnectivity() || (await queuedMutations()).some(entry => !entry.retry?.paused);
+        if ((next && getConnectivity()) || topicsNeedRefresh) {
+          try { await fetchTopics(true); topicsNeedRefresh = false; }
+          catch { topicsNeedRefresh = true; }
+        }
+        retry = topicsNeedRefresh || !getConnectivity() || (await queuedMutations()).some(entry => !entry.retry?.paused);
         return next;
       });
       return retry;
     }, AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
     const unsubscribe = subscribeConnectivity(online => {
-      if (online) loop.wake();
+      // Another endpoint (for example achievements) can succeed while topics
+      // still fail. It must neither cancel that retry nor reset its backoff.
+      if (online && !topicsNeedRefresh) loop.wake();
       else loop.retry();
     });
     const unsubscribeQueue = subscribeQueue(() => {

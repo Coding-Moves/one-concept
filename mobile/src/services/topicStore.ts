@@ -35,7 +35,7 @@ export class TopicStore {
     this.listeners.forEach(listener => listener());
   }
 
-  async load(): Promise<ServerTopic[]> {
+  async load(requireFresh = false): Promise<ServerTopic[]> {
     const revision = ++this.revision;
     const cached = await this.deps.read();
     const overlay = (rows: ServerTopic[], slugs?: string[]) => slugs
@@ -52,7 +52,7 @@ export class TopicStore {
       await this.deps.write(this.topics);
       return this.topics;
     } catch (error) {
-      if (revision !== this.revision || this.topics.length) return this.topics;
+      if (revision !== this.revision || (!requireFresh && this.topics.length)) return this.topics;
       throw error;
     }
   }

@@ -34,7 +34,7 @@ export const topicStore = new TopicStore({
   enqueue: slugs => enqueue({ kind: 'topics', slugs }),
 });
 
-export const fetchTopics = () => topicStore.load();
+export const fetchTopics = (requireFresh = false) => topicStore.load(requireFresh);
 
 export async function clearTopicsCache(): Promise<void> {
   topicStore.reset();

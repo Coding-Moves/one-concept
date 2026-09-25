@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     environment: str = "development"
     log_level: str = "info"
     app_revision: str = Field(default="development", pattern=r"^(development|[0-9a-f]{40})$")
+    operations_status_file: str | None = None
     rate_limit_reads_per_minute: int = Field(default=120, ge=1, le=10000)
     rate_limit_writes_per_minute: int = Field(default=60, ge=1, le=10000)
     rate_limit_max_buckets: int = Field(default=20000, ge=1, le=100000)

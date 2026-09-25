@@ -1,0 +1,23 @@
+{
+    email {$TLS_EMAIL}
+    admin off
+}
+
+{$API_HOST} {
+    # Access logs are disabled: recovery URLs may contain temporary auth codes.
+    request_body {
+        max_size 1MB
+    }
+    header {
+        -Server
+        X-Content-Type-Options nosniff
+        Referrer-Policy no-referrer
+        Cache-Control no-store
+    }
+    reverse_proxy api:8000 {
+        transport http {
+            dial_timeout 5s
+            response_header_timeout 30s
+        }
+    }
+}

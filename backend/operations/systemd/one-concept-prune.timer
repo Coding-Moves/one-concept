@@ -1,0 +1,7 @@
+[Unit]
+Description=Bound One Concept image and release retention
+[Timer]
+OnCalendar=Sun *-*-* 03:00:00 UTC
+Persistent=true
+[Install]
+WantedBy=timers.target

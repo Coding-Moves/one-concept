@@ -1,0 +1,9 @@
+[Unit]
+Description=Remove obsolete One Concept images while retaining rollback
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/one-concept prune
+TimeoutStartSec=5min
+UMask=0077
+NoNewPrivileges=true

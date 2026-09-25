@@ -1,0 +1,11 @@
+[Unit]
+Description=One Concept host and scheduler health
+After=docker.service
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/one-concept monitor
+TimeoutStartSec=90
+UMask=0022
+PrivateTmp=true
+ProtectHome=true
+NoNewPrivileges=true

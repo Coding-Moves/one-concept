@@ -1,0 +1,79 @@
+name: one-concept
+
+x-backend: &backend
+  image: ${BACKEND_IMAGE:?An immutable backend image digest is required}
+  env_file: /etc/one-concept/backend.env
+  environment:
+    APP_REVISION: ${APP_REVISION:?A verified full commit SHA is required}
+    GENERATION_ENABLED: ${GENERATION_ENABLED:-false}
+    ENVIRONMENT: production
+    PORT: '8000'
+  read_only: true
+  tmpfs:
+    - /tmp:size=64m,mode=1777
+  cap_drop: [ALL]
+  security_opt: [no-new-privileges:true]
+  pids_limit: 128
+  mem_limit: 768m
+  cpus: 0.75
+  init: true
+  stop_grace_period: 45s
+  logging:
+    driver: local
+    options:
+      max-size: '10m'
+      max-file: '3'
+
+services:
+  api:
+    <<: *backend
+    restart: unless-stopped
+    environment:
+      APP_REVISION: ${APP_REVISION}
+      GENERATION_ENABLED: ${GENERATION_ENABLED:-false}
+      ENVIRONMENT: production
+      PORT: '8000'
+      OPERATIONS_STATUS_FILE: /run/one-concept/health.json
+    volumes:
+      - /var/lib/one-concept/public:/run/one-concept:ro
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health',timeout=8)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  proxy:
+    image: ${CADDY_IMAGE:?Pin the Caddy image by digest in host.env}
+    restart: unless-stopped
+    ports: ['80:80', '443:443']
+    environment:
+      API_HOST: ${API_HOST:?Set the approved hostname}
+      TLS_EMAIL: ${TLS_EMAIL:?Set the certificate contact address}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    read_only: true
+    tmpfs: [/tmp]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    security_opt: [no-new-privileges:true]
+    pids_limit: 128
+    mem_limit: 256m
+    cpus: 0.25
+    logging:
+      driver: local
+      options: {max-size: '10m', max-file: '3'}
+
+  job:
+    <<: *backend
+    profiles: [tools]
+    volumes:
+      - /etc/one-concept/imports:/imports:ro
+    # Deliberate harmless default; publication always needs an explicit command.
+    command: ['python', '-m', 'app.workers.content', '--help']
+
+volumes:
+  caddy_data:
+  caddy_config:

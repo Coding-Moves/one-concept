@@ -1,0 +1,9 @@
+[Unit]
+Description=One Concept hourly content health observations
+[Timer]
+OnCalendar=*-*-* *:05:00 UTC
+AccuracySec=1min
+Persistent=true
+Unit=one-concept-job@observe.service
+[Install]
+WantedBy=timers.target

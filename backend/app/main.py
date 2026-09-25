@@ -9,6 +9,7 @@ from app.api.v1.health import router as health_router
 from app.api.v1.pages import router as pages_router
 from app.api.v1.router import api_router
 from app.config import get_settings
+from app.core.rate_limit import AccountRateLimiter
 from app.core.security import JwksCache
 from app.db.keepalive import keep_database_warm
 from app.db.session import engine
@@ -57,6 +58,11 @@ def create_app() -> FastAPI:
         openapi_url=None if settings.is_production else "/openapi.json",
         redoc_url=None,
     )
+    app.state.rate_limiter = AccountRateLimiter(
+        settings.rate_limit_reads_per_minute,
+        settings.rate_limit_writes_per_minute,
+        settings.rate_limit_max_buckets,
+    )
 
     app.add_middleware(
         CORSMiddleware,
@@ -64,6 +70,7 @@ def create_app() -> FastAPI:
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
+        expose_headers=["Retry-After"],
     )
 
     app.include_router(health_router)

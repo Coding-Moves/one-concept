@@ -19,6 +19,7 @@ TABLES = (
     "concept_backlog", "reminder_log", "generation_daily_usage",
     "content_supply_targets", "concept_revisions", "content_retry_log",
     "daily_reviews", "content_worker_runs", "content_conditions",
+    "achievement_definitions", "user_achievements",
 )
 
 

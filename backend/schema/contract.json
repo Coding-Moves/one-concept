@@ -14,10 +14,53 @@
     "0012_curriculum_publication.sql": "0c0208a48298e85c83a1b1fbd5ceac2c49e5a316f78ac2dd74d1dca64bb31759",
     "0013_daily_reviews.sql": "22569710fa76da5558c67bb90563824975d7c82ce33236a57fa85dfbfc046582",
     "0014_content_operations.sql": "35be688ceeb0e2e0438c82c712eaafb6b4f3e38fe7e18ee96358279e831f70cc",
-    "0015_revision_generation_claims.sql": "0b7e75a9eb27cd6716878d7a00557cd26febe5d4982c1c858a82bb1567d3e8e9"
+    "0015_revision_generation_claims.sql": "0b7e75a9eb27cd6716878d7a00557cd26febe5d4982c1c858a82bb1567d3e8e9",
+    "0016_achievements.sql": "b2d4e2d053d57fe7b10289610896a612f066d65380a3ea806ac8ae8e8c2e012b"
   },
   "schema": {
     "columns": {
+      "achievement_definitions.artwork_key": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.code": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.description": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.metric": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.sort_order": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "achievement_definitions.threshold": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
       "concept_backlog.angle": {
         "default": null,
         "identity": "",
@@ -630,6 +673,42 @@
         "not_null": true,
         "type": "smallint"
       },
+      "user_achievements.achievement_code": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "user_achievements.earned_on": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "user_achievements.recorded_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_achievements.seen_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "user_achievements.source": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "user_achievements.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
       "user_topics.created_at": {
         "default": "now()",
         "identity": "",
@@ -650,6 +729,18 @@
       }
     },
     "constraints": {
+      "achievement_definitions.achievement_definitions_metric_threshold_key": {
+        "definition": "UNIQUE (metric, threshold)",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_pkey": {
+        "definition": "PRIMARY KEY (code)",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_threshold_check": {
+        "definition": "CHECK ((threshold > 0))",
+        "validated": true
+      },
       "concept_backlog.concept_backlog_difficulty_check": {
         "definition": "CHECK (((difficulty >= 1) AND (difficulty <= 3)))",
         "validated": true
@@ -854,6 +945,22 @@
         "definition": "UNIQUE (slug)",
         "validated": true
       },
+      "user_achievements.user_achievements_achievement_code_fkey": {
+        "definition": "FOREIGN KEY (achievement_code) REFERENCES public.achievement_definitions(code)",
+        "validated": true
+      },
+      "user_achievements.user_achievements_pkey": {
+        "definition": "PRIMARY KEY (user_id, achievement_code)",
+        "validated": true
+      },
+      "user_achievements.user_achievements_source_check": {
+        "definition": "CHECK ((source = ANY (ARRAY['history'::text, 'completion'::text])))",
+        "validated": true
+      },
+      "user_achievements.user_achievements_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
       "user_topics.user_topics_pkey": {
         "definition": "PRIMARY KEY (user_id, topic_id)",
         "validated": true
@@ -876,6 +983,16 @@
       }
     },
     "indexes": {
+      "achievement_definitions_metric_threshold_key": {
+        "definition": "CREATE UNIQUE INDEX achievement_definitions_metric_threshold_key ON public.achievement_definitions USING btree (metric, threshold)",
+        "ready": true,
+        "valid": true
+      },
+      "achievement_definitions_pkey": {
+        "definition": "CREATE UNIQUE INDEX achievement_definitions_pkey ON public.achievement_definitions USING btree (code)",
+        "ready": true,
+        "valid": true
+      },
       "assignments_streak_idx": {
         "definition": "CREATE INDEX assignments_streak_idx ON public.daily_assignments USING btree (user_id, assigned_for) WHERE (completed_at IS NOT NULL)",
         "ready": true,
@@ -1056,6 +1173,11 @@
         "ready": true,
         "valid": true
       },
+      "user_achievements_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_achievements_pkey ON public.user_achievements USING btree (user_id, achievement_code)",
+        "ready": true,
+        "valid": true
+      },
       "user_topics_pkey": {
         "definition": "CREATE UNIQUE INDEX user_topics_pkey ON public.user_topics USING btree (user_id, topic_id)",
         "ready": true,
@@ -1063,6 +1185,13 @@
       }
     },
     "policies": {
+      "achievement_definitions.achievements_catalog_read": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "true",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
       "concept_interactions.concept_interactions_delete_own": {
         "cmd": "DELETE",
         "permissive": "PERMISSIVE",
@@ -1168,6 +1297,13 @@
         "roles": "{authenticated}",
         "with_check": null
       },
+      "user_achievements.achievements_owner_read": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(user_id = auth.uid())",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
       "user_topics.user_topics_delete_own": {
         "cmd": "DELETE",
         "permissive": "PERMISSIVE",
@@ -1191,6 +1327,9 @@
       }
     },
     "tables": {
+      "achievement_definitions": {
+        "rls": true
+      },
       "concept_backlog": {
         "rls": true
       },
@@ -1237,6 +1376,9 @@
         "rls": true
       },
       "topics": {
+        "rls": true
+      },
+      "user_achievements": {
         "rls": true
       },
       "user_topics": {

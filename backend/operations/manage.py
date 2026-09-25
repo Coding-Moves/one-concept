@@ -275,6 +275,17 @@ def status(revision):
         print(json.dumps({'release_ready': True, 'revision': revision, 'image': release['image']}))
 
 
+def run_maintainer(command):
+    with lock('runtime', shared=True):
+        name = f'one-concept-manual-{os.getpid()}'
+        run([*DOCKER, 'rm', '-f', name], check=False, capture=True)
+        try:
+            compose(current(), 'run', '--rm', '--no-deps', '--name', name, 'job',
+                    *command, timeout=3600)
+        finally:
+            run([*DOCKER, 'rm', '-f', name], check=False, capture=True)
+
+
 def prune():
     """Only this application's images; never remove current or previous digest."""
     with lock('deployment'), lock('runtime'):
@@ -305,6 +316,7 @@ def main(argv=None):
     sub.add_parser('pause-jobs'); sub.add_parser('monitor'); sub.add_parser('rollback'); sub.add_parser('prune')
     p = sub.add_parser('generation'); p.add_argument('mode', choices=['on', 'off'])
     p = sub.add_parser('content'); p.add_argument('args', nargs=argparse.REMAINDER)
+    sub.add_parser('rewrite')
     p = sub.add_parser('ssh'); p.add_argument('request')
     args = parser.parse_args(argv)
     if os.geteuid() != 0:
@@ -353,9 +365,9 @@ def main(argv=None):
                 raise
             atomic_json(STATE / 'current.json', candidate)
     elif args.command == 'content':
-        with lock('runtime', shared=True):
-            compose(current(), 'run', '--rm', '--no-deps', 'job',
-                    'python', '-m', 'app.workers.content', *args.args, timeout=3600)
+        run_maintainer(['python', '-m', 'app.workers.content', *args.args])
+    elif args.command == 'rewrite':
+        run_maintainer(['python', '-m', 'app.workers.rewrite_catalog'])
     return 0
 
 

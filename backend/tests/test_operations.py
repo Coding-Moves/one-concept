@@ -12,6 +12,7 @@ REVISION = 'a' * 40
 OLD = 'b' * 40
 IMAGE = manage.IMAGE_PREFIX + 'c' * 64
 OLD_IMAGE = manage.IMAGE_PREFIX + 'd' * 64
+REAL_MONITOR = manage.monitor
 
 
 @pytest.fixture
@@ -135,26 +136,32 @@ def test_pruning_preserves_current_and_previous_images_and_operations(host, monk
 
 def test_monitor_requires_recent_success_for_every_worker_at_the_current_revision(host, monkeypatch):
     existing_host()
-    # Restore the real monitor while keeping Docker/systemd isolated.
-    import importlib.util
-    spec = importlib.util.spec_from_file_location('unpatched_manage', manage.__file__)
-    real = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(real)
-    for name in ['ROOT', 'STATE', 'CONFIG', 'run']:
-        setattr(real, name, getattr(manage, name))
-    monkeypatch.setattr(real.shutil, 'disk_usage', lambda path: SimpleNamespace(free=10 * 1024**3, total=20 * 1024**3))
+    monkeypatch.setattr(manage.shutil, 'disk_usage', lambda path: SimpleNamespace(free=10 * 1024**3, total=20 * 1024**3))
     now = time.time()
     for job in manage.JOBS:
         manage.atomic_json(manage.STATE / f'{job}.json', {
             'revision': OLD, 'ok': True, 'started_at': now, 'finished_at': now,
             'last_success_at': now, 'last_success_revision': OLD,
         })
-    assert real.monitor()
+    assert REAL_MONITOR()
     stamp = json.loads((manage.STATE / 'reminders.json').read_text())
     stamp['last_success_revision'] = REVISION
     manage.atomic_json(manage.STATE / 'reminders.json', stamp)
-    assert not real.monitor()
+    assert not REAL_MONITOR()
     stamp['last_success_revision'] = OLD
     stamp['last_success_at'] = now - 26 * 60
     manage.atomic_json(manage.STATE / 'reminders.json', stamp)
-    assert not real.monitor()
+    assert not REAL_MONITOR()
+
+
+def test_timed_out_editorial_command_cannot_outlive_the_deployment_lock(host, monkeypatch):
+    existing_host()
+    removed = []
+    monkeypatch.setattr(manage, 'run', lambda args, **kw: removed.append(args))
+    def timeout(*args, **kwargs):
+        raise subprocess.TimeoutExpired('docker', 3600)
+    monkeypatch.setattr(manage, 'compose', timeout)
+    with pytest.raises(subprocess.TimeoutExpired):
+        manage.run_maintainer(['python', '-m', 'app.workers.content', 'report'])
+    assert len(removed) == 2
+    assert all(args[-3:-1] == ['rm', '-f'] and args[-1].startswith('one-concept-manual-') for args in removed)

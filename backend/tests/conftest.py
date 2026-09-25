@@ -34,18 +34,7 @@ MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 
 # Supabase provides these; the migrations depend on them, so a bare Postgres
 # needs stand-ins before the schema will apply.
-AUTH_STUB = """
-create role authenticated;
-create schema auth;
-create table auth.users (
-  id uuid primary key default gen_random_uuid(),
-  email text,
-  raw_user_meta_data jsonb
-);
-create or replace function auth.uid() returns uuid language sql stable as $$
-  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-$$;
-"""
+AUTH_STUB = (Path(__file__).parent / 'auth_stub.sql').read_text()
 
 
 def _psql(sql: str = None, file: Path = None) -> subprocess.CompletedProcess:

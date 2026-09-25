@@ -6,12 +6,13 @@ on:
   push:
     branches: [develop, main]
   workflow_dispatch:
+  workflow_call:
 
 permissions:
   contents: read
 
 concurrency:
-  group: quality-${{ github.ref }}
+  group: quality-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 # No path filters: required checks must finish even for documentation PRs.
@@ -32,7 +33,7 @@ jobs:
           cache: pip
           cache-dependency-path: backend/requirements*.txt
       - run: python -m pip install -r requirements-dev.txt
-      - run: python -m ruff check --select F,E9 app tests
+      - run: python -m ruff check --select F,E9 app tests operations
       - name: Unit and disposable PostgreSQL 16 integration tests
         env:
           TEST_CONTAINER_ENGINE: docker
@@ -56,3 +57,32 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+
+  image:
+    name: Backend image (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {arch: amd64, runner: ubuntu-24.04}
+          - {arch: arm64, runner: ubuntu-24.04-arm}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the actual architecture and Python dependencies
+        run: docker build --build-arg APP_REVISION="$GITHUB_SHA" -t one-concept:test backend
+      - name: API and all worker entry points on disposable PostgreSQL
+        run: python3 .github/scripts/smoke-backend-image.py one-concept:test
+      - name: Validate HTTPS proxy configuration
+        run: |
+          docker run --rm -e API_HOST=api.example.org -e TLS_EMAIL=operator@example.org \
+            -v "$PWD/backend/operations/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2 caddy validate --config /etc/caddy/Caddyfile
+      - name: Check host shell and systemd schedules
+        run: |
+          bash -n backend/operations/install.sh .github/scripts/backend-ssh.sh
+          for unit in backend/operations/systemd/*.timer; do
+            calendar=$(sed -n 's/^OnCalendar=//p' "$unit")
+            if [ -n "$calendar" ]; then systemd-analyze calendar "$calendar"; fi
+          done

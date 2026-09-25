@@ -11,6 +11,8 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.achievements import award_streaks
+
 _EXISTING = text("""select r.id as review_id,r.assigned_for,r.assigned_at,r.completed_at,
   c.id,c.slug,c.title,c.summary,c.example,c.content_version,
   t.slug as topic_slug,t.name as topic_name,
@@ -85,5 +87,6 @@ async def complete_review(
         raise HTTPException(
             409, detail="Review is unavailable or its completion window has ended"
         )
+    await award_streaks(session, user_id)
     await session.commit()
     return row.assigned_for

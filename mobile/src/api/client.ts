@@ -27,7 +27,7 @@ export class ApiError extends Error {
   }
 }
 
-type TokenProvider = () => Promise<string | null>;
+type TokenProvider = (expectedUserId?: string) => Promise<string | null>;
 
 let getAccessToken: TokenProvider = async () => null;
 let accountEpoch = 0;
@@ -80,6 +80,8 @@ export function setConnectivity(next: boolean): void {
 }
 
 interface RequestOptions {
+  /** Account-scoped requests must never borrow a replacement account token. */
+  expectedUserId?: string;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
   signal?: AbortSignal;
@@ -96,7 +98,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
 
   const epoch = accountEpoch;
   if (apiRetryDelay()) throw new ApiError(429, 'Please wait before retrying', undefined, apiRetryDelay());
-  const token = await getAccessToken();
+  const token = await getAccessToken(options.expectedUserId);
   if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
@@ -116,6 +118,8 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     setConnectivity(false);
     throw new ApiError(0, 'Network request failed', cause);
   }
+  if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
+
   if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
 
   // Got a response (even a 4xx/5xx) — the server is reachable, so we're online.

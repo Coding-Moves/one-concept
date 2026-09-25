@@ -23,6 +23,44 @@ claims as completed work.
 - Preserve #195; coordinate with separate achievements #228 and SMTP #187.
   Do not auto-close migration/source issues while rollout remains unverified.
 
+### #209 permanent streak achievements — 2026-09-25
+
+- Scope: nine streak milestones (including 90/180 days), durable server awards,
+  historical credit, account-safe offline viewing, Profile collection, details
+  and grouped celebrations. No production migration, deployment or merge.
+- Use existing recorded learning dates, lesson/review union and completion locks.
+  Earned badges survive missed days; client clocks cannot grant awards.
+- Planned commits: schema/backfill; transactional evaluation/API/tests; account
+  cache/tests; provider; badge/details UI; collection/Profile; celebration;
+  validation and operational documentation. Keep each change independently useful.
+- Worktree isolates existing local handbook edits/backups. CLI and SSH both
+  verified as Muawiya-contact; configured name/email match the public profile.
+  The connector uses another identity and will not be used for writes.
+- Read Expo SDK 57 documentation before mobile implementation. Migration 0016
+  remains unapplied to production and must not enter the applied ledger yet.
+- Delivered [PR #228](https://github.com/Coding-Moves/one-concept/pull/228) against
+  develop. Permanent awards, historical reconciliation, responsive collection,
+  detail sheets and grouped celebrations are implemented; no merge performed.
+- Commits: `0d49545` schema/backfill; `949c273` transactional APIs/tests;
+  `51491dc` account cache/request isolation; `484cdbe` provider synchronization;
+  `d90b255` badge/detail presentation; `0eadcfa` Profile/collection;
+  `f84eb8a` celebrations; `8ea5ee1` rollout-gap reconciliation;
+  `2625c87` browser regressions/contrast; `2c6481f` architecture/rollout guide.
+  This handoff is a separate `docs: record achievement validation and PR handoff` commit.
+- Final validation: PostgreSQL 16 full backend suite **190 passed, zero skips**;
+  targeted achievements **18 passed**; Node 24 mobile **44 passed**; TypeScript,
+  Ruff F/E9, whitespace checks and Android/iOS/web exports passed.
+- Mocked exported-app browser scenarios passed in both themes: grouped historical
+  rewards, What's New ordering, dismissal, locked/unlocked cards, detail contrast,
+  narrow/enlarged text, offline restart and delayed A-response after B sign-in.
+  Light/dark screenshots were visually inspected. Account-store tests additionally
+  cover direct replacement without sign-out, cache epochs and storage failures.
+- Validation used local test services only. Original handbook edits/backups remain
+  untouched. Physical Android/TalkBack and native system font/Back checks remain
+  outstanding. Server acknowledgement has the cross-device/offline limits documented
+  in ACHIEVEMENTS.md; earned awards remain permanent and unique.
+
+
 ### #207 XML parser patch and mobile publication status
 
 - Owner requested a fix PR and the new version/card on the phone and GitHub.

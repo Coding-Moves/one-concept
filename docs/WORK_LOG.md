@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #163 privacy policy — 2026-09-25
+
+- Confirmed the issue: no public policy page or in-app link existed while the app uses account identity, profile/learning data, reminder preferences and optional Expo push tokens.
+- `8479116` adds a public `/privacy` page, an accessible About-screen link that resolves from the configured API origin, and a public-page regression test. The policy describes only source-confirmed data flows, local cache behavior, reminder choices and the contact route for access, correction or deletion requests.
+- Validation: privacy route test passed with test-only configuration; mobile TypeScript and all 39 mobile tests passed. No live deployment, store-listing update, migration, release or merge was performed.
+
+
 ### #207 XML parser patch and mobile publication status
 
 - Owner requested a fix PR and the new version/card on the phone and GitHub.

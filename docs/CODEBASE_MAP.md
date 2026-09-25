@@ -143,7 +143,7 @@ The existing pre-ping, transaction pooler mode, and pool limits remain in place.
 | `me.py`: `PUT /v1/me/topics`, `PATCH /v1/me` | Whole-set follows, profile name, PostgreSQL-validated timezone. |
 | `me.py`: `GET/PUT /v1/me/notifications`, `POST/DELETE /v1/me/push-token` | Reminder preferences and scoped device registration/removal. |
 | `concepts.py`: `GET /v1/concepts/{slug}`, `PUT/DELETE .../like`, `.../save` | Published lesson detail and independent interaction writes. |
-| `pages.py`: `GET /confirmed`, `/reset-password` | Public HTML auth landing pages; reset uses Supabase Auth in the browser. |
+| `pages.py`: `GET /privacy`, `/confirmed`, `/reset-password` | Public privacy and auth landing pages; reset uses Supabase Auth in the browser. |
 
 `router.py` mounts authenticated feature routers under `/v1`. Response/input
 models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.

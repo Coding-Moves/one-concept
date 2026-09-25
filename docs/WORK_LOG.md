@@ -7,6 +7,25 @@ claims as completed work.
 
 ## Current status
 
+### 1.10.0 native release preparation — 2026-09-25
+
+- Owner requested release checks, version/one-time What's New, and a detailed
+  develop → main release PR. Prepare from develop `9e9f802`; preserve VM draft
+  #231 and SMTP draft #187. Main remains `0191b0e` during preparation.
+- Scope: achievements (#228), privacy policy (#229), XML parser correction
+  (#208), and the reviewed dependency updates. Native Expo changes require a
+  new APK and runtime 1.10.0; old runtime 1.3.0 binaries will not receive it OTA.
+- Planned focused commits: version/runtime and matching card; release checklist
+  and evidence. Reuse the existing version-based dismissal and verify it in the
+  exported app, including ordering before achievement celebrations.
+- Release gates: merge the preparation PR only after exact owner confirmation;
+  apply and verify migration 0016 on production before recording it in the
+  ledger/opening the release PR. No production database credentials are present
+  in the workspace and no signed-in deployment dashboard is available.
+- The 10 bot PR merges passed combined backend (191 tests), mobile (44 tests)
+  and TypeScript checks. Version/card commit `bfb1de3` passed clean npm install, TypeScript, 44 mobile tests, all-platform bundle exports, nine revision guards and light/dark browser card/achievement checks. Clean Metro export corrected stale test-fixture URLs; screenshots inspected. Production migration remains pending with the owner. No deployment,
+  production mobile publication, release tag or native cloud build has run.
+
 ### #163 privacy policy — 2026-09-25
 
 - PR [#229](https://github.com/Coding-Moves/one-concept/pull/229) targets `develop`; it is ready for review and remains open.

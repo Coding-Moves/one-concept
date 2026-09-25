@@ -5,6 +5,8 @@
 # crashing on "column claimed_at does not exist".
 #
 # The check compares backend/migrations/*.sql against the applied.txt ledger.
+# This is a bookkeeping gate only. Actual read-only schema verification runs
+# before VM activation and again before mobile Release; see app/db/schema.py.
 # It runs on main and on PRs INTO main (release PRs) — not on develop, where
 # unreleased migrations are legitimately not-yet-applied.
 name: Migrations applied check

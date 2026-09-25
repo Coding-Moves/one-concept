@@ -25,3 +25,15 @@ test('release validation rejects local/http endpoints and missing auth configura
   assert.match(result.stderr, /EXPO_PUBLIC_API_BASE_URL/);
   assert.doesNotMatch(result.stderr, /test-public-key/);
 });
+
+test('production publication requires the endpoint that passed deployment health checks', () => {
+  const env = { ...process.env, EXPO_PUBLIC_API_BASE_URL: 'https://api.example.org', EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co', EXPO_PUBLIC_SUPABASE_ANON_KEY: 'test-public-key' };
+  delete env.NODE_TEST_CONTEXT;
+  for (const [origin, status] of [['', 1], ['https://old.example.org', 1], ['https://api.example.org/', 0]]) {
+    const result = spawnSync(process.execPath, ['scripts/validate-public-config.cjs', '--release', '--deployed'], {
+      env: { ...env, PUBLIC_API_ORIGIN: origin }, encoding: 'utf8',
+    });
+    assert.equal(result.status, status);
+    assert.doesNotMatch(result.stderr, /test-public-key/);
+  }
+});

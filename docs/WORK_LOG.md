@@ -17,8 +17,17 @@ claims as completed work.
   production connection or independent policy/constraint inspection claimed.
 - Current release head is `ac72cba`; its rerun still fails because the ledger
   change has not reached develop. Merely rerunning that head cannot fix it.
-- Next: regression test for slow cache hydration, typecheck/mobile tests and
-  affected browser flow, publish follow-up PR, then request exact merge approval.
+- `cd0cf6a` records owner-verified migration application; `291570c` shares one
+  initial cache read and waits for it before refreshing, preserving offline
+  dismissals and acknowledgement retries. Sign-out still fences pending work.
+- Passed: TypeScript, all 47 Node 24 mobile tests, clean web export, light/dark
+  achievement browser flows (dismissal, offline restart and account replacement),
+  local migration ledger check and diff --check. The two slow-disk regression
+  cases failed before the fix and pass afterward; a third covers sign-out while
+  hydration is pending. No backend code changed, so its suite was not repeated.
+- Validation documentation commit: `docs: record release review fix validation`.
+  Next: publish follow-up PR, run GitHub migration check on its branch and request
+  exact merge approval. Release #233 checks rerun once develop receives the fix.
 - Original VM draft checkout and prior release-preparation handoff preserved.
 
 ### 1.10.0 native release preparation — 2026-09-25

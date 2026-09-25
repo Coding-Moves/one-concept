@@ -28,7 +28,7 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
       <View style={[styles.backdrop, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
         <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]} accessibilityViewIsModal>
           <ScrollView contentContainerStyle={styles.body}>
-            <Text accessibilityRole="header" style={[styles.eyebrow, { color: colors.primary }]}>
+            <Text accessibilityRole="header" style={[styles.eyebrow, { color: colors.textSecondary }]}>
               {celebration ? count > 1 ? `${count} achievements earned` : 'Achievement unlocked' : 'Your achievement'}
             </Text>
             <Animated.View style={{ transform: [{ scale: reveal }] }}>
@@ -36,17 +36,17 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
             </Animated.View>
             <Text style={[styles.title, { color: colors.text }]}>{award.name}</Text>
             <Text style={[styles.days, { color: colors.text }]}>{award.threshold.toLocaleString()} consecutive days</Text>
-            <Text style={[styles.copy, { color: colors.textMuted }]}>{award.description}</Text>
-            <Text style={[styles.copy, { color: colors.textMuted }]}>Earned {award.earned_on}</Text>
+            <Text style={[styles.copy, { color: colors.textSecondary }]}>{award.description}</Text>
+            <Text style={[styles.copy, { color: colors.textSecondary }]}>Earned {award.earned_on}</Text>
             <View style={[styles.note, { backgroundColor: colors.background }]}>
-              <Text style={[styles.copy, { color: colors.textMuted }]}>
+              <Text style={[styles.copy, { color: colors.textSecondary }]}>
                 {count > 1 ? 'Your previous learning counts. All earned badges are waiting in your collection.' : 'Earned by completing daily lessons or reviews. This badge is yours to keep, even if your streak ends.'}
               </Text>
             </View>
           </ScrollView>
           <Pressable accessibilityRole="button" accessibilityLabel={celebration ? 'Continue learning' : 'Close achievement'}
-            onPress={onClose} style={({ pressed }) => [styles.button, { backgroundColor: pressed ? colors.primaryPressed : colors.primary }]}>
-            <Text style={styles.buttonText}>{celebration ? 'Continue' : 'Done'}</Text>
+            onPress={onClose} style={({ pressed }) => [styles.button, { backgroundColor: colors.offlineBackground, opacity: pressed ? 0.85 : 1 }]}>
+            <Text style={[styles.buttonText, { color: colors.offlineText }]}>{celebration ? 'Continue' : 'Done'}</Text>
           </Pressable>
         </View>
       </View>

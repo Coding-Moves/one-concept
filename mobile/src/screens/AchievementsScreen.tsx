@@ -56,7 +56,7 @@ export function AchievementsScreen() {
           {(!online || !fresh) && <Text accessibilityLiveRegion="polite" style={[styles.copy, { color: colors.textSecondary }]}>Saved achievements. Connect and sync to confirm new milestones.</Text>}
         </>}
         {refreshUI.action}
-        {failed && <Text accessibilityRole="alert" style={[styles.copy, { color: colors.textSecondary }]}>Couldn’t refresh achievements. Your saved collection is still available. Try again when connected.</Text>}
+        {failed && <Text accessibilityRole="alert" style={[styles.copy, { color: colors.textSecondary }]}>{collection ? 'Couldn’t refresh achievements. Your saved collection is still available. Try again when connected.' : 'Couldn’t load achievements. Connect and tap Refresh achievements to try again.'}</Text>}
       </View>}
       ListEmptyComponent={loading ? <ActivityIndicator accessibilityLabel="Loading achievements" color={colors.primary} /> :
         <Text style={[styles.copy, { color: colors.textSecondary }]}>Your collection will appear here after a successful sync.</Text>}

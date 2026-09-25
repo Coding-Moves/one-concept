@@ -22,6 +22,15 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.0',
+    highlights: [
+      'Earn permanent badges for your learning streaks, with credit for milestones you have already reached.',
+      'Explore your achievement collection from Profile and see your next milestone.',
+      'Celebrate newly earned badges together, then revisit them whenever you like.',
+      'Read our privacy policy directly from About to understand how your data is handled.',
+    ],
+  },
+  {
     version: '1.9.1',
     highlights: [
       'Keep your learning streak going with daily reviews when no new lesson is available.',

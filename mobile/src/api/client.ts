@@ -1,16 +1,13 @@
 /**
  * Thin HTTP client for the FastAPI backend.
  *
- * Not wired into any screen yet — it lands here in Phase 0 so the base URL,
- * auth header, and error shape are settled before Phase 2 starts returning
- * real data. The access token is supplied by a provider function so this
+ * The access token is supplied by a provider function so this
  * module never imports the auth stack (and never stores a token itself).
  */
 
 import { fetchWithTimeout } from './fetchWithTimeout';
-
-/** Public config only. Secrets live in backend/.env, never in the bundle. */
-export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
+import { API_BASE_URL, assertApiConfigured } from './config';
+export { API_BASE_URL, isApiConfigured } from './config';
 
 export class ApiError extends Error {
   constructor(
@@ -36,10 +33,6 @@ export function invalidateAccountRequests(): void {
 /** Registered once by the auth layer in Phase 3. */
 export function setTokenProvider(provider: TokenProvider): void {
   getAccessToken = provider;
-}
-
-export function isApiConfigured(): boolean {
-  return API_BASE_URL.length > 0;
 }
 
 // --- Connectivity, inferred from request outcomes (no native listener) -------
@@ -79,9 +72,7 @@ interface RequestOptions {
  * identity from this bearer token alone.
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  if (!isApiConfigured()) {
-    throw new ApiError(0, 'EXPO_PUBLIC_API_BASE_URL is not set');
-  }
+  assertApiConfigured();
 
   const epoch = accountEpoch;
   const token = await getAccessToken();

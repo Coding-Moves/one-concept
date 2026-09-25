@@ -14,6 +14,8 @@ import { ComponentProps, useCallback, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OfflineBanner } from './src/components/OfflineBanner';
+import { ConfigurationState } from './src/components/ConfigurationState';
+import { configurationErrors } from './src/api/config';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ConnectivityProvider, useOnline } from './src/context/ConnectivityContext';
@@ -201,6 +203,7 @@ export default function App() {
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <SafeAreaProvider>
         <ThemeProvider>
+          {configurationErrors.length ? <ConfigurationState /> : (
           <ConnectivityProvider>
             <AuthProvider>
               <ProgressProvider>
@@ -208,6 +211,7 @@ export default function App() {
               </ProgressProvider>
             </AuthProvider>
           </ConnectivityProvider>
+          )}
         </ThemeProvider>
       </SafeAreaProvider>
     </View>

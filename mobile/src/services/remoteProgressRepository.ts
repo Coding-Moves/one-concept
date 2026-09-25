@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError, apiRequest } from '../api/client';
+import { ApiConfigurationError, assertApiConfigured } from '../api/config';
 import { Category, DailyPayload, ReviewPayload, ProgressState } from '../types';
 import { todayKey } from './dates';
 import { cacheSavedConcepts, conceptCache } from './conceptApi';
@@ -159,7 +160,8 @@ export class RemoteProgressRepository implements ProgressRepository {
     const epoch = this.epoch;
     try {
       return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
-    } catch {
+    } catch (error) {
+      if (error instanceof ApiConfigurationError) throw error;
       const parsed = await this.disk.get('v1', epoch);
       if (parsed && epoch === this.epoch) {
         const cached = withPendingProgress(parsed, parsed, await pending());
@@ -253,6 +255,7 @@ export class RemoteProgressRepository implements ProgressRepository {
   }
 
   async completeReview(reviewId: string): Promise<ProgressState> {
+    assertApiConfigured();
     const epoch = this.epoch;
     const daily = this.cache.serverDaily;
     if (daily?.status !== 'review' || daily.payload.review_id !== reviewId) return this.cache;

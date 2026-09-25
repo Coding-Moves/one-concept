@@ -23,6 +23,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { useWhatsNew } from './src/hooks/useWhatsNew';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
+import { AchievementsScreen } from './src/screens/AchievementsScreen';
 import { AboutScreen } from './src/screens/AboutScreen';
 import { ConceptDetailScreen } from './src/screens/ConceptDetailScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
@@ -50,6 +51,7 @@ function ProfileStackScreen() {
         component={PersonalizationScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
+      <ProfileStack.Screen name="Achievements" component={AchievementsScreen} />
       <ProfileStack.Screen name="Saved" component={SavedScreen} />
       <ProfileStack.Screen
         name="About"

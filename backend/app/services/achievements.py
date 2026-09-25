@@ -19,7 +19,7 @@ _AWARD_STREAKS = text("""
         select d,row_number() over(partition by grp order by d) as length from islands
     )
     insert into public.user_achievements(user_id,achievement_code,earned_on,source)
-    select :uid,a.code,min(l.d),'completion' from lengths l
+    select :uid,a.code,min(l.d),:source from lengths l
     join public.achievement_definitions a
       on a.metric='consecutive_days' and l.length=a.threshold
     group by a.code
@@ -27,15 +27,20 @@ _AWARD_STREAKS = text("""
 """)
 
 
-async def award_streaks(session: AsyncSession, user_id: uuid.UUID) -> None:
+async def award_streaks(
+    session: AsyncSession, user_id: uuid.UUID, *, historical: bool = False,
+) -> None:
     # No commit here: an award and its accepted completion must succeed or fail
     # together. Replay preserves the original earned date and seen state.
-    await session.execute(_AWARD_STREAKS, {"uid": user_id})
+    await session.execute(_AWARD_STREAKS, {"uid": user_id, "source": "history" if historical else "completion"})
 
 
 async def collection(session: AsyncSession, user_id: uuid.UUID) -> dict:
     # Same lock as completion: badges and progress describe one consistent state.
     await session.execute(text("select id from public.profiles where id=:uid for update"), {"uid": user_id})
+    # Reconcile learning accepted by an older API during deployment, or newly
+    # added definitions. Historical credit must not require another completion.
+    await award_streaks(session, user_id, historical=True)
     stats = await compute_streaks(session, user_id)
     rows = await session.execute(text("""
         select a.code,a.metric,a.threshold,a.name,a.description,a.artwork_key,

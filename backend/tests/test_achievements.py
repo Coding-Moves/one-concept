@@ -9,7 +9,11 @@ from sqlalchemy import text
 from app.services.achievements import acknowledge, award_streaks
 from app.services.interactions import complete_today
 from app.services.reviews import complete_review
-from tests.test_api import client, anon_client  # noqa: F401
+from tests import test_api
+
+# Reuse the existing HTTP fixtures without registering another test plugin.
+client = test_api.client
+anon_client = test_api.anon_client
 from tests.test_writes import _make_user
 
 DAY = date(2026, 1, 1)
@@ -141,3 +145,16 @@ async def test_client_roles_cannot_mint_awards(session, user):
     with pytest.raises(Exception, match='row-level security'):
         await session.execute(text("insert into public.user_achievements(user_id,achievement_code,earned_on,source) values (:u,'streak_7',current_date,'completion')"), {'u': user})
     await session.rollback()
+
+
+async def test_collection_reconciles_deployment_gap_without_another_completion(client, session, user):
+    await history(session, user, 30)
+    assert not await earned(session, user)
+    response = await client.get('/v1/me/achievements')
+    assert response.status_code == 200
+    unlocked = [a for a in response.json()['items'] if a['earned_on']]
+    assert [a['code'] for a in unlocked] == ['streak_7', 'streak_30']
+    assert all(a['source'] == 'history' for a in unlocked)
+    await client.post('/v1/me/achievements/seen', json={'codes': ['streak_7', 'streak_30']})
+    again = await client.get('/v1/me/achievements')
+    assert all(a['seen_at'] for a in again.json()['items'] if a['earned_on'])

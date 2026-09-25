@@ -7,21 +7,43 @@ claims as completed work.
 
 ## Current status
 
-### #169 consolidated Oracle migration — implementation in progress
+### #169 consolidated VM migration — draft; cloud setup deferred
 
-- Owner requested one implementation PR into develop, preserving the separate
-  release and merge approvals. Base: c52cd01. Existing handbook checkout and
-  private backups are untouched; implementation uses an isolated checkout.
-- Included work: Oracle API/proxy/timers, immutable deployment and rollback,
-  actual schema readiness, CI gates, per-user rate limits, mobile configuration
-  and bounded durable replay, regression coverage, and operator/onboarding docs.
-- Planned commits separate CI, API protection, schema verification, mobile
-  configuration, retry behavior, infrastructure, release integration and docs.
-- Oracle VM eligibility/access and hostname are being checked by the owner.
-  Production cutover, physical-device evidence and Railway retirement remain
-  explicit rollout acceptance; code preparation does not establish them.
-- Preserve #195; coordinate with separate achievements #228 and SMTP #187.
-  Do not auto-close migration/source issues while rollout remains unverified.
+- Owner requested one PR into develop, then explicitly deferred signup, VM and
+  release until verification funds are available. Preserve implementation and
+  keep it draft; no deployment, Railway removal or app publication is authorized
+  by this handoff. The separate handbook checkout/private backups are untouched.
+- Base c52cd01 advanced to develop 39c58af while working: integrated the already
+  merged achievements #228 with a preserving merge (92caa4d), retained account
+  identity fencing, and extended the schema contract through migration 0016.
+  No production migration application or ledger entry is claimed.
+- Focused commits implement mandatory disposable-Postgres/mobile CI (5caa649),
+  verified-account limits (13b2c14), bounded revision health (92fc37d), actual
+  read-only schema checks (a1d9a46/156f606), configuration errors (c6d4ae5),
+  durable bounded replay (e9d76f6), reminder failure visibility (06ca338),
+  immutable VM/proxy/job supervision (d5ba12a/c5422bd), protected image/deployment
+  CI and release gates (4213372/171f33c/592f15a), and operator/onboarding docs
+  (67e9973). Provider-neutral Ubuntu scripts retain Oracle as the proposed target;
+  AWS was discussed but no provider change or hostname was selected.
+- Integration found that a successful achievement fetch could cancel retry of a
+  failed topic refresh. 06213c4 retains endpoint retry state and backoff while
+  continuing to show cached topics; the browser regression passes.
+- Local evidence: 220 backend tests passed on disposable PostgreSQL 16, no skips;
+  55 mobile Node 24 tests and TypeScript passed; nine release-guard cases passed.
+  Browser checks passed for durable eight-failure pause/manual retry, delayed
+  replay vs later taps, rejected-write reconciliation, midnight, partial endpoint
+  failure/recovery, offline restart and sign-out. Caddy validates; systemd calendar
+  expressions and shell syntax pass. Initial local AMD64 image build/smoke passed.
+  Final integrated image/native export and GitHub CI results follow at handoff.
+- Setup remains incomplete: account/eligible capacity, host/domain/DNS, protected
+  secrets/verified SSH network path, actual schema check, required status-check
+  enforcement, physical push/auth/old-client evidence, reboot/rollback/restore,
+  full daily observation and final cost/Railway retirement verification.
+  Inspected develop protection has no required status checks; workflow YAML alone
+  is not enforcement. Configure it after workflows exist on branch baselines.
+- Keep #169/#170 and related rollout issues open. Preserve #195 behavior; SMTP
+  draft #187 and broad mobile crash reporting (#161 remainder) stay separate.
+  Full mechanical checklist and limitations: [VM_DEPLOYMENT.md](VM_DEPLOYMENT.md).
 
 ### #209 permanent streak achievements — 2026-09-25
 

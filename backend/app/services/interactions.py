@@ -8,6 +8,8 @@ from fastapi import HTTPException, status
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.achievements import award_streaks
+
 _CONCEPT_ID = text("select id from public.concepts where slug = :slug and status = 'published'")
 
 
@@ -80,6 +82,7 @@ async def complete_today(session: AsyncSession, user_id: uuid.UUID, today) -> Co
             status.HTTP_404_NOT_FOUND,
             detail="No concept has been assigned recently. Fetch /v1/daily first.",
         )
+    await award_streaks(session, user_id)
     await session.commit()
     return Completion(assigned_for=row.assigned_for)
 

@@ -5,6 +5,7 @@ import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { AchievementPreview } from '../components/AchievementPreview';
 import { AnimatedFlame } from '../components/AnimatedFlame';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
@@ -23,6 +24,7 @@ export type ProfileStackParamList = {
   Personalization: undefined;
   Saved: undefined;
   About: undefined;
+  Achievements: undefined;
 };
 
 export function ProfileScreen() {
@@ -105,6 +107,8 @@ export function ProfileScreen() {
           <Text style={styles.cardLabel}>Your activity</Text>
         </View>
       </View>
+
+      <AchievementPreview onPress={() => navigation.navigate('Achievements')} />
 
       <Pressable
         onPress={() => navigation.navigate('Personalization')}

@@ -11,6 +11,7 @@ from fastapi import APIRouter
 from fastapi.responses import HTMLResponse
 
 from app.config import get_settings
+from app.privacy import PRIVACY_POLICY
 
 router = APIRouter(tags=["pages"])
 
@@ -37,6 +38,11 @@ _CONFIRMED = """<!doctype html>
   </main>
 </body>
 </html>"""
+
+
+@router.get("/privacy", response_class=HTMLResponse, include_in_schema=False)
+async def privacy() -> str:
+    return PRIVACY_POLICY
 
 
 @router.get("/confirmed", response_class=HTMLResponse, include_in_schema=False)

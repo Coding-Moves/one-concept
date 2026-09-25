@@ -7,6 +7,22 @@ claims as completed work.
 
 ## Current status
 
+### #169 consolidated Oracle migration — implementation in progress
+
+- Owner requested one implementation PR into develop, preserving the separate
+  release and merge approvals. Base: c52cd01. Existing handbook checkout and
+  private backups are untouched; implementation uses an isolated checkout.
+- Included work: Oracle API/proxy/timers, immutable deployment and rollback,
+  actual schema readiness, CI gates, per-user rate limits, mobile configuration
+  and bounded durable replay, regression coverage, and operator/onboarding docs.
+- Planned commits separate CI, API protection, schema verification, mobile
+  configuration, retry behavior, infrastructure, release integration and docs.
+- Oracle VM eligibility/access and hostname are being checked by the owner.
+  Production cutover, physical-device evidence and Railway retirement remain
+  explicit rollout acceptance; code preparation does not establish them.
+- Preserve #195; coordinate with separate achievements #228 and SMTP #187.
+  Do not auto-close migration/source issues while rollout remains unverified.
+
 ### #207 XML parser patch and mobile publication status
 
 - Owner requested a fix PR and the new version/card on the phone and GitHub.

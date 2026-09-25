@@ -33,8 +33,10 @@ claims as completed work.
   Browser checks passed for durable eight-failure pause/manual retry, delayed
   replay vs later taps, rejected-write reconciliation, midnight, partial endpoint
   failure/recovery, offline restart and sign-out. Caddy validates; systemd calendar
-  expressions and shell syntax pass. Initial local AMD64 image build/smoke passed.
-  Final integrated image/native export and GitHub CI results follow at handoff.
+  expressions and shell syntax pass. Final integrated AMD64 image build/smoke
+  passed for API, all job entry points, imports, non-root execution and damaged
+  schema rejection. Clean Android/iOS/web exports passed. GitHub CI results
+  and the draft PR link follow at handoff.
 - Setup remains incomplete: account/eligible capacity, host/domain/DNS, protected
   secrets/verified SSH network path, actual schema check, required status-check
   enforcement, physical push/auth/old-client evidence, reboot/rollback/restore,

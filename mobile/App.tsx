@@ -15,6 +15,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { ConfigurationState } from './src/components/ConfigurationState';
+import { SyncStatusBanner } from './src/components/SyncStatusBanner';
 import { configurationErrors } from './src/api/config';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -117,6 +118,7 @@ function ThemedApp() {
   return (
     <View style={{ flex: 1 }}>
       {!online && <OfflineBanner />}
+      <SyncStatusBanner />
       <View style={{ flex: 1 }}>
         <NavigationContainer theme={navigationTheme}>
           <RootStack.Navigator screenOptions={{ headerShown: false }}>

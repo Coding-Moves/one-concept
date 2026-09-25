@@ -9,7 +9,8 @@ claims as completed work.
 
 ### #169 consolidated VM migration — draft; cloud setup deferred
 
-- Owner requested one PR into develop, then explicitly deferred signup, VM and
+- Draft PR [#231](https://github.com/Coding-Moves/one-concept/pull/231) targets
+  develop and preserves the focused commits. Owner deferred signup, VM and
   release until verification funds are available. Preserve implementation and
   keep it draft; no deployment, Railway removal or app publication is authorized
   by this handoff. The separate handbook checkout/private backups are untouched.
@@ -35,8 +36,9 @@ claims as completed work.
   failure/recovery, offline restart and sign-out. Caddy validates; systemd calendar
   expressions and shell syntax pass. Final integrated AMD64 image build/smoke
   passed for API, all job entry points, imports, non-root execution and damaged
-  schema rejection. Clean Android/iOS/web exports passed. GitHub CI results
-  and the draft PR link follow at handoff.
+  schema rejection. Clean Android/iOS/web exports passed. Final offline replay,
+  sign-out and paused-retry browser reruns passed. Edited documentation links
+  resolve. GitHub native image CI remains a separate result to record.
 - Setup remains incomplete: account/eligible capacity, host/domain/DNS, protected
   secrets/verified SSH network path, actual schema check, required status-check
   enforcement, physical push/auth/old-client evidence, reboot/rollback/restore,

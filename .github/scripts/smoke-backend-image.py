@@ -46,7 +46,7 @@ def main():
         base = ['run', '--rm', '--network', name, *environment, args.image]
         run(*base, 'python', '-c', 'import os,asyncpg; assert os.getuid()==10001; print("Non-root asyncpg import passed")')
         run(*base, 'python', '-m', 'app.workers.schema_check')
-        for module, extra in [('reminders', []), ('pool_topup', []), ('content', ['report', '--observe']),
+        for module, extra in [('reminders', []), ('pool_topup', []), ('rewrite_catalog', []), ('content', ['report', '--observe']),
                               ('content', ['import-subjects', 'content/subjects.json']), ('content', ['--help'])]:
             run(*base, 'python', '-m', f'app.workers.{module}', *extra)
         run('run', '-d', '--name', api, '--network', name, *environment, args.image)

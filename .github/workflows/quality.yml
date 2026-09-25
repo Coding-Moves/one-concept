@@ -81,7 +81,12 @@ jobs:
           CADDY_IMAGE: caddy:2
           API_HOST: api.example.org
           TLS_EMAIL: operator@example.org
-        run: docker compose -f backend/operations/compose.yaml --profile tools config --no-env-resolution --quiet
+        run: |
+          # Compose still checks required env-file existence with no resolution.
+          # This disposable runner gets an empty fixture, never runtime secrets.
+          sudo install -d -m 0755 /etc/one-concept
+          sudo install -m 0644 /dev/null /etc/one-concept/backend.env
+          docker compose -f backend/operations/compose.yaml --profile tools config --no-env-resolution --quiet
       - name: Validate HTTPS proxy configuration
         run: |
           docker run --rm -e API_HOST=api.example.org -e TLS_EMAIL=operator@example.org \

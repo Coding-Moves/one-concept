@@ -38,7 +38,12 @@ claims as completed work.
   passed for API, all job entry points, imports, non-root execution and damaged
   schema rejection. Clean Android/iOS/web exports passed. Final offline replay,
   sign-out and paused-retry browser reruns passed. Edited documentation links
-  resolve. GitHub native image CI remains a separate result to record.
+  resolve. GitHub native ARM64/AMD64 build and runtime smoke passed; the following
+  Compose check initially failed because it still requires the private env-file
+  path to exist even with no env resolution. CI now creates an empty fixture on
+  its disposable runner; it receives no production credentials. Final check
+  status is tracked on the draft PR. The disabled correction-worker image entry
+  point also passes and is included in CI smoke coverage.
 - Setup remains incomplete: account/eligible capacity, host/domain/DNS, protected
   secrets/verified SSH network path, actual schema check, required status-check
   enforcement, physical push/auth/old-client evidence, reboot/rollback/restore,

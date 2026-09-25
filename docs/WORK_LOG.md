@@ -7,6 +7,20 @@ claims as completed work.
 
 ## Current status
 
+### Release #233 review follow-up — 2026-09-25
+
+- Scope: record owner-confirmed production application of migration 0016 and
+  fix the reviewed badge-dismissal hydration race, in separate focused commits
+  within one follow-up PR targeting develop. Release #233 then receives both.
+- Owner reported the complete migration succeeded and the verification query
+  returns both achievement tables. Ledger updated from that evidence; no
+  production connection or independent policy/constraint inspection claimed.
+- Current release head is `ac72cba`; its rerun still fails because the ledger
+  change has not reached develop. Merely rerunning that head cannot fix it.
+- Next: regression test for slow cache hydration, typecheck/mobile tests and
+  affected browser flow, publish follow-up PR, then request exact merge approval.
+- Original VM draft checkout and prior release-preparation handoff preserved.
+
 ### 1.10.0 native release preparation — 2026-09-25
 
 - Preparation PR [#232](https://github.com/Coding-Moves/one-concept/pull/232)

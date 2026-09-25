@@ -26,8 +26,9 @@ learned history, streaks, likes, saved concepts, and push reminders.
 
 `services/achievements.py` awards permanent streak milestones under the existing
 completion transaction/profile lock. Migration `0016_achievements.sql` adds the
-catalog and per-user awards and backfills historical milestones; it remains
-unapplied to production. `api/v1/achievements.py` serves collection and seen APIs.
+catalog and per-user awards and backfills historical milestones. The owner
+confirmed production application and both tables on 2026-09-25.
+`api/v1/achievements.py` serves collection and seen APIs.
 On mobile, `AchievementsContext` owns one keyed account instance, `achievementStore`
 fences async results, and `achievementCache` joins account cleanup. Profile opens
 `AchievementsScreen`; shared badge/detail/celebration components render the

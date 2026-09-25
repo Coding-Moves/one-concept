@@ -15,6 +15,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
+import { AchievementsProvider } from './src/context/AchievementsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ConnectivityProvider, useOnline } from './src/context/ConnectivityContext';
 import { ProgressProvider } from './src/context/ProgressContext';
@@ -204,7 +205,9 @@ export default function App() {
           <ConnectivityProvider>
             <AuthProvider>
               <ProgressProvider>
-                <ThemedApp />
+                <AchievementsProvider>
+                  <ThemedApp />
+                </AchievementsProvider>
               </ProgressProvider>
             </AuthProvider>
           </ConnectivityProvider>

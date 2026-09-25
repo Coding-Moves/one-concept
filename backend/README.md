@@ -9,9 +9,10 @@ Mobile app  ──►  FastAPI  ──┬──►  Supabase (Postgres + Auth)
                             └──►  Gemini API
 ```
 
-Status: **Phase 7 — reminders.** Reads, writes, Gemini generation from a
-curated backlog, and timezone-aware push reminders that stop once the day is
-learned.
+The API serves stored lessons, progress and achievements. Background workers
+create reviewed content drafts and send timezone-aware reminders. The prepared
+VM deployment is described in [the migration runbook](../docs/VM_DEPLOYMENT.md);
+production remains on Railway until the owner completes the deferred cutover.
 
 ## Sustainable content lifecycle
 
@@ -20,7 +21,7 @@ See [the architecture](../docs/CONTENT_ARCHITECTURE.md) and
 reader-aware supply targets, structured curriculum imports, explicit reviewed
 publication, and separate daily reviews when new lessons are exhausted.
 Run `python -m app.workers.content --help` for maintainer operations.
-Migrations 0011–0015 must precede this backend; keep old generators disabled
+All migrations through 0016 must precede this backend; keep old generators disabled
 during rollout. Daily review clients opt into `reviews=true` on `/v1/me/state`
 and complete an identified activity through `/v1/reviews/{id}/complete`.
 
@@ -41,8 +42,10 @@ backend/
 │   └── api/v1/              health, topics, daily
 ├── migrations/          # plain SQL, applied in filename order
 ├── email-templates/     # account email HTML installed manually in Supabase Auth
-├── tests/               # 25 tests: token verification, selection, HTTP
-├── Dockerfile           # what Railway builds
+├── tests/               # unit and disposable PostgreSQL integration tests
+├── operations/          # VM controller, Compose, Caddy and systemd timers
+├── schema/contract.json # reviewed metadata used by the read-only deploy gate
+├── Dockerfile           # API and all jobs, immutable revision, non-root user
 └── .env.example         # copy to .env — never commit the filled copy
 ```
 
@@ -50,7 +53,10 @@ backend/
 
 ```bash
 cd backend
-python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+python3.12 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+cp .env.example .env
+# Fill .env with a DEVELOPMENT Supabase project before starting.
 .venv/bin/python -m uvicorn app.main:app --reload --port 8000
 ```
 
@@ -60,7 +66,8 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/health` | no | Liveness + a real query. Also the keep-alive ping target. |
+| GET | `/health` | no | Bounded DB readiness and deployed revision. |
+| GET | `/health/operations` | no | Safe VM/worker aggregate; 503 until current evidence exists. |
 | GET | `/v1/topics` | yes | Active topics, concept counts, and whether you follow each. |
 | GET | `/v1/daily` | yes | Today's concept. Creates the assignment on first call, idempotent after. |
 | POST | `/v1/daily/complete` | yes | Mark today learned. Server sets the timestamp and the day it counts for. |
@@ -77,8 +84,12 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 | PUT/DELETE | `/v1/concepts/{slug}/save` | yes | Save / unsave. |
 
 `GET /v1/daily` returns `409` with `reason: "catalog_exhausted"` once a user has
-been assigned every published concept — it never repeats one. Phase 6 hooks
-Gemini generation in at that point.
+been assigned every published concept. New assignments never repeat a concept
+for that user. Review-aware clients request `reviews=true` on state and receive
+a separate daily review if eligible; complete it with `POST /v1/reviews/{id}/complete`.
+`GET /v1/me/achievements` reads permanent earned milestones and
+`POST /v1/me/achievements/seen` records celebration acknowledgement.
+See [achievements](../docs/ACHIEVEMENTS.md) for the exact contract.
 
 ## Startup and collection pagination
 
@@ -102,7 +113,7 @@ The limit applies before per-concept like-count enrichment. Bare membership
 arrays and aggregate calculations still grow with account activity. Older
 clients that omit `compact=true` keep the full legacy detail response during
 backend/OTA rollout; their startup cost is unchanged until updated. The mobile
-History screen still shows the last ten lessons; its full-history UI is separate.
+History screen pages older lessons and retains downloaded content offline.
 Saved loads older metadata only when opened, preserving search/category filters,
 and caches it for offline use. Downloaded lesson bodies also supply missing
 metadata offline, even if Saved was never opened before.
@@ -127,38 +138,30 @@ does not publish these templates or change SMTP settings.
 
 Gemini writes lessons. It does **not** choose subjects.
 
-```
-curated backlog (150 titles)
+```text
+reviewed subjects and curriculum titles
         ↓
-worker: is a topic below MIN_POOL_PER_TOPIC published concepts?
+reader-aware supply target and bounded worker/demand wake
         ↓
-claim a title + reserve one shared daily call, then commit
+claim title and reserve shared quota, then commit
         ↓
-Gemini writes {summary, example} for one backlogged title
+Gemini creates a validated draft revision
         ↓
-validate — length bounds, no boilerplate opener, no code fence,
-           example must not restate the summary
+human inspects and publishes the exact revision
         ↓
-INSERT INTO concepts (status='published', source='gemini',
-                      model, prompt_version)
-        ↓
-GET /v1/daily serves stored rows. It never calls Gemini on the happy path.
+GET /v1/daily serves stored published rows
 ```
 
-Curating titles up front is what makes deduplication trivial — a unique slug —
-and keeps the syllabus deliberate instead of drifting towards whatever the model
-finds popular. The catalog is global, so one generated lesson serves every user;
-that is the largest cost lever in the design.
+The catalog is shared, while assignment history is per user. The floor of 25
+published lessons per subject is a bootstrap setting, not a lifetime ceiling.
+Continuing supply targets account for the most experienced active readers.
+New drafts never automatically become visible lessons. Reading requests never
+wait for Gemini; background wakes respect the same switches and budget.
 
-Run the worker:
-
-```bash
-python -m app.workers.pool_topup
-```
-
-On Railway, add this as a **cron job** on the same service (daily is plenty).
-It is safe to run concurrently: backlog items are claimed with
-`FOR UPDATE SKIP LOCKED`, so two workers never write the same title.
+Run the worker with `python -m app.workers.pool_topup`. The VM runbook schedules
+it daily, reminders every 15 minutes and content observations hourly. On the VM,
+use `sudo one-concept run-job pool_topup` only after scheduler ownership has been
+activated. Concurrent claim attempts cannot spend the same title reservation.
 
 ### Safety rails
 
@@ -194,8 +197,8 @@ this database. Changing it does not erase existing usage. This is an application
 budget, not a provider quota lookup: other applications using the same Gemini
 project are outside this ledger, and provider rate/token limits still apply.
 
-**Before deploying this code:** apply
-[`0010_generation_daily_usage.sql`](migrations/0010_generation_daily_usage.sql)
+**Before enabling generation:** verify all required migrations, including
+[`0010_generation_daily_usage.sql`](migrations/0010_generation_daily_usage.sql),
 using the migration procedure in [RELEASING.md](../RELEASING.md). The production
 ledger remains unchanged until actual application is verified. Earlier application
 versions do not use this counter, and calls made before deployment cannot be
@@ -277,40 +280,48 @@ Two are needed, and they are not interchangeable:
 - **`DATABASE_URL`** — transaction pooler (6543), used by the API. `config.py`
   strips a `?pgbouncer=true` suffix (a Prisma convention that asyncpg rejects)
   and disables prepared statements, which is what a transaction pooler requires.
-- **`DIRECT_URL`** — session pooler (5432), used for migrations and DDL.
+- **`DIRECT_URL`** — session pooler (5432), used for read-only schema checks and
+  deliberate migrations/DDL. It must point to the same project as `DATABASE_URL`.
 
-## Tests
+## Tests and required checks
 
-```bash
-.venv/bin/python -m pytest
-```
-
-Token tests run offline against a locally minted ES256 keypair. Selection tests
-run against a throwaway PostgreSQL started with podman and the project's own
-migration files, so constraints and races are exercised for real; they skip if
-podman is unavailable.
-
-## Applying the migrations
-
-Create a Supabase project first (one for `dev`, one for `prod` later), then
-either paste each file into the SQL Editor in filename order, or:
+Use Python 3.12, Node 24 for the mobile project, and a working Docker or Podman
+engine. The suite creates its own PostgreSQL 16 container on a random loopback
+port, applies all migrations and overrides provider configuration with test
+values. It never accepts a production database URL as its integration target.
 
 ```bash
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0001_schema.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0002_rls.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0003_seed_topics.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0004_seed_concepts.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0005_concept_backlog.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0006_seed_backlog.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0007_reminder_log.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0008_backlog_claimed_at.sql
-psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/0009_like_count_index.sql
+.venv/bin/python -m ruff check --select F,E9 app tests operations
+TEST_CONTAINER_ENGINE=podman TEST_REQUIRE_DATABASE=1 .venv/bin/python -m pytest -ra
+# Use TEST_CONTAINER_ENGINE=docker with Docker instead.
 ```
 
-Applying only through `0004` leaves a schema with no generation backlog and no
-reminder log — the pool worker and the reminders worker both need the later
-files. Each file is wrapped in a transaction, and the seeds are idempotent —
-re-running them updates rows in place rather than duplicating.
+`TEST_REQUIRE_DATABASE=1` turns unavailable PostgreSQL into a failure. Without
+it, local database tests can skip; report those skips separately. CI runs the
+full backend and mobile suites, then builds/tests native AMD64 and ARM64 images
+with disposable PostgreSQL. See [VM branch rules](../docs/VM_DEPLOYMENT.md#github-deployment-credentials-and-branch-rules)
+for the separate GitHub protection configuration.
+
+## Applying and verifying migrations
+
+Use a development project for local setup. Apply every pending immutable SQL
+file in filename order, through Supabase SQL Editor or `psql "$DIRECT_URL" -v
+ON_ERROR_STOP=1 -f migrations/FILE.sql`. Do not run only an outdated subset of
+seed files. Production application is a deliberate release operation; update
+`migrations/applied.txt` only after the actual effects are verified.
+
+`python -m app.workers.schema_check` opens a bounded read-only transaction and
+compares actual schema/RLS to the reviewed image contract. It never migrates or
+re-seeds a database. To update the contract after a new migration, use only the
+disposable test fixture:
+
+```bash
+UPDATE_SCHEMA_CONTRACT=1 TEST_REQUIRE_DATABASE=1 \
+  .venv/bin/python -m pytest -q tests/test_schema_contract.py
+```
+
+Review the changed metadata in the PR. Never baseline production to hide a
+missing migration, RLS policy or constraint. See [RELEASING.md](../RELEASING.md).
 
 ## What the schema guarantees
 
@@ -337,10 +348,21 @@ seed counts, the new-user trigger, both unique constraints rejecting duplicates,
 query, the gaps-and-islands streak query across three scenarios (today complete,
 today pending, day missed), and RLS isolation between two users.
 
-## Deployment
+## API protection and deployment
 
-**Railway**, from `backend/Dockerfile` (see `railway.json`). Set every variable
-from `.env.example` in Railway's variable store — never in the image, never in
-git. Point the health check at `/health`, and set `ENVIRONMENT=production` to
-disable both `/docs` and `/openapi.json` (the raw schema). A cron worker for
-pool top-up and reminders joins later, in Phases 6 and 7.
+Verified JWT subjects have separate read/write token buckets (defaults 120/60
+per minute). Rejections use 429 plus `Retry-After`; malformed tokens never
+consume another account's bucket. The bounded in-memory limiter uses one API
+process. Restarts reset these soft limits; scaling to more workers/VMs requires
+a shared limiter. It is not DDoS protection or the provider-spend boundary;
+generation still uses the durable database quota.
+
+[VM_DEPLOYMENT.md](../docs/VM_DEPLOYMENT.md) covers the complete API/proxy,
+workers, environment, hostname/client compatibility, monitoring, rollback and
+remaining owner setup. `railway.json` remains for the currently running service
+and transition recovery. No Railway service is deleted by this PR.
+
+Set `ENVIRONMENT=production` to disable `/docs` and `/openapi.json`. The image
+runs as UID 10001, has no embedded credentials and exposes safe revision health.
+GitHub deployment and manual mobile Release are separate; publication verifies
+actual schema, current workers and the public endpoint before sending an OTA.

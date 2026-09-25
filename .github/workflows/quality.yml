@@ -1,0 +1,101 @@
+name: Application quality
+
+on:
+  pull_request:
+    branches: [develop, main]
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# No path filters: required checks must finish even for documentation PRs.
+# Pull requests receive no deployment, database, Expo or provider credentials.
+jobs:
+  backend:
+    name: Backend quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: backend/requirements*.txt
+      - run: python -m pip install -r requirements-dev.txt
+      - run: python -m ruff check --select F,E9 app tests operations
+      - name: Unit and disposable PostgreSQL 16 integration tests
+        env:
+          TEST_CONTAINER_ENGINE: docker
+          TEST_REQUIRE_DATABASE: '1'
+        run: python -m pytest -ra
+
+  mobile:
+    name: Mobile quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  image:
+    name: Backend image (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - {arch: amd64, runner: ubuntu-24.04}
+          - {arch: arm64, runner: ubuntu-24.04-arm}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build the actual architecture and Python dependencies
+        run: docker build --build-arg APP_REVISION="$GITHUB_SHA" -t one-concept:test backend
+      - name: API and all worker entry points on disposable PostgreSQL
+        run: python3 .github/scripts/smoke-backend-image.py one-concept:test
+      - name: Validate production Compose without runtime secrets
+        env:
+          BACKEND_IMAGE: one-concept:test
+          APP_REVISION: ${{ github.sha }}
+          CADDY_IMAGE: caddy:2
+          API_HOST: api.example.org
+          TLS_EMAIL: operator@example.org
+        run: |
+          # Compose still checks required env-file existence with no resolution.
+          # This disposable runner gets an empty fixture, never runtime secrets.
+          sudo install -d -m 0755 /etc/one-concept
+          sudo install -m 0644 /dev/null /etc/one-concept/backend.env
+          docker compose -f backend/operations/compose.yaml --profile tools config --no-env-resolution --quiet
+      - name: Validate HTTPS proxy configuration
+        run: |
+          docker run --rm -e API_HOST=api.example.org -e TLS_EMAIL=operator@example.org \
+            -v "$PWD/backend/operations/Caddyfile:/etc/caddy/Caddyfile:ro" \
+            caddy:2 caddy validate --config /etc/caddy/Caddyfile
+      - name: Check host shell and systemd schedules
+        run: |
+          bash -n backend/operations/install.sh .github/scripts/backend-ssh.sh
+          for unit in backend/operations/systemd/*.timer; do
+            calendar=$(sed -n 's/^OnCalendar=//p' "$unit")
+            if [ -n "$calendar" ]; then systemd-analyze calendar "$calendar"; fi
+          done

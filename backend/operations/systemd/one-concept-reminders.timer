@@ -1,0 +1,9 @@
+[Unit]
+Description=One Concept reminder window every 15 minutes UTC
+[Timer]
+OnCalendar=*-*-* *:00/15:00 UTC
+AccuracySec=1s
+Persistent=false
+Unit=one-concept-job@reminders.service
+[Install]
+WantedBy=timers.target

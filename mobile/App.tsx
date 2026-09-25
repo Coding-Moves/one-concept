@@ -15,6 +15,9 @@ import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AchievementCelebration } from './src/components/AchievementCelebration';
 import { OfflineBanner } from './src/components/OfflineBanner';
+import { ConfigurationState } from './src/components/ConfigurationState';
+import { SyncStatusBanner } from './src/components/SyncStatusBanner';
+import { configurationErrors } from './src/api/config';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AchievementsProvider } from './src/context/AchievementsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -119,6 +122,7 @@ function ThemedApp() {
   return (
     <View style={{ flex: 1 }}>
       {!online && <OfflineBanner />}
+      <SyncStatusBanner />
       <View style={{ flex: 1 }}>
         <NavigationContainer theme={navigationTheme}>
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
@@ -206,6 +210,7 @@ export default function App() {
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
       <SafeAreaProvider>
         <ThemeProvider>
+          {configurationErrors.length ? <ConfigurationState /> : (
           <ConnectivityProvider>
             <AuthProvider>
               <ProgressProvider>
@@ -215,6 +220,7 @@ export default function App() {
               </ProgressProvider>
             </AuthProvider>
           </ConnectivityProvider>
+          )}
         </ThemeProvider>
       </SafeAreaProvider>
     </View>

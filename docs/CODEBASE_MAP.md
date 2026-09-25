@@ -1,6 +1,6 @@
 # Codebase map
 
-Source inspection: 2026-09-13. This is a navigation guide to the implementation,
+Source inspection: 2026-09-25. This is a navigation guide to the implementation,
 not a claim that deployed services or every runtime behavior have been verified.
 Refresh the relevant sections when the code changes.
 
@@ -16,7 +16,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
 | Content engine | `backend/app/services/generation.py`, `pool.py`, `prefetch.py`; Gemini lessons from a curated backlog. |
-| Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
+| Operations | `backend/operations/` (Compose/Caddy/systemd/controller), `backend/schema/contract.json`, `.github/workflows/`, `docs/VM_DEPLOYMENT.md`; `railway.json` remains for transition. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
@@ -78,6 +78,9 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   infers connectivity from request results. `ConnectivityContext` drives the
   global banner; there is no native connectivity listener.
   `api/fetchWithTimeout.ts` bounds API and auth fetches to 15 seconds.
+  `api/config.ts` and root `public-config.cjs` separate missing configuration from
+  network failure. `ConfigurationState` blocks invalid setup before auth mounts.
+  Account epochs suppress late responses; 429/503 honor `Retry-After`.
 - `ProgressContext.tsx` is the shared UI state owner. It loads cached state
   before revalidation, applies optimistic actions, serializes mutation requests,
   and flushes queued work on the same mutation chain. `services/syncLoop.ts`
@@ -101,7 +104,10 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
 - `mutationQueue.ts` wires AsyncStorage to `mutationOutbox.ts`, which serializes
   disk writes and stores the latest intent per like/save/topic/completion key.
   Replay discards stale-day completions, retains retryable failures, and
-  reconciles state. It does not backdate server completion.
+  reconciles state. Server failures store an exponential retry deadline and
+  attempt count; eight failures pause intent across restarts. `SyncStatusBanner`
+  exposes explicit retry. Successful unrelated API calls do not cancel a failed
+  topic refresh. It does not backdate server completion.
 - `accountCaches.ts` centralizes account cache cleanup. The remote repository's
   epoch guards reject late mutation callbacks after a wipe; the API invalidates
   requests still waiting for an old account's token during cleanup.
@@ -146,7 +152,7 @@ The existing pre-ping, transaction pooler mode, and pool limits remain in place.
 
 | Routes (`backend/app/api/v1/`) | Implementation |
 | --- | --- |
-| `health.py`: `GET /health` | Liveness plus a database query. |
+| `health.py`: `GET /health`, `/health/operations` | Bounded database/revision readiness and safe current worker/host aggregate. |
 | `topics.py`: `GET /v1/topics` | Active topics, published counts, follow state. |
 | `daily.py`: `GET /v1/daily`, `POST /v1/daily/complete` | Selection, completion, server-derived date and streaks. Exhaustion returns 409 with `catalog_exhausted`. |
 | `me.py`: `GET /v1/me/state`, `/stats` | Optional compact state, exact totals, today's lesson. |
@@ -268,13 +274,20 @@ and the session pooler. Applied migrations must not be rewritten.
 - Backend dependencies are pinned in `requirements.txt`/`requirements-dev.txt`.
   From `backend/`, run `.venv/bin/python -m uvicorn app.main:app --reload --port 8000`
   for development and `.venv/bin/python -m pytest` for tests after configuration.
-- Nine test modules cover HTTP contracts, token validation, daily selection,
-  writes/streaks, generation, reminders, notification preferences, and connection
-  warm-up/cleanup. The pool integration checks compare real PostgreSQL idle expiry
-  with warming disabled/enabled and print timing plus physical-connection counts.
-  `tests/conftest.py` supplies a disposable PostgreSQL 16 database through Podman
-  on port 55433, applies every migration, and disables live generation. HTTP calls
-  to Gemini/Expo are mocked. Database-dependent tests skip if Podman cannot start.
+- Backend tests cover real constraints/concurrency, content/reviews, achievements,
+  reminders, rate limiting, schema damage and VM deployment failures. The fixture
+  starts disposable PostgreSQL 16 through Docker/Podman on a random loopback port.
+  Provider calls are mocked. `TEST_REQUIRE_DATABASE=1` fails instead of skipping
+  unavailable database tests; application CI requires it.
+- `db/schema.py` and `workers/schema_check.py` verify the actual database against
+  reviewed metadata/migration hashes in a bounded read-only transaction. They do
+  not apply migrations. `core/rate_limit.py` limits verified subjects within the
+  deployed single API process; durable Gemini quota remains independent.
+- `operations/manage.py` validates immutable image/revision, gates deployment on
+  real schema, serializes API/worker transitions, records job status and protects
+  rollback images. `compose.yaml` isolates API/jobs behind Caddy. systemd timers
+  run reminders, top-up, observations, host monitoring and retention. The full
+  operator/recovery/compatibility procedure is in `docs/VM_DEPLOYMENT.md`.
 - `.github/workflows/eas-update.yml` publishes preview OTA on qualifying mobile
   pushes to `develop`; manual dispatch also publishes preview only. `eas-build.yml` is
   a manual Android build workflow.
@@ -282,14 +295,19 @@ and the session pooler. Applied migrations must not be rewritten.
   the deployed backend/worker SHA; its guard rejects missing/mismatched revisions
   and non-main dispatches. It publishes production then preview OTA, creates a
   version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
-  is gated on native `runtimeVersion` changes. Railway deploys the backend
-  independently; follow `RELEASING.md` for migration and release ordering.
+  is gated on native `runtimeVersion` changes. Before publication it verifies
+  actual VM schema, current workers, public TLS/revision and matching EAS URLs.
+  `backend-deploy.yml` separately checks/builds multiarch images and deploys main
+  through a protected environment. Initial workers/generation remain paused.
+  `backend-monitor.yml` checks HTTPS externally; host timers run production jobs.
 - `migrations.yml` checks the applied ledger on `main` and PRs into `main`.
   `audit.yml` runs dependency audits, Ruff, and TypeScript checks and files
   findings as issues. `cleanup.yml` manages stale issues; Dependabot schedules
   dependency updates with Expo-managed version restrictions. The checked-in
-  workflows do not include a general PR pytest job.
-- `mobile/app.config.js` currently has app version `1.8.0` and native runtime
+  `quality.yml` requires backend/mobile tests and native ARM64/AMD64 image smoke
+  jobs on every PR; GitHub branch-protection configuration remains a separate
+  owner setup item until the workflow is on the branch baselines.
+- `mobile/app.config.js` currently has app version `1.9.1` and native runtime
   `1.3.0`; `package.json`'s `1.0.0` is not the release-version authority.
 
 ## Documentation drift to remember
@@ -297,14 +315,14 @@ and the session pooler. Applied migrations must not be rewritten.
 These observations are recorded for future assigned work; setup does not change
 the implementation or older documentation:
 
-- Backend/architecture prose still describes synchronous on-demand generation;
-  selection now schedules background prefetch and widens the stored catalog.
+- The backend guide now describes background drafting and reviewed publication;
+  older roadmap/history entries should not be read as current deployment state.
 - `/me/state` documentation says one query; its aggregate is one query, followed
   by selection queries for the folded daily lesson.
 - Some comments describe the HTTP client as unwired or the repository as local
   only. Both are used by the authenticated application today.
-- `mobile/DEPLOYMENT.md` describes an older OTA trigger and fewer workflows.
-  Use current workflow YAML plus `RELEASING.md` to trace release behavior.
+- Use current workflow YAML plus `RELEASING.md` to trace release behavior;
+  historical work-log entries describe the deployment state at their own dates.
 - The roadmap's older offline milestones predate the current full-lesson cache,
   cached personalization, and foreground queue synchronization. Closed-app OS
   background scheduling remains outside the current APK's capabilities.

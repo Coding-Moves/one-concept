@@ -23,32 +23,24 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 os.environ["GENERATION_ENABLED"] = "false"
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["GENERATION_DAILY_CALL_CAP"] = "200"
+os.environ["DATABASE_URL"] = "postgresql+asyncpg://test:test@127.0.0.1:1/test"
+os.environ["SUPABASE_URL"] = "https://test.invalid"
+os.environ["SUPABASE_JWKS_URL"] = "https://test.invalid/jwks"
+os.environ["ENVIRONMENT"] = "test"
 
-CONTAINER = "one-concept-test-db"
-PORT = 55433
-DSN = f"postgresql+asyncpg://postgres:postgres@127.0.0.1:{PORT}/postgres"
+CONTAINER_ENGINE = os.environ.get("TEST_CONTAINER_ENGINE", "podman")
+CONTAINER = f"one-concept-test-{uuid.uuid4().hex[:12]}"
 MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 
 # Supabase provides these; the migrations depend on them, so a bare Postgres
 # needs stand-ins before the schema will apply.
-AUTH_STUB = """
-create role authenticated;
-create schema auth;
-create table auth.users (
-  id uuid primary key default gen_random_uuid(),
-  email text,
-  raw_user_meta_data jsonb
-);
-create or replace function auth.uid() returns uuid language sql stable as $$
-  select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
-$$;
-"""
+AUTH_STUB = (Path(__file__).parent / 'auth_stub.sql').read_text()
 
 
 def _psql(sql: str = None, file: Path = None) -> subprocess.CompletedProcess:
     data = sql if sql is not None else file.read_text()
     return subprocess.run(
-        ["podman", "exec", "-i", CONTAINER, "psql", "-U", "postgres",
+        [CONTAINER_ENGINE, "exec", "-i", CONTAINER, "psql", "-U", "postgres",
          "-v", "ON_ERROR_STOP=1", "-q"],
         input=data, text=True, capture_output=True,
     )
@@ -56,38 +48,46 @@ def _psql(sql: str = None, file: Path = None) -> subprocess.CompletedProcess:
 
 @pytest.fixture(scope="session")
 def database():
-    if not shutil.which("podman"):
-        pytest.skip("podman is required for integration tests")
+    def unavailable(reason):
+        if os.environ.get("TEST_REQUIRE_DATABASE") == "1":
+            pytest.fail(reason)
+        pytest.skip(reason)
 
-    subprocess.run(["podman", "rm", "-f", CONTAINER], capture_output=True)
+    if not shutil.which(CONTAINER_ENGINE):
+        unavailable(f"{CONTAINER_ENGINE} is required for integration tests")
+
     started = subprocess.run(
-        ["podman", "run", "--rm", "-d", "--name", CONTAINER,
-         "-e", "POSTGRES_PASSWORD=postgres", "-p", f"{PORT}:5432",
+        [CONTAINER_ENGINE, "run", "--rm", "-d", "--name", CONTAINER,
+         "-e", "POSTGRES_PASSWORD=postgres", "-p", "127.0.0.1::5432",
          "docker.io/library/postgres:16"],
         capture_output=True, text=True,
     )
     if started.returncode != 0:
-        pytest.skip(f"could not start postgres: {started.stderr[:200]}")
+        unavailable(f"could not start postgres: {started.stderr[:200]}")
 
-    for _ in range(60):
-        ready = subprocess.run(
-            ["podman", "exec", CONTAINER, "pg_isready", "-U", "postgres"],
-            capture_output=True,
-        )
-        if ready.returncode == 0:
-            break
-        time.sleep(1)
-    else:
-        subprocess.run(["podman", "rm", "-f", CONTAINER], capture_output=True)
-        pytest.skip("postgres did not become ready")
+    try:
+        for _ in range(60):
+            ready = subprocess.run(
+                [CONTAINER_ENGINE, "exec", CONTAINER, "pg_isready", "-U", "postgres"],
+                capture_output=True,
+            )
+            if ready.returncode == 0:
+                break
+            time.sleep(1)
+        else:
+            unavailable("postgres did not become ready")
 
-    assert _psql(sql=AUTH_STUB).returncode == 0, "auth stub failed"
-    for migration in sorted(MIGRATIONS.glob("0*.sql")):
-        result = _psql(file=migration)
-        assert result.returncode == 0, f"{migration.name} failed: {result.stderr[:400]}"
+        port = subprocess.check_output(
+            [CONTAINER_ENGINE, "port", CONTAINER, "5432/tcp"], text=True,
+        ).strip().rsplit(":", 1)[1]
+        assert _psql(sql=AUTH_STUB).returncode == 0, "auth stub failed"
+        for migration in sorted(MIGRATIONS.glob("0*.sql")):
+            result = _psql(file=migration)
+            assert result.returncode == 0, f"{migration.name} failed: {result.stderr[:400]}"
 
-    yield DSN
-    subprocess.run(["podman", "rm", "-f", CONTAINER], capture_output=True)
+        yield f"postgresql+asyncpg://postgres:postgres@127.0.0.1:{port}/postgres"
+    finally:
+        subprocess.run([CONTAINER_ENGINE, "rm", "-f", CONTAINER], capture_output=True)
 
 
 @pytest_asyncio.fixture

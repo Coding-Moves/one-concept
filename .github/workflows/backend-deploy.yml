@@ -1,0 +1,74 @@
+name: Backend deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-production
+  cancel-in-progress: false
+
+jobs:
+  checks:
+    if: github.ref == 'refs/heads/main' && (github.event_name == 'workflow_dispatch' || vars.VM_DEPLOY_ENABLED == 'true')
+    uses: ./.github/workflows/quality.yml
+
+  build:
+    needs: checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.image.outputs.digest }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Require current production revision
+        run: test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - uses: docker/setup-qemu-action@v4
+      - uses: docker/setup-buildx-action@v4
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v7
+        id: image
+        with:
+          context: backend
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ghcr.io/coding-moves/one-concept-backend:${{ github.sha }}
+          build-args: APP_REVISION=${{ github.sha }}
+      - name: Record immutable image
+        env:
+          IMAGE_DIGEST: ${{ steps.image.outputs.digest }}
+        run: |
+          printf 'Revision: `%s`\n\nImage: `ghcr.io/coding-moves/one-concept-backend@%s`\n' \
+            "$GITHUB_SHA" "$IMAGE_DIGEST" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 80
+    environment: production-backend
+    steps:
+      - uses: actions/checkout@v7
+      - name: Deploy API and install the matching worker configuration
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          IMAGE_DIGEST: ${{ needs.build.outputs.digest }}
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          bash .github/scripts/backend-ssh.sh deploy "$GITHUB_SHA" "ghcr.io/coding-moves/one-concept-backend@$IMAGE_DIGEST"
+      - name: Record remaining release gate
+        run: |
+          echo 'Backend deployed with generation paused. Initial cutover requires operator scheduler activation; mobile Release separately verifies actual schema and current successful worker runs.' >> "$GITHUB_STEP_SUMMARY"

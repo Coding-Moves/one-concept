@@ -88,3 +88,19 @@ repository secret for EAS:
 - **eas-update.yml** — qualifying mobile pushes to `develop` and manual runs
   publish preview only.
 - **eas-build.yml** — manual build; choose the profile.
+
+## Deferred VM migration and endpoint validation
+
+The #169 implementation is draft while cloud verification/setup is deferred.
+Follow [the VM runbook](../docs/VM_DEPLOYMENT.md) before changing production EAS
+values. Keep existing Supabase/Expo projects and old auth links during transition.
+An installed Railway-hostname client needs an OTA before it uses the new origin;
+removing Railway early strands clients that have not updated.
+
+`eas-build-post-install` validates public configuration. Preview OTA validates
+its EAS environment, and production Release verifies the actual backend schema,
+current API/workers and TLS before checking both EAS API URLs against the verified
+`PUBLIC_API_ORIGIN`. Missing configuration displays a dedicated app setup error,
+not an offline queue. Never bundle database, service-role, Gemini or SMTP secrets.
+These changes use the existing native runtime; the later release still requires
+its marketing version and matching What's New entry.

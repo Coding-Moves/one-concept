@@ -1,6 +1,6 @@
 """Run with: python -m app.workers.pool_topup
 
-Scheduled on Railway as a cron job. Keeps every topic stocked so the request
+Scheduled daily by the host. Keeps every topic stocked so the request
 path never waits on a model.
 """
 

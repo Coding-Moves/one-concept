@@ -45,7 +45,7 @@ async def anon_client(sessionmaker_for_test):
 async def test_health_touches_the_database(anon_client):
     response = await anon_client.get("/health")
     assert response.status_code == 200
-    assert response.json() == {"status": "ok", "database": "reachable"}
+    assert response.json() == {"status": "ok", "database": "reachable", "revision": "development"}
 
 
 @pytest.mark.parametrize("path", ["/v1/daily", "/v1/topics"])

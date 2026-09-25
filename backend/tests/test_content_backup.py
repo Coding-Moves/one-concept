@@ -3,7 +3,7 @@
 import json
 import subprocess
 
-from conftest import CONTAINER
+from conftest import CONTAINER, CONTAINER_ENGINE
 
 
 _CHECK = """select json_build_object(
@@ -18,7 +18,7 @@ _CHECK = """select json_build_object(
 def test_backup_restores_catalog_progress_and_schema(database, tmp_path):
     def command(*args, input=None):
         result = subprocess.run(
-            ["podman", "exec", "-i", CONTAINER, *args], input=input, capture_output=True
+            [CONTAINER_ENGINE, "exec", "-i", CONTAINER, *args], input=input, capture_output=True
         )
         assert result.returncode == 0, result.stderr.decode()[:500]
         return result.stdout

@@ -1,0 +1,9 @@
+[Unit]
+Description=One Concept daily supply planning and drafting
+[Timer]
+OnCalendar=*-*-* 04:00:00 UTC
+AccuracySec=1min
+Persistent=true
+Unit=one-concept-job@pool_topup.service
+[Install]
+WantedBy=timers.target

@@ -1,5 +1,5 @@
-# Railway deploys main independently. Publish only after the operator verifies
-# the same commit on the API and workers and checks production health.
+# Backend deployment is separate. Publication verifies the VM's actual schema,
+# API revision and recent successful worker runs, as well as the attestation.
 name: Release
 
 on:
@@ -22,6 +22,7 @@ permissions:
 jobs:
   ota:
     runs-on: ubuntu-latest
+    environment: production-backend
     defaults:
       run:
         working-directory: mobile
@@ -36,9 +37,23 @@ jobs:
           export REMOTE_MAIN_SHA
           bash ../.github/scripts/check-release-revision.sh
 
+      - name: Verify actual production schema, API and worker revision
+        env:
+          DEPLOY_HOST: ${{ vars.DEPLOY_HOST }}
+          DEPLOY_PORT: ${{ vars.DEPLOY_PORT }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+        run: bash ../.github/scripts/backend-ssh.sh status "$GITHUB_SHA"
+
+      - name: Verify the public HTTPS endpoint and certificate
+        env:
+          PUBLIC_API_ORIGIN: ${{ vars.PUBLIC_API_ORIGIN }}
+          EXPECTED_REVISION: ${{ github.sha }}
+        run: python3 ../.github/scripts/check-public-health.py
+
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
           cache-dependency-path: mobile/package-lock.json
 
@@ -48,6 +63,13 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - run: npm ci
+
+      - name: Validate both EAS public environments before any publication
+        env:
+          PUBLIC_API_ORIGIN: ${{ vars.PUBLIC_API_ORIGIN }}
+        run: |
+          eas env:exec --environment production 'node scripts/validate-public-config.cjs --release --deployed'
+          eas env:exec --environment preview 'node scripts/validate-public-config.cjs --release --deployed'
 
       # Production first, then preview so preview devices are never left
       # behind a production release. --environment bundles the EXPO_PUBLIC_*
@@ -72,7 +94,7 @@ jobs:
       # not silently depend on whatever the runner image preinstalls.
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: 24
 
       - name: Read the version
         id: version

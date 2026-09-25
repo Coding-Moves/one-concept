@@ -31,6 +31,7 @@ export class AchievementStore {
   private active = true;
   private epoch: number;
   private snapshot: AchievementSnapshot | null = null;
+  private hydration: Promise<void> | null = null;
   private work: Promise<unknown> = Promise.resolve();
   private userId: string;
   private cache: OfflineCache<AchievementSnapshot>;
@@ -53,16 +54,23 @@ export class AchievementStore {
     }
   }
   async cached(): Promise<AchievementSnapshot | null> {
-    const value = await this.cache.get(this.userId, this.epoch);
-    if (!this.valid()) return null;
-    // Ignore malformed/old cache shapes instead of crashing Profile.
-    if (value && Array.isArray(value.collection?.items) && Array.isArray(value.dismissed)) {
-      this.snapshot ??= value;
-    }
-    return this.snapshot;
+    // Refresh and the provider share one initial read. A fast response must
+    // never overwrite a dismissal before its pending disk read finishes.
+    this.hydration ??= (async () => {
+      const value = await this.cache.get(this.userId, this.epoch);
+      if (!this.valid()) return;
+      // Ignore malformed/old cache shapes instead of crashing Profile.
+      if (value && Array.isArray(value.collection?.items) && Array.isArray(value.dismissed)) {
+        this.snapshot ??= value;
+      }
+    })();
+    await this.hydration;
+    return this.valid() ? this.snapshot : null;
   }
   refresh(): Promise<AchievementSnapshot | null> {
     return this.serial(async () => {
+      if (!this.valid()) return null;
+      await this.cached();
       if (!this.valid()) return null;
       const collection = await this.transport.load(this.userId);
       if (!this.valid()) return null;

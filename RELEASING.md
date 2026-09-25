@@ -23,6 +23,11 @@ Production release flow. Keep it boring and repeatable.
    lists, technical diagnostics, or internal maintenance. Reuse the existing
    version-based dismissal so the card stays hidden after the user dismisses it.
    This owner instruction supersedes the earlier features-only policy in issue #97.
+   **Permanent owner requirement:** every release PR must contain both the app
+   version bump and the matching nonempty What's New entry in its final diff
+   against `main`, even when prepared through a separate PR into `develop`.
+   Before opening or marking it ready, verify both and explicitly list the
+   release version, user-facing highlights and card verification in its description.
 3. **Apply pending DB migrations to production** (see below) **before opening the
    release PR.**
 4. Open the release PR **develop → main**. It must pass the required

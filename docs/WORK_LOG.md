@@ -7,6 +7,141 @@ claims as completed work.
 
 ## Current status
 
+### Release #233 review follow-up — 2026-09-25
+
+- Scope: record owner-confirmed production application of migration 0016 and
+  fix the reviewed badge-dismissal hydration race, in separate focused commits
+  within one follow-up PR targeting develop. Release #233 then receives both.
+- Owner reported the complete migration succeeded and the verification query
+  returns both achievement tables. Ledger updated from that evidence; no
+  production connection or independent policy/constraint inspection claimed.
+- Current release head is `ac72cba`; its rerun still fails because the ledger
+  change has not reached develop. Merely rerunning that head cannot fix it.
+- `cd0cf6a` records owner-verified migration application; `291570c` shares one
+  initial cache read and waits for it before refreshing, preserving offline
+  dismissals and acknowledgement retries. Sign-out still fences pending work.
+- Passed: TypeScript, all 47 Node 24 mobile tests, clean web export, light/dark
+  achievement browser flows (dismissal, offline restart and account replacement),
+  local migration ledger check and diff --check. The two slow-disk regression
+  cases failed before the fix and pass afterward; a third covers sign-out while
+  hydration is pending. No backend code changed, so its suite was not repeated.
+- Validation documentation commit: `docs: record release review fix validation`.
+  Next: publish follow-up PR, run GitHub migration check on its branch and request
+  exact merge approval. Release #233 checks rerun once develop receives the fix.
+- Original VM draft checkout and prior release-preparation handoff preserved.
+
+### 1.10.0 native release preparation — 2026-09-25
+
+- Preparation PR [#232](https://github.com/Coding-Moves/one-concept/pull/232)
+  targets develop; owner requested a detailed develop → main release PR after
+  requirements are checked. VM #231 and SMTP #187 remain draft and excluded.
+- Scope: achievements (#228), privacy policy (#229), XML parser correction
+  (#208), and reviewed dependency updates. Native Expo changes require a new
+  APK/runtime 1.10.0; runtime 1.3.0 binaries do not receive this release OTA.
+- `bfb1de3`: version/runtime and matching nonempty What's New; existing dismissal
+  retained, with browser assertions for version, persisted dismissal and restart.
+  `ce0d006`: release checklist and evidence. This handoff's commit is identified
+  by subject `docs: record release preparation PR and remaining verification`.
+- Passed: clean npm install, TypeScript, 44 mobile tests, Android/iOS/web bundle
+  exports, nine release-revision guards, six card-layout/theme browser cases and
+  light/dark achievement flows. Small/landscape screenshots inspected. Initial
+  stale dummy endpoints from Metro cache were fixed by a clean test export.
+- Unchanged backend at develop `9e9f802`: 191 PostgreSQL-backed tests and pip
+  check passed during dependency integration, no skips. No backend code changed
+  during preparation; no repeated full backend run was needed.
+- Online Expo check and npm audit failed on external requests; not counted as
+  passes. Offline Expo check flags baseline React/React DOM 19.2.8 versus 19.2.3.
+  Seven GitHub XML advisories affect <=0.8.14; candidate resolutions 0.8.15 and
+  0.9.12 are outside those reported ranges. Alerts were not dismissed.
+- Owner confirmed migration 0016 is pending and will apply/verify it. Production
+  ledger remains unchanged. Actual verification and exact #232 merge approval
+  are prerequisites to completing the release PR. Main requires Migrations
+  applied check and one approval; no rule was weakened.
+- No production database writes, deployment, production OTA/tag, or cloud native
+  build occurred. Native build/device checks and production API/worker revision
+  verification remain rollout work; see [release checklist](releases/1.10.0.md).
+
+### #163 privacy policy — 2026-09-25
+
+- PR [#229](https://github.com/Coding-Moves/one-concept/pull/229) targets `develop`; it is ready for review and remains open.
+- Confirmed the issue: no public policy page or in-app link existed while the app uses account identity, profile/learning data, reminder preferences and optional Expo push tokens.
+- `8479116` adds a public `/privacy` page, an accessible About-screen link that resolves from the configured API origin, and a public-page regression test. The policy describes only source-confirmed data flows, local cache behavior, reminder choices and the contact route for access, correction or deletion requests.
+- The branch now includes current `develop`; its documentation conflict was resolved by retaining the #209 and #163 records. Post-resolution validation: privacy route test passed with test-only configuration; mobile TypeScript and all 44 mobile tests passed. No live deployment, store-listing update, migration, release or merge was performed.
+### #209 permanent streak achievements — 2026-09-25
+
+- Scope: nine streak milestones (including 90/180 days), durable server awards,
+  historical credit, account-safe offline viewing, Profile collection, details
+  and grouped celebrations. No production migration, deployment or merge.
+- Use existing recorded learning dates, lesson/review union and completion locks.
+  Earned badges survive missed days; client clocks cannot grant awards.
+- Planned commits: schema/backfill; transactional evaluation/API/tests; account
+  cache/tests; provider; badge/details UI; collection/Profile; celebration;
+  validation and operational documentation. Keep each change independently useful.
+- Worktree isolates existing local handbook edits/backups. CLI and SSH both
+  verified as Muawiya-contact; configured name/email match the public profile.
+  The connector uses another identity and will not be used for writes.
+- Read Expo SDK 57 documentation before mobile implementation. Migration 0016
+  remains unapplied to production and must not enter the applied ledger yet.
+- Delivered [PR #228](https://github.com/Coding-Moves/one-concept/pull/228) against
+  develop. Permanent awards, historical reconciliation, responsive collection,
+  detail sheets and grouped celebrations are implemented; no merge performed.
+- Commits: `0d49545` schema/backfill; `949c273` transactional APIs/tests;
+  `51491dc` account cache/request isolation; `484cdbe` provider synchronization;
+  `d90b255` badge/detail presentation; `0eadcfa` Profile/collection;
+  `f84eb8a` celebrations; `8ea5ee1` rollout-gap reconciliation;
+  `2625c87` browser regressions/contrast; `2c6481f` architecture/rollout guide.
+  This handoff is a separate `docs: record achievement validation and PR handoff` commit.
+- Final validation: PostgreSQL 16 full backend suite **190 passed, zero skips**;
+  targeted achievements **18 passed**; Node 24 mobile **44 passed**; TypeScript,
+  Ruff F/E9, whitespace checks and Android/iOS/web exports passed.
+- Mocked exported-app browser scenarios passed in both themes: grouped historical
+  rewards, What's New ordering, dismissal, locked/unlocked cards, detail contrast,
+  narrow/enlarged text, offline restart and delayed A-response after B sign-in.
+  Light/dark screenshots were visually inspected. Account-store tests additionally
+  cover direct replacement without sign-out, cache epochs and storage failures.
+- Validation used local test services only. Original handbook edits/backups remain
+  untouched. Physical Android/TalkBack and native system font/Back checks remain
+  outstanding. Server acknowledgement has the cross-device/offline limits documented
+  in ACHIEVEMENTS.md; earned awards remain permanent and unique.
+
+
+### #207 XML parser patch and mobile publication status
+
+- Owner requested a fix PR and the new version/card on the phone and GitHub.
+- Confirmed the audit's high finding in @xmldom/xmldom 0.8.14, used by
+  expo-updates → @expo/plist. A targeted lockfile update selects compatible
+  0.8.15 without changing Expo, native runtime or app version (still 1.9.1).
+- Audit before: one high, zero critical, 18 moderate. After: zero high/critical,
+  18 moderate; the XML finding is absent. Moderate findings remain disclosed.
+- `7f6169b` patches the dependency. Clean npm install, Node 24 TypeScript checks,
+  all 39 tests and clean Android/iOS/web exports passed. A focused runtime check
+  confirmed malformed PI rejection with the supported serializer options and
+  preserved Expo plist roundtrip values. Initial ad-hoc checks used the wrong
+  API signature/default export; corrected checks pass. No app source changed.
+- Browser checks in both themes passed: upgrades from 1.8.0/1.9.0 show four
+  1.9.1 highlights and dismissal survives reload. Physical-device OTA unverified.
+- PR [#208](https://github.com/Coding-Moves/one-concept/pull/208) targets develop;
+  the fix and this validation record use separate commits. GitHub default-branch
+  dependency alerts remain a separate scope from the mobile npm audit result.
+- Production 1.9.1 release publication is still pending. Owner sees green Railway
+  deployments but cannot confirm all worker revisions; in-app Railway view stalls.
+  Never attest an unverified worker revision merely to dispatch the release.
+
+
+### Permanent release/card requirement and 1.9.1 handoff
+
+- Owner reiterated that every release PR must contain both the version bump and
+  its matching one-time What's New card, and explicitly document both in that PR.
+  Strengthened AGENTS.md and RELEASING.md with final-diff verification; this applies
+  automatically to future releases without another reminder.
+- Release [#205](https://github.com/Coding-Moves/one-concept/pull/205) includes
+  version 1.9.1 and its four highlights. The durable rule landed on develop
+  through #206 after #205 was merged by the owner. The existing dismissal
+  remains once per version; preview/card checks are recorded below. Main now
+  includes 1.9.1, but no production OTA has been published for it.
+- Documentation validation: referenced paths exist and whitespace checks passed.
+
+
 ### Requested 1.9.1 release and visible What's New verification
 
 - Owner requested another version/release PR after 1.9.0 merged but was not

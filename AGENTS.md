@@ -56,6 +56,11 @@ requires the exact Expo SDK 57 documentation before writing mobile code.
   better. Describe actual benefits, not error lists, technical diagnostics, or
   internal maintenance. Use the existing dismissal mechanism so it appears once
   per version on each device after dismissal.
+- Treat the release version bump and matching What's New entry as one required
+  release deliverable. Before opening or marking a release PR ready, verify that
+  its final `develop` → `main` diff contains both. A preparation PR does not
+  replace including both changes in the release PR. State the version, card
+  highlights and verification in the release PR description every time.
 - PR descriptions explain the resulting behavior, list meaningful changes and
   validation, and disclose remaining limitations. Keep the PR scope aligned
   with the assigned chunk while retaining its commit history.

@@ -22,6 +22,18 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
 | Engineering handbook | `docs/handbook/ONE_CONCEPT_HANDBOOK.md` explains the full stack and learning lifecycle; `docs/handbook/build_pdf.py` renders the printable guide with vector diagrams. Build and verification instructions are in `docs/handbook/README.md`. |
 
+## Achievements (#209)
+
+`services/achievements.py` awards permanent streak milestones under the existing
+completion transaction/profile lock. Migration `0016_achievements.sql` adds the
+catalog and per-user awards and backfills historical milestones. The owner
+confirmed production application and both tables on 2026-09-25.
+`api/v1/achievements.py` serves collection and seen APIs.
+On mobile, `AchievementsContext` owns one keyed account instance, `achievementStore`
+fences async results, and `achievementCache` joins account cleanup. Profile opens
+`AchievementsScreen`; shared badge/detail/celebration components render the
+collection. See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
+
 ## Mobile navigation and presentation
 
 `App.tsx` composes SafeArea, Theme, Connectivity, Auth, and Progress providers.
@@ -143,7 +155,7 @@ The existing pre-ping, transaction pooler mode, and pool limits remain in place.
 | `me.py`: `PUT /v1/me/topics`, `PATCH /v1/me` | Whole-set follows, profile name, PostgreSQL-validated timezone. |
 | `me.py`: `GET/PUT /v1/me/notifications`, `POST/DELETE /v1/me/push-token` | Reminder preferences and scoped device registration/removal. |
 | `concepts.py`: `GET /v1/concepts/{slug}`, `PUT/DELETE .../like`, `.../save` | Published lesson detail and independent interaction writes. |
-| `pages.py`: `GET /confirmed`, `/reset-password` | Public HTML auth landing pages; reset uses Supabase Auth in the browser. |
+| `pages.py`: `GET /privacy`, `/confirmed`, `/reset-password` | Public privacy and auth landing pages; reset uses Supabase Auth in the browser. |
 
 `router.py` mounts authenticated feature routers under `/v1`. Response/input
 models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.

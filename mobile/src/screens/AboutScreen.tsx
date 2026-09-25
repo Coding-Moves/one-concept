@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { useMemo } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { API_BASE_URL } from '../api/client';
 import { scaleIcon, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
@@ -18,6 +19,12 @@ const GITHUB_ORG = 'https://github.com/Coding-Moves';
 const GITHUB_DEV = 'https://github.com/Muawiya-contact';
 const ISSUES_URL = 'https://github.com/Coding-Moves/one-concept/issues/new';
 const FEEDBACK_EMAIL = 'contactmuawia@gmail.com';
+
+function privacyUrl(): string {
+  return API_BASE_URL
+    ? new URL('/privacy', API_BASE_URL).toString()
+    : 'https://github.com/Coding-Moves/one-concept/blob/develop/backend/app/privacy.py';
+}
 
 /**
  * Open a URL, falling back to an alert if nothing can handle it — most likely
@@ -88,6 +95,16 @@ export function AboutScreen() {
         >
           <Ionicons name="mail-outline" size={scaleIcon(18)} color={colors.primary} style={styles.itemIcon} />
           <Text style={styles.actionText}>Have feedback or found a bug? Contact us</Text>
+          <Ionicons name="chevron-forward" size={scaleIcon(18)} color={colors.textMuted} />
+        </Pressable>
+        <Pressable
+          onPress={() => openURL(privacyUrl(), privacyUrl())}
+          style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
+          accessibilityRole="link"
+          accessibilityLabel="Read the privacy policy"
+        >
+          <Ionicons name="shield-checkmark-outline" size={scaleIcon(18)} color={colors.primary} style={styles.itemIcon} />
+          <Text style={styles.actionText}>Privacy policy</Text>
           <Ionicons name="chevron-forward" size={scaleIcon(18)} color={colors.textMuted} />
         </Pressable>
         <Pressable

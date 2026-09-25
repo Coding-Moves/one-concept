@@ -16,6 +16,7 @@ def create_db_engine(config: Settings) -> AsyncEngine:
     return create_async_engine(
         config.sqlalchemy_url,
         echo=False,
+        hide_parameters=True,
         pool_size=5,
         max_overflow=5,
         pool_recycle=1800,

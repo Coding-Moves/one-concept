@@ -75,6 +75,20 @@ async def test_due_slot_sends_once_and_only_once(session, user, capture_push):
     assert logged == 1
 
 
+async def test_failed_push_is_visible_without_retrying_claim_or_logging_ticket(session, user, capture_push, caplog):
+    sent = capture_push(lambda message: {
+        'status': 'error', 'message': 'sensitive provider diagnostic',
+        'details': {'error': 'MessageRateExceeded'}, 'to': message['to'],
+    })
+    await _register_token(session, user)
+    result = await send_due_reminders(session, at=AT_0805)
+    assert result.failed == 1 and result.sent == 0
+    assert 'sensitive provider diagnostic' not in caplog.text
+    assert 'ExponentPushToken' not in caplog.text
+    assert (await send_due_reminders(session, at=AT_0805)).sent == 0
+    assert len(sent) == 1
+
+
 async def test_outside_the_window_is_silent(session, user, capture_push):
     capture_push()
     await _register_token(session, user)

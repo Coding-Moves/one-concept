@@ -108,6 +108,7 @@ _DROP_TOKEN = text("delete from public.device_tokens where expo_push_token = :to
 class ReminderResult:
     sent: int
     dropped_tokens: int
+    failed: int = 0
 
 
 async def _post_batch(client: httpx.AsyncClient, messages: list[dict]) -> list[dict]:
@@ -160,16 +161,21 @@ async def send_due_reminders(
     if not messages:
         return ReminderResult(0, 0)
 
-    sent = dropped = 0
+    sent = dropped = failed = 0
     async with httpx.AsyncClient(timeout=30.0) as client:
         for start in range(0, len(messages), BATCH_SIZE):
             batch = messages[start : start + BATCH_SIZE]
             try:
                 tickets = await _post_batch(client, batch)
-            except httpx.HTTPError as exc:
-                log.warning("push batch failed: %s", exc)
+            except (httpx.HTTPError, ValueError) as exc:
+                failed += len(batch)
+                log.warning("push batch failed (%s); claims retained", type(exc).__name__)
                 continue
+            failed += max(0, len(batch) - len(tickets))
             for message, ticket in zip(batch, tickets):
+                if not isinstance(ticket, dict):
+                    failed += 1
+                    continue
                 if ticket.get("status") == "ok":
                     sent += 1
                 elif (ticket.get("details") or {}).get("error") == "DeviceNotRegistered":
@@ -177,7 +183,8 @@ async def send_due_reminders(
                     await session.execute(_DROP_TOKEN, {"token": message["to"]})
                     dropped += 1
                 else:
-                    log.warning("push rejected: %s", ticket)
+                    failed += 1
+                    log.warning("push rejected; inspect Expo delivery configuration (claim retained)")
     await session.commit()
 
-    return ReminderResult(sent, dropped)
+    return ReminderResult(sent, dropped, failed)

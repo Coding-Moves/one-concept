@@ -7,6 +7,7 @@
  * progress) deliberately stay out.
  */
 
+import { achievementCache } from './achievementsApi';
 import { invalidateAccountRequests } from '../api/client';
 import { clearDailyCache } from './dailyApi';
 import { conceptCache } from './conceptApi';
@@ -19,6 +20,7 @@ import { clearTopicsCache } from './topicsApi';
 export async function clearAccountCaches(): Promise<void> {
   invalidateAccountRequests();
   await Promise.all([
+    achievementCache.clear(),
     clearServerStateCache(),
     clearDailyCache(),
     conceptCache.clear(),

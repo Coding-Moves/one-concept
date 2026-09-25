@@ -13,8 +13,10 @@ import { StatusBar } from 'expo-status-bar';
 import { ComponentProps, useCallback, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AchievementCelebration } from './src/components/AchievementCelebration';
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
+import { AchievementsProvider } from './src/context/AchievementsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
 import { ConnectivityProvider, useOnline } from './src/context/ConnectivityContext';
 import { ProgressProvider } from './src/context/ProgressContext';
@@ -22,6 +24,7 @@ import { ThemeProvider, useTheme } from './src/context/ThemeContext';
 import { useWhatsNew } from './src/hooks/useWhatsNew';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
+import { AchievementsScreen } from './src/screens/AchievementsScreen';
 import { AboutScreen } from './src/screens/AboutScreen';
 import { ConceptDetailScreen } from './src/screens/ConceptDetailScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
@@ -49,6 +52,7 @@ function ProfileStackScreen() {
         component={PersonalizationScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
+      <ProfileStack.Screen name="Achievements" component={AchievementsScreen} />
       <ProfileStack.Screen name="Saved" component={SavedScreen} />
       <ProfileStack.Screen
         name="About"
@@ -127,6 +131,7 @@ function ThemedApp() {
         </RootStack.Navigator>
         </NavigationContainer>
       </View>
+      <AchievementCelebration paused={Boolean(whatsNew.entry)} />
       {whatsNew.entry && (
         <WhatsNewCard entry={whatsNew.entry} onDismiss={whatsNew.dismiss} />
       )}
@@ -204,7 +209,9 @@ export default function App() {
           <ConnectivityProvider>
             <AuthProvider>
               <ProgressProvider>
-                <ThemedApp />
+                <AchievementsProvider>
+                  <ThemedApp />
+                </AchievementsProvider>
               </ProgressProvider>
             </AuthProvider>
           </ConnectivityProvider>

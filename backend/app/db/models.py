@@ -188,3 +188,27 @@ class GenerationDailyUsage(Base):
 
     budget_day: Mapped[date] = mapped_column(Date, primary_key=True)
     calls_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class AchievementDefinition(Base):
+    """Mirror of 0016; metric evaluators belong to the server."""
+
+    __tablename__ = "achievement_definitions"
+    code: Mapped[str] = mapped_column(Text, primary_key=True)
+    metric: Mapped[str] = mapped_column(Text, nullable=False)
+    threshold: Mapped[int] = mapped_column(Integer, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str] = mapped_column(Text, nullable=False)
+    artwork_key: Mapped[str] = mapped_column(Text, nullable=False)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    __table_args__ = (UniqueConstraint("metric", "threshold"),)
+
+
+class UserAchievement(Base):
+    __tablename__ = "user_achievements"
+    user_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True)
+    achievement_code: Mapped[str] = mapped_column(Text, ForeignKey("achievement_definitions.code"), primary_key=True)
+    earned_on: Mapped[date] = mapped_column(Date, nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

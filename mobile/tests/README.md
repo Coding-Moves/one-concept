@@ -146,3 +146,18 @@ UI checks manual refresh, disabled controls during a request, retained offline
 content, actual banner contrast in both themes, and an enlarged profile at
 320px. Native pull gestures, OS Dynamic Type, TalkBack and VoiceOver still need
 physical-device acceptance. Refresh buttons provide an accessible alternative.
+
+
+## Achievement scenarios (#209)
+
+Using the mocked export environment above, run:
+
+```sh
+node tests/achievements.browser.cjs /tmp/one-concept-offline
+```
+
+Checks cover both themes, grouped celebrations, ordering behind What's New,
+earned/locked cards, details and contrast, narrow/enlarged text, offline restart
+and a delayed old-account request after signing into a different account. No
+real credentials or production services are used. Native TalkBack, system font
+scaling and physical Android Back remain manual device checks.

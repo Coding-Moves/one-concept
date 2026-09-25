@@ -37,7 +37,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     // The API client asks for a token per request; Supabase refreshes it in the
     // background, so this always hands back a currently valid one.
-    setTokenProvider(async () => {
+    setTokenProvider(async (expectedUserId) => {
       const { data, error } = await supabase.auth.getSession();
       if (error) {
         if (isAuthRetryableFetchError(error)) {
@@ -45,6 +45,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new ApiError(0, 'Could not refresh session', error);
         }
         throw new ApiError(401, 'Session unavailable');
+      }
+      if (expectedUserId && data.session?.user.id !== expectedUserId) {
+        throw new ApiError(401, 'Account changed');
       }
       return data.session?.access_token ?? null;
     });

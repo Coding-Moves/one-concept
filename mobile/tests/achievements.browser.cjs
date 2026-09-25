@@ -56,8 +56,11 @@ const server=http.createServer((req,res)=>{
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
    await page.goto('http://127.0.0.1:4781');
    await expect(page.getByRole('button',{name:'Got it',exact:true})).toBeVisible();
+   await expect(page.getByText(`Version ${version}`,{exact:true})).toBeVisible();
    await expect(page.getByRole('button',{name:'Continue learning'})).toHaveCount(0);
+   await page.screenshot({path:`/tmp/release-whats-new-${theme}.png`});
    await page.getByRole('button',{name:'Got it',exact:true}).click();
+   await expect.poll(()=>page.evaluate(()=>localStorage.getItem('one-concept/last-seen-version/v1'))).toBe(version);
    await expect(page.getByText('2 achievements earned',{exact:true})).toBeVisible();
    await page.screenshot({path:`/tmp/209-celebration-${theme}.png`});
    await page.getByRole('button',{name:'Continue learning',exact:true}).click();
@@ -87,6 +90,7 @@ const server=http.createServer((req,res)=>{
    const bounds=await page.getByText('10,000 days',{exact:true}).boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=321);
    // Offline reload retains awards and suppresses an already-dismissed celebration.
    online=false;await page.reload();
+   await expect(page.getByRole('button',{name:'Got it',exact:true})).toHaveCount(0);
    await page.getByRole('tab',{name:'Profile'}).click();
    await page.getByRole('button',{name:'Open achievements'}).click();
    await expect(page.getByText('2 / 9 earned',{exact:true})).toBeVisible();

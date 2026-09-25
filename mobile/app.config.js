@@ -18,7 +18,7 @@ module.exports = {
     name: 'One Concept',
     slug: 'one-concept',
     owner: 'coding-moves',
-    version: '1.9.1',
+    version: '1.10.0',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -36,7 +36,8 @@ module.exports = {
       },
       predictiveBackGestureEnabled: false,
     },
-    runtimeVersion: '1.3.0',
+    // SDK 57 native dependency updates ship in the 1.10.0 binary.
+    runtimeVersion: '1.10.0',
     updates: {
       checkAutomatically: 'ON_LOAD',
       fallbackToCacheTimeout: 0,

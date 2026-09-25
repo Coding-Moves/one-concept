@@ -13,6 +13,7 @@ import { StatusBar } from 'expo-status-bar';
 import { ComponentProps, useCallback, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { AchievementCelebration } from './src/components/AchievementCelebration';
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AchievementsProvider } from './src/context/AchievementsContext';
@@ -130,6 +131,7 @@ function ThemedApp() {
         </RootStack.Navigator>
         </NavigationContainer>
       </View>
+      <AchievementCelebration paused={Boolean(whatsNew.entry)} />
       {whatsNew.entry && (
         <WhatsNewCard entry={whatsNew.entry} onDismiss={whatsNew.dismiss} />
       )}

@@ -7,6 +7,23 @@ claims as completed work.
 
 ## Current status
 
+### #209 permanent streak achievements — 2026-09-25
+
+- Scope: nine streak milestones (including 90/180 days), durable server awards,
+  historical credit, account-safe offline viewing, Profile collection, details
+  and grouped celebrations. No production migration, deployment or merge.
+- Use existing recorded learning dates, lesson/review union and completion locks.
+  Earned badges survive missed days; client clocks cannot grant awards.
+- Planned commits: schema/backfill; transactional evaluation/API/tests; account
+  cache/tests; provider; badge/details UI; collection/Profile; celebration;
+  validation and operational documentation. Keep each change independently useful.
+- Worktree isolates existing local handbook edits/backups. CLI and SSH both
+  verified as Muawiya-contact; configured name/email match the public profile.
+  The connector uses another identity and will not be used for writes.
+- Read Expo SDK 57 documentation before mobile implementation. Migration 0016
+  remains unapplied to production and must not enter the applied ledger yet.
+
+
 ### #207 XML parser patch and mobile publication status
 
 - Owner requested a fix PR and the new version/card on the phone and GitHub.

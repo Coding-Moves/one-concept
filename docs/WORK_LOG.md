@@ -9,22 +9,34 @@ claims as completed work.
 
 ### 1.10.0 native release preparation — 2026-09-25
 
-- Owner requested release checks, version/one-time What's New, and a detailed
-  develop → main release PR. Prepare from develop `9e9f802`; preserve VM draft
-  #231 and SMTP draft #187. Main remains `0191b0e` during preparation.
+- Preparation PR [#232](https://github.com/Coding-Moves/one-concept/pull/232)
+  targets develop; owner requested a detailed develop → main release PR after
+  requirements are checked. VM #231 and SMTP #187 remain draft and excluded.
 - Scope: achievements (#228), privacy policy (#229), XML parser correction
-  (#208), and the reviewed dependency updates. Native Expo changes require a
-  new APK and runtime 1.10.0; old runtime 1.3.0 binaries will not receive it OTA.
-- Planned focused commits: version/runtime and matching card; release checklist
-  and evidence. Reuse the existing version-based dismissal and verify it in the
-  exported app, including ordering before achievement celebrations.
-- Release gates: merge the preparation PR only after exact owner confirmation;
-  apply and verify migration 0016 on production before recording it in the
-  ledger/opening the release PR. No production database credentials are present
-  in the workspace and no signed-in deployment dashboard is available.
-- The 10 bot PR merges passed combined backend (191 tests), mobile (44 tests)
-  and TypeScript checks. Version/card commit `bfb1de3` passed clean npm install, TypeScript, 44 mobile tests, all-platform bundle exports, nine revision guards and light/dark browser card/achievement checks. Clean Metro export corrected stale test-fixture URLs; screenshots inspected. Production migration remains pending with the owner. No deployment,
-  production mobile publication, release tag or native cloud build has run.
+  (#208), and reviewed dependency updates. Native Expo changes require a new
+  APK/runtime 1.10.0; runtime 1.3.0 binaries do not receive this release OTA.
+- `bfb1de3`: version/runtime and matching nonempty What's New; existing dismissal
+  retained, with browser assertions for version, persisted dismissal and restart.
+  `ce0d006`: release checklist and evidence. This handoff's commit is identified
+  by subject `docs: record release preparation PR and remaining verification`.
+- Passed: clean npm install, TypeScript, 44 mobile tests, Android/iOS/web bundle
+  exports, nine release-revision guards, six card-layout/theme browser cases and
+  light/dark achievement flows. Small/landscape screenshots inspected. Initial
+  stale dummy endpoints from Metro cache were fixed by a clean test export.
+- Unchanged backend at develop `9e9f802`: 191 PostgreSQL-backed tests and pip
+  check passed during dependency integration, no skips. No backend code changed
+  during preparation; no repeated full backend run was needed.
+- Online Expo check and npm audit failed on external requests; not counted as
+  passes. Offline Expo check flags baseline React/React DOM 19.2.8 versus 19.2.3.
+  Seven GitHub XML advisories affect <=0.8.14; candidate resolutions 0.8.15 and
+  0.9.12 are outside those reported ranges. Alerts were not dismissed.
+- Owner confirmed migration 0016 is pending and will apply/verify it. Production
+  ledger remains unchanged. Actual verification and exact #232 merge approval
+  are prerequisites to completing the release PR. Main requires Migrations
+  applied check and one approval; no rule was weakened.
+- No production database writes, deployment, production OTA/tag, or cloud native
+  build occurred. Native build/device checks and production API/worker revision
+  verification remain rollout work; see [release checklist](releases/1.10.0.md).
 
 ### #163 privacy policy — 2026-09-25
 

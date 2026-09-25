@@ -7,6 +7,29 @@ claims as completed work.
 
 ## Current status
 
+### Release #233 review follow-up — 2026-09-25
+
+- Scope: record owner-confirmed production application of migration 0016 and
+  fix the reviewed badge-dismissal hydration race, in separate focused commits
+  within one follow-up PR targeting develop. Release #233 then receives both.
+- Owner reported the complete migration succeeded and the verification query
+  returns both achievement tables. Ledger updated from that evidence; no
+  production connection or independent policy/constraint inspection claimed.
+- Current release head is `ac72cba`; its rerun still fails because the ledger
+  change has not reached develop. Merely rerunning that head cannot fix it.
+- `cd0cf6a` records owner-verified migration application; `291570c` shares one
+  initial cache read and waits for it before refreshing, preserving offline
+  dismissals and acknowledgement retries. Sign-out still fences pending work.
+- Passed: TypeScript, all 47 Node 24 mobile tests, clean web export, light/dark
+  achievement browser flows (dismissal, offline restart and account replacement),
+  local migration ledger check and diff --check. The two slow-disk regression
+  cases failed before the fix and pass afterward; a third covers sign-out while
+  hydration is pending. No backend code changed, so its suite was not repeated.
+- Validation documentation commit: `docs: record release review fix validation`.
+  Next: publish follow-up PR, run GitHub migration check on its branch and request
+  exact merge approval. Release #233 checks rerun once develop receives the fix.
+- Original VM draft checkout and prior release-preparation handoff preserved.
+
 ### 1.10.0 native release preparation — 2026-09-25
 
 - Preparation PR [#232](https://github.com/Coding-Moves/one-concept/pull/232)

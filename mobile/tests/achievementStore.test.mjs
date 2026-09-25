@@ -50,3 +50,40 @@ test('storage failures do not hide confirmed awards; broken streak keeps earned 
  const result=await store.refresh();assert.equal(result.collection.current_streak,0);
  assert.equal(result.collection.items[0].earned_on,badge.earned_on);
 });
+
+for (const startCached of [true, false]) {
+ test(`slow disk preserves offline dismissal on refresh (cached called: ${startCached})`,async()=>{
+  const {cache,rows,disk}=setup();const pending=defer();const ack=[];
+  const previous={collection,dismissed:['streak_7']};
+  rows.set('awards/A',JSON.stringify(previous));
+  disk.getItem=()=>pending.promise;
+  const store=new AchievementStore('A',cache,{
+   load:async()=>({...collection,current_streak:8}),
+   acknowledge:async(user,codes)=>{ack.push([user,codes]);},
+  });
+  const hydration=startCached ? store.cached() : null;
+  const refresh=store.refresh();
+  // Let a fast network response race the still-pending storage read.
+  await new Promise(resolve=>setImmediate(resolve));
+  pending.resolve(JSON.stringify(previous));
+  const result=await refresh;await hydration;
+  assert.deepEqual(result.dismissed,['streak_7']);
+  assert.equal(result.collection.current_streak,8);
+  assert.equal(uncelebrated(result).length,0);
+  assert.deepEqual(JSON.parse(rows.get('awards/A')).dismissed,['streak_7']);
+  assert.deepEqual(ack,[['A',['streak_7']]]);
+ });
+}
+
+test('sign-out during hydration prevents the waiting refresh from fetching or saving',async()=>{
+ const {cache,rows,disk}=setup();const pending=defer();let loads=0;
+ disk.getItem=()=>pending.promise;
+ const store=new AchievementStore('A',cache,{
+  load:async()=>{loads++;return collection;},acknowledge:async()=>{},
+ });
+ const refresh=store.refresh();await new Promise(resolve=>setImmediate(resolve));
+ await cache.clear();
+ pending.resolve(JSON.stringify({collection,dismissed:['streak_7']}));
+ assert.equal(await refresh,null);
+ assert.equal(loads,0);assert.equal(rows.size,0);
+});

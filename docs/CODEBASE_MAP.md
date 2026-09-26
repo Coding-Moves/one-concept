@@ -83,8 +83,10 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   confirmed sign-out still clears account caches. `authErrors.ts` keeps raw
   transport diagnostics out of authentication forms.
 - `src/api/client.ts` makes authenticated JSON requests, exposes `ApiError`, and
-  infers connectivity from request results. `ConnectivityContext` drives the
-  global banner; there is no native connectivity listener.
+  infers connectivity from request results. Its account epoch rejects a request
+  that crosses sign-out/sign-in, and it honors a server `Retry-After` hold.
+  `ConnectivityContext` drives the global banner; there is no native
+  connectivity listener.
   `api/fetchWithTimeout.ts` bounds API and auth fetches to 15 seconds.
 - `ProgressContext.tsx` is the shared UI state owner. It loads cached state
   before revalidation, applies optimistic actions, serializes mutation requests,
@@ -108,8 +110,9 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   retain local/demo support; this is not a separate visible guest navigation flow.
 - `mutationQueue.ts` wires AsyncStorage to `mutationOutbox.ts`, which serializes
   disk writes and stores the latest intent per like/save/topic/completion key.
-  Replay discards stale-day completions, retains retryable failures, and
-  reconciles state. It does not backdate server completion.
+  Replay discards stale-day completions, retains retryable failures with a
+  persisted 5-second-to-5-minute backoff, and pauses after eight attempts until
+  the learner explicitly retries. It does not backdate server completion.
 - `accountCaches.ts` centralizes account cache cleanup. The remote repository's
   epoch guards reject late mutation callbacks after a wipe; the API invalidates
   requests still waiting for an old account's token during cleanup.

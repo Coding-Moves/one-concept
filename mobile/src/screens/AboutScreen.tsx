@@ -16,7 +16,7 @@ const HOW_IT_WORKS = [
 ];
 
 const GITHUB_ORG = 'https://github.com/Coding-Moves';
-const GITHUB_DEV = 'https://github.com/Muawiya-contact';
+const PORTFOLIO_URL = 'https://muawiya-contact.github.io/';
 const ISSUES_URL = 'https://github.com/Coding-Moves/one-concept/issues/new';
 const FEEDBACK_EMAIL = 'contactmuawia@gmail.com';
 
@@ -128,7 +128,7 @@ export function AboutScreen() {
         </Text>
         <Text style={styles.footerSub}>
           Developed by{' '}
-          <Text style={styles.link} onPress={() => openURL(GITHUB_DEV, GITHUB_DEV)} accessibilityRole="link">
+          <Text style={styles.link} onPress={() => openURL(PORTFOLIO_URL, PORTFOLIO_URL)} accessibilityRole="link">
             @Muawiya-contact
           </Text>
         </Text>

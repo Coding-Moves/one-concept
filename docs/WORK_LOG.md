@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### PR quality-gate PostgreSQL readiness follow-up — ready for review
+
+- GitHub-hosted CI exposed a real fixture race: `pg_isready` could succeed against the official PostgreSQL image's temporary initialization server, which then stopped before the migration harness ran.
+- `b3719bd` waits for a TCP `psql` query instead, proving the final server has started before applying migrations. A timeout now reports the last container log output as a test failure rather than silently skipping database coverage.
+- Passed: full disposable PostgreSQL 16 backend suite (**195 passed**) and Ruff `F,E9`; no production database or credential was used.
+- Follow-up PR: [#252](https://github.com/Coding-Moves/one-concept/pull/252).
 ### 1.10.1 release preparation — ready for review
 
 - Scope: current `develop` changes since `v1.10.0` on `main`: reliable paused-sync recovery and account fencing, friendly service/configuration recovery screens, safer authenticated API limits, regression coverage, quality-gate groundwork, and current developer documentation. No database migration is introduced by this release range.

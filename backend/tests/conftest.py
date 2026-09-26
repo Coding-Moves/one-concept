@@ -48,8 +48,11 @@ $$;
 def _psql(sql: str = None, file: Path = None) -> subprocess.CompletedProcess:
     data = sql if sql is not None else file.read_text()
     return subprocess.run(
-        ["podman", "exec", "-i", CONTAINER, "psql", "-U", "postgres",
-         "-v", "ON_ERROR_STOP=1", "-q"],
+        # The image exposes a temporary Unix-socket-only server while its
+        # initialization scripts run. TCP proves the final PostgreSQL server is
+        # running before migrations begin.
+        ["podman", "exec", "-i", CONTAINER, "psql", "-h", "127.0.0.1",
+         "-U", "postgres", "-v", "ON_ERROR_STOP=1", "-q"],
         input=data, text=True, capture_output=True,
     )
 
@@ -70,16 +73,15 @@ def database():
         pytest.skip(f"could not start postgres: {started.stderr[:200]}")
 
     for _ in range(60):
-        ready = subprocess.run(
-            ["podman", "exec", CONTAINER, "pg_isready", "-U", "postgres"],
-            capture_output=True,
-        )
-        if ready.returncode == 0:
+        if _psql(sql="select 1;").returncode == 0:
             break
         time.sleep(1)
     else:
+        logs = subprocess.run(
+            ["podman", "logs", CONTAINER], capture_output=True, text=True,
+        )
         subprocess.run(["podman", "rm", "-f", CONTAINER], capture_output=True)
-        pytest.skip("postgres did not become ready")
+        pytest.fail(f"postgres TCP listener did not become ready: {(logs.stdout + logs.stderr)[-400:]}")
 
     assert _psql(sql=AUTH_STUB).returncode == 0, "auth stub failed"
     for migration in sorted(MIGRATIONS.glob("0*.sql")):

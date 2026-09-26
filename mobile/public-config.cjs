@@ -1,4 +1,4 @@
-/** Shared by the bundle and release/build validation. Public values only. */
+/** Shared by build/publication validation and its tests. Public values only. */
 function validUrl(value, release = false) {
   if (typeof value !== 'string' || !value || value.trim() !== value) return false;
   try {

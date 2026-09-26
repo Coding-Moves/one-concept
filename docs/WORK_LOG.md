@@ -15,6 +15,68 @@ claims as completed work.
 - `docs: document outage recovery operations` adds the operator triage/recovery guide and updates this map.
 - Passed: focused backend response tests; mobile TypeScript and all 49 Node 24 tests; whitespace checks. The full backend suite was attempted with dummy local settings and PostgreSQL 16: it showed four failures and one error by 74%, then stalled in the local harness and was stopped; it is not counted as a pass. No production deployment, migration, release, or merge occurred.
 
+### #230 Railway account migration — in progress, 2026-09-26
+
+- Owner requested one migration PR and performs Railway changes manually.
+  Scope: preserve the existing Supabase project, replace the API and two cron
+  workers, migrate mobile endpoint configuration, then retire old infrastructure.
+- Isolated branch starts from develop 7e18b44; main is 5ebdea4 (release 1.10.0)
+  with the same tree. VM draft #231 and other worktrees remain untouched.
+- Planned focused commits: account-migration runbook and evidence; release-guide
+  integration and handoff. No app source change or native rebuild is required
+  merely to change EXPO_PUBLIC_API_BASE_URL.
+- Destination Full Trial is owner-reported. New API public /health returned HTTP
+  200 with database reachable. Worker screenshots prove import-only tests; owner
+  reports reminder logs are fine after handover, but exact run evidence and old
+  worker retirement are not independently verified. New pool-topup generation
+  was last confirmed false; the owner intends to enable it, but effective
+  settings and scheduled generation are not proven.
+- Owner added the recovery redirect and changed EAS production/preview endpoint
+  values. Direct reads confirm both now target the replacement API. Actual
+  password recovery remains unverified.
+- CLI and SSH identity verified as Muawiya-contact; configured author matches
+  the profile. Backend behavior and native runtime stay unchanged. Owner now
+  reports a successful production phone smoke check; request attribution, worker
+  outcomes and retirement remain pending evidence.
+- `3e0ba41` adds the runbook. Owner intends to enable destination generation
+  and delete the source project; at that stage the production EAS URL still
+  targeted the source. No deletion or generation activation claimed.
+- Release-guide integration documents the endpoint-only OTA path and the existing
+  release workflow's partial-publication risk when rerun for an existing tag.
+  `eda36c0` contains that integration. Local documentation links, source/command
+  inspection and whitespace checks passed; no code or workflow behavior changed.
+- Opened draft [PR #240](https://github.com/Coding-Moves/one-concept/pull/240)
+  against develop. Application tests were not rerun for unchanged application
+  source. Draft status does not mean production migration is complete.
+- Handoff commit: `docs: record migration PR and validation status`.
+- Published endpoint-only production OTA group
+  `f77ba7d7-e5ca-4097-b393-03ea17d9c473` at 2026-09-26 10:14 UTC, Android/iOS,
+  environment production, unchanged version/runtime 1.10.0, clean released
+  source `5ebdea4d796a916862181dc9a47a0b20c9d90c30`. Production channel readback
+  confirms this group. Previous group `e937609c-49f8-4238-a5f6-18672b3c0c0f`
+  retained as rollback reference. No new tag, APK, schema or app-source change.
+- Passed: Node 24 npm ci, clean Android/iOS exports, binary inspection showing
+  new API present and old hostname absent, both API health checks (database
+  reachable), unauthenticated daily-route 401, and matching Supabase recovery
+  page configuration. Owner subsequently confirmed the production phone works,
+  including history and version checks; update ID/API traffic was not observed.
+- Direct manifest-permalink retrieval returned HTTP 403, so an independent
+  CDN payload download is not claimed. EAS upload succeeded and authenticated
+  channel readback confirms the group, runtime, environment and clean source.
+- Preview environment changed but preview OTA was not overwritten: its latest
+  source revision differs. Runtime 1.3.0 devices still require a separate path.
+- Publication evidence handoff: `docs: record production endpoint OTA publication`.
+- Owner requested PR readiness review, a refreshed summary and `Closes #230`.
+  `615d455` integrates develop `cb57c6b` without rewriting commits and resolves
+  the work-log conflict by preserving both sets of entries. The final PR diff
+  remains documentation-only; application source matches develop.
+- Readiness handoff: `docs: record handset check and migration closure scope`.
+  Local links and diff whitespace checks passed. No application tests rerun for
+  prose-only changes. The summary distinguishes the successful owner phone
+  check from unverified worker/retirement work; issue closure is not evidence of
+  fleet adoption or permission to skip the retirement gate. No PR merge or
+  direct issue closure is performed by this readiness update.
+
 ### #238 developer portfolio link — 2026-09-26
 
 - Confirmed the About footer's “Developed by @Muawiya-contact” destination still pointed to GitHub rather than the portfolio requested in the issue.

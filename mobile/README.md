@@ -58,9 +58,9 @@ need a local Playwright installation; they never need a real account or backend.
 | Authentication | `src/context/AuthContext.tsx`, `src/lib/supabase.ts` | Supabase session lifecycle, sign-in/up/recovery, token supply, account cleanup. |
 | Learning state | `src/context/ProgressContext.tsx`, `src/services/progressRepository.ts` | Cached-first state, optimistic actions, server reconciliation, local demo fallback. |
 | API and availability | `src/api/`, `src/context/ConnectivityContext.tsx` | Authenticated HTTP, safe error shapes, request timeout, connectivity inferred from requests. |
-| Offline sync | `src/services/mutationOutbox.ts`, `mutationQueue.ts`, `remoteProgressRepository.ts`, `syncLoop.ts` | Durable latest-intent queue, replay, bounded retry and account-safe cleanup. |
+| Offline sync | `src/services/mutationOutbox.ts`, `src/services/mutationQueue.ts`, `src/services/remoteProgressRepository.ts`, `src/services/syncLoop.ts` | Durable latest-intent queue, replay, bounded retry and account-safe cleanup. |
 | Screens and shared UI | `src/screens/`, `src/components/`, `src/theme/` | Learner-facing views, accessibility, light/dark themes, reusable presentation. |
-| Cached content | `src/services/conceptApi.ts`, `offlineCache.ts`, `savedApi.ts`, `historyApi.ts` | Account-scoped lesson, Saved, and History data for offline reading. |
+| Cached content | `src/services/conceptApi.ts`, `src/services/offlineCache.ts`, `src/services/savedApi.ts`, `src/services/historyApi.ts` | Account-scoped lesson, Saved, and History data for offline reading. |
 
 The broader cross-service design is in [../docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
 and [../docs/CODEBASE_MAP.md](../docs/CODEBASE_MAP.md).

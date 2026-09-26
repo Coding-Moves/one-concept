@@ -119,6 +119,7 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   lessons by slug, including each cached daily lesson and missing saved lessons
   downloaded with three workers. Offline reading requires a completed download.
   `offlineCache.ts` provides per-entry storage and fences late writes on sign-out.
+- `mobile/tests/` uses Node's built-in runner for pure service, storage, account-boundary and sync-loop regressions; browser scripts exercise exported-app flows without live credentials. The helper resolver lets Node load Metro-style extensionless source imports without adding a second test framework.
   UI concept IDs are slugs, while the database also has UUIDs.
 - `hooks/useSavedConcepts.ts` loads older Saved metadata in 50-record pages on
   that screen, retaining full search/filter access. `services/savedApi.ts` owns

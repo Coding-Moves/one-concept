@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### #157 mobile regression coverage — ready for review
+
+- The issue's original zero-test diagnosis is historical: `develop` already uses Node 24's built-in runner and existing queue/browser regressions. This dedicated PR extends that single test stack rather than introducing Jest or another runner.
+- `1d14ca4` covers deterministic daily selection, assigned-day stability, learned-pool selection and unavailable assignments. It also corrects type-only imports so the existing Node runner can load the pure selector.
+- `63ed4a5` covers duplicate learning records, unfinished-day continuity and year-boundary streaks, with the same type-only import correction and narrowly scoped Metro-compatible source resolver for tests.
+- `edd1f7d` proves a thrown replay callback continues the sync loop's retry rather than leaving durable offline work idle.
+- Focused test files pass. Full `npm ci`, `npm test`, TypeScript and whitespace validation remain to run before PR creation.
+
 ### #155 public mobile configuration gate — 2026-09-26
 
 - Confirmed #243 already fixes the runtime failure: missing API or Supabase configuration renders the configuration state, does not masquerade as offline, and does not start mutation replay.

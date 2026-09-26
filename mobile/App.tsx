@@ -207,8 +207,8 @@ export default function App() {
   if (!ready) return null;
 
   return (
-    <AppRecoveryBoundary>
-      <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+    <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
+      <AppRecoveryBoundary>
         <SafeAreaProvider>
           <ThemeProvider>
             {!isApiConfigured() || !isSupabaseConfigured ? <ConfigurationState /> : (
@@ -224,7 +224,7 @@ export default function App() {
             )}
           </ThemeProvider>
         </SafeAreaProvider>
-      </View>
-    </AppRecoveryBoundary>
+      </AppRecoveryBoundary>
+    </View>
   );
 }

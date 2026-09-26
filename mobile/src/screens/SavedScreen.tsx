@@ -13,7 +13,7 @@ import { useSavedConcepts } from '../hooks/useSavedConcepts';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
-import { scaleFont, scaleIcon, spacing, ThemeColors, typography } from '../theme';
+import { radius, scaleFont, scaleIcon, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
 interface SavedItem {

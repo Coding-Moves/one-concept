@@ -118,6 +118,7 @@ export function StatsScreen() {
           {error && topics.length === 0 ? (
             <UnavailableState
               offline={!online}
+              error={error}
               message="Connect to load your topic breakdown. Your saved progress is still here."
               onRetry={retry}
             />

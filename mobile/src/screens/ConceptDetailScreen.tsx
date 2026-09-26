@@ -27,6 +27,7 @@ export function ConceptDetailScreen() {
   const [concept, setConcept] = useState<Concept | null>(null);
   const [status, setStatus] = useState<Status>('loading');
   const [attempt, setAttempt] = useState(0);
+  const [failure, setFailure] = useState<unknown>(null);
   const online = useOnline();
   const request = useRef(0);
   const refreshUI = useRefreshControl('lesson', async () => {
@@ -39,6 +40,7 @@ export function ConceptDetailScreen() {
     let active = true;
     const current = ++request.current;
     setStatus('loading');
+    setFailure(null);
     fetchConcept(conceptId, (cached) => {
       if (active && current === request.current) {
         setConcept(cached);
@@ -51,11 +53,12 @@ export function ConceptDetailScreen() {
           setStatus('ready');
         }
       })
-      .catch(() => {
+      .catch((cause: unknown) => {
         // Offline or not found: the bundled catalog covers the signed-out demo
         // set; anything else we can't show, so say so rather than hang.
         const local = CONCEPTS_BY_ID.get(conceptId);
         if (!active || current !== request.current) return;
+        setFailure(cause);
         if (local) {
           setConcept(local);
           setStatus('ready');
@@ -93,6 +96,7 @@ export function ConceptDetailScreen() {
         <View style={styles.center}>
           <UnavailableState
             offline={!online}
+            error={failure}
             message="This concept couldn’t be loaded. Check your connection and try again."
             onRetry={() => setAttempt((value) => value + 1)}
           />

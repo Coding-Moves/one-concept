@@ -1,25 +1,32 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Animated, AppState, Platform, StyleSheet, Text, View } from 'react-native';
+import { AccessibilityInfo, Animated, AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
+import { classifyRecoveryError } from '../api/errorRecovery';
 import { useTheme } from '../context/ThemeContext';
 import { radius, scaleFont, spacing, typography } from '../theme';
 import { PrimaryButton } from './PrimaryButton';
+import { contactSupport } from './support';
 
 interface Props {
   offline: boolean;
   message: string;
+  error?: unknown;
   onRetry: () => void | Promise<void>;
 }
 
 /** Local artwork works without a connection and pauses offscreen or with reduced motion. */
-export function UnavailableState({ offline, message, onRetry }: Props) {
+export function UnavailableState({ offline, message, error, onRetry }: Props) {
   const { colors } = useTheme();
   const focused = useIsFocused();
   const [reduceMotion, setReduceMotion] = useState(true);
   const [foreground, setForeground] = useState(AppState.currentState === 'active');
   const [retrying, setRetrying] = useState(false);
   const float = useRef(new Animated.Value(0)).current;
+  const recovery = error ? classifyRecoveryError(error) : null;
+  const isOffline = recovery?.kind === 'offline' || (!recovery && offline);
+  const title = recovery?.title ?? (isOffline ? 'You’re offline' : 'Couldn’t load this yet');
+  const copy = recovery?.message ?? message;
 
   useEffect(() => {
     let active = true;
@@ -32,14 +39,14 @@ export function UnavailableState({ offline, message, onRetry }: Props) {
   }, []);
 
   useEffect(() => {
-    if (reduceMotion || !focused || !foreground || !offline) return;
+    if (reduceMotion || !focused || !foreground || !isOffline) return;
     const timing = (toValue: number) => Animated.timing(float, {
       toValue, duration: 1400, useNativeDriver: Platform.OS !== 'web', isInteraction: false,
     });
     const animation = Animated.loop(Animated.sequence([timing(-6), timing(0)]));
     animation.start();
     return () => { animation.stop(); float.setValue(0); };
-  }, [float, reduceMotion, focused, foreground, offline]);
+  }, [float, reduceMotion, focused, foreground, isOffline]);
 
   const retry = async () => {
     if (retrying) return;
@@ -51,16 +58,19 @@ export function UnavailableState({ offline, message, onRetry }: Props) {
     <View style={styles.container}>
       <View accessible={false} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
         <Animated.View style={[styles.artwork, { backgroundColor: colors.categoryChip, transform: [{ translateY: float }] }]}>
-          <Ionicons name={offline ? 'cloud-offline-outline' : 'cloud-outline'} size={48} color={colors.categoryChipText} />
+          <Ionicons name={isOffline ? 'cloud-offline-outline' : 'cloud-outline'} size={48} color={colors.categoryChipText} />
         </Animated.View>
       </View>
       <Text style={[styles.title, { color: colors.text }]} accessibilityRole="header">
-        {offline ? 'You’re offline' : 'Couldn’t load this yet'}
+        {title}
       </Text>
-      <Text style={[styles.message, { color: colors.textSecondary }]}>{message}</Text>
+      <Text style={[styles.message, { color: colors.textSecondary }]}>{copy}</Text>
       <View style={styles.action}>
         <PrimaryButton label={retrying ? 'Trying…' : 'Try again'} onPress={retry} disabled={retrying} />
       </View>
+      <Pressable accessibilityRole="link" accessibilityLabel="Contact support by email" onPress={() => contactSupport('One Concept app help')} style={styles.support}>
+        <Text style={[styles.supportText, { color: colors.primary }]}>Contact support</Text>
+      </Pressable>
     </View>
   );
 }
@@ -71,4 +81,6 @@ const styles = StyleSheet.create({
   title: { ...typography.heading, textAlign: 'center' },
   message: { fontSize: scaleFont(15), lineHeight: scaleFont(22), textAlign: 'center', maxWidth: 320 },
   action: { width: '100%', maxWidth: 200, marginTop: spacing.xs },
+  support: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.md },
+  supportText: { fontSize: scaleFont(15), fontWeight: '700' },
 });

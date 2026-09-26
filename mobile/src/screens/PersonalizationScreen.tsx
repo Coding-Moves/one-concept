@@ -45,6 +45,7 @@ export function PersonalizationScreen() {
       ) : error && topics.length === 0 ? (
         <UnavailableState
           offline={!online}
+          error={error}
           message="Connect to load your topics and choose what to learn next."
           onRetry={retry}
         />

@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #155 public mobile configuration gate — 2026-09-26
+
+- Confirmed #243 already fixes the runtime failure: missing API or Supabase configuration renders the configuration state, does not masquerade as offline, and does not start mutation replay.
+- This dedicated follow-up prevents an invalid public configuration from reaching a build or OTA publication. `acfca93` validates required public endpoints/key, rejects malformed or unsafe release URLs without echoing values, and adds 3 focused tests. `42b3bb8` validates the selected EAS preview/production environments before publishing updates.
+- Passed: validator with dummy public values, JavaScript syntax checks, TypeScript, all 52 Node 24 mobile tests, and whitespace checks. No EAS environment, production deployment, OTA publication, migration, or release was changed.
+
 ### #242 graceful outage recovery — 2026-09-26
 
 - Scope: a dedicated reliability PR only. Related #161, #169, #171, #187, and #155 remain open and are not closed by this work.

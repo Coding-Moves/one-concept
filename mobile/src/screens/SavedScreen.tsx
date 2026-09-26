@@ -13,7 +13,7 @@ import { useSavedConcepts } from '../hooks/useSavedConcepts';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
-import { radius, scaleFont, scaleIcon, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleFont, scaleIcon, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
 interface SavedItem {
@@ -207,7 +207,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
     },
-    iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
     title: { ...typography.title, fontSize: scaleFont(20), color: colors.text },
     loadStatus: { padding: spacing.md, gap: spacing.sm, alignItems: 'center' },
     searchWrap: {

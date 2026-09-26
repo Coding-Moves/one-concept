@@ -17,9 +17,30 @@ Merging this document does not change Railway or EAS configuration.
 | Destination trial | Owner reports Full Trial; screenshot showed 30 days or $5, not a guaranteed 30 days of service |
 | Reminders | Import-only test passed; owner reports real-run logs are fine. Record actual run outcome and confirm old worker stopped before sign-off |
 | Pool top-up | Import-only test passed; last confirmed flag was `GENERATION_ENABLED=false`. Owner intends to enable generation; effective settings, successful generation and old-worker handover remain unverified |
-| EAS endpoint | Direct read of production and preview variables shows both still use the old API |
+| EAS endpoint | Owner changed production and preview; direct reads confirm both now use the new API |
+| Recovery redirect | Owner reports the new Supabase recovery redirect was added; full email recovery flow remains unverified |
 | Mobile runtime | Released app/runtime 1.10.0; older runtime 1.3.0 installations need a separate compatibility decision |
-| Publication / retirement | No endpoint OTA published and no source-project deletion performed as part of this work |
+| Publication / retirement | Production endpoint OTA published for runtime 1.10.0; device verification pending. No source-project deletion performed as part of this work |
+
+### Production endpoint update, 2026-09-26
+
+- Published at 10:14 UTC (15:14 Pakistan time), to production, Android and iOS.
+- Source: clean released `main`, `5ebdea4d796a916862181dc9a47a0b20c9d90c30`.
+  App version and runtime remain `1.10.0`; no native or application source edits.
+- Update group: `f77ba7d7-e5ca-4097-b393-03ea17d9c473`, message
+  `Migrate Railway API endpoint`, built with the production EAS environment.
+- Previous compatible production group retained for rollback:
+  `e937609c-49f8-4238-a5f6-18672b3c0c0f` (same release source).
+- Node 24 locked dependency installation and clean Android/iOS exports passed.
+  Both bundles contain the new API URL and exclude the old API hostname.
+- Before publication, both APIs returned HTTP 200 with database reachable from
+  `/health`, HTTP 401 for unauthenticated `/v1/daily`, and HTTP 200 from
+  `/reset-password`. Embedded recovery-page Supabase configuration matched.
+  These checks do not substitute for authenticated device or email recovery tests.
+- The owner has a production 1.10.0 APK. Preview's environment is updated, but
+  no preview OTA was published: its latest update uses a different source revision.
+- Device adoption and worker handover remain pending evidence. Retain the old
+  API for devices still using the old bundle, including runtime 1.3.0 clients.
 
 The new API is service `63e0dfd6-99b9-432b-8747-d578d3d07789`; reminders is
 `0341bb11-51bc-4ec8-8ea0-fc98c5d4dbc2`. Deployment screenshots include short

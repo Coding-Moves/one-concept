@@ -21,26 +21,42 @@ claims as completed work.
   200 with database reachable. Worker screenshots prove import-only tests; owner
   reports reminder logs are fine after handover, but exact run evidence and old
   worker retirement are not independently verified. New pool-topup generation
-  remains false, as confirmed by owner; scheduled generation is not proven.
-- EAS production and preview public endpoint values were read directly: both
-  still use https://api-production-f3a9f.up.railway.app. No EAS values or updates
-  have been changed/published by this migration work.
+  was last confirmed false; the owner intends to enable it, but effective
+  settings and scheduled generation are not proven.
+- Owner added the recovery redirect and changed EAS production/preview endpoint
+  values. Direct reads confirm both now target the replacement API. Actual
+  password recovery remains unverified.
 - CLI and SSH identity verified as Muawiya-contact; configured author matches
   the profile. Backend behavior and native runtime stay unchanged. Production
-  cutover, recovery redirect configuration, device tests and retirement remain
-  pending; keep the issue and migration PR open until those are evidenced.
-- `3e0ba41` adds the runbook. Owner now intends to enable destination generation
-  and delete the source project; warned that the confirmed production EAS URL
-  still targets the source. No deletion or generation activation claimed.
+  device tests and retirement remain pending; keep the issue and migration PR
+  open until those are evidenced.
+- `3e0ba41` adds the runbook. Owner intends to enable destination generation
+  and delete the source project; at that stage the production EAS URL still
+  targeted the source. No deletion or generation activation claimed.
 - Release-guide integration documents the endpoint-only OTA path and the existing
   release workflow's partial-publication risk when rerun for an existing tag.
   `eda36c0` contains that integration. Local documentation links, source/command
   inspection and whitespace checks passed; no code or workflow behavior changed.
 - Opened draft [PR #240](https://github.com/Coding-Moves/one-concept/pull/240)
-  against develop. Application tests were not rerun for documentation-only
-  changes. Operational evidence and production endpoint publication remain
-  pending; draft status does not mean production migration is complete.
+  against develop. Application tests were not rerun for unchanged application
+  source. Draft status does not mean production migration is complete.
 - Handoff commit: `docs: record migration PR and validation status`.
+- Published endpoint-only production OTA group
+  `f77ba7d7-e5ca-4097-b393-03ea17d9c473` at 2026-09-26 10:14 UTC, Android/iOS,
+  environment production, unchanged version/runtime 1.10.0, clean released
+  source `5ebdea4d796a916862181dc9a47a0b20c9d90c30`. Production channel readback
+  confirms this group. Previous group `e937609c-49f8-4238-a5f6-18672b3c0c0f`
+  retained as rollback reference. No new tag, APK, schema or app-source change.
+- Passed: Node 24 npm ci, clean Android/iOS exports, binary inspection showing
+  new API present and old hostname absent, both API health checks (database
+  reachable), unauthenticated daily-route 401, and matching Supabase recovery
+  page configuration. User's production 1.10.0 phone test remains pending.
+- Direct manifest-permalink retrieval returned HTTP 403, so an independent
+  CDN payload download is not claimed. EAS upload succeeded and authenticated
+  channel readback confirms the group, runtime, environment and clean source.
+- Preview environment changed but preview OTA was not overwritten: its latest
+  source revision differs. Runtime 1.3.0 devices still require a separate path.
+- Publication evidence handoff: `docs: record production endpoint OTA publication`.
 
 ### Release #233 review follow-up — 2026-09-25
 

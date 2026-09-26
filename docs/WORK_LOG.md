@@ -58,6 +58,18 @@ claims as completed work.
   source revision differs. Runtime 1.3.0 devices still require a separate path.
 - Publication evidence handoff: `docs: record production endpoint OTA publication`.
 
+### #238 developer portfolio link — 2026-09-26
+
+- Confirmed the About footer's “Developed by @Muawiya-contact” destination still pointed to GitHub rather than the portfolio requested in the issue.
+- `e2e017a` changes only that destination to `https://muawiya-contact.github.io/`; the existing accessible link role and URL-opening fallback remain in use.
+- Passed: TypeScript, all 47 Node 24 mobile tests, and whitespace checks. The portfolio URL is owner-provided; this workstation's documentation browser could not fetch the GitHub Pages host for an independent availability check.
+
+### #236 collection UI refinement — 2026-09-26
+
+- Confirmed the current issue: History used a separate rectangular search field and a prominent loaded-count line; Saved had compact filter controls without an explicit touch-target or label line-height; both screens duplicated collection-row layout.
+- `9333b44` adds shared `SearchField` and `CollectionConceptRow` primitives, with bounded topic labels. `0884023` moves Saved to the shared search/row and makes its filter rail 44 points tall with vertical breathing room. `9296e80` moves History to the same compact search/row and places its loaded count inside the search placeholder plus an accessibility hint. `4fe7a89` updates bounded-history browser assertions; `bbc7b51` restores the Saved back control to a 44-point target. Review follow-ups `0446787` raise collection controls to Android's 48dp target and `25c72f0` ensures a long server-supplied category label stays within a compact row.
+- Passed: TypeScript, all 47 Node 24 tests, a clean web export, and whitespace checks. The exported-app Playwright scenarios could not run on this workstation because the optional `playwright/test` module is absent; no dependency was added only for validation. Physical Android/iOS large-text, TalkBack/VoiceOver, and screenshot review remain required before release.
+
 ### Release #233 review follow-up — 2026-09-25
 
 - Scope: record owner-confirmed production application of migration 0016 and

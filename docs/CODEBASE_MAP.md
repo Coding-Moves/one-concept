@@ -57,6 +57,7 @@ inside a root stack, with a concept-detail modal above them.
 All screens live in `mobile/src/screens/`. Reusable presentation in
 `mobile/src/components/` covers lesson cards/actions, category/follow controls,
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
+`SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.
 `src/theme/index.ts` defines colors, spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.

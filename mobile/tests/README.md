@@ -54,6 +54,7 @@ CI=1 EXPO_NO_DOTENV=1 EXPO_NO_TELEMETRY=1 EXPO_OFFLINE=1 \
   npx expo export --platform web --clear --output-dir /tmp/one-concept-offline
 node tests/offline.browser.cjs /tmp/one-concept-offline \
   --no-event --retry-error --signout-inflight
+node tests/offline.browser.cjs /tmp/one-concept-offline --flush-race
 node tests/offline.browser.cjs /tmp/one-concept-offline --midnight
 node tests/offline.browser.cjs /tmp/one-concept-offline --partial-connectivity
 node tests/offline.browser.cjs /tmp/one-concept-offline --large-collections --require-compact
@@ -66,7 +67,7 @@ stale Expo configuration from Metro.
 
 The flags exercise timer-only reconnection, a 503 during replay, and a request
 that fails after sign-out. Omit `--no-event` to test the browser online event.
-The separate `--midnight` scenario holds a like request across the date change,
+`--flush-race` delays a reconnect reconciliation while a later Save is optimistic, then rejects Unlike while Unsave is pending. It proves unrelated state survives and the pending counter drains. The separate `--midnight` scenario holds a like request across the date change,
 queues Save behind it, and verifies persistence through offline restart and replay.
 `--partial-connectivity` serves progress but fails topics, checks that requests
 back off, and restores topics to verify automatic recovery without a browser event.

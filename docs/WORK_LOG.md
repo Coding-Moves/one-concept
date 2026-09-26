@@ -13,6 +13,12 @@ claims as completed work.
 - `b3719bd` waits for a TCP `psql` query instead, proving the final server has started before applying migrations. A timeout now reports the last container log output as a test failure rather than silently skipping database coverage.
 - Passed: full disposable PostgreSQL 16 backend suite (**195 passed**) and Ruff `F,E9`; no production database or credential was used.
 - Follow-up PR: [#252](https://github.com/Coding-Moves/one-concept/pull/252).
+### 1.10.1 release preparation — ready for review
+
+- Scope: current `develop` changes since `v1.10.0` on `main`: reliable paused-sync recovery and account fencing, friendly service/configuration recovery screens, safer authenticated API limits, regression coverage, quality-gate groundwork, and current developer documentation. No database migration is introduced by this release range.
+- `efe5270` updates `mobile/app.config.js` to marketing version `1.10.1` and adds the required nonempty `1.10.1` one-time What's New card. It describes learner-visible recovery, retry, account-protection and setup guidance benefits. `runtimeVersion` remains `1.10.0` because the release has no native change.
+- Release preparation must merge into `develop` before opening the final `develop` → `main` release PR. That final diff must retain both the version and its matching card; mobile publication remains a separate verified action after production deployment checks.
+- Release preparation PR: [#251](https://github.com/Coding-Moves/one-concept/pull/251).
 
 ### #162 PR application quality gates — 2026-09-26
 
@@ -135,7 +141,7 @@ claims as completed work.
 ### #238 developer portfolio link — 2026-09-26
 
 - Confirmed the About footer's “Developed by @Muawiya-contact” destination still pointed to GitHub rather than the portfolio requested in the issue.
-- `e2e017a` changes only that destination to `https://muawiya-contact.github.io/`; the existing accessible link role and URL-opening fallback remain in use.
+- `e2e017a` originally moved the destination away from GitHub. Release preparation follow-up corrects it to the owner-provided `https://muawiya-contact.github.io/muawiya-portfolio/`; the existing accessible link role and URL-opening fallback remain in use.
 - Passed: TypeScript, all 47 Node 24 mobile tests, and whitespace checks. The portfolio URL is owner-provided; this workstation's documentation browser could not fetch the GitHub Pages host for an independent availability check.
 
 ### #236 collection UI refinement — 2026-09-26

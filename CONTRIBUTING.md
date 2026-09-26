@@ -24,6 +24,38 @@ take outside pull requests — **issues are the place to contribute.** If
 something really needs a code change, open an issue first and we'll take it from
 there.
 
+Before opening a pull request, run the checks for the area you changed:
+
+```bash
+# Mobile (Node 24)
+cd mobile
+npm ci
+npm run typecheck
+npm test
+```
+
+```bash
+# Backend (Python 3.12; Podman starts a disposable PostgreSQL 16 database)
+cd backend
+python -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt ruff
+.venv/bin/ruff check --select F,E9 .
+.venv/bin/python -m pytest
+```
+
+Pull requests into `develop` and `main` run these same application gates in
+GitHub Actions. The backend suite skips its database cases when Podman is
+unavailable locally; the PR gate treats a skip as a failure so its PostgreSQL
+coverage is always exercised before merge.
+
 ## License
 
 The project is licensed under the [MIT License](LICENSE).
+
+## Maintainer pull requests
+
+When a maintainer pull request fully resolves one existing issue, its description
+must include `Fixes #<issue-number>` or `Closes #<issue-number>`. This makes the
+issue close automatically when the pull request is merged and keeps the work
+traceable. Do not use a closing keyword for partial work or a related issue that
+remains open.

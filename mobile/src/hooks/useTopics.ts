@@ -4,7 +4,7 @@ import { fetchTopics, ServerTopic, topicStore } from '../services/topicsApi';
 
 export interface Topics {
   loading: boolean;
-  error: boolean;
+  error: unknown;
   retry: () => void;
   topics: ServerTopic[];
   /** Follow/unfollow one topic. The PUT sends every currently-followed slug
@@ -19,7 +19,7 @@ export function useTopics(): Topics {
   const userId = session?.user?.id ?? null;
   const topics = useSyncExternalStore(topicStore.subscribe, topicStore.getSnapshot);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const [error, setError] = useState<unknown>(null);
   const [attempt, setAttempt] = useState(0);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
 
@@ -30,10 +30,10 @@ export function useTopics(): Topics {
     }
     let cancelled = false;
     setLoading(true);
-    setError(false);
+    setError(null);
     fetchTopics()
-      .catch(() => {
-        if (!cancelled) setError(true);
+      .catch((cause: unknown) => {
+        if (!cancelled) setError(cause);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -45,7 +45,7 @@ export function useTopics(): Topics {
 
   const toggle = useCallback(
     (slug: string) => {
-      topicStore.toggle(slug).catch(() => setError(true));
+      topicStore.toggle(slug).catch((cause: unknown) => setError(cause));
     },
     []
   );

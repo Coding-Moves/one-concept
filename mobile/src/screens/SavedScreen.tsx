@@ -3,9 +3,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { CategoryChip } from '../components/CategoryChip';
-import { LikeCount } from '../components/LikeCount';
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { CollectionConceptRow } from '../components/CollectionConceptRow';
+import { SearchField } from '../components/SearchField';
 import { UnavailableState } from '../components/UnavailableState';
 import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
@@ -13,7 +13,7 @@ import { useSavedConcepts } from '../hooks/useSavedConcepts';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
-import { radius, scaleFont, scaleIcon, shadows, spacing, ThemeColors, typography } from '../theme';
+import { radius, scaleFont, scaleIcon, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
 interface SavedItem {
@@ -130,23 +130,13 @@ export function SavedScreen() {
         </View>
       ) : (
         <>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={scaleIcon(16)} color={colors.textMuted} />
-            <TextInput
-              style={styles.searchInput}
+          <View style={styles.searchWrap}>
+            <SearchField
               value={query}
               onChangeText={setQuery}
               placeholder="Search saved concepts"
-              placeholderTextColor={colors.textMuted}
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="search"
+              accessibilityLabel="Search saved concepts"
             />
-            {query ? (
-              <Pressable onPress={() => setQuery('')} accessibilityLabel="Clear search">
-                <Ionicons name="close-circle" size={scaleIcon(16)} color={colors.textMuted} />
-              </Pressable>
-            ) : null}
           </View>
 
           {categories.length > 2 ? (
@@ -189,23 +179,16 @@ export function SavedScreen() {
               </Text>
             }
             renderItem={({ item }) => (
-              <Pressable
+              <CollectionConceptRow
+                title={item.title}
+                category={item.topicName}
+                likes={item.likes}
                 onPress={() =>
                   navigation.navigate('ConceptDetail', { conceptId: item.id, title: item.title })
                 }
-                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-                accessibilityRole="button"
                 accessibilityLabel={`Open ${item.title}`}
-              >
-                <View style={styles.rowText}>
-                  <Text style={styles.rowTitle}>{item.title}</Text>
-                  <View style={styles.rowMeta}>
-                    {item.topicName ? <CategoryChip category={item.topicName} /> : null}
-                    <LikeCount count={item.likes} />
-                  </View>
-                </View>
-                <Ionicons name="bookmark" size={scaleIcon(16)} color={colors.primary} />
-              </Pressable>
+                trailing={<Ionicons name="bookmark" size={scaleIcon(16)} color={colors.primary} />}
+              />
             )}
           />
         </>
@@ -224,51 +207,27 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
     },
-    iconButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center' },
+    iconButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
     title: { ...typography.title, fontSize: scaleFont(20), color: colors.text },
     loadStatus: { padding: spacing.md, gap: spacing.sm, alignItems: 'center' },
-    searchBox: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: spacing.sm,
+    searchWrap: {
       marginHorizontal: spacing.lg,
-      paddingHorizontal: spacing.md,
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
     },
-    searchInput: { flex: 1, paddingVertical: spacing.sm + 2, fontSize: scaleFont(15), color: colors.text },
     filterRow: { flexGrow: 0, marginTop: spacing.sm },
-    filterContent: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+    filterContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm },
     filterChip: {
+      minHeight: 48,
+      justifyContent: 'center',
       paddingHorizontal: spacing.md,
-      paddingVertical: spacing.xs + 2,
       borderRadius: radius.pill,
       backgroundColor: colors.surface,
       borderWidth: StyleSheet.hairlineWidth,
       borderColor: colors.border,
     },
     filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-    filterText: { fontSize: scaleFont(13), fontWeight: '600', color: colors.textSecondary },
+    filterText: { fontSize: scaleFont(13), lineHeight: scaleFont(18), fontWeight: '600', color: colors.textSecondary },
     filterTextActive: { color: colors.onPrimary },
     listContent: { padding: spacing.lg, paddingTop: spacing.md },
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      padding: spacing.md,
-      gap: spacing.md,
-      ...shadows.card,
-    },
-    rowPressed: { opacity: 0.7 },
-    rowText: { flexShrink: 1, gap: spacing.sm, alignItems: 'flex-start' },
-    rowTitle: { fontSize: scaleFont(15), fontWeight: '600', color: colors.text },
-    rowMeta: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flexWrap: 'wrap' },
     noMatch: { fontSize: scaleFont(14), color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg },
     empty: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.xl },
     emptyTitle: { fontSize: scaleFont(17), fontWeight: '700', color: colors.text },

@@ -7,6 +7,149 @@ claims as completed work.
 
 ## Current status
 
+### PR quality-gate PostgreSQL readiness follow-up — ready for review
+
+- GitHub-hosted CI exposed a real fixture race: `pg_isready` could succeed against the official PostgreSQL image's temporary initialization server, which then stopped before the migration harness ran.
+- `b3719bd` waits for a TCP `psql` query instead, proving the final server has started before applying migrations. A timeout now reports the last container log output as a test failure rather than silently skipping database coverage.
+- Passed: full disposable PostgreSQL 16 backend suite (**195 passed**) and Ruff `F,E9`; no production database or credential was used.
+- Follow-up PR: [#252](https://github.com/Coding-Moves/one-concept/pull/252).
+### 1.10.1 release preparation — ready for review
+
+- Scope: current `develop` changes since `v1.10.0` on `main`: reliable paused-sync recovery and account fencing, friendly service/configuration recovery screens, safer authenticated API limits, regression coverage, quality-gate groundwork, and current developer documentation. No database migration is introduced by this release range.
+- `efe5270` updates `mobile/app.config.js` to marketing version `1.10.1` and adds the required nonempty `1.10.1` one-time What's New card. It describes learner-visible recovery, retry, account-protection and setup guidance benefits. `runtimeVersion` remains `1.10.0` because the release has no native change.
+- Release preparation must merge into `develop` before opening the final `develop` → `main` release PR. That final diff must retain both the version and its matching card; mobile publication remains a separate verified action after production deployment checks.
+- Release preparation PR: [#251](https://github.com/Coding-Moves/one-concept/pull/251).
+
+### #162 PR application quality gates — 2026-09-26
+
+- Confirmed the remaining gap: the release guard is path-scoped and the weekly audit is advisory, so ordinary PRs into `develop` did not run the mobile suite or backend pytest.
+- `eda63f3` adds stable, credential-free PR checks for `develop` and `main`: Node 24 mobile typecheck/tests; backend Ruff F/E9; and the existing backend pytest suite using its disposable Podman PostgreSQL 16 fixture. The backend job fails if that fixture skips, preventing a green result without database coverage.
+- Review follow-up `538d6b0` supplies only safe test configuration required during backend test collection (`DATABASE_URL` for the disposable database and `.invalid` Supabase placeholders). No production credential or service is exposed to PRs.
+- `19a168d` documents the exact local commands and `0bebc4f` corrects the codebase map. Required-check enforcement in GitHub branch rules remains an owner/repository-settings action after the workflow first appears; a workflow file alone cannot claim it is required.
+- Passed: workflow YAML assertions, mobile Node 24 typecheck and all 49 Node tests, backend Ruff F/E9, and a clean PostgreSQL-backed selection module (9 passed). A full local backend run was started twice accidentally while collecting asynchronous terminal output; the duplicate runs contended for the fixed disposable container and were stopped, so that full-suite attempt is not counted as a pass. GitHub Actions must run the full suite once this PR is opened.
+### #157 mobile regression coverage — ready for review
+
+- The issue's original zero-test diagnosis is historical: `develop` already uses Node 24's built-in runner and existing queue/browser regressions. This dedicated PR extends that single test stack rather than introducing Jest or another runner.
+- `1d14ca4` covers deterministic daily selection, assigned-day stability, learned-pool selection and unavailable assignments. It also corrects type-only imports so the existing Node runner can load the pure selector.
+- `63ed4a5` covers duplicate learning records, unfinished-day continuity and year-boundary streaks, with the same type-only import correction and narrowly scoped Metro-compatible source resolver for tests.
+- `edd1f7d` proves a thrown replay callback continues the sync loop's retry rather than leaving durable offline work idle.
+- Validation: clean `npm ci`, `npm test` (**60 passed**), `npm run typecheck` and `git diff --check` passed. `npm ci` reports 11 existing moderate dependency advisories; this test-only PR does not alter dependency versions.
+### #153 authenticated endpoint rate limits — ready for review
+
+- Confirmed `develop` had no limiter. The dedicated PR applies separate per-verified-account token buckets for reads and writes after JWT verification, protecting database-facing state and mutation routes without trusting request headers or user IDs.
+- `3fe53a4` supplies configuration defaults, bounded in-process bucket storage, structured 429 responses with `Retry-After`, CORS header exposure and regression coverage for refill, method isolation, bounded memory and spoof-resistant identity. It preserves the established outage exception handlers during the conflict resolution.
+- The PR description will use `Fixes #153`, so GitHub closes this fully resolved issue only when the PR merges.
+- Review follow-up `4b366eb` removes an unrelated `APP_REVISION` setting carried from the #169 draft, keeping this PR limited to throttle configuration.
+- Passed: focused rate-limit/security suite (**12 passed**) with dummy local settings and `git diff --check`. The full suite collected 195 tests and ran 41, then 154 database tests errored when the local Podman PostgreSQL 16 container stopped during migration setup; this environment failure is not counted as a pass or attributed to the limiter.
+### #164 developer onboarding and accurate backend guide — ready for review
+
+- Confirmed the documented test count and abbreviated route map were stale; the backend now has a wider regression suite and authenticated routers for profile, concepts, reviews and achievements in addition to topics/daily. The layout uses descriptive coverage rather than a hardcoded count.
+- `91fbb25` corrects the backend layout/endpoint guide. `425fc6f` adds `mobile/README.md` with clone-to-Expo setup, safe public configuration, architecture navigation, offline/account rules and local validation commands.
+- This documentation-only PR uses `Fixes #164`; no runtime behavior, deployment, environment values or secrets changed. Local link/path and whitespace verification passed; tests were not run because no executable code changed.
+- Review follow-up `124250b` makes every mobile service reference in the application map an unambiguous repository path.
+
+### #156 offline queue retry and account boundary — 2026-09-26
+
+- Confirmed the current `develop` defect: a 5xx replay loop had no persisted retry limit, and a queued replay could acquire a replacement account token during sign-out/sign-in.
+- `d06d7ef` fences token lookup, network completion and JSON parsing to the account epoch. It adds focused tests proving a queued write cannot be sent with a next-account token and a late old-account response cannot affect the new account's connectivity state.
+- `2c9b098` persists a per-intent exponential backoff (5 seconds to 5 minutes), pauses after eight automatic failures, respects `Retry-After`, and preserves a newer same-key choice. Retryable daily, review, topic, like and save writes share the policy.
+- `6a7a04b` exposes paused changes with an accessible Retry saved changes control, clears the pause only on deliberate retry, and adds an exported-app browser scenario for repeated 503s, restart, and recovery.
+- Passed: TypeScript and all 58 Node 24 tests. The optional Playwright browser scenario needs a local Playwright module and browser executable; it was syntax-inspected but not run on this workstation. No production service, schema, EAS update, or release changed.
+
+### #155 public mobile configuration gate — 2026-09-26
+
+- Confirmed #243 already fixes the runtime failure: missing API or Supabase configuration renders the configuration state, does not masquerade as offline, and does not start mutation replay.
+- This dedicated follow-up prevents an invalid public configuration from reaching a build or OTA publication. `acfca93` validates required public endpoints/key, rejects malformed or unsafe release URLs without echoing values, and adds 3 focused tests. `42b3bb8` validates the selected EAS preview/production environments before publishing updates.
+- Passed: validator with dummy public values, JavaScript syntax checks, TypeScript, all 52 Node 24 mobile tests, and whitespace checks. No EAS environment, production deployment, OTA publication, migration, or release was changed.
+
+### #154 reconnect replay race regression — 2026-09-26
+
+- Current `develop` already serializes reconnect queue replay through the same ProgressContext mutation chain as optimistic taps. This focused PR supplies the missing deterministic proof instead of reimplementing that behavior.
+- `443f46e` adds a mocked exported-app browser scenario: it holds a reconnect snapshot, applies a later Save, releases the stale snapshot, then rejects an Unlike while Unsave is pending. The assertions require the later action to remain visible, unrelated rollback to stay isolated, and the durable queue to drain.
+- Passed: browser-script syntax, TypeScript, all 49 Node 24 tests, and whitespace checks. The mocked browser scenario is not locally runnable because Playwright is absent; CI or a Playwright-equipped workstation must run `offline.browser.cjs --flush-race`. No production change, migration, or release is included.
+
+### #242 graceful outage recovery — 2026-09-26
+
+- Scope: a dedicated reliability PR only. Related #161, #169, #171, #187, and #155 remain open and are not closed by this work.
+- Review found that an absent Supabase URL could throw during module import before the planned configuration screen could render. The recovery path now uses a safe placeholder client only while the app shows a configuration state; no request is made in that state.
+- `fee9ce3` adds sanitized FastAPI SQL/database and unexpected-failure responses with opaque incident IDs, retry guidance for database failures, and regression tests. `85536da` adds shared mobile error types and non-diagnostic recovery classification. `d4d2185` adds root render recovery, import-safe configuration handling, and the support action. `5a46b03` routes topic, history, and concept failures into the shared safe unavailable state. Review follow-up `33146f0` keeps the splash-owning layout outside the boundary so a caught startup failure can still reveal the recovery screen.
+- `docs: document outage recovery operations` adds the operator triage/recovery guide and updates this map.
+- Passed: focused backend response tests; mobile TypeScript and all 49 Node 24 tests; whitespace checks. The full backend suite was attempted with dummy local settings and PostgreSQL 16: it showed four failures and one error by 74%, then stalled in the local harness and was stopped; it is not counted as a pass. No production deployment, migration, release, or merge occurred.
+
+### #230 Railway account migration — in progress, 2026-09-26
+
+- Owner requested one migration PR and performs Railway changes manually.
+  Scope: preserve the existing Supabase project, replace the API and two cron
+  workers, migrate mobile endpoint configuration, then retire old infrastructure.
+- Isolated branch starts from develop 7e18b44; main is 5ebdea4 (release 1.10.0)
+  with the same tree. VM draft #231 and other worktrees remain untouched.
+- Planned focused commits: account-migration runbook and evidence; release-guide
+  integration and handoff. No app source change or native rebuild is required
+  merely to change EXPO_PUBLIC_API_BASE_URL.
+- Destination Full Trial is owner-reported. New API public /health returned HTTP
+  200 with database reachable. Worker screenshots prove import-only tests; owner
+  reports reminder logs are fine after handover, but exact run evidence and old
+  worker retirement are not independently verified. New pool-topup generation
+  was last confirmed false; the owner intends to enable it, but effective
+  settings and scheduled generation are not proven.
+- Owner added the recovery redirect and changed EAS production/preview endpoint
+  values. Direct reads confirm both now target the replacement API. Actual
+  password recovery remains unverified.
+- CLI and SSH identity verified as Muawiya-contact; configured author matches
+  the profile. Backend behavior and native runtime stay unchanged. Owner now
+  reports a successful production phone smoke check; request attribution, worker
+  outcomes and retirement remain pending evidence.
+- `3e0ba41` adds the runbook. Owner intends to enable destination generation
+  and delete the source project; at that stage the production EAS URL still
+  targeted the source. No deletion or generation activation claimed.
+- Release-guide integration documents the endpoint-only OTA path and the existing
+  release workflow's partial-publication risk when rerun for an existing tag.
+  `eda36c0` contains that integration. Local documentation links, source/command
+  inspection and whitespace checks passed; no code or workflow behavior changed.
+- Opened draft [PR #240](https://github.com/Coding-Moves/one-concept/pull/240)
+  against develop. Application tests were not rerun for unchanged application
+  source. Draft status does not mean production migration is complete.
+- Handoff commit: `docs: record migration PR and validation status`.
+- Published endpoint-only production OTA group
+  `f77ba7d7-e5ca-4097-b393-03ea17d9c473` at 2026-09-26 10:14 UTC, Android/iOS,
+  environment production, unchanged version/runtime 1.10.0, clean released
+  source `5ebdea4d796a916862181dc9a47a0b20c9d90c30`. Production channel readback
+  confirms this group. Previous group `e937609c-49f8-4238-a5f6-18672b3c0c0f`
+  retained as rollback reference. No new tag, APK, schema or app-source change.
+- Passed: Node 24 npm ci, clean Android/iOS exports, binary inspection showing
+  new API present and old hostname absent, both API health checks (database
+  reachable), unauthenticated daily-route 401, and matching Supabase recovery
+  page configuration. Owner subsequently confirmed the production phone works,
+  including history and version checks; update ID/API traffic was not observed.
+- Direct manifest-permalink retrieval returned HTTP 403, so an independent
+  CDN payload download is not claimed. EAS upload succeeded and authenticated
+  channel readback confirms the group, runtime, environment and clean source.
+- Preview environment changed but preview OTA was not overwritten: its latest
+  source revision differs. Runtime 1.3.0 devices still require a separate path.
+- Publication evidence handoff: `docs: record production endpoint OTA publication`.
+- Owner requested PR readiness review, a refreshed summary and `Closes #230`.
+  `615d455` integrates develop `cb57c6b` without rewriting commits and resolves
+  the work-log conflict by preserving both sets of entries. The final PR diff
+  remains documentation-only; application source matches develop.
+- Readiness handoff: `docs: record handset check and migration closure scope`.
+  Local links and diff whitespace checks passed. No application tests rerun for
+  prose-only changes. The summary distinguishes the successful owner phone
+  check from unverified worker/retirement work; issue closure is not evidence of
+  fleet adoption or permission to skip the retirement gate. No PR merge or
+  direct issue closure is performed by this readiness update.
+
+### #238 developer portfolio link — 2026-09-26
+
+- Confirmed the About footer's “Developed by @Muawiya-contact” destination still pointed to GitHub rather than the portfolio requested in the issue.
+- `e2e017a` originally moved the destination away from GitHub. Release preparation follow-up corrects it to the owner-provided `https://muawiya-contact.github.io/muawiya-portfolio/`; the existing accessible link role and URL-opening fallback remain in use.
+- Passed: TypeScript, all 47 Node 24 mobile tests, and whitespace checks. The portfolio URL is owner-provided; this workstation's documentation browser could not fetch the GitHub Pages host for an independent availability check.
+
+### #236 collection UI refinement — 2026-09-26
+
+- Confirmed the current issue: History used a separate rectangular search field and a prominent loaded-count line; Saved had compact filter controls without an explicit touch-target or label line-height; both screens duplicated collection-row layout.
+- `9333b44` adds shared `SearchField` and `CollectionConceptRow` primitives, with bounded topic labels. `0884023` moves Saved to the shared search/row and makes its filter rail 44 points tall with vertical breathing room. `9296e80` moves History to the same compact search/row and places its loaded count inside the search placeholder plus an accessibility hint. `4fe7a89` updates bounded-history browser assertions; `bbc7b51` restores the Saved back control to a 44-point target. Review follow-ups `0446787` raise collection controls to Android's 48dp target and `25c72f0` ensures a long server-supplied category label stays within a compact row.
+- Passed: TypeScript, all 47 Node 24 tests, a clean web export, and whitespace checks. The exported-app Playwright scenarios could not run on this workstation because the optional `playwright/test` module is absent; no dependency was added only for validation. Physical Android/iOS large-text, TalkBack/VoiceOver, and screenshot review remain required before release.
+
 ### Release #233 review follow-up — 2026-09-25
 
 - Scope: record owner-confirmed production application of migration 0016 and

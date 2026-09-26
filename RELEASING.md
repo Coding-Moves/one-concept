@@ -68,3 +68,41 @@ download link in the README changes only on a native (runtimeVersion) release.
 ## One-time backend config (already set in production)
 - `SUPABASE_ANON_KEY` on the Railway `api` service — the `/reset-password` page needs it.
 - Supabase → Auth → Redirect URLs must include `<api-domain>/reset-password`.
+
+## Backend endpoint migration without a new app version
+
+Follow [the Railway migration runbook](docs/RAILWAY_MIGRATION.md) for service
+handover, recovery redirects, device checks and old-endpoint retirement. The
+mobile API address comes from EAS `EXPO_PUBLIC_API_BASE_URL`; editing Railway
+or merging the runbook alone does not update installed applications.
+
+An endpoint-only operational update reuses the existing release's source and
+native runtime. It does not create another version tag or a new release PR.
+For a normal version release, all version/What's New requirements above still
+apply. Do not rerun `release.yml` for an already-published version to repoint its
+API: OTA publication runs before that workflow rejects a duplicate version tag,
+so the run can partially publish and then fail.
+
+After backend/worker revision verification, recovery configuration and candidate
+testing, obtain the owner's approval of the specific production endpoint switch.
+Use a clean checkout of the verified current `main` revision, install its locked
+dependencies, and verify `EXPO_PUBLIC_API_BASE_URL` in each EAS environment. Check
+the effective runtime and app version before export; do not use a feature branch
+or bump native runtime merely to move the API. Recheck remote `main` immediately
+before publication and stop if it differs from the verified checkout/deployments.
+
+Publish the candidate with the preview environment first, using a compatible
+preview installation for validation. Once approved, the explicit EAS commands
+from that checkout's `mobile/` directory are:
+
+```sh
+eas update --channel preview --environment preview --message "Verify Railway API migration" --non-interactive
+# Only after candidate validation and approval of the production switch:
+eas update --channel production --environment production --message "Migrate Railway API endpoint" --non-interactive
+```
+
+Record the source SHA, environment URL, runtime, update group, channel and device
+results in the migration PR. Do not imply all users have updated when an upload
+succeeds. Retain the old API until older runtimes, offline clients, fresh installs,
+recovery links and rollback are accounted for. Environment-variable rollback
+alone does not change already-published bundles.

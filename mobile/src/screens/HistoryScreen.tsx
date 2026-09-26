@@ -4,11 +4,11 @@ import { CompositeNavigationProp, ParamListBase, useNavigation } from '@react-na
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo, useState } from 'react';
-import { FlatList, Pressable, TextInput, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 import { useHistory } from '../hooks/useHistory';
 import { PrimaryButton } from '../components/PrimaryButton';
-import { CategoryChip } from '../components/CategoryChip';
-import { LikeCount } from '../components/LikeCount';
+import { CollectionConceptRow } from '../components/CollectionConceptRow';
+import { SearchField } from '../components/SearchField';
 import { SkeletonRow } from '../components/Skeleton';
 import { UnavailableState } from '../components/UnavailableState';
 import { useOnline } from '../context/ConnectivityContext';
@@ -17,7 +17,7 @@ import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
 import { formatDateKey } from '../services/dates';
-import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, spacing, ThemeColors, typography } from '../theme';
 import { Category, LearnedRecord } from '../types';
 
 
@@ -43,21 +43,14 @@ function HistoryRow({
   const category = (record.topicName as Category | undefined) ?? local?.category;
   const likeTotal = (record.likeCount ?? 0) + (liked ? 1 : 0);
   return (
-    <Pressable
+    <CollectionConceptRow
+      title={title}
+      category={category}
+      likes={likeTotal}
       onPress={() => onOpen(record.conceptId, title)}
-      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
-      accessibilityRole="button"
       accessibilityLabel={`Open ${title}`}
-    >
-      <View style={styles.rowText}>
-        <Text style={styles.rowTitle}>{title}</Text>
-        {/* Category and likes each get their own row, so the heart never
-            wraps to a different line depending on chip width (issue #121). */}
-        {category ? <CategoryChip category={category} /> : null}
-        <LikeCount count={likeTotal} />
-      </View>
-      <Text style={styles.rowDate}>{formatDateKey(record.date)}</Text>
-    </Pressable>
+      trailing={<Text style={styles.rowDate}>{formatDateKey(record.date)}</Text>}
+    />
   );
 }
 
@@ -106,10 +99,13 @@ export function HistoryScreen() {
           <View style={styles.header}>
             <Text style={styles.title}>History</Text>
             {refreshUI.action}
-            <Text style={styles.subtitle}>{history.records.length} of {progress.stats?.totalLearned ?? history.records.length} learned concepts loaded.</Text>
-            <TextInput value={query} onChangeText={setQuery} style={styles.search}
-              placeholder="Search loaded history" placeholderTextColor={colors.textSecondary}
-              accessibilityLabel="Search loaded history" autoCapitalize="none" autoCorrect={false} />
+            <SearchField
+              value={query}
+              onChangeText={setQuery}
+              placeholder={`Search ${history.records.length} loaded lessons`}
+              accessibilityLabel="Search loaded history"
+              accessibilityHint="Searches lessons downloaded to this device. Load older lessons to include more."
+            />
           </View>
         }
         ListEmptyComponent={
@@ -119,6 +115,8 @@ export function HistoryScreen() {
               <SkeletonRow />
               <SkeletonRow />
             </View>
+          ) : history.failed ? (
+            <UnavailableState offline={!online} error={history.failure} message="Connect to load your learning history on this device." onRetry={history.loadMore} />
           ) : query.trim() ? (
             <Text style={styles.subtitle}>No matches in loaded history. Load older lessons to keep looking.</Text>
           ) : !online && !progress.stats ? (
@@ -151,7 +149,6 @@ type Styles = ReturnType<typeof createStyles>;
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-    search: { color: colors.text, borderColor: colors.border, borderWidth: 1, borderRadius: radius.sm, padding: spacing.md, fontSize: scaleFont(16) },
     footer: { paddingVertical: spacing.lg, gap: spacing.sm },
     screen: {
       flex: 1,
@@ -175,29 +172,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     list: {
       gap: spacing.sm,
-    },
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
-      padding: spacing.md,
-      gap: spacing.md,
-      ...shadows.card,
-    },
-    rowPressed: { opacity: 0.7 },
-    rowText: {
-      gap: spacing.sm,
-      flexShrink: 1,
-      alignItems: 'flex-start',
-    },
-    rowTitle: {
-      fontSize: scaleFont(16),
-      fontWeight: '600',
-      color: colors.text,
     },
     rowDate: {
       fontSize: scaleFont(13),

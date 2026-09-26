@@ -42,7 +42,9 @@
     "build:android:preview": "eas build --platform android --profile preview",
     "build:android:production": "eas build --platform android --profile production",
     "update:preview": "eas update --channel preview",
-    "update:production": "eas update --channel production"
+    "update:production": "eas update --channel production",
+    "validate:config": "node scripts/validate-public-config.cjs",
+    "eas-build-post-install": "node scripts/validate-public-config.cjs"
   },
   "private": true
 }

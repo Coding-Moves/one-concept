@@ -11,12 +11,13 @@ learned history, streaks, likes, saved concepts, and push reminders.
 
 | Area | Entry points and purpose |
 | --- | --- |
-| Mobile | `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
+| Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
 | Content engine | `backend/app/services/generation.py`, `pool.py`, `prefetch.py`; Gemini lessons from a curated backlog. |
 | Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
+| Hosting migration | `docs/RAILWAY_MIGRATION.md`; source/destination evidence, worker handover, EAS endpoint publication, recovery redirects and retirement. New Railway services use dashboard settings because legacy Config as Code is deprecated. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
@@ -37,7 +38,12 @@ collection. See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rul
 ## Mobile navigation and presentation
 
 `App.tsx` composes SafeArea, Theme, Connectivity, Auth, and Progress providers.
-It holds the native splash until fonts are ready (or fail) and the root lays out.
+It holds the native splash until fonts are ready (or fail), checks public API and
+Supabase configuration before starting providers, and wraps the root in
+`AppRecoveryBoundary`. `ConfigurationState`, `UnavailableState`, and
+`api/errorRecovery.ts` provide safe learner-facing recovery copy; raw API error
+payloads are not rendered. `components/support.ts` opens the support email.
+The root then lays out the signed-in flow.
 The visible signed-out flow is `AuthScreen`; authenticated users get bottom tabs
 inside a root stack, with a concept-detail modal above them.
 
@@ -56,6 +62,7 @@ inside a root stack, with a concept-detail modal above them.
 All screens live in `mobile/src/screens/`. Reusable presentation in
 `mobile/src/components/` covers lesson cards/actions, category/follow controls,
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
+`SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.
 `src/theme/index.ts` defines colors, spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
@@ -68,7 +75,7 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
 
 ## Mobile state, persistence, and API boundaries
 
-- `src/lib/supabase.ts` creates the Auth client. `secureStorage.ts` chunks native
+- `src/lib/supabase.ts` creates the Auth client and remains import-safe when public configuration is absent so the configuration recovery UI can render. `secureStorage.ts` chunks native
   session storage through Expo SecureStore, with AsyncStorage on web.
 - `AuthContext.tsx` owns session startup, sign-in/up/recovery/sign-out, supplies
   the API token provider, and triggers push registration and timezone sync.
@@ -76,8 +83,10 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   confirmed sign-out still clears account caches. `authErrors.ts` keeps raw
   transport diagnostics out of authentication forms.
 - `src/api/client.ts` makes authenticated JSON requests, exposes `ApiError`, and
-  infers connectivity from request results. `ConnectivityContext` drives the
-  global banner; there is no native connectivity listener.
+  infers connectivity from request results. Its account epoch rejects a request
+  that crosses sign-out/sign-in, and it honors a server `Retry-After` hold.
+  `ConnectivityContext` drives the global banner; there is no native
+  connectivity listener.
   `api/fetchWithTimeout.ts` bounds API and auth fetches to 15 seconds.
 - `ProgressContext.tsx` is the shared UI state owner. It loads cached state
   before revalidation, applies optimistic actions, serializes mutation requests,
@@ -101,8 +110,9 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   retain local/demo support; this is not a separate visible guest navigation flow.
 - `mutationQueue.ts` wires AsyncStorage to `mutationOutbox.ts`, which serializes
   disk writes and stores the latest intent per like/save/topic/completion key.
-  Replay discards stale-day completions, retains retryable failures, and
-  reconciles state. It does not backdate server completion.
+  Replay discards stale-day completions, retains retryable failures with a
+  persisted 5-second-to-5-minute backoff, and pauses after eight attempts until
+  the learner explicitly retries. It does not backdate server completion.
 - `accountCaches.ts` centralizes account cache cleanup. The remote repository's
   epoch guards reject late mutation callbacks after a wipe; the API invalidates
   requests still waiting for an old account's token during cleanup.
@@ -112,6 +122,7 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   lessons by slug, including each cached daily lesson and missing saved lessons
   downloaded with three workers. Offline reading requires a completed download.
   `offlineCache.ts` provides per-entry storage and fences late writes on sign-out.
+- `mobile/tests/` uses Node's built-in runner for pure service, storage, account-boundary and sync-loop regressions; browser scripts exercise exported-app flows without live credentials. The helper resolver lets Node load Metro-style extensionless source imports without adding a second test framework.
   UI concept IDs are slugs, while the database also has UUIDs.
 - `hooks/useSavedConcepts.ts` loads older Saved metadata in 50-record pages on
   that screen, retaining full search/filter access. `services/savedApi.ts` owns
@@ -133,15 +144,23 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
 - `src/types/index.ts` defines shared concept, progress, daily, history, and
   streak types. API payloads also have types near their service consumers.
 
+## Incident response
+
+[INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) defines the production triage and
+communication sequence for Railway API/workers, Supabase, GitHub release gates,
+and mobile delivery. It deliberately separates learner-safe UI recovery from
+private diagnostics and restore procedures.
+
 ## Backend request and service flow
 
-`main.py` configures CORS, routes, production documentation visibility, a shared
+`main.py` configures CORS, routes, production documentation visibility, safe SQLAlchemy and unexpected-exception responses, and a shared
 JWKS cache, and engine cleanup. Its lifespan owns `db/keepalive.py`'s configurable
 database probes; checkout/query and connection return are bounded, failures retry,
 and cancellation awaits cleanup before engine disposal. `config.py` loads settings
 and normalizes pooler URLs; `db/session.py` creates the async engine/session
 dependency and reuses the most recently returned connection to keep a hot slot.
 The existing pre-ping, transaction pooler mode, and pool limits remain in place.
+Authenticated routes pass through `core/rate_limit.py` after JWT verification. It uses bounded in-process per-account read/write token buckets, returning `429` with `Retry-After`; a multi-replica deployment must replace it with shared state.
 `deps.py` obtains identity from bearer tokens verified by `core/security.py`
 (ES256, issuer, audience, expiry, and subject). `core/errors.py` formats auth errors.
 
@@ -285,11 +304,14 @@ and the session pooler. Applied migrations must not be rewritten.
   version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
   is gated on native `runtimeVersion` changes. Railway deploys the backend
   independently; follow `RELEASING.md` for migration and release ordering.
-- `migrations.yml` checks the applied ledger on `main` and PRs into `main`.
-  `audit.yml` runs dependency audits, Ruff, and TypeScript checks and files
-  findings as issues. `cleanup.yml` manages stale issues; Dependabot schedules
-  dependency updates with Expo-managed version restrictions. The checked-in
-  workflows do not include a general PR pytest job.
+- `pr-quality.yml` is the general pull-request gate for `develop` and `main`.
+  It runs mobile Node 24 typechecking/tests and backend Ruff F/E9 plus pytest.
+  The backend job installs Podman and fails if its disposable PostgreSQL 16
+  fixture skips, so a green backend result includes database coverage.
+  `migrations.yml` separately checks the applied ledger on `main` and PRs into
+  `main`. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
+  files findings as issues. `cleanup.yml` manages stale issues; Dependabot
+  schedules dependency updates with Expo-managed version restrictions.
 - `mobile/app.config.js` currently has app version `1.8.0` and native runtime
   `1.3.0`; `package.json`'s `1.0.0` is not the release-version authority.
 

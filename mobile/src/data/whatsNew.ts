@@ -22,6 +22,15 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.1',
+    highlights: [
+      'Recover gracefully when the service is unavailable, with clear next steps instead of technical error messages.',
+      'Keep your saved learning changes visible and retry them when a connection or server problem pauses syncing.',
+      'Switch accounts with stronger protection for your saved lessons and pending learning activity.',
+      'Get clearer guidance when your app setup needs attention, so connection problems are easier to understand.',
+    ],
+  },
+  {
     version: '1.10.0',
     highlights: [
       'Earn permanent badges for your learning streaks, with credit for milestones you have already reached.',

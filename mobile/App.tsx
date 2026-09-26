@@ -14,7 +14,10 @@ import { ComponentProps, useCallback, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { AchievementCelebration } from './src/components/AchievementCelebration';
+import { AppRecoveryBoundary } from './src/components/AppRecoveryBoundary';
+import { ConfigurationState } from './src/components/ConfigurationState';
 import { OfflineBanner } from './src/components/OfflineBanner';
+import { SyncStatusBanner } from './src/components/SyncStatusBanner';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AchievementsProvider } from './src/context/AchievementsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -33,6 +36,8 @@ import { SavedScreen } from './src/screens/SavedScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { RootStackParamList } from './src/navigation';
+import { isApiConfigured } from './src/api/client';
+import { isSupabaseConfigured } from './src/lib/supabase';
 
 // Hold the native splash up until we're ready to paint, instead of hiding it
 // automatically and flashing a blank screen while the font loads (issue #93).
@@ -119,6 +124,7 @@ function ThemedApp() {
   return (
     <View style={{ flex: 1 }}>
       {!online && <OfflineBanner />}
+      <SyncStatusBanner />
       <View style={{ flex: 1 }}>
         <NavigationContainer theme={navigationTheme}>
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
@@ -204,19 +210,23 @@ export default function App() {
 
   return (
     <View style={{ flex: 1 }} onLayout={onLayoutRootView}>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <ConnectivityProvider>
-            <AuthProvider>
-              <ProgressProvider>
-                <AchievementsProvider>
-                  <ThemedApp />
-                </AchievementsProvider>
-              </ProgressProvider>
-            </AuthProvider>
-          </ConnectivityProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
+      <AppRecoveryBoundary>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            {!isApiConfigured() || !isSupabaseConfigured ? <ConfigurationState /> : (
+              <ConnectivityProvider>
+                <AuthProvider>
+                  <ProgressProvider>
+                    <AchievementsProvider>
+                      <ThemedApp />
+                    </AchievementsProvider>
+                  </ProgressProvider>
+                </AuthProvider>
+              </ConnectivityProvider>
+            )}
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </AppRecoveryBoundary>
     </View>
   );
 }

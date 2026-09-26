@@ -7,8 +7,14 @@ const url = process.env.EXPO_PUBLIC_SUPABASE_URL ?? '';
 const anonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
 
 export const isSupabaseConfigured = Boolean(url && anonKey);
+
 // Match Supabase's existing default key, so installed sessions need no migration.
-const storageKey = `sb-${new URL(url).hostname.split('.')[0]}-auth-token`;
+// Missing public configuration must show the recovery screen, not throw while
+// this module is imported before React can render it.
+const projectRef = isSupabaseConfigured ? new URL(url).hostname.split('.')[0] : 'unconfigured';
+const storageKey = `sb-${projectRef}-auth-token`;
+const clientUrl = isSupabaseConfigured ? url : 'https://unconfigured.invalid';
+const clientAnonKey = isSupabaseConfigured ? anonKey : 'unconfigured';
 
 export async function readCachedSession(): Promise<Session | null> {
   const raw = await sessionStorage.getItem(storageKey);
@@ -29,7 +35,7 @@ export async function readCachedSession(): Promise<Session | null> {
  * or writes tables directly, so this client's job is to obtain and refresh the
  * access token that the backend verifies.
  */
-export const supabase = createClient(url, anonKey, {
+export const supabase = createClient(clientUrl, clientAnonKey, {
   global: { fetch: fetchWithTimeout },
   auth: {
     storageKey,

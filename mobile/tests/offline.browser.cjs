@@ -32,6 +32,7 @@ let failLikes = false;
 let failTopics = false;
 let stateRequests = 0, topicRequests = 0;
 let holdLike = false, releaseLike;
+let holdState = false, releaseState, holdSave = false, releaseSave, rejectLikes = false;
 const writes = [];
 const errors = [];
 const session = { access_token:'fixture', refresh_token:'fixture-refresh', token_type:'bearer', expires_in:864000, expires_at:Math.floor(Date.now()/1000)+864000, user:{ id:'11111111-1111-1111-1111-111111111111', email:'fixture@example.invalid', aud:'authenticated', role:'authenticated', app_metadata:{}, user_metadata:{}, created_at:'2026-01-01T00:00:00Z' } };
@@ -60,6 +61,13 @@ const server = http.createServer((req,res) => {
     const method = req.method();
     if (endpoint === '/v1/me/state') {
       stateRequests++;
+      if (holdState) {
+        // Snapshot before the later tap: this is the response that used to
+        // overwrite an optimistic mutation after connectivity returned.
+        const snapshot = JSON.stringify(state);
+        await new Promise(resolve => { releaseState = resolve; });
+        return route.fulfill({status:200,contentType:'application/json',body:snapshot});
+      }
     }
     if (process.argv.includes('--require-compact') && ['/v1/me/state','/v1/me/topics','/v1/me'].includes(endpoint)) {
       assert.equal(new URL(req.url()).searchParams.get('compact'),'true');
@@ -80,7 +88,9 @@ const server = http.createServer((req,res) => {
       if (failTopics) return route.abort('connectionreset');
     }
     if (holdLike && endpoint.endsWith('/like')) { await new Promise(r=>{releaseLike=r;}); return route.abort('internetdisconnected'); }
+    if (holdSave && endpoint.endsWith('/save') && method !== 'GET') await new Promise(resolve => { releaseSave = resolve; });
     if (method !== 'GET') writes.push({endpoint,method,body:req.postDataJSON()});
+    if (rejectLikes && endpoint.endsWith('/like')) return route.fulfill({status:403,contentType:'application/json',body:'{}'});
     if (failLikes && endpoint.endsWith('/like')) return route.fulfill({status:503,contentType:'application/json',body:'{}'});
     let body = {};
     if (endpoint === '/v1/me/topics' && method === 'PUT') state.followed_topics = req.postDataJSON().topics;
@@ -141,6 +151,67 @@ const server = http.createServer((req,res) => {
     return;
   }
   await expect(page.getByText(daily.summary,{exact:true})).toBeVisible();
+  if (process.argv.includes('--flush-race')) {
+    // Reconnect starts a delayed reconciliation. The subsequent Save must stay
+    // visible while that older snapshot arrives, and a failed Unlike must undo
+    // only the Like rather than the independent Save.
+    online = false;
+    await page.getByRole('button',{name:'Like',exact:true}).click();
+    await expect.poll(async () => (await queue())['like:fixture-daily']?.desired).toBe(true);
+    online = true;
+    holdState = true;
+    await page.evaluate(() => window.dispatchEvent(new Event('online')));
+    await expect.poll(() => Boolean(releaseState)).toBe(true);
+    holdSave = true;
+    await page.getByRole('button',{name:'Save for later',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Remove from saved',exact:true})).toBeVisible();
+    holdState = false;
+    releaseState();
+    await expect.poll(() => Boolean(releaseSave)).toBe(true);
+    await expect(page.getByRole('button',{name:'Remove from saved',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Unlike',exact:true})).toBeVisible();
+    holdSave = false;
+    releaseSave();
+    await expect.poll(() => state.bookmarks.includes(daily.slug)).toBe(true);
+    await expect.poll(async () => Object.keys(await queue()).length).toBe(0);
+
+    rejectLikes = true;
+    await page.getByRole('button',{name:'Unlike',exact:true}).click();
+    await page.getByRole('button',{name:'Remove from saved',exact:true}).click();
+    await expect.poll(() => state.bookmarks.includes(daily.slug)).toBe(false);
+    await expect(page.getByRole('button',{name:'Unlike',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Save for later',exact:true})).toBeVisible();
+    assert.deepEqual(errors, []);
+    console.log('PASS: delayed replay snapshot preserves a later tap; rejected writes do not erase another field or strand the pending counter');
+    return;
+  }
+  if (process.argv.includes('--paused-retry')) {
+    await page.clock.install();
+    failLikes = true;
+    await page.getByRole('button',{name:'Like',exact:true}).click();
+    await expect.poll(async () => (await queue())['like:fixture-daily']?.retry?.failures).toBe(1);
+    for (let attempt = 2; attempt <= 8; attempt++) {
+      await page.clock.fastForward(310000);
+      await expect.poll(async () => (await queue())['like:fixture-daily']?.retry?.failures).toBe(attempt);
+    }
+    await expect(page.getByRole('button',{name:'Retry saved changes',exact:true})).toBeVisible();
+    const likeWrites = () => writes.filter(write => write.endpoint.endsWith('/like')).length;
+    const count = likeWrites();
+    await page.clock.fastForward(3600000);
+    assert.equal(likeWrites(), count, 'Paused intents must stop automatic HTTP retries');
+    await page.reload();
+    await expect(page.getByRole('button',{name:'Retry saved changes',exact:true})).toBeVisible();
+    await page.clock.fastForward(60000);
+    assert.equal(likeWrites(), count, 'Restart must preserve the retry budget');
+    failLikes = false;
+    await page.getByRole('button',{name:'Retry saved changes',exact:true}).click();
+    await expect.poll(async () => Object.keys(await queue()).length).toBe(0);
+    assert(state.likes.includes(daily.slug));
+    await expect(page.getByRole('button',{name:'Unlike',exact:true})).toBeVisible();
+    assert.deepEqual(errors, []);
+    console.log('PASS: repeated 503s pause durably, stop requests, survive restart and recover by explicit retry');
+    return;
+  }
   if (largeCollections) {
     assert.equal(savedRequests,0,'Older Saved metadata must not load on startup');
     await page.getByText('Stats',{exact:true}).last().click();

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { MutationOutbox } from '../src/services/mutationOutbox.ts';
+import { MutationOutbox, MAX_AUTOMATIC_FAILURES, readyToReplay } from '../src/services/mutationOutbox.ts';
 
 function disk() {
   let raw=null;
@@ -42,4 +42,36 @@ test('storage failures are reported and do not prevent a later retry', async () 
   storage.setItem=put;
   await queue.enqueue(like);
   assert.deepEqual(await queue.pending(),[like]);
+});
+
+test('persistent server failures pause across restart without deleting intent; user retry restores it', async () => {
+  const storage = disk();
+  let queue = new MutationOutbox(storage, 'queue');
+  await queue.enqueue(like);
+  for (let i = 0; i < MAX_AUTOMATIC_FAILURES; i++) {
+    const [entry] = await queue.pending();
+    await queue.failed(entry, 60000, false, i * 1000000);
+    queue = new MutationOutbox(storage, 'queue');
+    const [saved] = await queue.pending();
+    assert.equal(saved.retry.failures, i + 1);
+    assert.equal(readyToReplay(saved, i * 1000000 + 59999), false);
+  }
+  const [paused] = await queue.pending();
+  assert.equal(paused.retry.paused, true);
+  assert.equal(readyToReplay(paused, Number.MAX_SAFE_INTEGER), false);
+  assert.equal(paused.desired, true);
+  await queue.retryPaused();
+  assert.deepEqual(await queue.pending(), [like]);
+});
+
+test('a late replay failure cannot pause a newer choice or resurrect a signed-out queue', async () => {
+  const queue = new MutationOutbox(disk(), 'queue');
+  await queue.enqueue(like);
+  const [sent] = await queue.pending();
+  await queue.enqueue({ ...like, desired: false });
+  await queue.failed(sent, 60000);
+  assert.deepEqual(await queue.pending(), [{ ...like, desired: false }]);
+  await queue.clear();
+  await queue.failed(sent, 60000);
+  assert.deepEqual(await queue.pending(), []);
 });

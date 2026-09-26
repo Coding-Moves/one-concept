@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### #156 offline queue retry and account boundary — 2026-09-26
+
+- Confirmed the current `develop` defect: a 5xx replay loop had no persisted retry limit, and a queued replay could acquire a replacement account token during sign-out/sign-in.
+- `d06d7ef` fences token lookup, network completion and JSON parsing to the account epoch. It adds focused tests proving a queued write cannot be sent with a next-account token and a late old-account response cannot affect the new account's connectivity state.
+- `2c9b098` persists a per-intent exponential backoff (5 seconds to 5 minutes), pauses after eight automatic failures, respects `Retry-After`, and preserves a newer same-key choice. Retryable daily, review, topic, like and save writes share the policy.
+- `6a7a04b` exposes paused changes with an accessible Retry saved changes control, clears the pause only on deliberate retry, and adds an exported-app browser scenario for repeated 503s, restart, and recovery.
+- Passed: TypeScript and all 58 Node 24 tests. The optional Playwright browser scenario needs a local Playwright module and browser executable; it was syntax-inspected but not run on this workstation. No production service, schema, EAS update, or release changed.
+
 ### #155 public mobile configuration gate — 2026-09-26
 
 - Confirmed #243 already fixes the runtime failure: missing API or Supabase configuration renders the configuration state, does not masquerade as offline, and does not start mutation replay.

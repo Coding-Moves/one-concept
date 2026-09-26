@@ -17,7 +17,7 @@ import { todayKey } from '../services/dates';
 import { localProgressRepository } from '../services/localProgressRepository';
 import { ProgressRepository } from '../services/progressRepository';
 import { remoteProgressRepository } from '../services/remoteProgressRepository';
-import { pending as queuedMutations, subscribeQueue } from '../services/mutationQueue';
+import { pending as queuedMutations, retryPaused, subscribeQueue } from '../services/mutationQueue';
 import { createSyncLoop } from '../services/syncLoop';
 import { fetchTopics } from '../services/topicsApi';
 import { useAuth } from './AuthContext';
@@ -28,6 +28,8 @@ import { computeStreaks, StreakStats } from '../services/streak';
 export interface ProgressContextValue {
   loading: boolean;
   refresh: () => Promise<void>;
+  pausedSyncCount: number;
+  retrySync: () => Promise<void>;
   progress: ProgressState;
   /** Today's assigned concept (local selection; the offline/demo fallback). */
   concept: Concept | null;
@@ -71,6 +73,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
   const { session } = useAuth();
   const [progress, setProgress] = useState<ProgressState>(EMPTY_PROGRESS);
   const [loading, setLoading] = useState(true);
+  const [pausedSyncCount, setPausedSyncCount] = useState(0);
 
   // Signed in, the server owns progress. Signed out, the device does — which
   // keeps the app usable before an account exists.
@@ -83,6 +86,18 @@ export function ProgressProvider({ children, repository: override }: Props) {
   const pending = useRef(0);
   const accountEpoch = useRef(0);
   const confirmed = useRef<ProgressState | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    const update = () => {
+      void queuedMutations().then(entries => {
+        if (active) setPausedSyncCount(entries.filter(entry => entry.retry?.paused).length);
+      });
+    };
+    update();
+    const unsubscribe = subscribeQueue(update);
+    return () => { active = false; unsubscribe(); };
+  }, [userId]);
 
   // Only an account/source change invalidates queued actions. A new calendar
   // day refreshes the assignment without cancelling taps still in flight.
@@ -201,7 +216,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
         else if (!getConnectivity()) next = await repository.load();
         if (!active) return null;
         if (next && getConnectivity()) await fetchTopics().catch(() => {});
-        retry = !getConnectivity() || (await queuedMutations()).length > 0;
+        retry = !getConnectivity() || (await queuedMutations()).some(entry => !entry.retry?.paused);
         return next;
       });
       return retry;
@@ -239,6 +254,10 @@ export function ProgressProvider({ children, repository: override }: Props) {
 
   // Retry shares the mutation chain, so a refresh cannot overwrite a later tap.
   const refresh = useCallback(() => apply(null, () => repository.load()), [apply, repository]);
+  const retrySync = useCallback(() => apply(null, async () => {
+    await retryPaused();
+    return repository.flushQueue?.() ?? null;
+  }), [apply, repository]);
 
   const markLearned = useCallback((target?: Concept) => {
     // Prefer the concept the screen actually showed (the server's, when signed
@@ -358,6 +377,8 @@ export function ProgressProvider({ children, repository: override }: Props) {
     () => ({
       loading,
       refresh,
+      pausedSyncCount,
+      retrySync,
       progress,
       concept,
       serverDaily,
@@ -373,6 +394,8 @@ export function ProgressProvider({ children, repository: override }: Props) {
     [
       loading,
       refresh,
+      pausedSyncCount,
+      retrySync,
       progress,
       concept,
       serverDaily,

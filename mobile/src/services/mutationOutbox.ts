@@ -4,14 +4,26 @@ interface Storage {
   removeItem(key: string): Promise<void>;
 }
 
-export type QueuedMutation =
+export interface RetryState {
+  failures: number;
+  nextAttemptAt: number;
+  paused: boolean;
+}
+
+export type QueuedMutation = (
   | { kind: 'like'; slug: string; desired: boolean }
   | { kind: 'save'; slug: string; desired: boolean }
   | { kind: 'topics'; slugs: string[] }
   // The date it was completed: /v1/daily/complete only completes "today", so a
   // 'learn' queued on a previous day must be dropped, not replayed (#133).
   | { kind: 'learn'; date: string }
-  | { kind: 'review'; reviewId: string; date: string };
+  | { kind: 'review'; reviewId: string; date: string }
+) & { retry?: RetryState };
+
+export const MAX_AUTOMATIC_FAILURES = 8;
+export function readyToReplay(mutation: QueuedMutation, now = Date.now()): boolean {
+  return !mutation.retry?.paused && (mutation.retry?.nextAttemptAt ?? 0) <= now;
+}
 
 /** Stable coalescing key — one pending intent per (kind, target). */
 export function keyOf(m: QueuedMutation): string {
@@ -75,6 +87,7 @@ export class MutationOutbox {
       if (expected && JSON.stringify(map[key]) !== JSON.stringify(expected)) return;
       delete map[key];
       await this.storage.setItem(this.key, JSON.stringify(map));
+      if (epoch === this.epoch) this.listeners.forEach(listener => listener());
     });
   }
 
@@ -86,8 +99,43 @@ export class MutationOutbox {
     });
   }
 
+  /** Persist failure state with the intent. Restart/foreground cannot reset the
+   * budget, and a late failure cannot pause a newer choice for the same key. */
+  failed(expected: QueuedMutation, retryAfterMs = 0, pause = false, now = Date.now()): Promise<void> {
+    const epoch = this.epoch;
+    return this.serial(async () => {
+      const map = await this.read();
+      const key = keyOf(expected);
+      if (epoch !== this.epoch || JSON.stringify(map[key]) !== JSON.stringify(expected)) return;
+      const failures = (expected.retry?.failures ?? 0) + 1;
+      map[key] = { ...expected, retry: {
+        failures,
+        nextAttemptAt: now + Math.max(retryAfterMs, Math.min(5000 * 2 ** (failures - 1), 300000)),
+        paused: pause || failures >= MAX_AUTOMATIC_FAILURES,
+      } };
+      await this.storage.setItem(this.key, JSON.stringify(map));
+      if (epoch === this.epoch) this.listeners.forEach(listener => listener());
+    });
+  }
+
+  retryPaused(): Promise<void> {
+    const epoch = this.epoch;
+    return this.serial(async () => {
+      const map = await this.read();
+      if (epoch !== this.epoch) return;
+      for (const mutation of Object.values(map)) {
+        if (mutation.retry?.paused) delete mutation.retry;
+      }
+      await this.storage.setItem(this.key, JSON.stringify(map));
+      if (epoch === this.epoch) this.listeners.forEach(listener => listener());
+    });
+  }
+
   clear(): Promise<void> {
     this.epoch += 1;
-    return this.serial(() => this.storage.removeItem(this.key));
+    return this.serial(async () => {
+      await this.storage.removeItem(this.key);
+      this.listeners.forEach(listener => listener());
+    });
   }
 }

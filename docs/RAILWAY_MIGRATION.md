@@ -20,7 +20,7 @@ Merging this document does not change Railway or EAS configuration.
 | EAS endpoint | Owner changed production and preview; direct reads confirm both now use the new API |
 | Recovery redirect | Owner reports the new Supabase recovery redirect was added; full email recovery flow remains unverified |
 | Mobile runtime | Released app/runtime 1.10.0; older runtime 1.3.0 installations need a separate compatibility decision |
-| Publication / retirement | Production endpoint OTA published for runtime 1.10.0; device verification pending. No source-project deletion performed as part of this work |
+| Publication / retirement | Production endpoint OTA published for runtime 1.10.0; owner reports the app and history work on the production handset. New-API request attribution and source retirement remain unverified |
 
 ### Production endpoint update, 2026-09-26
 
@@ -39,7 +39,10 @@ Merging this document does not change Railway or EAS configuration.
   These checks do not substitute for authenticated device or email recovery tests.
 - The owner has a production 1.10.0 APK. Preview's environment is updated, but
   no preview OTA was published: its latest update uses a different source revision.
-- Device adoption and worker handover remain pending evidence. Retain the old
+- Owner reports the production handset works, including history and version
+  checks. This is a functional smoke check, not proof of the device's update ID
+  or new-API requests; those were not independently observed.
+- Fleet adoption and worker handover remain pending evidence. Retain the old
   API for devices still using the old bundle, including runtime 1.3.0 clients.
 
 The new API is service `63e0dfd6-99b9-432b-8747-d578d3d07789`; reminders is
@@ -218,7 +221,10 @@ Do not declare migration complete based only on green deployment cards.
   only that source project's obsolete resources, then verify no remaining charges
   or forgotten workers. Do not delete the destination or cancel its account.
 
-Until this gate is met, keep issue #230 and its PR open with pending work visible.
+PR #240 records the migration plan and endpoint handover and includes the
+owner-requested closing reference for issue #230. Merging that documentation or
+closing the issue does not establish that this retirement gate has been met;
+the remaining operational checks above still apply before deleting the source.
 
 ## References
 

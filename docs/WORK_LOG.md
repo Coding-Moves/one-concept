@@ -34,8 +34,13 @@ claims as completed work.
   still targets the source. No deletion or generation activation claimed.
 - Release-guide integration documents the endpoint-only OTA path and the existing
   release workflow's partial-publication risk when rerun for an existing tag.
-  Planned validation is documentation links, source/command inspection and
-  whitespace checks; no code or workflow behavior is changed by this PR.
+  `eda36c0` contains that integration. Local documentation links, source/command
+  inspection and whitespace checks passed; no code or workflow behavior changed.
+- Opened draft [PR #240](https://github.com/Coding-Moves/one-concept/pull/240)
+  against develop. Application tests were not rerun for documentation-only
+  changes. Operational evidence and production endpoint publication remain
+  pending; draft status does not mean production migration is complete.
+- Handoff commit: `docs: record migration PR and validation status`.
 
 ### Release #233 review follow-up — 2026-09-25
 

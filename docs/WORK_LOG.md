@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #154 reconnect replay race regression — 2026-09-26
+
+- Current `develop` already serializes reconnect queue replay through the same ProgressContext mutation chain as optimistic taps. This focused PR supplies the missing deterministic proof instead of reimplementing that behavior.
+- `443f46e` adds a mocked exported-app browser scenario: it holds a reconnect snapshot, applies a later Save, releases the stale snapshot, then rejects an Unlike while Unsave is pending. The assertions require the later action to remain visible, unrelated rollback to stay isolated, and the durable queue to drain.
+- Passed: browser-script syntax, TypeScript, all 49 Node 24 tests, and whitespace checks. The mocked browser scenario is not locally runnable because Playwright is absent; CI or a Playwright-equipped workstation must run `offline.browser.cjs --flush-race`. No production change, migration, or release is included.
+
 ### #242 graceful outage recovery — 2026-09-26
 
 - Scope: a dedicated reliability PR only. Related #161, #169, #171, #187, and #155 remain open and are not closed by this work.

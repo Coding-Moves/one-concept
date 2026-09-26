@@ -51,8 +51,8 @@ jobs:
 
       - name: Validate mobile configuration before publication
         run: |
-          eas env:exec --environment production 'node scripts/validate-public-config.cjs --release'
-          eas env:exec --environment preview 'node scripts/validate-public-config.cjs --release'
+          eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
+          eas env:exec preview 'node scripts/validate-public-config.cjs --release' --non-interactive
 
       # Production first, then preview so preview devices are never left
       # behind a production release. --environment bundles the EXPO_PUBLIC_*

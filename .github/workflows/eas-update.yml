@@ -39,7 +39,7 @@ jobs:
       - run: npm ci
 
       - name: Validate preview configuration before publication
-        run: eas env:exec --environment preview 'node scripts/validate-public-config.cjs --release'
+        run: eas env:exec preview 'node scripts/validate-public-config.cjs --release' --non-interactive
 
       # --environment pulls the EXPO_PUBLIC_* variables from EAS into the
       # bundle; without it the update ships with empty config and crashes.

@@ -29,6 +29,13 @@ claims as completed work.
   the profile. Backend behavior and native runtime stay unchanged. Production
   cutover, recovery redirect configuration, device tests and retirement remain
   pending; keep the issue and migration PR open until those are evidenced.
+- `3e0ba41` adds the runbook. Owner now intends to enable destination generation
+  and delete the source project; warned that the confirmed production EAS URL
+  still targets the source. No deletion or generation activation claimed.
+- Release-guide integration documents the endpoint-only OTA path and the existing
+  release workflow's partial-publication risk when rerun for an existing tag.
+  Planned validation is documentation links, source/command inspection and
+  whitespace checks; no code or workflow behavior is changed by this PR.
 
 ### Release #233 review follow-up — 2026-09-25
 

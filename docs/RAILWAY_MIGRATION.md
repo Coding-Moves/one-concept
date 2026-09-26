@@ -16,7 +16,7 @@ Merging this document does not change Railway or EAS configuration.
 | New API health | Public GET `/health`: HTTP 200, `status=ok`, `database=reachable` |
 | Destination trial | Owner reports Full Trial; screenshot showed 30 days or $5, not a guaranteed 30 days of service |
 | Reminders | Import-only test passed; owner reports real-run logs are fine. Record actual run outcome and confirm old worker stopped before sign-off |
-| Pool top-up | Import-only test passed; owner confirms new `GENERATION_ENABLED=false`. Successful generation and old-worker handover are pending |
+| Pool top-up | Import-only test passed; last confirmed flag was `GENERATION_ENABLED=false`. Owner intends to enable generation; effective settings, successful generation and old-worker handover remain unverified |
 | EAS endpoint | Direct read of production and preview variables shows both still use the old API |
 | Mobile runtime | Released app/runtime 1.10.0; older runtime 1.3.0 installations need a separate compatibility decision |
 | Publication / retirement | No endpoint OTA published and no source-project deletion performed as part of this work |
@@ -157,7 +157,8 @@ this endpoint change, and `runtimeVersion` must stay unchanged.
    and publish the compatible OTA from the verified, clean production revision.
    Record source SHA, channel, runtime, environment, update group and test results.
    Preserve unrelated native/runtime/version/What's New configuration for this
-   endpoint-only operational update. Follow the procedure in RELEASING.md below.
+   endpoint-only operational update. Follow the endpoint-migration section in
+   [RELEASING.md](../RELEASING.md).
 6. Cold-launch/relaunch a production device online as needed for update download
    and application. Confirm requests reach the new API and learning still works.
    Update downloads are not instantaneous across all devices.

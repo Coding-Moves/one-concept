@@ -12,6 +12,7 @@ claims as completed work.
 - Scope: current `develop` changes since `v1.10.0` on `main`: reliable paused-sync recovery and account fencing, friendly service/configuration recovery screens, safer authenticated API limits, regression coverage, quality-gate groundwork, and current developer documentation. No database migration is introduced by this release range.
 - `efe5270` updates `mobile/app.config.js` to marketing version `1.10.1` and adds the required nonempty `1.10.1` one-time What's New card. It describes learner-visible recovery, retry, account-protection and setup guidance benefits. `runtimeVersion` remains `1.10.0` because the release has no native change.
 - Release preparation must merge into `develop` before opening the final `develop` → `main` release PR. That final diff must retain both the version and its matching card; mobile publication remains a separate verified action after production deployment checks.
+- Release preparation PR: [#251](https://github.com/Coding-Moves/one-concept/pull/251).
 
 ### #157 mobile regression coverage — ready for review
 

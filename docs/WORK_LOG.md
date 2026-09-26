@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #164 developer onboarding and accurate backend guide — ready for review
+
+- Confirmed the documented test count and abbreviated route map were stale; the backend now has a wider regression suite and authenticated routers for profile, concepts, reviews and achievements in addition to topics/daily. The layout uses descriptive coverage rather than a hardcoded count.
+- `91fbb25` corrects the backend layout/endpoint guide. `425fc6f` adds `mobile/README.md` with clone-to-Expo setup, safe public configuration, architecture navigation, offline/account rules and local validation commands.
+- This documentation-only PR uses `Fixes #164`; no runtime behavior, deployment, environment values or secrets changed. Local link/path and whitespace verification remain to run before publication.
+
 ### #156 offline queue retry and account boundary — 2026-09-26
 
 - Confirmed the current `develop` defect: a 5xx replay loop had no persisted retry limit, and a queued replay could acquire a replacement account token during sign-out/sign-in.

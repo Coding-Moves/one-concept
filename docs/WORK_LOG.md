@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #153 authenticated endpoint rate limits — ready for review
+
+- Confirmed `develop` had no limiter. The dedicated PR applies separate per-verified-account token buckets for reads and writes after JWT verification, protecting database-facing state and mutation routes without trusting request headers or user IDs.
+- `3fe53a4` supplies configuration defaults, bounded in-process bucket storage, structured 429 responses with `Retry-After`, CORS header exposure and regression coverage for refill, method isolation, bounded memory and spoof-resistant identity. It preserves the established outage exception handlers during the conflict resolution.
+- The PR description will use `Fixes #153`, so GitHub closes this fully resolved issue only when the PR merges.
+- Validation and independent review remain in progress.
+
 ### #156 offline queue retry and account boundary — 2026-09-26
 
 - Confirmed the current `develop` defect: a 5xx replay loop had no persisted retry limit, and a queued replay could acquire a replacement account token during sign-out/sign-in.

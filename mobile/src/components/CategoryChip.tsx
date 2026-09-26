@@ -11,7 +11,7 @@ export function CategoryChip({ category }: { category: string }) {
 
   return (
     <View style={styles.chip}>
-      <Text style={styles.label}>{category}</Text>
+      <Text style={styles.label} numberOfLines={1}>{category}</Text>
     </View>
   );
 }
@@ -20,6 +20,7 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     chip: {
       alignSelf: 'flex-start',
+      maxWidth: '100%',
       backgroundColor: colors.categoryChip,
       borderRadius: radius.pill,
       paddingHorizontal: spacing.md,
@@ -31,5 +32,6 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '700',
       letterSpacing: 1,
       textTransform: 'uppercase',
+      lineHeight: scaleFont(16),
     },
   });

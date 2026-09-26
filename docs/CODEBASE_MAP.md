@@ -304,11 +304,14 @@ and the session pooler. Applied migrations must not be rewritten.
   version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
   is gated on native `runtimeVersion` changes. Railway deploys the backend
   independently; follow `RELEASING.md` for migration and release ordering.
-- `migrations.yml` checks the applied ledger on `main` and PRs into `main`.
-  `audit.yml` runs dependency audits, Ruff, and TypeScript checks and files
-  findings as issues. `cleanup.yml` manages stale issues; Dependabot schedules
-  dependency updates with Expo-managed version restrictions. The checked-in
-  workflows do not include a general PR pytest job.
+- `pr-quality.yml` is the general pull-request gate for `develop` and `main`.
+  It runs mobile Node 24 typechecking/tests and backend Ruff F/E9 plus pytest.
+  The backend job installs Podman and fails if its disposable PostgreSQL 16
+  fixture skips, so a green backend result includes database coverage.
+  `migrations.yml` separately checks the applied ledger on `main` and PRs into
+  `main`. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
+  files findings as issues. `cleanup.yml` manages stale issues; Dependabot
+  schedules dependency updates with Expo-managed version restrictions.
 - `mobile/app.config.js` currently has app version `1.8.0` and native runtime
   `1.3.0`; `package.json`'s `1.0.0` is not the release-version authority.
 

@@ -16,7 +16,7 @@ const HOW_IT_WORKS = [
 ];
 
 const GITHUB_ORG = 'https://github.com/Coding-Moves';
-const PORTFOLIO_URL = 'https://muawiya-contact.github.io/';
+const PORTFOLIO_URL = 'https://muawiya-contact.github.io/muawiya-portfolio/';
 const ISSUES_URL = 'https://github.com/Coding-Moves/one-concept/issues/new';
 const FEEDBACK_EMAIL = 'contactmuawia@gmail.com';
 

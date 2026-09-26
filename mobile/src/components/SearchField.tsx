@@ -44,7 +44,6 @@ export function SearchField({
           style={({ pressed }) => [styles.clear, pressed && styles.clearPressed]}
           accessibilityRole="button"
           accessibilityLabel="Clear search"
-          hitSlop={4}
         >
           <Ionicons name="close-circle" size={scaleIcon(18)} color={colors.textMuted} />
         </Pressable>
@@ -56,7 +55,7 @@ export function SearchField({
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     field: {
-      minHeight: 44,
+      minHeight: 48,
       flexDirection: 'row',
       alignItems: 'center',
       gap: spacing.sm,
@@ -76,8 +75,8 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.text,
     },
     clear: {
-      width: 36,
-      height: 36,
+      width: 48,
+      height: 48,
       alignItems: 'center',
       justifyContent: 'center',
       borderRadius: radius.pill,

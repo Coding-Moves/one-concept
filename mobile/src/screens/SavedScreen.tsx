@@ -207,7 +207,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.md,
     },
-    iconButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
+    iconButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
     title: { ...typography.title, fontSize: scaleFont(20), color: colors.text },
     loadStatus: { padding: spacing.md, gap: spacing.sm, alignItems: 'center' },
     searchWrap: {
@@ -216,7 +216,7 @@ const createStyles = (colors: ThemeColors) =>
     filterRow: { flexGrow: 0, marginTop: spacing.sm },
     filterContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm },
     filterChip: {
-      minHeight: 44,
+      minHeight: 48,
       justifyContent: 'center',
       paddingHorizontal: spacing.md,
       borderRadius: radius.pill,

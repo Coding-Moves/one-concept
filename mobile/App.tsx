@@ -17,6 +17,7 @@ import { AchievementCelebration } from './src/components/AchievementCelebration'
 import { AppRecoveryBoundary } from './src/components/AppRecoveryBoundary';
 import { ConfigurationState } from './src/components/ConfigurationState';
 import { OfflineBanner } from './src/components/OfflineBanner';
+import { SyncStatusBanner } from './src/components/SyncStatusBanner';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AchievementsProvider } from './src/context/AchievementsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -123,6 +124,7 @@ function ThemedApp() {
   return (
     <View style={{ flex: 1 }}>
       {!online && <OfflineBanner />}
+      <SyncStatusBanner />
       <View style={{ flex: 1 }}>
         <NavigationContainer theme={navigationTheme}>
           <RootStack.Navigator screenOptions={{ headerShown: false }}>

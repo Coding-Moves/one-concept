@@ -185,6 +185,33 @@ const server = http.createServer((req,res) => {
     console.log('PASS: delayed replay snapshot preserves a later tap; rejected writes do not erase another field or strand the pending counter');
     return;
   }
+  if (process.argv.includes('--paused-retry')) {
+    await page.clock.install();
+    failLikes = true;
+    await page.getByRole('button',{name:'Like',exact:true}).click();
+    await expect.poll(async () => (await queue())['like:fixture-daily']?.retry?.failures).toBe(1);
+    for (let attempt = 2; attempt <= 8; attempt++) {
+      await page.clock.fastForward(310000);
+      await expect.poll(async () => (await queue())['like:fixture-daily']?.retry?.failures).toBe(attempt);
+    }
+    await expect(page.getByRole('button',{name:'Retry saved changes',exact:true})).toBeVisible();
+    const likeWrites = () => writes.filter(write => write.endpoint.endsWith('/like')).length;
+    const count = likeWrites();
+    await page.clock.fastForward(3600000);
+    assert.equal(likeWrites(), count, 'Paused intents must stop automatic HTTP retries');
+    await page.reload();
+    await expect(page.getByRole('button',{name:'Retry saved changes',exact:true})).toBeVisible();
+    await page.clock.fastForward(60000);
+    assert.equal(likeWrites(), count, 'Restart must preserve the retry budget');
+    failLikes = false;
+    await page.getByRole('button',{name:'Retry saved changes',exact:true}).click();
+    await expect.poll(async () => Object.keys(await queue()).length).toBe(0);
+    assert(state.likes.includes(daily.slug));
+    await expect(page.getByRole('button',{name:'Unlike',exact:true})).toBeVisible();
+    assert.deepEqual(errors, []);
+    console.log('PASS: repeated 503s pause durably, stop requests, survive restart and recover by explicit retry');
+    return;
+  }
   if (largeCollections) {
     assert.equal(savedRequests,0,'Older Saved metadata must not load on startup');
     await page.getByText('Stats',{exact:true}).last().click();

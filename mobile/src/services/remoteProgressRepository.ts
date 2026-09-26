@@ -1,12 +1,12 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { ApiError, apiRequest } from '../api/client';
-import { Category, DailyPayload, ReviewPayload, ProgressState } from '../types';
+import { ApiError, apiRequest, apiRetryDelay } from '../api/client';
+import type { Category, DailyPayload, ReviewPayload, ProgressState } from '../types';
 import { todayKey } from './dates';
 import { cacheSavedConcepts, conceptCache } from './conceptApi';
 import { toConcept } from './dailyApi';
 import { withPendingProgress, withCompletedReview, withRejectedReview } from './pendingProgress';
-import { clearQueue, dequeue, enqueue, keyOf, pending, QueuedMutation } from './mutationQueue';
-import { ProgressRepository } from './progressRepository';
+import { clearQueue, dequeue, enqueue, keyOf, pending, readyToReplay, recordFailure, type QueuedMutation } from './mutationQueue';
+import type { ProgressRepository } from './progressRepository';
 import { OfflineCache } from './offlineCache';
 import { EMPTY_PROGRESS } from './storage';
 import { toCategory, toSlug } from './topics';
@@ -14,8 +14,15 @@ import { toCategory, toSlug } from './topics';
 const CACHE_PREFIX = 'one-concept/server-state/';
 
 /** True for a network failure (no response) — the signal to queue offline. */
-function isOffline(err: unknown): boolean {
-  return err instanceof ApiError && err.status === 0;
+function isRetryable(err: unknown): boolean {
+  return err instanceof ApiError && (err.status === 0 || err.status === 429 || err.status >= 500);
+}
+
+async function queueRetry(mutation: QueuedMutation, error: unknown): Promise<void> {
+  await enqueue(mutation);
+  if (error instanceof ApiError && error.status !== 0) {
+    await recordFailure(mutation, error.retryAfterMs);
+  }
 }
 
 interface StatePayload {
@@ -101,6 +108,11 @@ export class RemoteProgressRepository implements ProgressRepository {
   private epoch = 0;
   private disk = new OfflineCache<ProgressState>(AsyncStorage, CACHE_PREFIX);
 
+  private request<T>(epoch: number, path: string, options?: Parameters<typeof apiRequest>[1]): Promise<T> {
+    if (epoch !== this.epoch) return Promise.reject(new ApiError(401, 'Account changed'));
+    return apiRequest<T>(path, options);
+  }
+
   private async remember(state: ProgressState, epoch: number): Promise<ProgressState> {
     if (epoch !== this.epoch) return EMPTY_PROGRESS;
     this.cache = state;
@@ -158,7 +170,7 @@ export class RemoteProgressRepository implements ProgressRepository {
   async load(): Promise<ProgressState> {
     const epoch = this.epoch;
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
+      return await this.fromState(await this.request<StatePayload>(epoch, '/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
       const parsed = await this.disk.get('v1', epoch);
       if (parsed && epoch === this.epoch) {
@@ -197,14 +209,14 @@ export class RemoteProgressRepository implements ProgressRepository {
       stats: { current: number; longest: number; total_learned: number; total_reviews?: number };
     };
     try {
-      done = await apiRequest('/v1/daily/complete', { method: 'POST' });
+      done = await this.request(epoch, '/v1/daily/complete', { method: 'POST' });
     } catch (err) {
       if (epoch !== this.epoch) return EMPTY_PROGRESS;
-      if (isOffline(err)) {
+      if (isRetryable(err)) {
         // Queue the completion (with the date — it can only be replayed today)
         // and persist the optimistic record + streak bump so History AND the
         // streak stay right until the server's numbers replace them on sync.
-        await enqueue({ kind: 'learn', date: today });
+        await queueRetry({ kind: 'learn', date: today }, err);
         const already = this.cache.learned.some((r) => r.date === today);
         const learned = already
           ? this.cache.learned
@@ -230,7 +242,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     // guess (the caller's concept id, no title). Without this the History tab
     // only caught up on a full reload, i.e. an app restart (issue #91).
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
+      return await this.fromState(await this.request<StatePayload>(epoch, '/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
       // The completion already persisted; a failed reload must not roll it back.
       // Patch in place using the caller's concept id (the cached assignment can
@@ -258,15 +270,16 @@ export class RemoteProgressRepository implements ProgressRepository {
     if (daily?.status !== 'review' || daily.payload.review_id !== reviewId) return this.cache;
     // Persist intent before I/O. A successful server write followed by a lost
     // response or process restart is safe to replay using this exact review ID.
-    await enqueue({ kind: 'review', reviewId, date: daily.payload.assigned_for });
+    const mutation: QueuedMutation = { kind: 'review', reviewId, date: daily.payload.assigned_for };
+    await enqueue(mutation);
     if (epoch !== this.epoch) return EMPTY_PROGRESS;
     const before = this.cache;
     const optimistic = withCompletedReview(before, reviewId);
     await this.remember(optimistic, epoch);
     try {
-      const done = await apiRequest<{
+      const done = await this.request<{
         stats: {current: number; longest: number; total_learned: number; total_reviews: number};
-      }>(`/v1/reviews/${encodeURIComponent(reviewId)}/complete`, { method: 'POST' });
+      }>(epoch, `/v1/reviews/${encodeURIComponent(reviewId)}/complete`, { method: 'POST' });
       if (epoch !== this.epoch) return EMPTY_PROGRESS;
       await dequeue(`review:${reviewId}`);
       return this.remember({ ...this.cache, pendingReviewStats: undefined, stats: {
@@ -275,14 +288,15 @@ export class RemoteProgressRepository implements ProgressRepository {
       } }, epoch);
     } catch (error) {
       if (epoch !== this.epoch) return EMPTY_PROGRESS;
-      if (isOffline(error) || (error instanceof ApiError && (error.status >= 500 || error.status === 429))) {
+      if (isRetryable(error)) {
+        if (error instanceof ApiError && error.status !== 0) await recordFailure(mutation, error.retryAfterMs);
         return optimistic; // durable retry; do not turn an uncertain write into a lost tap
       }
       await dequeue(`review:${reviewId}`);
       // Restore the uncompleted snapshot even if the reconciliation request
       // also fails; an expired review must not keep an invented completed day.
       await this.remember({ ...this.cache, serverDaily: before.serverDaily, stats: before.stats, pendingReviewStats: undefined }, epoch);
-      return this.load();
+      return epoch === this.epoch ? this.load() : EMPTY_PROGRESS;
     }
   }
 
@@ -296,7 +310,7 @@ export class RemoteProgressRepository implements ProgressRepository {
 
     // Whole-list semantics: PUT replaces the set, so a retry is harmless.
     try {
-      const payload = await apiRequest<StatePayload>('/v1/me/topics?compact=true', {
+      const payload = await this.request<StatePayload>(epoch, '/v1/me/topics?compact=true', {
         method: 'PUT',
         body: { topics: slugs },
       });
@@ -305,8 +319,8 @@ export class RemoteProgressRepository implements ProgressRepository {
       return this.fromState(payload, epoch);
     } catch (err) {
       if (epoch !== this.epoch) return EMPTY_PROGRESS;
-      if (isOffline(err)) {
-        await enqueue({ kind: 'topics', slugs });
+      if (isRetryable(err)) {
+        await queueRetry({ kind: 'topics', slugs }, err);
         return this.remember({ ...this.cache, followedTopics: next }, epoch);
       }
       throw err;
@@ -314,11 +328,12 @@ export class RemoteProgressRepository implements ProgressRepository {
   }
 
   private async toggle(
+    epoch: number,
     slug: string,
     kind: 'like' | 'save',
     currently: boolean
   ): Promise<void> {
-    await apiRequest(`/v1/concepts/${encodeURIComponent(slug)}/${kind}`, {
+    await this.request(epoch, `/v1/concepts/${encodeURIComponent(slug)}/${kind}`, {
       method: currently ? 'DELETE' : 'PUT',
     });
   }
@@ -336,14 +351,14 @@ export class RemoteProgressRepository implements ProgressRepository {
         : this.cache.likes.filter((id) => id !== conceptId),
     };
     try {
-      await this.toggle(conceptId, 'like', currently);
+      await this.toggle(epoch, conceptId, 'like', currently);
       if (epoch !== this.epoch) return EMPTY_PROGRESS;
       await dequeue(`like:${conceptId}`);
       return this.remember(next, epoch);
     } catch (err) {
       if (epoch !== this.epoch) return EMPTY_PROGRESS;
-      if (isOffline(err)) {
-        await enqueue({ kind: 'like', slug: conceptId, desired });
+      if (isRetryable(err)) {
+        await queueRetry({ kind: 'like', slug: conceptId, desired }, err);
         return this.remember(next, epoch);
       }
       throw err;
@@ -382,11 +397,11 @@ export class RemoteProgressRepository implements ProgressRepository {
     };
 
     try {
-      await this.toggle(conceptId, 'save', currently);
+      await this.toggle(epoch, conceptId, 'save', currently);
     } catch (err) {
       if (epoch !== this.epoch) return EMPTY_PROGRESS;
-      if (isOffline(err)) {
-        await enqueue({ kind: 'save', slug: conceptId, desired });
+      if (isRetryable(err)) {
+        await queueRetry({ kind: 'save', slug: conceptId, desired }, err);
         return this.remember(patched(), epoch);
       }
       throw err;
@@ -399,7 +414,7 @@ export class RemoteProgressRepository implements ProgressRepository {
     // by the UI. Fall back to patching in place; the saved list catches up on
     // the next successful load.
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
+      return await this.fromState(await this.request<StatePayload>(epoch, '/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
       return this.remember(patched(), epoch);
     }
@@ -419,25 +434,36 @@ export class RemoteProgressRepository implements ProgressRepository {
     if (entries.length === 0) return null;
 
     let rejectedReview = false;
+    let attempted = false;
     const today = todayKey();
     for (const m of entries) {
       if (epoch !== this.epoch) return null; // signed out mid-flush
 
       // A completion can only be replayed on its own day — /v1/daily/complete
       // always targets "today", so a stale 'learn' is dropped, not replayed.
-      if (m.kind === 'learn' && m.date !== today) {
+      if ((m.kind === 'learn' || m.kind === 'review') && m.date !== today) {
+        if (m.kind === 'review') {
+          await this.remember(withRejectedReview(this.cache, m.reviewId), epoch);
+          rejectedReview = true;
+        }
+        attempted = true;
         await dequeue(keyOf(m), m);
         continue;
       }
 
+      if (!readyToReplay(m) || apiRetryDelay() > 0) continue;
+      attempted = true;
       try {
-        await this.replay(m);
+        await this.replay(m, epoch);
         if (epoch !== this.epoch) return null;
         await dequeue(keyOf(m), m); // guarded: don't clobber a newer same-key intent
       } catch (err) {
         if (epoch !== this.epoch) return null;
-        if (isOffline(err)) return rejectedReview ? this.cache : null; // keep remaining intents queued
-        if (err instanceof ApiError && (err.status >= 500 || err.status === 429)) continue; // transient — retry next time
+        if (err instanceof ApiError && err.status === 0) return rejectedReview ? this.cache : null;
+        if (isRetryable(err) || (err instanceof ApiError && err.status === 401)) {
+          await recordFailure(m, err instanceof ApiError ? err.retryAfterMs : 0, err instanceof ApiError && err.status === 401);
+          return rejectedReview ? this.cache : null; // stop the burst; intent stays durable
+        }
         if (m.kind === 'review') {
           const restored = withRejectedReview(this.cache, m.reviewId);
           // Persist the rollback BEFORE deleting the intent. A storage failure
@@ -451,34 +477,34 @@ export class RemoteProgressRepository implements ProgressRepository {
       }
     }
 
-    if (epoch !== this.epoch) return null;
+    if (epoch !== this.epoch || !attempted || apiRetryDelay() > 0) return null;
     try {
-      return await this.fromState(await apiRequest<StatePayload>('/v1/me/state?compact=true&reviews=true'), epoch);
+      return await this.fromState(await this.request<StatePayload>(epoch, '/v1/me/state?compact=true&reviews=true'), epoch);
     } catch {
       return epoch === this.epoch && rejectedReview ? this.cache : null;
     }
   }
 
-  private async replay(m: QueuedMutation): Promise<void> {
+  private async replay(m: QueuedMutation, epoch: number): Promise<void> {
     switch (m.kind) {
       case 'like':
-        await apiRequest(`/v1/concepts/${encodeURIComponent(m.slug)}/like`, {
+        await this.request(epoch, `/v1/concepts/${encodeURIComponent(m.slug)}/like`, {
           method: m.desired ? 'PUT' : 'DELETE',
         });
         return;
       case 'save':
-        await apiRequest(`/v1/concepts/${encodeURIComponent(m.slug)}/save`, {
+        await this.request(epoch, `/v1/concepts/${encodeURIComponent(m.slug)}/save`, {
           method: m.desired ? 'PUT' : 'DELETE',
         });
         return;
       case 'topics':
-        await apiRequest('/v1/me/topics?compact=true', { method: 'PUT', body: { topics: m.slugs } });
+        await this.request(epoch, '/v1/me/topics?compact=true', { method: 'PUT', body: { topics: m.slugs } });
         return;
       case 'review':
-        await apiRequest(`/v1/reviews/${encodeURIComponent(m.reviewId)}/complete`, { method: 'POST' });
+        await this.request(epoch, `/v1/reviews/${encodeURIComponent(m.reviewId)}/complete`, { method: 'POST' });
         return;
       case 'learn':
-        await apiRequest('/v1/daily/complete', { method: 'POST' });
+        await this.request(epoch, '/v1/daily/complete', { method: 'POST' });
         return;
     }
   }

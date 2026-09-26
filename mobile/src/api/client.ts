@@ -19,10 +19,23 @@ type TokenProvider = (expectedUserId?: string) => Promise<string | null>;
 
 let getAccessToken: TokenProvider = async () => null;
 let accountEpoch = 0;
+let retryUntil = 0;
+
+export function apiRetryDelay(): number {
+  return Math.max(0, retryUntil - Date.now());
+}
+
+export function parseRetryAfter(value: string | null, now = Date.now()): number {
+  if (!value) return 0;
+  const seconds = Number(value);
+  const delay = Number.isFinite(seconds) ? seconds * 1000 : Date.parse(value) - now;
+  return Number.isFinite(delay) ? Math.max(0, delay) : 0;
+}
 
 /** Cancel requests still waiting for a token when the account is cleared. */
 export function invalidateAccountRequests(): void {
   accountEpoch += 1;
+  retryUntil = 0;
 }
 
 /** Registered once by the auth layer in Phase 3. */
@@ -78,6 +91,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   }
 
   const epoch = accountEpoch;
+  if (apiRetryDelay()) throw new ApiError(429, 'Please wait before retrying', undefined, apiRetryDelay());
   const token = await getAccessToken(options.expectedUserId);
   if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
   const headers: Record<string, string> = { Accept: 'application/json' };
@@ -93,6 +107,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       signal: options.signal,
     });
   } catch (cause) {
+    if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
     // Offline or unreachable host: callers fall back to cached state.
     setConnectivity(false);
     throw new ApiError(0, 'Network request failed', cause);
@@ -106,13 +121,18 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (response.status === 204) return undefined as T;
 
   const payload = await response.json().catch(() => null);
+  if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
 
   if (!response.ok) {
     const detail =
       payload && typeof payload === 'object' && 'detail' in payload
         ? (payload as { detail: unknown }).detail
         : null;
-    throw new ApiError(response.status, `Request failed: ${response.status}`, detail);
+    const retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'));
+    if (response.status === 429 || response.status === 503) {
+      retryUntil = Math.max(retryUntil, Date.now() + retryAfterMs);
+    }
+    throw new ApiError(response.status, `Request failed: ${response.status}`, detail, retryAfterMs);
   }
 
   return payload as T;

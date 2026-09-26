@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #162 PR application quality gates — 2026-09-26
+
+- Confirmed the remaining gap: the release guard is path-scoped and the weekly audit is advisory, so ordinary PRs into `develop` did not run the mobile suite or backend pytest.
+- `eda63f3` adds stable, credential-free PR checks for `develop` and `main`: Node 24 mobile typecheck/tests; backend Ruff F/E9; and the existing backend pytest suite using its disposable Podman PostgreSQL 16 fixture. The backend job fails if that fixture skips, preventing a green result without database coverage.
+- Review follow-up `538d6b0` supplies only safe test configuration required during backend test collection (`DATABASE_URL` for the disposable database and `.invalid` Supabase placeholders). No production credential or service is exposed to PRs.
+- `19a168d` documents the exact local commands and `0bebc4f` corrects the codebase map. Required-check enforcement in GitHub branch rules remains an owner/repository-settings action after the workflow first appears; a workflow file alone cannot claim it is required.
+- Passed: workflow YAML assertions, mobile Node 24 typecheck and all 49 Node tests, backend Ruff F/E9, and a clean PostgreSQL-backed selection module (9 passed). A full local backend run was started twice accidentally while collecting asynchronous terminal output; the duplicate runs contended for the fixed disposable container and were stopped, so that full-suite attempt is not counted as a pass. GitHub Actions must run the full suite once this PR is opened.
 ### #157 mobile regression coverage — ready for review
 
 - The issue's original zero-test diagnosis is historical: `develop` already uses Node 24's built-in runner and existing queue/browser regressions. This dedicated PR extends that single test stack rather than introducing Jest or another runner.

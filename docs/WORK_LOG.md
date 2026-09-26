@@ -12,6 +12,7 @@ claims as completed work.
 - GitHub-hosted CI exposed a real fixture race: `pg_isready` could succeed against the official PostgreSQL image's temporary initialization server, which then stopped before the migration harness ran.
 - `b3719bd` waits for a TCP `psql` query instead, proving the final server has started before applying migrations. A timeout now reports the last container log output as a test failure rather than silently skipping database coverage.
 - Passed: full disposable PostgreSQL 16 backend suite (**195 passed**) and Ruff `F,E9`; no production database or credential was used.
+- Follow-up PR: [#252](https://github.com/Coding-Moves/one-concept/pull/252).
 
 ### #162 PR application quality gates — 2026-09-26
 

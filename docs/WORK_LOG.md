@@ -14,6 +14,12 @@ claims as completed work.
 - The PR description will use `Fixes #153`, so GitHub closes this fully resolved issue only when the PR merges.
 - Review follow-up `4b366eb` removes an unrelated `APP_REVISION` setting carried from the #169 draft, keeping this PR limited to throttle configuration.
 - Passed: focused rate-limit/security suite (**12 passed**) with dummy local settings and `git diff --check`. The full suite collected 195 tests and ran 41, then 154 database tests errored when the local Podman PostgreSQL 16 container stopped during migration setup; this environment failure is not counted as a pass or attributed to the limiter.
+### #164 developer onboarding and accurate backend guide — ready for review
+
+- Confirmed the documented test count and abbreviated route map were stale; the backend now has a wider regression suite and authenticated routers for profile, concepts, reviews and achievements in addition to topics/daily. The layout uses descriptive coverage rather than a hardcoded count.
+- `91fbb25` corrects the backend layout/endpoint guide. `425fc6f` adds `mobile/README.md` with clone-to-Expo setup, safe public configuration, architecture navigation, offline/account rules and local validation commands.
+- This documentation-only PR uses `Fixes #164`; no runtime behavior, deployment, environment values or secrets changed. Local link/path and whitespace verification passed; tests were not run because no executable code changed.
+- Review follow-up `124250b` makes every mobile service reference in the application map an unambiguous repository path.
 
 ### #156 offline queue retry and account boundary — 2026-09-26
 

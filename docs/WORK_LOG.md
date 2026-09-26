@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #157 mobile regression coverage — ready for review
+
+- The issue's original zero-test diagnosis is historical: `develop` already uses Node 24's built-in runner and existing queue/browser regressions. This dedicated PR extends that single test stack rather than introducing Jest or another runner.
+- `1d14ca4` covers deterministic daily selection, assigned-day stability, learned-pool selection and unavailable assignments. It also corrects type-only imports so the existing Node runner can load the pure selector.
+- `63ed4a5` covers duplicate learning records, unfinished-day continuity and year-boundary streaks, with the same type-only import correction and narrowly scoped Metro-compatible source resolver for tests.
+- `edd1f7d` proves a thrown replay callback continues the sync loop's retry rather than leaving durable offline work idle.
+- Validation: clean `npm ci`, `npm test` (**60 passed**), `npm run typecheck` and `git diff --check` passed. `npm ci` reports 11 existing moderate dependency advisories; this test-only PR does not alter dependency versions.
 ### #153 authenticated endpoint rate limits — ready for review
 
 - Confirmed `develop` had no limiter. The dedicated PR applies separate per-verified-account token buckets for reads and writes after JWT verification, protecting database-facing state and mutation routes without trusting request headers or user IDs.

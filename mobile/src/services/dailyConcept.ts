@@ -1,4 +1,4 @@
-import { Concept, ProgressState } from '../types';
+import type { Concept, ProgressState } from '../types';
 
 /** Deterministic 32-bit hash (FNV-1a) so the same date always maps to the same pick. */
 function hashString(input: string): number {

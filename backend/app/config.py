@@ -13,6 +13,9 @@ class Settings(BaseSettings):
 
     environment: str = "development"
     log_level: str = "info"
+    rate_limit_reads_per_minute: int = Field(default=120, ge=1, le=10000)
+    rate_limit_writes_per_minute: int = Field(default=60, ge=1, le=10000)
+    rate_limit_max_buckets: int = Field(default=20000, ge=1, le=100000)
 
     # Transaction-mode pooler (port 6543). Migrations use DIRECT_URL instead.
     database_url: str

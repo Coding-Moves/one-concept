@@ -11,7 +11,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 
 | Area | Entry points and purpose |
 | --- | --- |
-| Mobile | `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
+| Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
@@ -83,8 +83,10 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   confirmed sign-out still clears account caches. `authErrors.ts` keeps raw
   transport diagnostics out of authentication forms.
 - `src/api/client.ts` makes authenticated JSON requests, exposes `ApiError`, and
-  infers connectivity from request results. `ConnectivityContext` drives the
-  global banner; there is no native connectivity listener.
+  infers connectivity from request results. Its account epoch rejects a request
+  that crosses sign-out/sign-in, and it honors a server `Retry-After` hold.
+  `ConnectivityContext` drives the global banner; there is no native
+  connectivity listener.
   `api/fetchWithTimeout.ts` bounds API and auth fetches to 15 seconds.
 - `ProgressContext.tsx` is the shared UI state owner. It loads cached state
   before revalidation, applies optimistic actions, serializes mutation requests,
@@ -108,8 +110,9 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   retain local/demo support; this is not a separate visible guest navigation flow.
 - `mutationQueue.ts` wires AsyncStorage to `mutationOutbox.ts`, which serializes
   disk writes and stores the latest intent per like/save/topic/completion key.
-  Replay discards stale-day completions, retains retryable failures, and
-  reconciles state. It does not backdate server completion.
+  Replay discards stale-day completions, retains retryable failures with a
+  persisted 5-second-to-5-minute backoff, and pauses after eight attempts until
+  the learner explicitly retries. It does not backdate server completion.
 - `accountCaches.ts` centralizes account cache cleanup. The remote repository's
   epoch guards reject late mutation callbacks after a wipe; the API invalidates
   requests still waiting for an old account's token during cleanup.
@@ -119,6 +122,7 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   lessons by slug, including each cached daily lesson and missing saved lessons
   downloaded with three workers. Offline reading requires a completed download.
   `offlineCache.ts` provides per-entry storage and fences late writes on sign-out.
+- `mobile/tests/` uses Node's built-in runner for pure service, storage, account-boundary and sync-loop regressions; browser scripts exercise exported-app flows without live credentials. The helper resolver lets Node load Metro-style extensionless source imports without adding a second test framework.
   UI concept IDs are slugs, while the database also has UUIDs.
 - `hooks/useSavedConcepts.ts` loads older Saved metadata in 50-record pages on
   that screen, retaining full search/filter access. `services/savedApi.ts` owns
@@ -156,6 +160,7 @@ and cancellation awaits cleanup before engine disposal. `config.py` loads settin
 and normalizes pooler URLs; `db/session.py` creates the async engine/session
 dependency and reuses the most recently returned connection to keep a hot slot.
 The existing pre-ping, transaction pooler mode, and pool limits remain in place.
+Authenticated routes pass through `core/rate_limit.py` after JWT verification. It uses bounded in-process per-account read/write token buckets, returning `429` with `Retry-After`; a multi-replica deployment must replace it with shared state.
 `deps.py` obtains identity from bearer tokens verified by `core/security.py`
 (ES256, issuer, audience, expiry, and subject). `core/errors.py` formats auth errors.
 

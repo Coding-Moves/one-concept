@@ -14,6 +14,34 @@ claims as completed work.
 - Review follow-up `538d6b0` supplies only safe test configuration required during backend test collection (`DATABASE_URL` for the disposable database and `.invalid` Supabase placeholders). No production credential or service is exposed to PRs.
 - `19a168d` documents the exact local commands and `0bebc4f` corrects the codebase map. Required-check enforcement in GitHub branch rules remains an owner/repository-settings action after the workflow first appears; a workflow file alone cannot claim it is required.
 - Passed: workflow YAML assertions, mobile Node 24 typecheck and all 49 Node tests, backend Ruff F/E9, and a clean PostgreSQL-backed selection module (9 passed). A full local backend run was started twice accidentally while collecting asynchronous terminal output; the duplicate runs contended for the fixed disposable container and were stopped, so that full-suite attempt is not counted as a pass. GitHub Actions must run the full suite once this PR is opened.
+### #157 mobile regression coverage — ready for review
+
+- The issue's original zero-test diagnosis is historical: `develop` already uses Node 24's built-in runner and existing queue/browser regressions. This dedicated PR extends that single test stack rather than introducing Jest or another runner.
+- `1d14ca4` covers deterministic daily selection, assigned-day stability, learned-pool selection and unavailable assignments. It also corrects type-only imports so the existing Node runner can load the pure selector.
+- `63ed4a5` covers duplicate learning records, unfinished-day continuity and year-boundary streaks, with the same type-only import correction and narrowly scoped Metro-compatible source resolver for tests.
+- `edd1f7d` proves a thrown replay callback continues the sync loop's retry rather than leaving durable offline work idle.
+- Validation: clean `npm ci`, `npm test` (**60 passed**), `npm run typecheck` and `git diff --check` passed. `npm ci` reports 11 existing moderate dependency advisories; this test-only PR does not alter dependency versions.
+### #153 authenticated endpoint rate limits — ready for review
+
+- Confirmed `develop` had no limiter. The dedicated PR applies separate per-verified-account token buckets for reads and writes after JWT verification, protecting database-facing state and mutation routes without trusting request headers or user IDs.
+- `3fe53a4` supplies configuration defaults, bounded in-process bucket storage, structured 429 responses with `Retry-After`, CORS header exposure and regression coverage for refill, method isolation, bounded memory and spoof-resistant identity. It preserves the established outage exception handlers during the conflict resolution.
+- The PR description will use `Fixes #153`, so GitHub closes this fully resolved issue only when the PR merges.
+- Review follow-up `4b366eb` removes an unrelated `APP_REVISION` setting carried from the #169 draft, keeping this PR limited to throttle configuration.
+- Passed: focused rate-limit/security suite (**12 passed**) with dummy local settings and `git diff --check`. The full suite collected 195 tests and ran 41, then 154 database tests errored when the local Podman PostgreSQL 16 container stopped during migration setup; this environment failure is not counted as a pass or attributed to the limiter.
+### #164 developer onboarding and accurate backend guide — ready for review
+
+- Confirmed the documented test count and abbreviated route map were stale; the backend now has a wider regression suite and authenticated routers for profile, concepts, reviews and achievements in addition to topics/daily. The layout uses descriptive coverage rather than a hardcoded count.
+- `91fbb25` corrects the backend layout/endpoint guide. `425fc6f` adds `mobile/README.md` with clone-to-Expo setup, safe public configuration, architecture navigation, offline/account rules and local validation commands.
+- This documentation-only PR uses `Fixes #164`; no runtime behavior, deployment, environment values or secrets changed. Local link/path and whitespace verification passed; tests were not run because no executable code changed.
+- Review follow-up `124250b` makes every mobile service reference in the application map an unambiguous repository path.
+
+### #156 offline queue retry and account boundary — 2026-09-26
+
+- Confirmed the current `develop` defect: a 5xx replay loop had no persisted retry limit, and a queued replay could acquire a replacement account token during sign-out/sign-in.
+- `d06d7ef` fences token lookup, network completion and JSON parsing to the account epoch. It adds focused tests proving a queued write cannot be sent with a next-account token and a late old-account response cannot affect the new account's connectivity state.
+- `2c9b098` persists a per-intent exponential backoff (5 seconds to 5 minutes), pauses after eight automatic failures, respects `Retry-After`, and preserves a newer same-key choice. Retryable daily, review, topic, like and save writes share the policy.
+- `6a7a04b` exposes paused changes with an accessible Retry saved changes control, clears the pause only on deliberate retry, and adds an exported-app browser scenario for repeated 503s, restart, and recovery.
+- Passed: TypeScript and all 58 Node 24 tests. The optional Playwright browser scenario needs a local Playwright module and browser executable; it was syntax-inspected but not run on this workstation. No production service, schema, EAS update, or release changed.
 
 ### #155 public mobile configuration gate — 2026-09-26
 

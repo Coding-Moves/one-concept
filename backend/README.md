@@ -38,10 +38,10 @@ backend/
 │   ├── services/
 │   │   ├── selection.py     the daily concept algorithm
 │   │   └── users.py         profile bootstrap (safety net for the DB trigger)
-│   └── api/v1/              health, topics, daily
+│   └── api/v1/              authenticated topics, daily, concepts, profile, reviews, achievements
 ├── migrations/          # plain SQL, applied in filename order
 ├── email-templates/     # account email HTML installed manually in Supabase Auth
-├── tests/               # 25 tests: token verification, selection, HTTP
+├── tests/               # regression suite for API, security, persistence, workers and content lifecycle
 ├── Dockerfile           # what Railway builds
 └── .env.example         # copy to .env — never commit the filled copy
 ```
@@ -75,6 +75,9 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 | DELETE | `/v1/me/push-token` | yes | Deregister on sign-out; scoped to the caller's own registration. |
 | PUT/DELETE | `/v1/concepts/{slug}/like` | yes | Like / unlike. |
 | PUT/DELETE | `/v1/concepts/{slug}/save` | yes | Save / unsave. |
+| POST | `/v1/reviews/{review_id}/complete` | yes | Complete the identified review activity. |
+| GET | `/v1/me/achievements` | yes | Permanent achievement collection and acknowledgement state. |
+| POST | `/v1/me/achievements/seen` | yes | Acknowledge achievement cards without creating awards. |
 
 `GET /v1/daily` returns `409` with `reason: "catalog_exhausted"` once a user has
 been assigned every published concept — it never repeats one. Phase 6 hooks

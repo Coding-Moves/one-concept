@@ -89,3 +89,27 @@ test('overlapping wakeups never run concurrent flushes and stop prevents late re
   loop.stop(); resolve(true); await settle();
   t.mock.timers.tick(60000); await settle(); assert.equal(calls,1);
 });
+
+test('a thrown replay error retains the queue retry instead of leaving it idle', async t => {
+  t.mock.timers.enable({apis:['setTimeout']});
+  let calls = 0;
+  const loop = createSyncLoop(async () => {
+    calls++;
+    if (calls === 1) throw new Error('temporary replay failure');
+    return false;
+  });
+  t.after(loop.stop);
+  loop.wake();
+  t.mock.timers.tick(0);
+  await settle();
+  assert.equal(calls, 1);
+  t.mock.timers.tick(4999);
+  await settle();
+  assert.equal(calls, 1);
+  t.mock.timers.tick(1);
+  await settle();
+  assert.equal(calls, 2);
+  t.mock.timers.tick(60000);
+  await settle();
+  assert.equal(calls, 2);
+});

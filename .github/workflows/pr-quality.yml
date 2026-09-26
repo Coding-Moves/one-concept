@@ -1,0 +1,65 @@
+# Application quality gates for every pull request into the integration and
+# production branches. These checks require no production credentials: the
+# backend suite starts a disposable PostgreSQL 16 container and all provider
+# HTTP is blocked by its test fixtures.
+name: PR quality gates
+
+on:
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-quality-${{ github.workflow }}-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  mobile:
+    name: Mobile typecheck and tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  backend:
+    name: Backend lint and tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: |
+            backend/requirements.txt
+            backend/requirements-dev.txt
+      - name: Install Podman for PostgreSQL integration tests
+        run: |
+          sudo apt-get update
+          sudo apt-get install --yes podman
+          podman --version
+      - name: Install backend dependencies
+        run: python -m pip install --requirement backend/requirements-dev.txt ruff
+      - name: Check backend syntax and undefined names
+        run: ruff check --select F,E9 backend
+      - name: Run backend test suite with PostgreSQL 16
+        working-directory: backend
+        run: |
+          set -o pipefail
+          python -m pytest -q -rs | tee pytest-results.txt
+          if grep -Eq '[0-9]+ skipped|[0-9]+ skipped,' pytest-results.txt; then
+            echo '::error::A backend test was skipped; the PostgreSQL integration fixture must run in PR CI.'
+            exit 1
+          fi

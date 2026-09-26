@@ -7,6 +7,29 @@ claims as completed work.
 
 ## Current status
 
+### #230 Railway account migration — in progress, 2026-09-26
+
+- Owner requested one migration PR and performs Railway changes manually.
+  Scope: preserve the existing Supabase project, replace the API and two cron
+  workers, migrate mobile endpoint configuration, then retire old infrastructure.
+- Isolated branch starts from develop 7e18b44; main is 5ebdea4 (release 1.10.0)
+  with the same tree. VM draft #231 and other worktrees remain untouched.
+- Planned focused commits: account-migration runbook and evidence; release-guide
+  integration and handoff. No app source change or native rebuild is required
+  merely to change EXPO_PUBLIC_API_BASE_URL.
+- Destination Full Trial is owner-reported. New API public /health returned HTTP
+  200 with database reachable. Worker screenshots prove import-only tests; owner
+  reports reminder logs are fine after handover, but exact run evidence and old
+  worker retirement are not independently verified. New pool-topup generation
+  remains false, as confirmed by owner; scheduled generation is not proven.
+- EAS production and preview public endpoint values were read directly: both
+  still use https://api-production-f3a9f.up.railway.app. No EAS values or updates
+  have been changed/published by this migration work.
+- CLI and SSH identity verified as Muawiya-contact; configured author matches
+  the profile. Backend behavior and native runtime stay unchanged. Production
+  cutover, recovery redirect configuration, device tests and retirement remain
+  pending; keep the issue and migration PR open until those are evidenced.
+
 ### Release #233 review follow-up — 2026-09-25
 
 - Scope: record owner-confirmed production application of migration 0016 and

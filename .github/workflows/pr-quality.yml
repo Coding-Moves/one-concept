@@ -56,6 +56,10 @@ jobs:
         run: ruff check --select F,E9 backend
       - name: Run backend test suite with PostgreSQL 16
         working-directory: backend
+        env:
+          DATABASE_URL: postgresql+asyncpg://postgres:postgres@127.0.0.1:55433/postgres
+          SUPABASE_URL: https://test.invalid
+          SUPABASE_JWKS_URL: https://test.invalid/jwks
         run: |
           set -o pipefail
           python -m pytest -q -rs | tee pytest-results.txt

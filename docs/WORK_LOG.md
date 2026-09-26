@@ -12,7 +12,8 @@ claims as completed work.
 - Confirmed `develop` had no limiter. The dedicated PR applies separate per-verified-account token buckets for reads and writes after JWT verification, protecting database-facing state and mutation routes without trusting request headers or user IDs.
 - `3fe53a4` supplies configuration defaults, bounded in-process bucket storage, structured 429 responses with `Retry-After`, CORS header exposure and regression coverage for refill, method isolation, bounded memory and spoof-resistant identity. It preserves the established outage exception handlers during the conflict resolution.
 - The PR description will use `Fixes #153`, so GitHub closes this fully resolved issue only when the PR merges.
-- Passed: focused rate-limit/security suite (**12 passed**) with dummy local settings and `git diff --check`. A full suite invocation in the isolated checkout could not collect because the developer `.env` is intentionally absent; it is not counted as a pass.
+- Review follow-up `4b366eb` removes an unrelated `APP_REVISION` setting carried from the #169 draft, keeping this PR limited to throttle configuration.
+- Passed: focused rate-limit/security suite (**12 passed**) with dummy local settings and `git diff --check`. The full suite collected 195 tests and ran 41, then 154 database tests errored when the local Podman PostgreSQL 16 container stopped during migration setup; this environment failure is not counted as a pass or attributed to the limiter.
 
 ### #156 offline queue retry and account boundary — 2026-09-26
 

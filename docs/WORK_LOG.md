@@ -12,6 +12,7 @@ claims as completed work.
 - Confirmed the documented test count and abbreviated route map were stale; the backend now has a wider regression suite and authenticated routers for profile, concepts, reviews and achievements in addition to topics/daily. The layout uses descriptive coverage rather than a hardcoded count.
 - `91fbb25` corrects the backend layout/endpoint guide. `425fc6f` adds `mobile/README.md` with clone-to-Expo setup, safe public configuration, architecture navigation, offline/account rules and local validation commands.
 - This documentation-only PR uses `Fixes #164`; no runtime behavior, deployment, environment values or secrets changed. Local link/path and whitespace verification passed; tests were not run because no executable code changed.
+- Review follow-up `124250b` makes every mobile service reference in the application map an unambiguous repository path.
 
 ### #156 offline queue retry and account boundary — 2026-09-26
 

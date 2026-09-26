@@ -159,6 +159,7 @@ and cancellation awaits cleanup before engine disposal. `config.py` loads settin
 and normalizes pooler URLs; `db/session.py` creates the async engine/session
 dependency and reuses the most recently returned connection to keep a hot slot.
 The existing pre-ping, transaction pooler mode, and pool limits remain in place.
+Authenticated routes pass through `core/rate_limit.py` after JWT verification. It uses bounded in-process per-account read/write token buckets, returning `429` with `Retry-After`; a multi-replica deployment must replace it with shared state.
 `deps.py` obtains identity from bearer tokens verified by `core/security.py`
 (ES256, issuer, audience, expiry, and subject). `core/errors.py` formats auth errors.
 

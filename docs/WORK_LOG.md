@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #153 authenticated endpoint rate limits — ready for review
+
+- Confirmed `develop` had no limiter. The dedicated PR applies separate per-verified-account token buckets for reads and writes after JWT verification, protecting database-facing state and mutation routes without trusting request headers or user IDs.
+- `3fe53a4` supplies configuration defaults, bounded in-process bucket storage, structured 429 responses with `Retry-After`, CORS header exposure and regression coverage for refill, method isolation, bounded memory and spoof-resistant identity. It preserves the established outage exception handlers during the conflict resolution.
+- The PR description will use `Fixes #153`, so GitHub closes this fully resolved issue only when the PR merges.
+- Review follow-up `4b366eb` removes an unrelated `APP_REVISION` setting carried from the #169 draft, keeping this PR limited to throttle configuration.
+- Passed: focused rate-limit/security suite (**12 passed**) with dummy local settings and `git diff --check`. The full suite collected 195 tests and ran 41, then 154 database tests errored when the local Podman PostgreSQL 16 container stopped during migration setup; this environment failure is not counted as a pass or attributed to the limiter.
 ### #164 developer onboarding and accurate backend guide — ready for review
 
 - Confirmed the documented test count and abbreviated route map were stale; the backend now has a wider regression suite and authenticated routers for profile, concepts, reviews and achievements in addition to topics/daily. The layout uses descriptive coverage rather than a hardcoded count.

@@ -1,7 +1,7 @@
 import uuid
 from dataclasses import dataclass
 
-from fastapi import Depends, Request
+from fastapi import Depends, HTTPException, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,6 +41,13 @@ async def get_current_user(
     except ValueError:
         raise unauthorized("Token subject is not a valid user id")
 
+    retry = request.app.state.rate_limiter.retry_after(str(user_id), request.method)
+    if retry:
+        raise HTTPException(
+            status_code=429,
+            detail={"code": "rate_limited", "retry_after_seconds": retry},
+            headers={"Retry-After": str(retry), "Cache-Control": "no-store"},
+        )
     return CurrentUser(id=user_id, email=claims.email)
 
 

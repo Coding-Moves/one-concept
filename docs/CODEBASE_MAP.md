@@ -37,7 +37,12 @@ collection. See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rul
 ## Mobile navigation and presentation
 
 `App.tsx` composes SafeArea, Theme, Connectivity, Auth, and Progress providers.
-It holds the native splash until fonts are ready (or fail) and the root lays out.
+It holds the native splash until fonts are ready (or fail), checks public API and
+Supabase configuration before starting providers, and wraps the root in
+`AppRecoveryBoundary`. `ConfigurationState`, `UnavailableState`, and
+`api/errorRecovery.ts` provide safe learner-facing recovery copy; raw API error
+payloads are not rendered. `components/support.ts` opens the support email.
+The root then lays out the signed-in flow.
 The visible signed-out flow is `AuthScreen`; authenticated users get bottom tabs
 inside a root stack, with a concept-detail modal above them.
 
@@ -69,7 +74,7 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
 
 ## Mobile state, persistence, and API boundaries
 
-- `src/lib/supabase.ts` creates the Auth client. `secureStorage.ts` chunks native
+- `src/lib/supabase.ts` creates the Auth client and remains import-safe when public configuration is absent so the configuration recovery UI can render. `secureStorage.ts` chunks native
   session storage through Expo SecureStore, with AsyncStorage on web.
 - `AuthContext.tsx` owns session startup, sign-in/up/recovery/sign-out, supplies
   the API token provider, and triggers push registration and timezone sync.
@@ -134,9 +139,16 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
 - `src/types/index.ts` defines shared concept, progress, daily, history, and
   streak types. API payloads also have types near their service consumers.
 
+## Incident response
+
+[INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) defines the production triage and
+communication sequence for Railway API/workers, Supabase, GitHub release gates,
+and mobile delivery. It deliberately separates learner-safe UI recovery from
+private diagnostics and restore procedures.
+
 ## Backend request and service flow
 
-`main.py` configures CORS, routes, production documentation visibility, a shared
+`main.py` configures CORS, routes, production documentation visibility, safe SQLAlchemy and unexpected-exception responses, and a shared
 JWKS cache, and engine cleanup. Its lifespan owns `db/keepalive.py`'s configurable
 database probes; checkout/query and connection return are bounded, failures retry,
 and cancellation awaits cleanup before engine disposal. `config.py` loads settings

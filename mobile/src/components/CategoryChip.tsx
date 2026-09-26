@@ -21,12 +21,14 @@ const createStyles = (colors: ThemeColors) =>
     chip: {
       alignSelf: 'flex-start',
       maxWidth: '100%',
+      flexShrink: 1,
       backgroundColor: colors.categoryChip,
       borderRadius: radius.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs + 2,
     },
     label: {
+      flexShrink: 1,
       color: colors.categoryChipText,
       fontSize: scaleFont(11.5),
       fontWeight: '700',

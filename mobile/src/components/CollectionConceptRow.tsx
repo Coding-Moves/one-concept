@@ -55,6 +55,6 @@ const createStyles = (colors: ThemeColors) =>
     pressed: { opacity: 0.72 },
     content: { flex: 1, minWidth: 0, gap: spacing.xs },
     title: { fontSize: scaleFont(15), lineHeight: scaleFont(20), fontWeight: '600', color: colors.text },
-    meta: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
+    meta: { minWidth: 0, flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spacing.sm },
     trailing: { flexShrink: 0, alignItems: 'flex-end' },
   });

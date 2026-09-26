@@ -14,6 +14,11 @@ claims as completed work.
 - Review follow-up `538d6b0` supplies only safe test configuration required during backend test collection (`DATABASE_URL` for the disposable database and `.invalid` Supabase placeholders). No production credential or service is exposed to PRs.
 - `19a168d` documents the exact local commands and `0bebc4f` corrects the codebase map. Required-check enforcement in GitHub branch rules remains an owner/repository-settings action after the workflow first appears; a workflow file alone cannot claim it is required.
 - Passed: workflow YAML assertions, mobile Node 24 typecheck and all 49 Node tests, backend Ruff F/E9, and a clean PostgreSQL-backed selection module (9 passed). A full local backend run was started twice accidentally while collecting asynchronous terminal output; the duplicate runs contended for the fixed disposable container and were stopped, so that full-suite attempt is not counted as a pass. GitHub Actions must run the full suite once this PR is opened.
+### #155 public mobile configuration gate — 2026-09-26
+
+- Confirmed #243 already fixes the runtime failure: missing API or Supabase configuration renders the configuration state, does not masquerade as offline, and does not start mutation replay.
+- This dedicated follow-up prevents an invalid public configuration from reaching a build or OTA publication. `acfca93` validates required public endpoints/key, rejects malformed or unsafe release URLs without echoing values, and adds 3 focused tests. `42b3bb8` validates the selected EAS preview/production environments before publishing updates.
+- Passed: validator with dummy public values, JavaScript syntax checks, TypeScript, all 52 Node 24 mobile tests, and whitespace checks. No EAS environment, production deployment, OTA publication, migration, or release was changed.
 
 ### #154 reconnect replay race regression — 2026-09-26
 

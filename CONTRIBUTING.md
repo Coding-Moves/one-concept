@@ -27,3 +27,11 @@ there.
 ## License
 
 The project is licensed under the [MIT License](LICENSE).
+
+## Maintainer pull requests
+
+When a maintainer pull request fully resolves one existing issue, its description
+must include `Fixes #<issue-number>` or `Closes #<issue-number>`. This makes the
+issue close automatically when the pull request is merged and keeps the work
+traceable. Do not use a closing keyword for partial work or a related issue that
+remains open.

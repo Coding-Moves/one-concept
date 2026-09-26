@@ -11,7 +11,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 
 | Area | Entry points and purpose |
 | --- | --- |
-| Mobile | `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
+| Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
@@ -160,6 +160,7 @@ and cancellation awaits cleanup before engine disposal. `config.py` loads settin
 and normalizes pooler URLs; `db/session.py` creates the async engine/session
 dependency and reuses the most recently returned connection to keep a hot slot.
 The existing pre-ping, transaction pooler mode, and pool limits remain in place.
+Authenticated routes pass through `core/rate_limit.py` after JWT verification. It uses bounded in-process per-account read/write token buckets, returning `429` with `Retry-After`; a multi-replica deployment must replace it with shared state.
 `deps.py` obtains identity from bearer tokens verified by `core/security.py`
 (ES256, issuer, audience, expiry, and subject). `core/errors.py` formats auth errors.
 

@@ -1,4 +1,4 @@
-import { LearnedRecord, StreakStats } from '../types';
+import type { LearnedRecord, StreakStats } from '../types';
 import { previousDateKey, todayKey } from './dates';
 
 export type { StreakStats };

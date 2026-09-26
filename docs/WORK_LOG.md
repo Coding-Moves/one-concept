@@ -128,7 +128,7 @@ claims as completed work.
 ### #238 developer portfolio link — 2026-09-26
 
 - Confirmed the About footer's “Developed by @Muawiya-contact” destination still pointed to GitHub rather than the portfolio requested in the issue.
-- `e2e017a` changes only that destination to `https://muawiya-contact.github.io/`; the existing accessible link role and URL-opening fallback remain in use.
+- `e2e017a` originally moved the destination away from GitHub. Release preparation follow-up corrects it to the owner-provided `https://muawiya-contact.github.io/muawiya-portfolio/`; the existing accessible link role and URL-opening fallback remain in use.
 - Passed: TypeScript, all 47 Node 24 mobile tests, and whitespace checks. The portfolio URL is owner-provided; this workstation's documentation browser could not fetch the GitHub Pages host for an independent availability check.
 
 ### #236 collection UI refinement — 2026-09-26

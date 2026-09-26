@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### #242 graceful outage recovery — 2026-09-26
+
+- Scope: a dedicated reliability PR only. Related #161, #169, #171, #187, and #155 remain open and are not closed by this work.
+- Review found that an absent Supabase URL could throw during module import before the planned configuration screen could render. The recovery path now uses a safe placeholder client only while the app shows a configuration state; no request is made in that state.
+- `fee9ce3` adds sanitized FastAPI SQL/database and unexpected-failure responses with opaque incident IDs, retry guidance for database failures, and regression tests. `85536da` adds shared mobile error types and non-diagnostic recovery classification. `d4d2185` adds root render recovery, import-safe configuration handling, and the support action. `5a46b03` routes topic, history, and concept failures into the shared safe unavailable state. Review follow-up `33146f0` keeps the splash-owning layout outside the boundary so a caught startup failure can still reveal the recovery screen.
+- `docs: document outage recovery operations` adds the operator triage/recovery guide and updates this map.
+- Passed: focused backend response tests; mobile TypeScript and all 49 Node 24 tests; whitespace checks. The full backend suite was attempted with dummy local settings and PostgreSQL 16: it showed four failures and one error by 74%, then stalled in the local harness and was stopped; it is not counted as a pass. No production deployment, migration, release, or merge occurred.
+
 ### #230 Railway account migration — in progress, 2026-09-26
 
 - Owner requested one migration PR and performs Railway changes manually.

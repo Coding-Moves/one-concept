@@ -115,6 +115,8 @@ export function HistoryScreen() {
               <SkeletonRow />
               <SkeletonRow />
             </View>
+          ) : history.failed ? (
+            <UnavailableState offline={!online} error={history.failure} message="Connect to load your learning history on this device." onRetry={history.loadMore} />
           ) : query.trim() ? (
             <Text style={styles.subtitle}>No matches in loaded history. Load older lessons to keep looking.</Text>
           ) : !online && !progress.stats ? (

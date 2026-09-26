@@ -10,14 +10,14 @@ export function useHistory(progress: ProgressState) {
   const key = JSON.stringify([owner, progress.learned, progress.historyNextCursor]);
   const [loaded, setLoaded] = useState<{key: string; pages: HistoryPage[]}>({key, pages: []});
   const [loading, setLoading] = useState(false);
-  const [failed, setFailed] = useState(false);
+  const [failure, setFailure] = useState<unknown>(null);
   const generation = useRef(0);
   const busy = useRef(false);
   useEffect(() => {
     generation.current++;
     busy.current = false;
     setLoading(false);
-    setFailed(false);
+    setFailure(null);
     setLoaded({key, pages: []});
     return () => { generation.current++; };
   }, [key]);
@@ -39,16 +39,16 @@ export function useHistory(progress: ProgressState) {
     const request = generation.current;
     const epoch = historyPageCache.epoch;
     setLoading(true);
-    setFailed(false);
+    setFailure(null);
     try {
       const page = await fetchHistoryPage(owner, cursor, epoch);
       if (request !== generation.current || epoch !== historyPageCache.epoch) return;
       setLoaded(previous => ({key, pages: [...(previous.key === key ? previous.pages : []), page]}));
-    } catch {
-      if (request === generation.current) setFailed(true);
+    } catch (cause) {
+      if (request === generation.current) setFailure(cause);
     } finally {
       if (request === generation.current) { busy.current = false; setLoading(false); }
     }
   }, [owner, cursor, key]);
-  return {records, loading, failed, hasMore: !!owner && !!cursor, loadMore};
+  return {records, loading, failure, failed: Boolean(failure), hasMore: !!owner && !!cursor, loadMore};
 }

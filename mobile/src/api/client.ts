@@ -8,20 +8,12 @@
  */
 
 import { fetchWithTimeout } from './fetchWithTimeout';
+import { ApiConfigurationError, ApiError } from './errors';
+
+export { ApiConfigurationError, ApiError } from './errors';
 
 /** Public config only. Secrets live in backend/.env, never in the bundle. */
 export const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL ?? '';
-
-export class ApiError extends Error {
-  constructor(
-    readonly status: number,
-    message: string,
-    readonly detail?: unknown
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
 
 type TokenProvider = (expectedUserId?: string) => Promise<string | null>;
 
@@ -82,7 +74,7 @@ interface RequestOptions {
  */
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
   if (!isApiConfigured()) {
-    throw new ApiError(0, 'EXPO_PUBLIC_API_BASE_URL is not set');
+    throw new ApiConfigurationError();
   }
 
   const epoch = accountEpoch;

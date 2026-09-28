@@ -38,6 +38,7 @@ _TODO = text("""
       join public.subtopics s on s.id=c.subtopic_id
      where c.status = 'published'
        and t.is_active
+       and s.is_active
        and coalesce(c.prompt_version, '') <> :pv
        and not exists (select 1 from public.concept_revisions r where r.concept_id=c.id
          and r.status in ('draft','generating'))
@@ -49,6 +50,7 @@ _CLAIM = text("""
     select id,content_version,'{}'::jsonb,'generating' from public.concepts c
     where id=:id and content_version=:version and status='published'
       and exists(select 1 from public.topics t where t.id=c.topic_id and t.is_active)
+      and exists(select 1 from public.subtopics s where s.id=c.subtopic_id and s.is_active)
       and not exists(select 1 from public.concept_revisions r where r.concept_id=c.id
         and r.status in ('draft','generating')) returning id
 """)

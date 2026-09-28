@@ -164,8 +164,10 @@ async def retry_failed(
     row = (
         await session.execute(
             text("""select b.id,b.attempts from public.concept_backlog b
-      join public.topics t on t.id=b.topic_id where b.slug=:s and b.status='failed'
-      and t.is_active for update of b"""),
+      join public.topics t on t.id=b.topic_id
+      join public.subtopics s on s.id=b.subtopic_id
+      where b.slug=:s and b.status='failed' and t.is_active and s.is_active
+      for update of b"""),
             {"s": slug},
         )
     ).first()

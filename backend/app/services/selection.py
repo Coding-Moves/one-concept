@@ -144,6 +144,7 @@ _TOPIC_UNREAD = text("""
     select (select topic_id from target) as topic_id,
            (select count(*)
               from public.concepts c
+              join public.subtopics s on s.id=c.subtopic_id and s.is_active
              where c.status = 'published'
                and c.topic_id = (select topic_id from target)
                and not exists (

@@ -31,6 +31,16 @@ claims as completed work.
   native font/display scaling and screen readers remain manual acceptance;
   browser enlargement does not prove native behavior. Device checklist is in
   `mobile/tests/README.md`. Backend tests were not run locally: no backend changed.
+- Review follow-up: merged develop `4cebf61` in `c086e2b`, preserving both work-log
+  entries and all commits. `10ba0cd` responds to the owner's visual feedback with
+  shared half-point outlines, including Stats, action groups and navigation.
+  `b7f4acd` fixes an identified review edge case: offline completion must preserve
+  an unavailable lifetime review total, not fabricate one. Its regression covers
+  replay, repeated completion and rollback.
+- Revalidated: TypeScript, 69 Node tests, web export, both-theme readability and
+  review browser scenarios. The PR description carries the current validation
+  and remaining native-device checks. No remaining blocking code finding was
+  identified in the reviewed mobile diff.
 - No native dependency/runtime/version, schema, production deployment or release
   change. Hosted PR checks are pending at handoff. Keep commits separate;
   merge requires owner confirmation. Final bookkeeping commit updates this log

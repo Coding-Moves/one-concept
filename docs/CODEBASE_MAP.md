@@ -71,7 +71,7 @@ like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 Saved uses a non-shrinking horizontal ScrollView for its short filter rail, with
 content-driven chip height and separate virtualized lesson rows.
 `src/theme/index.ts` defines accessible text/control colors, success outlines,
-consistent one-point component borders, spacing, radii,
+shared half-point component outlines, spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 `src/navigation.ts` types the root stack.
 

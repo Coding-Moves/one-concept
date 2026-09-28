@@ -16,7 +16,7 @@ import { PrimaryButton } from '../components/PrimaryButton';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { describeAuthError } from '../services/authErrors';
-import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { outlineWidth, scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -261,7 +261,7 @@ const createStyles = (colors: ThemeColors) =>
       width: 40,
       height: 40,
       borderRadius: radius.pill,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       backgroundColor: colors.surface,
       alignItems: 'center',
@@ -281,7 +281,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     input: {
       backgroundColor: colors.surface,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       borderRadius: radius.lg,
       paddingHorizontal: spacing.md + 2,

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
+import { outlineWidth, scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
 
 interface Props {
   following: boolean;
@@ -60,7 +60,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
     },
     followPill: {
       backgroundColor: colors.text,

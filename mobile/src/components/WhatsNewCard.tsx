@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { WhatsNewEntry } from '../data/whatsNew';
-import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { outlineWidth, scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 interface Props {
   entry: WhatsNewEntry;
@@ -123,7 +123,7 @@ const createStyles = (colors: ThemeColors) =>
       flexShrink: 1,
       backgroundColor: colors.surface,
       borderRadius: radius.xl,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       padding: spacing.lg,
       ...shadows.card,

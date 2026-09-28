@@ -31,7 +31,7 @@ fs.mkdirSync(output,{recursive:true});
     likes:[],bookmarks:saved.map(x=>x.concept_slug),saved,
     stats:{current:4,longest:4,total_learned:18,total_reviews:0},assignment_slug:concept.slug,
     daily:{assigned_for:today,assigned_at:today+'T08:00:00Z',learned:true,completed_at:today+'T09:00:00Z',outside_followed_topics:false,concept}};
-   const context=await browser.newContext({viewport:{width:360,height:800}});
+   const context=await browser.newContext({viewport:{width:360,height:800},deviceScaleFactor:2});
    await context.addInitScript(({session,version,theme})=>{
     localStorage.setItem('sb-127-auth-token',JSON.stringify(session));
     localStorage.setItem('one-concept/last-seen-version/v1',version);
@@ -51,7 +51,8 @@ fs.mkdirSync(output,{recursive:true});
    const success=page.getByText('Learned today — see you tomorrow!',{exact:true});
    await success.scrollIntoViewIfNeeded();await expect(success).toBeVisible();
    const outlined=await success.evaluate(el=>getComputedStyle(el.parentElement).borderTopWidth);
-   assert.equal(outlined,'1px');
+   // Browsers may round a half-point CSS border to one device pixel.
+   assert.ok(parseFloat(outlined)>0 && parseFloat(outlined)<=1, outlined);
    await page.screenshot({path:path.join(output,`today-${theme}.png`)});
    await page.getByRole('tab',{name:'Stats'}).click();
    await expect(page.getByText('Concepts learned',{exact:true})).toBeVisible();

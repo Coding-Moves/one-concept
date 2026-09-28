@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { Animated, StyleSheet, View, ViewStyle } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { radius, spacing, ThemeColors } from '../theme';
+import { outlineWidth, radius, spacing, ThemeColors } from '../theme';
 
 /** A pulsing placeholder block, sized by the caller. */
 export function SkeletonBlock({ style }: { style?: ViewStyle }) {
@@ -74,7 +74,7 @@ const createStyles = (colors: ThemeColors) =>
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       padding: spacing.lg,
       gap: spacing.md,
@@ -85,7 +85,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       backgroundColor: colors.surface,
       borderRadius: radius.md,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       padding: spacing.md,
     },

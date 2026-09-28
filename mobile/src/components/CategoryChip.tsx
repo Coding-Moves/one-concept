@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { scaleFont, radius, spacing, ThemeColors } from '../theme';
+import { outlineWidth, scaleFont, radius, spacing, ThemeColors } from '../theme';
 
 // Accepts any label string: the app's Category values and the server's topic
 // names (which match those values) both render the same way.
@@ -23,7 +23,7 @@ const createStyles = (colors: ThemeColors) =>
       maxWidth: '100%',
       flexShrink: 1,
       backgroundColor: colors.categoryChip,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       borderRadius: radius.pill,
       paddingHorizontal: spacing.md,

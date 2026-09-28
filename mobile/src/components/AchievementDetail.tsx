@@ -4,7 +4,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { Achievement } from '../services/achievementStore';
-import { scaleFont, spacing, radius, typography } from '../theme';
+import { outlineWidth, scaleFont, spacing, radius, typography } from '../theme';
 import { AchievementBadge } from './AchievementBadge';
 
 export function AchievementDetail({ award, onClose, celebration = false, count = 1 }: {
@@ -55,7 +55,7 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
 }
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  sheet: { width: '100%', maxWidth: 420, maxHeight: '100%', borderRadius: radius.xl, borderWidth: 1, overflow: 'hidden' },
+  sheet: { width: '100%', maxWidth: 420, maxHeight: '100%', borderRadius: radius.xl, borderWidth: outlineWidth, overflow: 'hidden' },
   body: { alignItems: 'center', padding: spacing.lg, gap: spacing.md },
   eyebrow: { fontSize: scaleFont(13), fontWeight: '700', textAlign: 'center' },
   title: { ...typography.title, fontSize: scaleFont(28), textAlign: 'center' },

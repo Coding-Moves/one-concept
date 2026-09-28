@@ -36,6 +36,7 @@ import { SavedScreen } from './src/screens/SavedScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { RootStackParamList } from './src/navigation';
+import { outlineWidth } from './src/theme';
 import { isApiConfigured } from './src/api/client';
 import { isSupabaseConfigured } from './src/lib/supabase';
 
@@ -159,6 +160,7 @@ function Tabs() {
         tabBarStyle: {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
+          borderTopWidth: outlineWidth,
         },
         tabBarLabelStyle: { fontWeight: '600' },
       }}

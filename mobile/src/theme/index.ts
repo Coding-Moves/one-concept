@@ -75,6 +75,9 @@ export const darkColors: ThemeColors = {
   skeleton: '#20263D',
 };
 
+/** Subtle component outlines; keep contrast in the color instead of thickness. */
+export const outlineWidth = 0.5;
+
 export const spacing = {
   xs: 4,
   sm: 8,

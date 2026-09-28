@@ -3,7 +3,7 @@ import { useMemo, useRef } from 'react';
 import { Animated, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
+import { outlineWidth, scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 
 function usePop() {
@@ -108,7 +108,7 @@ const createStyles = (colors: ThemeColors) =>
       alignSelf: 'flex-start',
       backgroundColor: colors.surface,
       borderRadius: radius.pill,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       paddingHorizontal: spacing.sm,
     },

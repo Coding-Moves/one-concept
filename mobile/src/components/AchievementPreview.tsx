@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAchievements } from '../context/AchievementsContext';
 import { useTheme } from '../context/ThemeContext';
 import { nextMilestone } from '../services/achievementStore';
-import { radius, scaleFont, spacing } from '../theme';
+import { outlineWidth, radius, scaleFont, spacing } from '../theme';
 import { AchievementBadge } from './AchievementBadge';
 
 export function AchievementPreview({ onPress }: { onPress: () => void }) {
@@ -32,7 +32,7 @@ export function AchievementPreview({ onPress }: { onPress: () => void }) {
   </Pressable>;
 }
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.md, gap: spacing.sm },
+  card: { borderRadius: radius.lg, borderWidth: outlineWidth, padding: spacing.md, gap: spacing.sm },
   heading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: scaleFont(18), fontWeight: '700' },
   copy: { fontSize: scaleFont(13), lineHeight: scaleFont(19) },

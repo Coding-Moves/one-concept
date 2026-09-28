@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
+import { outlineWidth, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 import { CategoryChip } from './CategoryChip';
 
@@ -29,7 +29,7 @@ const createStyles = (colors: ThemeColors) =>
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.xl,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       padding: spacing.lg,
       gap: spacing.md,
@@ -49,7 +49,7 @@ const createStyles = (colors: ThemeColors) =>
     exampleBox: {
       backgroundColor: colors.categoryChip,
       borderRadius: radius.md,
-      borderWidth: 1,
+      borderWidth: outlineWidth,
       borderColor: colors.border,
       borderLeftWidth: 3,
       borderLeftColor: colors.primary,

@@ -9,7 +9,7 @@ import { useOnline } from '../context/ConnectivityContext';
 import { useTheme } from '../context/ThemeContext';
 import { useRefreshControl } from '../hooks/useRefreshControl';
 import { nextMilestone } from '../services/achievementStore';
-import { radius, scaleFont, spacing, typography } from '../theme';
+import { outlineWidth, radius, scaleFont, spacing, typography } from '../theme';
 
 export function AchievementsScreen() {
   const navigation = useNavigation();
@@ -83,11 +83,11 @@ const styles = StyleSheet.create({
   header: { gap: spacing.md, marginBottom: spacing.md },
   lead: { ...typography.title, fontSize: scaleFont(24) },
   copy: { fontSize: scaleFont(14), lineHeight: scaleFont(21) },
-  summary: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
+  summary: { borderWidth: outlineWidth, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
   number: { fontSize: scaleFont(20), fontWeight: '700' },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 3 },
-  tile: { flex: 1, padding: spacing.md, borderWidth: 1, borderRadius: radius.lg, alignItems: 'center', gap: spacing.sm, maxWidth: '100%' },
+  tile: { flex: 1, padding: spacing.md, borderWidth: outlineWidth, borderRadius: radius.lg, alignItems: 'center', gap: spacing.sm, maxWidth: '100%' },
   badgeTitle: { fontSize: scaleFont(17), fontWeight: '700', textAlign: 'center' },
   caption: { fontSize: scaleFont(12), textAlign: 'center', lineHeight: scaleFont(18) },
 });

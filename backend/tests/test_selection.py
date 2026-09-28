@@ -47,7 +47,12 @@ async def test_existing_daily_assignment_keeps_its_subtopic_after_retirement(ses
     again = await get_or_create_daily(session, user, today=DAY)
     assert again.concept.id == first.concept.id
     assert again.concept.subtopic_slug == first.concept.subtopic_slug
-    await session.rollback()
+    await session.execute(
+        text("""update public.subtopics set is_active=true
+          where id=(select subtopic_id from public.concepts where id=:id)"""),
+        {"id": first.concept.id},
+    )
+    await session.commit()
 
 
 async def test_never_repeats_and_reports_exhaustion(session, user):

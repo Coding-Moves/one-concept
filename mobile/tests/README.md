@@ -172,14 +172,14 @@ With the same mocked localhost export and Playwright setup, run:
 node tests/readability.browser.cjs /path/to/web-export
 ```
 
-This checks the real exported app in both themes: outlined success state,
+This checks the real exported app in both themes: a thin success-only outline and borderless cards/filters/search,
 learned-only overall/topic counts (including older history), catalog growth,
 zero/nonzero/unavailable review totals, Saved filtering/search, and full chip
 height at 360px and 320px with browser text enlarged 1.8 times. Screenshots go
 into `UI_SCREENSHOT_DIR` (default `/tmp/one-concept-271-screens`). No production
 credentials or user data are used. Run browser scripts sequentially: they share
 port 4781. `accessibility.test.mjs` checks text, success, selected/pressed controls
-and boundary contrast against the actual theme palette.
+and success-outline contrast against the actual theme palette.
 
 Before production publication, check Android with normal and enlarged system
 font/display settings and both themes. Confirm status-bar clearance while

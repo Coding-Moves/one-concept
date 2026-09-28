@@ -41,6 +41,11 @@ claims as completed work.
   review browser scenarios. The PR description carries the current validation
   and remaining native-device checks. No remaining blocking code finding was
   identified in the reviewed mobile diff.
+- Final owner design supersedes the earlier broad-outline approach: retain a
+  0.5-point border only on Today's green completion pill. Other UI containers,
+  filters, inputs, action groups and navigation are borderless; existing badge
+  illustrations retain their artwork. Removed the broad outline token and
+  updated browser assertions to require borderless cards/filters/search.
 - No native dependency/runtime/version, schema, production deployment or release
   change. Hosted PR checks are pending at handoff. Keep commits separate;
   merge requires owner confirmation. Final bookkeeping commit updates this log

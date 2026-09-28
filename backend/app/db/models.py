@@ -58,7 +58,7 @@ class Subtopic(Base):
 
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     topic_id: Mapped[uuid.UUID] = mapped_column(
-        PgUUID(as_uuid=True), ForeignKey("topics.id"), nullable=False
+        PgUUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), nullable=False
     )
     slug: Mapped[str] = mapped_column(Text, nullable=False)
     name: Mapped[str] = mapped_column(Text, nullable=False)

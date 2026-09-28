@@ -26,6 +26,10 @@ claims as completed work.
   deployment, release, or app update has occurred.
 - PR: [#270](https://github.com/Coding-Moves/one-concept/pull/270) targets
   `develop` and uses `Fixes #260`; it remains open for owner review.
+- Review follow-up: GitHub's PostgreSQL suite exposed temporary-topic teardown
+  failures because the test fixture adds a subtopic. `0019` makes only an
+  otherwise deletable topic cascade to its private taxonomy; populated topics
+  remain protected by the existing content and user-topic foreign keys.
 - Next: review the PR and its PostgreSQL quality-gate result; do not merge or
   apply the migration until the owner approves it.
 

@@ -208,7 +208,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingVertical: spacing.md,
     },
     iconButton: { width: 48, height: 48, alignItems: 'center', justifyContent: 'center' },
-    title: { ...typography.title, fontSize: scaleFont(20), color: colors.text },
+    title: { ...typography.title, fontSize: scaleFont(20), color: colors.text, flex: 1, textAlign: 'center' },
     loadStatus: { padding: spacing.md, gap: spacing.sm, alignItems: 'center' },
     searchWrap: {
       marginHorizontal: spacing.lg,

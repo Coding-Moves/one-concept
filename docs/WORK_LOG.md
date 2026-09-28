@@ -18,10 +18,12 @@ claims as completed work.
   curriculum import, generation and review. `3604f2d` exposes the category in
   daily/concept responses while preserving already assigned material if a
   subtopic is retired.
-- Validation so far: Python compilation and whitespace checks passed. The local
-  PostgreSQL integration suite is unavailable because Podman is not installed;
-  the focused tests were collected and skipped for that reason. No production
-  migration, deployment, release, or app update has occurred.
+- Validation: Python compilation and whitespace checks passed. Focused
+  generation checks passed (**17 passed**). The focused PostgreSQL-backed
+  curriculum/publication/selection/year checks were collected but skipped
+  (**20 skipped**) because Podman is not installed locally; GitHub's disposable
+  PostgreSQL 16 quality gate remains required evidence. No production migration,
+  deployment, release, or app update has occurred.
 - Next: finish the self-review, run all feasible checks, open a `develop` PR
   with `Fixes #260`, and leave it open for owner review.
 

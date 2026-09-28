@@ -105,7 +105,7 @@ const server=http.createServer((req,res)=>{
    await expect(page.getByText('Review complete — your learning day counts.',{exact:true})).toBeVisible();
    assert.equal(completions,1);
    await page.getByRole('tab',{name:'Stats'}).click();
-   await expect(page.getByText('Reviews completed: 3',{exact:true})).toBeVisible();
+   await expect(page.getByText('3 reviews completed',{exact:true})).toBeVisible();
    assert.deepEqual(errors,[]);
    await context.close();
    console.log(`${theme}: cached review, offline completion/restart, reconnect, subject exploration, separate stats passed (${stateReads} state reads)`);

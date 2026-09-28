@@ -3,8 +3,10 @@ import uuid
 import pytest
 from app.services.curriculum import (
     PlannedLesson,
+    Subtopic,
     Subject,
     import_lessons,
+    import_subtopics,
     import_subjects,
 )
 from sqlalchemy import text
@@ -14,6 +16,7 @@ def plan(slug, topic, **changes):
     data = {
         "slug": slug,
         "topic_slug": topic,
+        "subtopic_slug": "foundations",
         "title": f"Learning {slug}",
         "curriculum": {
             "objective": f"Explain and demonstrate {slug}",
@@ -27,10 +30,24 @@ def plan(slug, topic, **changes):
     return PlannedLesson.model_validate(data)
 
 
+async def add_foundations(session, topic_slug):
+    await import_subtopics(
+        session,
+        [
+            Subtopic(
+                topic_slug=topic_slug,
+                slug="foundations",
+                name="Foundations",
+            )
+        ],
+    )
+
+
 async def test_generic_subject_import_and_retirement_preserve_identity(session):
     slug = "subject-" + uuid.uuid4().hex
     subject = Subject(slug=slug, name="Future subject")
     await import_subjects(session, [subject])
+    await add_foundations(session, slug)
     topic_id = await session.scalar(
         text("select id from public.topics where slug=:s"), {"s": slug}
     )
@@ -61,6 +78,7 @@ async def test_curriculum_rejects_cycles_missing_prerequisites_and_duplicate_obj
 ):
     slug = "subject-" + uuid.uuid4().hex
     await import_subjects(session, [Subject(slug=slug, name="Fixture subject")])
+    await add_foundations(session, slug)
     first, second = (
         plan("one-" + uuid.uuid4().hex, slug),
         plan("two-" + uuid.uuid4().hex, slug),
@@ -84,6 +102,7 @@ async def test_revising_a_failed_plan_preserves_attempts_and_requires_explicit_r
 ):
     slug = "revision-" + uuid.uuid4().hex
     await import_subjects(session, [Subject(slug=slug, name="Revision fixture")])
+    await add_foundations(session, slug)
     item = plan(slug, slug)
     await import_lessons(session, [item])
     await session.execute(
@@ -123,10 +142,14 @@ async def test_checked_in_registry_and_extension_examples_import_without_changin
     subjects = TypeAdapter(list[Subject]).validate_json(
         (folder / "subjects.json").read_text()
     )
+    subtopics = TypeAdapter(list[Subtopic]).validate_json(
+        (folder / "subtopics.json").read_text()
+    )
     lessons = TypeAdapter(list[PlannedLesson]).validate_json(
         (folder / "curriculum.example.json").read_text()
     )
     await import_subjects(session, subjects)
+    await import_subtopics(session, subtopics)
     assert len(subjects) == len(lessons) == 5
     await import_lessons(session, lessons)
     await import_lessons(session, lessons)
@@ -136,4 +159,19 @@ async def test_checked_in_registry_and_extension_examples_import_without_changin
         )
     ).all()
     assert before == after
+    await session.rollback()
+
+
+async def test_subtopic_must_belong_to_the_lesson_subject(session):
+    with pytest.raises(ValueError, match="subtopic"):
+        await import_lessons(
+            session,
+            [
+                plan(
+                    "wrong-parent-" + uuid.uuid4().hex,
+                    "mathematics",
+                    subtopic_slug="reliability",
+                )
+            ],
+        )
     await session.rollback()

@@ -19,6 +19,7 @@ class LessonBody(StrictModel):
     title: str = Field(min_length=3, max_length=160)
     summary: str = Field(min_length=100, max_length=600)
     example: str = Field(min_length=40, max_length=500)
+    subtopic_slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=120)
     curriculum: Curriculum
     model: str | None = None
     prompt_version: str | None = None
@@ -32,13 +33,17 @@ async def stage_revision(
     concept = (
         await session.execute(
             text(
-                "select id,content_version from public.concepts where slug=:s for update"
+                """select c.id,c.content_version,s.slug as subtopic_slug
+                  from public.concepts c join public.subtopics s on s.id=c.subtopic_id
+                 where c.slug=:s for update of c"""
             ),
             {"s": slug},
         )
     ).first()
     if concept is None:
         raise ValueError("Unknown concept")
+    if body.subtopic_slug != concept.subtopic_slug:
+        raise ValueError("A revision cannot change a concept's approved subtopic")
     await validate_graph(session, {slug: body.curriculum.model_dump(mode="json")})
     return await session.scalar(
         text("""insert into public.concept_revisions
@@ -61,9 +66,12 @@ async def publish_revision(
     await catalog_lock(session)
     row = (
         await session.execute(
-            text("""select r.*,c.slug,c.content_version,t.is_active
+            text("""select r.*,c.slug,c.content_version,t.is_active,s.slug as subtopic_slug,
+              s.is_active as subtopic_active
       from public.concept_revisions r join public.concepts c on c.id=r.concept_id
-      join public.topics t on t.id=c.topic_id where r.id=:id for update of r,c,t"""),
+      join public.topics t on t.id=c.topic_id
+      join public.subtopics s on s.id=c.subtopic_id
+      where r.id=:id for update of r,c,t,s"""),
             {"id": revision_id},
         )
     ).first()
@@ -77,7 +85,11 @@ async def publish_revision(
         )
     if not row.is_active:
         raise ValueError("Cannot publish into a retired subject")
+    if not row.subtopic_active:
+        raise ValueError("Cannot publish into a retired subtopic")
     body = LessonBody.model_validate(row.body)
+    if body.subtopic_slug != row.subtopic_slug:
+        raise ValueError("Revision subtopic does not match the concept")
     await validate_graph(session, {row.slug: body.curriculum.model_dump(mode="json")})
     # A prerequisite must be available before a dependent lesson can be published.
     for slug in body.curriculum.prerequisites:
@@ -110,9 +122,11 @@ async def publish_revision(
       (concept_id,base_version,body,status,review_note)
       select c.id,c.content_version-1,jsonb_build_object('title',c.title,
         'summary',c.summary,'example',c.example,'curriculum',c.curriculum,
+        'subtopic_slug',s.slug,
         'model',c.model,'prompt_version',c.prompt_version),'published',
         'Legacy version captured before correction; original review was not recorded.'
-      from public.concepts c where c.id=:id and c.content_version>0
+      from public.concepts c join public.subtopics s on s.id=c.subtopic_id
+      where c.id=:id and c.content_version>0
       and not exists(select 1 from public.concept_revisions r where r.concept_id=c.id
         and r.status='published' and r.base_version=c.content_version-1)"""),
         {"id": row.concept_id},

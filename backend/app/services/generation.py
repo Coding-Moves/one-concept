@@ -112,12 +112,15 @@ class GeneratedConcept:
     prompt_version: str = PROMPT_VERSION
 
 
-def build_prompt(title: str, topic_name: str, angle: str | None) -> str:
+def build_prompt(
+    title: str, topic_name: str, angle: str | None, subtopic_name: str | None = None
+) -> str:
     steer = f"\nAngle to take: {angle}" if angle else ""
     return (
         f"{_SYSTEM}\n\n{_EXAMPLES}\n\n"
         f"Now write the concept below.\n\n"
         f"Topic area: {topic_name}\n"
+        f"Subtopic: {subtopic_name or 'Not specified'}\n"
         f"Title: {title}{steer}\n\n"
         "Return JSON with exactly the keys \"summary\" and \"example\"."
     )
@@ -164,6 +167,7 @@ async def generate_concept(
     *,
     title: str,
     topic_name: str,
+    subtopic_name: str | None = None,
     angle: str | None,
     api_key: str,
     model: str,
@@ -175,7 +179,13 @@ async def generate_concept(
 
     url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
     body = {
-        "contents": [{"parts": [{"text": build_prompt(title, topic_name, angle)}]}],
+        "contents": [
+            {
+                "parts": [
+                    {"text": build_prompt(title, topic_name, angle, subtopic_name)}
+                ]
+            }
+        ],
         "generationConfig": {
             "temperature": 0.7,
             "maxOutputTokens": 800,

@@ -3,7 +3,7 @@ import { useMemo, useRef } from 'react';
 import { Animated, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
-import { outlineWidth, scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
+import { scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 
 function usePop() {
@@ -66,8 +66,6 @@ export function ConceptActions({ concept }: { concept: Concept }) {
         {likeTotal > 0 ? <Text style={styles.likeCount}>{likeTotal}</Text> : null}
       </Pressable>
 
-      <View style={styles.divider} />
-
       <Pressable
         onPress={() => {
           toggleBookmark(concept.id, concept.title, concept.category);
@@ -85,8 +83,6 @@ export function ConceptActions({ concept }: { concept: Concept }) {
           />
         </Animated.View>
       </Pressable>
-
-      <View style={styles.divider} />
 
       <Pressable
         onPress={onShare}
@@ -108,8 +104,6 @@ const createStyles = (colors: ThemeColors) =>
       alignSelf: 'flex-start',
       backgroundColor: colors.surface,
       borderRadius: radius.pill,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       paddingHorizontal: spacing.sm,
     },
     action: {
@@ -125,10 +119,5 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: scaleFont(13),
       fontWeight: '600',
       color: colors.textSecondary,
-    },
-    divider: {
-      width: 1,
-      height: 20,
-      backgroundColor: colors.border,
     },
   });

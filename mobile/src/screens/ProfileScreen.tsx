@@ -17,7 +17,7 @@ import {
   putNotificationPrefs,
   registerForReminders,
 } from '../services/notifications';
-import { outlineWidth, scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -262,8 +262,6 @@ const createStyles = (colors: ThemeColors) =>
       flex: 1,
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       ...shadows.card,
       padding: spacing.md,
       gap: spacing.xs,
@@ -284,8 +282,6 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       padding: spacing.md,
       ...shadows.card,
     },

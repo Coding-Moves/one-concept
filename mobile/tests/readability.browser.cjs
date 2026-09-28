@@ -14,6 +14,13 @@ const server=http.createServer((req,res)=>{
 });
 // The supplied Android screenshots are the before evidence. This checks the
 // exported UI at narrow widths; browser text enlargement is not native font QA.
+const assertBorderless = async locator => {
+ const widths=await locator.evaluate(el=>{
+  const style=getComputedStyle(el);
+  return ['Top','Right','Bottom','Left'].map(side=>parseFloat(style[`border${side}Width`]));
+ });
+ assert.deepEqual(widths,[0,0,0,0]);
+};
 const output=process.env.UI_SCREENSHOT_DIR || '/tmp/one-concept-271-screens';
 fs.mkdirSync(output,{recursive:true});
 (async()=>{
@@ -53,6 +60,8 @@ fs.mkdirSync(output,{recursive:true});
    const outlined=await success.evaluate(el=>getComputedStyle(el.parentElement).borderTopWidth);
    // Browsers may round a half-point CSS border to one device pixel.
    assert.ok(parseFloat(outlined)>0 && parseFloat(outlined)<=1, outlined);
+   await assertBorderless(page.getByText(concept.title,{exact:true}).locator('..'));
+   await assertBorderless(page.getByText('Example',{exact:true}).locator('..'));
    await page.screenshot({path:path.join(output,`today-${theme}.png`)});
    await page.getByRole('tab',{name:'Stats'}).click();
    await expect(page.getByText('Concepts learned',{exact:true})).toBeVisible();
@@ -87,6 +96,9 @@ fs.mkdirSync(output,{recursive:true});
     assert.ok(metrics.top>=metrics.railTop && metrics.bottom<=metrics.railBottom,JSON.stringify(metrics));
    };
    await assertChip(all);
+   await assertBorderless(all);
+   await assertBorderless(page.getByRole('button',{name:'Open Message queues',exact:true}));
+   await assertBorderless(page.getByRole('textbox',{name:'Search saved concepts'}).locator('..'));
    await page.screenshot({path:path.join(output,`saved-${theme}.png`)});
    const ai=page.getByRole('button',{name:'Artificial Intelligence',exact:true});
    await ai.click();
@@ -108,7 +120,7 @@ fs.mkdirSync(output,{recursive:true});
    await expect(page.getByRole('button',{name:'Open Neural networks',exact:true})).toBeVisible();
    await page.screenshot({path:path.join(output,`saved-enlarged-${theme}.png`)});
    assert.deepEqual(errors,[]);
-   console.log(`${theme}: success outline, learned totals, growing catalog, zero/nonzero/unavailable reviews, Saved filter/search and enlarged rail passed`);
+   console.log(`${theme}: success-only outline, borderless cards/filters/search, learned totals, growing catalog, zero/nonzero/unavailable reviews, Saved filter/search and enlarged rail passed`);
    await context.close();
   }
  } finally {await browser.close();server.close();}

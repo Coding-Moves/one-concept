@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { outlineWidth, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 
 interface Props {
   label: string;
@@ -34,8 +34,6 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     button: {
       backgroundColor: colors.primary,
-      borderWidth: outlineWidth,
-      borderColor: colors.primary,
       borderRadius: radius.pill,
       paddingVertical: spacing.md + 2,
       alignItems: 'center',

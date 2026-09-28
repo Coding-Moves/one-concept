@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { CategoryChip } from './CategoryChip';
 import { LikeCount } from './LikeCount';
 import { useTheme } from '../context/ThemeContext';
-import { outlineWidth, radius, scaleFont, shadows, spacing, ThemeColors } from '../theme';
+import { radius, scaleFont, shadows, spacing, ThemeColors } from '../theme';
 
 interface Props {
   title: string;
@@ -46,8 +46,6 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       backgroundColor: colors.surface,
       borderRadius: radius.md,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       padding: spacing.sm + 4,
       gap: spacing.sm,
       ...shadows.card,

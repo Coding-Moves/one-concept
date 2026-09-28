@@ -12,7 +12,7 @@ import { useTheme } from '../context/ThemeContext';
 import { useTopics } from '../hooks/useTopics';
 import { CONCEPTS } from '../data/concepts';
 import { ServerTopic } from '../services/topicsApi';
-import { outlineWidth, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
+import { scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { LearnedRecord } from '../types';
 import { learnedTopicCounts } from '../services/progressTotals';
 
@@ -169,8 +169,6 @@ const createStyles = (colors: ThemeColors) =>
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       padding: spacing.lg,
       gap: spacing.md,
     },

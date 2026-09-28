@@ -6,7 +6,7 @@ import { useMemo } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { API_BASE_URL } from '../api/client';
-import { outlineWidth, scaleIcon, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
 const HOW_IT_WORKS = [
@@ -184,8 +184,6 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       padding: spacing.md,
     },
     pressed: { opacity: 0.7 },

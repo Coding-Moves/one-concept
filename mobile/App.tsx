@@ -36,7 +36,6 @@ import { SavedScreen } from './src/screens/SavedScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { RootStackParamList } from './src/navigation';
-import { outlineWidth } from './src/theme';
 import { isApiConfigured } from './src/api/client';
 import { isSupabaseConfigured } from './src/lib/supabase';
 
@@ -118,7 +117,7 @@ function ThemedApp() {
       background: colors.background,
       card: colors.surface,
       text: colors.text,
-      border: colors.border,
+      border: 'transparent',
     },
   };
 
@@ -159,8 +158,7 @@ function Tabs() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.surface,
-          borderTopColor: colors.border,
-          borderTopWidth: outlineWidth,
+          borderTopWidth: 0,
         },
         tabBarLabelStyle: { fontWeight: '600' },
       }}

@@ -13,7 +13,7 @@ import { useSavedConcepts } from '../hooks/useSavedConcepts';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
-import { outlineWidth, radius, scaleFont, scaleIcon, spacing, ThemeColors, typography } from '../theme';
+import { radius, scaleFont, scaleIcon, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
 interface SavedItem {
@@ -223,10 +223,8 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.md,
       borderRadius: radius.pill,
       backgroundColor: colors.surface,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
     },
-    filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
+    filterChipActive: { backgroundColor: colors.primary },
     filterText: { fontSize: scaleFont(13), fontWeight: '600', color: colors.textSecondary },
     filterTextActive: { color: colors.onPrimary },
     listContent: { padding: spacing.lg, paddingTop: spacing.md },

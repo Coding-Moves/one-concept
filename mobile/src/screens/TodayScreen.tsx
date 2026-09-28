@@ -15,7 +15,7 @@ import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { toConcept } from '../services/dailyApi';
-import { outlineWidth, scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
 
 export function TodayScreen() {
   const {
@@ -199,8 +199,6 @@ const createStyles = (colors: ThemeColors) =>
       width: 40,
       height: 40,
       borderRadius: radius.pill,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
@@ -231,8 +229,6 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: spacing.sm,
       backgroundColor: colors.surface,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       borderRadius: radius.md,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm + 2,
@@ -250,7 +246,7 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       gap: spacing.sm,
       backgroundColor: colors.successSurface,
-      borderWidth: outlineWidth,
+      borderWidth: 0.5,
       borderColor: colors.successBorder,
       borderRadius: radius.pill,
       paddingVertical: spacing.md + 2,

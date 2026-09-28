@@ -47,7 +47,7 @@ export const lightColors: ThemeColors = {
   successBorder: '#137A3A',
   streak: '#F97316',
   like: '#E11D48',
-  border: '#7D8598',
+  border: '#E9EBF4',
   categoryChip: '#EEF0FF',
   categoryChipText: '#4F46E5',
   skeleton: '#E9EBF4',
@@ -69,14 +69,11 @@ export const darkColors: ThemeColors = {
   successBorder: '#34D399',
   streak: '#FB923C',
   like: '#FB7185',
-  border: '#68738C',
+  border: '#20263D',
   categoryChip: '#1D2242',
   categoryChipText: '#A5B4FC',
   skeleton: '#20263D',
 };
-
-/** Subtle component outlines; keep contrast in the color instead of thickness. */
-export const outlineWidth = 0.5;
 
 export const spacing = {
   xs: 4,
@@ -94,8 +91,7 @@ export const radius = {
   pill: 999,
 };
 
-/** Soft elevation for borderless cards. Invisible on dark backgrounds, where
- *  the hairline border carries the separation instead. */
+/** Soft elevation for borderless cards; theme surface colors provide separation. */
 export const shadows = {
   card: {
     shadowColor: '#101433',

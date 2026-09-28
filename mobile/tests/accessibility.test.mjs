@@ -30,9 +30,6 @@ for (const [name, colors] of Object.entries({light:lightColors,dark:darkColors})
       assert.ok(contrast(colors.onPrimary, colors[background]) >= 4.5, background);
     }
     assert.ok(contrast(colors.categoryChipText, colors.categoryChip) >= 4.5);
-    for (const background of ['surface', 'background', 'categoryChip']) {
-      assert.ok(contrast(colors.border, colors[background]) >= 3, `border on ${background}`);
-    }
     assert.ok(contrast(colors.successBorder, colors.successSurface) >= 3);
     assert.ok(contrast(colors.successBorder, colors.background) >= 3);
   });

@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { outlineWidth, radius, scaleFont, scaleIcon, spacing, ThemeColors } from '../theme';
+import { radius, scaleFont, scaleIcon, spacing, ThemeColors } from '../theme';
 
 interface Props {
   value: string;
@@ -63,8 +63,6 @@ const createStyles = (colors: ThemeColors) =>
       paddingRight: spacing.xs,
       backgroundColor: colors.surface,
       borderRadius: radius.pill,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
     },
     input: {
       flex: 1,

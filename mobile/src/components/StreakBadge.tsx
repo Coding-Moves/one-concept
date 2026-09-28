@@ -3,7 +3,7 @@ import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { AnimatedFlame } from './AnimatedFlame';
 import { useTheme } from '../context/ThemeContext';
-import { outlineWidth, scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 import { StreakStats } from '../services/streak';
 
 export function StreakBadge({ streaks }: { streaks: StreakStats }) {
@@ -47,8 +47,6 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: outlineWidth,
-      borderColor: colors.border,
       paddingVertical: spacing.md,
       ...shadows.card,
     },

@@ -31,6 +31,10 @@ claims as completed work.
   Operating instructions and draft #231 reconciliation are in
   [SCHEMA_VERIFICATION.md](SCHEMA_VERIFICATION.md).
 - Documentation/handoff commit: `docs: explain schema gate setup and validation`.
+- Opened [PR #269](https://github.com/Coding-Moves/one-concept/pull/269) against
+  develop with `Closes #165`. Five focused implementation/documentation commits
+  preserve the scope; no PR merge, deployment or source-draft modification.
+  Hosted PR checks are pending at opening. This handoff commit records the PR.
 
 ### PR quality-gate PostgreSQL readiness follow-up — ready for review
 

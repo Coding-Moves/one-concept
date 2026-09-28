@@ -38,6 +38,10 @@ collection. See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rul
 ## Mobile navigation and presentation
 
 `App.tsx` composes SafeArea, Theme, Connectivity, Auth, and Progress providers.
+The signed-in shell owns top/side safe-area padding outside scrolling screens;
+its offline/sync banners and Achievements header avoid adding that inset twice.
+Bottom tabs retain their own bottom inset. Native achievement modals still
+handle their own insets.
 It holds the native splash until fonts are ready (or fail), checks public API and
 Supabase configuration before starting providers, and wraps the root in
 `AppRecoveryBoundary`. `ConfigurationState`, `UnavailableState`, and
@@ -51,7 +55,7 @@ inside a root stack, with a concept-detail modal above them.
 | --- | --- |
 | `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states. |
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
-| `StatsScreen.tsx` | Streak and topic statistics. |
+| `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
 | `ProfileScreen.tsx` | Account, reminder preferences, theme, sign-out, and links to profile subpages. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
@@ -64,7 +68,10 @@ All screens live in `mobile/src/screens/`. Reusable presentation in
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.
-`src/theme/index.ts` defines colors, spacing, radii,
+Saved uses a non-shrinking horizontal ScrollView for its short filter rail, with
+content-driven chip height and separate virtualized lesson rows.
+`src/theme/index.ts` defines accessible text/control colors, success outlines,
+consistent one-point component borders, spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 `src/navigation.ts` types the root stack.
 

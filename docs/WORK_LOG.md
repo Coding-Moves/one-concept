@@ -7,18 +7,34 @@ claims as completed work.
 
 ## Current status
 
-### #271 mobile readability and collection layout — in progress
+### #271 mobile readability and collection layout — ready for review
 
-- Dedicated branch `codex/271-mobile-ui-readability` from develop `1d77a34`.
-  Preserve unrelated work in the owner's checkout.
-- Scope: shared theme contrast/thin borders, learned-only Stats and concise
-  review state, non-shrinking Saved filters, and signed-in safe-area ownership.
-- Planned commits: theme and contrast checks; Stats presentation; layout fixes;
-  visual regressions and validation/handoff. No native/schema/release changes.
-- Read exact Expo SDK 57 and safe-area-context documentation before editing.
-  Review zero is valid when no assigned review has been completed; existing
-  review reconciliation tests cover retry deduplication and learned totals.
-
+- [PR #272](https://github.com/Coding-Moves/one-concept/pull/272) targets
+  `develop` from `codex/271-mobile-ui-readability` and closes #271 on merge.
+  Started from `1d77a34`; unrelated owner-checkout work was preserved.
+- `0f6c718` improves theme contrast and thin component outlines; `198b87a`
+  replaces catalog fractions/bars with learned-only Stats and compact reviews.
+  `a43cc05` adds signed-in top/side safe-area ownership and prevents Saved filter
+  compression; `fa0949f` preserves unavailable review totals rather than zero;
+  `aad36e0` wraps narrow Saved headings; `9d655c4` adds browser regression coverage.
+- Reviewed Expo SDK 57 and safe-area-context documentation. Zero reviews is
+  valid when no assigned review was completed; reading new or saved lessons
+  does not increment it. No production user data was inspected.
+- Passed: TypeScript, all 68 Node 24 tests, dummy-config web export, new
+  light/dark readability browser scenario, existing review, History and
+  learning-UI browser scenarios, and whitespace checks. Review tests cover
+  deduplication, offline restart/reconnect and unchanged unique learned totals.
+  New UI checks cover catalog growth, older-topic aggregates, zero/nonzero/
+  unavailable review totals, Saved search/filtering and 320px enlarged chips.
+- Generated eight local screenshots in `/tmp/one-concept-271-screens`; inspected
+  Today, Stats and enlarged Saved output. Physical Android/iOS safe areas,
+  native font/display scaling and screen readers remain manual acceptance;
+  browser enlargement does not prove native behavior. Device checklist is in
+  `mobile/tests/README.md`. Backend tests were not run locally: no backend changed.
+- No native dependency/runtime/version, schema, production deployment or release
+  change. Hosted PR checks are pending at handoff. Keep commits separate;
+  merge requires owner confirmation. Final bookkeeping commit updates this log
+  and the codebase map.
 
 ### #165 verify deployed schema — dedicated fix
 

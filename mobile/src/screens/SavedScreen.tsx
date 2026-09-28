@@ -221,7 +221,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingHorizontal: spacing.md,
       borderRadius: radius.pill,
       backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor: colors.border,
     },
     filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },

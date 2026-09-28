@@ -34,6 +34,8 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     button: {
       backgroundColor: colors.primary,
+      borderWidth: 1,
+      borderColor: colors.primary,
       borderRadius: radius.pill,
       paddingVertical: spacing.md + 2,
       alignItems: 'center',

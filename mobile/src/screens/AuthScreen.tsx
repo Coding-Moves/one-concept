@@ -281,7 +281,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     input: {
       backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.lg,
       paddingHorizontal: spacing.md + 2,

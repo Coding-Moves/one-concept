@@ -23,6 +23,8 @@ const createStyles = (colors: ThemeColors) =>
       maxWidth: '100%',
       flexShrink: 1,
       backgroundColor: colors.categoryChip,
+      borderWidth: 1,
+      borderColor: colors.border,
       borderRadius: radius.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.xs + 2,

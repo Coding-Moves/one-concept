@@ -32,7 +32,7 @@ export function AchievementPreview({ onPress }: { onPress: () => void }) {
   </Pressable>;
 }
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: spacing.md, gap: spacing.sm },
+  card: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.md, gap: spacing.sm },
   heading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: scaleFont(18), fontWeight: '700' },
   copy: { fontSize: scaleFont(13), lineHeight: scaleFont(19) },

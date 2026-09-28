@@ -63,7 +63,7 @@ const createStyles = (colors: ThemeColors) =>
       paddingRight: spacing.xs,
       backgroundColor: colors.surface,
       borderRadius: radius.pill,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor: colors.border,
     },
     input: {

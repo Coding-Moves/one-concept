@@ -231,7 +231,7 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: spacing.sm,
       backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
+      borderWidth: 1,
       borderColor: colors.border,
       borderRadius: radius.md,
       paddingHorizontal: spacing.md,
@@ -250,6 +250,8 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       gap: spacing.sm,
       backgroundColor: colors.successSurface,
+      borderWidth: 1,
+      borderColor: colors.successBorder,
       borderRadius: radius.pill,
       paddingVertical: spacing.md + 2,
       // Room for the pill's curve — without this, long text pushed the icon

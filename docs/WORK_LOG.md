@@ -7,6 +7,19 @@ claims as completed work.
 
 ## Current status
 
+### #271 mobile readability and collection layout — in progress
+
+- Dedicated branch `codex/271-mobile-ui-readability` from develop `1d77a34`.
+  Preserve unrelated work in the owner's checkout.
+- Scope: shared theme contrast/thin borders, learned-only Stats and concise
+  review state, non-shrinking Saved filters, and signed-in safe-area ownership.
+- Planned commits: theme and contrast checks; Stats presentation; layout fixes;
+  visual regressions and validation/handoff. No native/schema/release changes.
+- Read exact Expo SDK 57 and safe-area-context documentation before editing.
+  Review zero is valid when no assigned review has been completed; existing
+  review reconciliation tests cover retry deduplication and learned totals.
+
+
 ### #165 verify deployed schema — dedicated fix
 
 - Owner requested a focused PR independent of deferred VM draft #231. Branch

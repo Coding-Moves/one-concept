@@ -44,7 +44,8 @@ export function withCompletedReview(state: ProgressState, reviewId: string): Pro
     ...state.stats,
     current: state.stats.current + (alreadyLearnedDay ? 0 : 1),
     longest: Math.max(state.stats.longest, state.stats.current + (alreadyLearnedDay ? 0 : 1)),
-    totalReviews: (state.stats.totalReviews ?? 0) + 1,
+    // An older/incomplete response cannot establish a lifetime review total.
+    totalReviews: state.stats.totalReviews == null ? undefined : state.stats.totalReviews + 1,
   } : undefined;
   return { ...state, stats, pendingReviewStats: { reviewId, stats: state.stats }, serverDaily: { ...daily, payload: { ...daily.payload, learned: true } } };
 }

@@ -46,8 +46,6 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       backgroundColor: colors.surface,
       borderRadius: radius.md,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
       padding: spacing.sm + 4,
       gap: spacing.sm,
       ...shadows.card,

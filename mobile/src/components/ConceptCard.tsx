@@ -29,8 +29,6 @@ const createStyles = (colors: ThemeColors) =>
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.xl,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
       padding: spacing.lg,
       gap: spacing.md,
       ...shadows.card,
@@ -49,8 +47,6 @@ const createStyles = (colors: ThemeColors) =>
     exampleBox: {
       backgroundColor: colors.categoryChip,
       borderRadius: radius.md,
-      borderLeftWidth: 3,
-      borderLeftColor: colors.primary,
       padding: spacing.md,
       gap: spacing.xs,
     },

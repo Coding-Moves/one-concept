@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { AchievementBadge } from '../components/AchievementBadge';
@@ -14,7 +13,6 @@ import { radius, scaleFont, spacing, typography } from '../theme';
 
 export function AchievementsScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { snapshot, loading, failed, fresh, refresh } = useAchievements();
   const { colors } = useTheme();
   const online = useOnline();
@@ -27,7 +25,7 @@ export function AchievementsScreen() {
   const earned = collection?.items.filter(a => a.earned_on).length ?? 0;
   const award = collection?.items.find(a => a.code === selected && a.earned_on);
   return <View style={[styles.screen, { backgroundColor: colors.background }]}>
-    <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
+    <View style={styles.top}>
       <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.goBack()} style={styles.back}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
       </Pressable>
@@ -40,7 +38,7 @@ export function AchievementsScreen() {
         <Text style={[styles.lead, { color: colors.text }]}>Small steps. Lasting achievements.</Text>
         <Text style={[styles.copy, { color: colors.textSecondary }]}>Keep learning one day at a time. Every badge you earn stays in your collection.</Text>
         {collection && <>
-          <View style={[styles.summary, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.summary, { backgroundColor: colors.surface }]}>
             <Text style={[styles.number, { color: colors.text }]}>{earned} / {collection.items.length} earned</Text>
             <Text style={[styles.copy, { color: colors.textSecondary }]}>Current streak {collection.current_streak} days · Best {collection.longest_streak} days</Text>
             {next ? <>
@@ -67,7 +65,7 @@ export function AchievementsScreen() {
           <Text style={[styles.badgeTitle, { color: colors.text }]}>{unlocked ? item.name : `${item.threshold.toLocaleString()} days`}</Text>
           <Text style={[styles.caption, { color: colors.textSecondary }]}>{unlocked ? `${item.threshold.toLocaleString()} days · Earned` : 'Keep learning to reveal'}</Text>
         </>;
-        const cardStyle = [styles.tile, { backgroundColor: colors.surface, borderColor: unlocked ? colors.primary + '60' : colors.border }];
+        const cardStyle = [styles.tile, { backgroundColor: colors.surface }];
         return unlocked ? <Pressable accessibilityRole="button" accessibilityLabel={`${item.name}, ${item.threshold} day achievement, earned`}
           onPress={() => setSelected(item.code)} style={({ pressed }) => [...cardStyle, { opacity: pressed ? 0.8 : 1 }]}>{body}</Pressable> :
           <View accessible accessibilityLabel={`${item.threshold} day achievement, locked`} style={cardStyle}>{body}</View>;
@@ -85,11 +83,11 @@ const styles = StyleSheet.create({
   header: { gap: spacing.md, marginBottom: spacing.md },
   lead: { ...typography.title, fontSize: scaleFont(24) },
   copy: { fontSize: scaleFont(14), lineHeight: scaleFont(21) },
-  summary: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
+  summary: { borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
   number: { fontSize: scaleFont(20), fontWeight: '700' },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 3 },
-  tile: { flex: 1, padding: spacing.md, borderWidth: 1, borderRadius: radius.lg, alignItems: 'center', gap: spacing.sm, maxWidth: '100%' },
+  tile: { flex: 1, padding: spacing.md, borderRadius: radius.lg, alignItems: 'center', gap: spacing.sm, maxWidth: '100%' },
   badgeTitle: { fontSize: scaleFont(17), fontWeight: '700', textAlign: 'center' },
   caption: { fontSize: scaleFont(12), textAlign: 'center', lineHeight: scaleFont(18) },
 });

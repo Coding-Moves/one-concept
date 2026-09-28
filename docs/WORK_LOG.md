@@ -7,6 +7,51 @@ claims as completed work.
 
 ## Current status
 
+### #271 mobile readability and collection layout — ready for review
+
+- [PR #272](https://github.com/Coding-Moves/one-concept/pull/272) targets
+  `develop` from `codex/271-mobile-ui-readability` and closes #271 on merge.
+  Started from `1d77a34`; unrelated owner-checkout work was preserved.
+- `0f6c718` improves theme contrast and thin component outlines; `198b87a`
+  replaces catalog fractions/bars with learned-only Stats and compact reviews.
+  `a43cc05` adds signed-in top/side safe-area ownership and prevents Saved filter
+  compression; `fa0949f` preserves unavailable review totals rather than zero;
+  `aad36e0` wraps narrow Saved headings; `9d655c4` adds browser regression coverage.
+- Reviewed Expo SDK 57 and safe-area-context documentation. Zero reviews is
+  valid when no assigned review was completed; reading new or saved lessons
+  does not increment it. No production user data was inspected.
+- Passed: TypeScript, all 68 Node 24 tests, dummy-config web export, new
+  light/dark readability browser scenario, existing review, History and
+  learning-UI browser scenarios, and whitespace checks. Review tests cover
+  deduplication, offline restart/reconnect and unchanged unique learned totals.
+  New UI checks cover catalog growth, older-topic aggregates, zero/nonzero/
+  unavailable review totals, Saved search/filtering and 320px enlarged chips.
+- Generated eight local screenshots in `/tmp/one-concept-271-screens`; inspected
+  Today, Stats and enlarged Saved output. Physical Android/iOS safe areas,
+  native font/display scaling and screen readers remain manual acceptance;
+  browser enlargement does not prove native behavior. Device checklist is in
+  `mobile/tests/README.md`. Backend tests were not run locally: no backend changed.
+- Review follow-up: merged develop `4cebf61` in `c086e2b`, preserving both work-log
+  entries and all commits. `10ba0cd` responds to the owner's visual feedback with
+  shared half-point outlines, including Stats, action groups and navigation.
+  `b7f4acd` fixes an identified review edge case: offline completion must preserve
+  an unavailable lifetime review total, not fabricate one. Its regression covers
+  replay, repeated completion and rollback.
+- Revalidated: TypeScript, 69 Node tests, web export, both-theme readability and
+  review browser scenarios. The PR description carries the current validation
+  and remaining native-device checks. No remaining blocking code finding was
+  identified in the reviewed mobile diff.
+- Final owner design supersedes the earlier broad-outline approach: retain a
+  0.5-point border only on Today's green completion pill. Other UI containers,
+  filters, inputs, action groups and navigation are borderless; existing badge
+  illustrations retain their artwork. Removed the broad outline token and
+  updated browser assertions to require borderless cards/filters/search.
+- No native dependency/runtime/version, schema, production deployment or release
+  change. Hosted PR checks are pending at handoff. Keep commits separate;
+  merge requires owner confirmation. Final bookkeeping commit updates this log
+  and the codebase map.
+
+
 ### #260 topic and subtopic taxonomy — in progress
 
 - Scope: a dedicated PR for the first item in the owner-approved sequence. It

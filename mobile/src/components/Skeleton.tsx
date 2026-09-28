@@ -74,8 +74,6 @@ const createStyles = (colors: ThemeColors) =>
     card: {
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
       padding: spacing.lg,
       gap: spacing.md,
     },
@@ -85,8 +83,6 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'space-between',
       backgroundColor: colors.surface,
       borderRadius: radius.md,
-      borderWidth: 1,
-      borderColor: colors.border,
       padding: spacing.md,
     },
   });

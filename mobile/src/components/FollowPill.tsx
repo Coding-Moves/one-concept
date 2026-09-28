@@ -60,15 +60,12 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.pill,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      borderWidth: 1,
     },
     followPill: {
       backgroundColor: colors.text,
-      borderColor: colors.text,
     },
     followingPill: {
       backgroundColor: colors.surface,
-      borderColor: colors.border,
     },
     pressed: {
       opacity: 0.75,

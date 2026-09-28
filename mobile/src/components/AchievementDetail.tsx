@@ -26,7 +26,7 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
   return (
     <Modal transparent visible animationType={reduced ? 'none' : 'fade'} onRequestClose={onClose}>
       <View style={[styles.backdrop, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]} accessibilityViewIsModal>
+        <View style={[styles.sheet, { backgroundColor: colors.surface }]} accessibilityViewIsModal>
           <ScrollView contentContainerStyle={styles.body}>
             <Text accessibilityRole="header" style={[styles.eyebrow, { color: colors.textSecondary }]}>
               {celebration ? count > 1 ? `${count} achievements earned` : 'Achievement unlocked' : 'Your achievement'}
@@ -55,7 +55,7 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
 }
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  sheet: { width: '100%', maxWidth: 420, maxHeight: '100%', borderRadius: radius.xl, borderWidth: 1, overflow: 'hidden' },
+  sheet: { width: '100%', maxWidth: 420, maxHeight: '100%', borderRadius: radius.xl, overflow: 'hidden' },
   body: { alignItems: 'center', padding: spacing.lg, gap: spacing.md },
   eyebrow: { fontSize: scaleFont(13), fontWeight: '700', textAlign: 'center' },
   title: { ...typography.title, fontSize: scaleFont(28), textAlign: 'center' },

@@ -184,8 +184,6 @@ const createStyles = (colors: ThemeColors) =>
       gap: spacing.sm,
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
       padding: spacing.md,
     },
     pressed: { opacity: 0.7 },

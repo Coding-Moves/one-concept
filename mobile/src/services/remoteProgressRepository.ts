@@ -81,7 +81,7 @@ function toProgressState(payload: StatePayload): ProgressState {
       current: payload.stats.current,
       longest: payload.stats.longest,
       totalLearned: payload.stats.total_learned,
-      totalReviews: payload.stats.total_reviews ?? 0,
+      totalReviews: payload.stats.total_reviews,
     },
     // Today's concept, folded in (#102). A fresh fetch is never "stale"; the
     // offline flag is set only when load() falls back to cache after a failure.
@@ -258,7 +258,7 @@ export class RemoteProgressRepository implements ProgressRepository {
           current: done.stats.current,
           longest: done.stats.longest,
           totalLearned: done.stats.total_learned,
-          totalReviews: done.stats.total_reviews ?? this.cache.stats?.totalReviews ?? 0,
+          totalReviews: done.stats.total_reviews ?? this.cache.stats?.totalReviews,
         },
       }, epoch);
     }

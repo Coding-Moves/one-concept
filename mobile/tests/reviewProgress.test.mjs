@@ -49,3 +49,17 @@ test('rejected review restores exact totals after disk restart without touching 
   assert.equal(withRejectedReview(rejected,'review-1'),rejected);
   assert.equal(withRejectedReview(state,'old-review'),state);
 });
+
+
+test('offline review completion preserves an unavailable lifetime review total', () => {
+  const unknown = {...state, stats: {...state.stats, totalReviews: undefined}};
+  const completed = withCompletedReview(unknown, 'review-1');
+  assert.equal(completed.stats.totalReviews, undefined);
+  assert.equal(completed.stats.totalLearned, 25);
+  assert.equal(completed.stats.current, 9);
+  assert.equal(withCompletedReview(completed, 'review-1'), completed);
+  const reconciled = withPendingProgress(unknown, completed,
+    [{kind:'review',reviewId:'review-1',date:'2026-09-13'}]);
+  assert.equal(reconciled.stats.totalReviews, undefined);
+  assert.deepEqual(withRejectedReview(completed, 'review-1').stats, unknown.stats);
+});

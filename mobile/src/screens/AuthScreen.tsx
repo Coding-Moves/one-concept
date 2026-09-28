@@ -261,8 +261,6 @@ const createStyles = (colors: ThemeColors) =>
       width: 40,
       height: 40,
       borderRadius: radius.pill,
-      borderWidth: 1,
-      borderColor: colors.border,
       backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
@@ -281,8 +279,6 @@ const createStyles = (colors: ThemeColors) =>
     },
     input: {
       backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
       borderRadius: radius.lg,
       paddingHorizontal: spacing.md + 2,
       paddingVertical: spacing.md,

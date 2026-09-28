@@ -13,7 +13,7 @@ export function AchievementPreview({ onPress }: { onPress: () => void }) {
   const earned = collection?.items.filter(a => a.earned_on) ?? [];
   const next = nextMilestone(collection);
   return <Pressable accessibilityRole="button" accessibilityLabel="Open achievements" onPress={onPress}
-    style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, borderColor: colors.border, opacity: pressed ? 0.8 : 1 }]}>
+    style={({ pressed }) => [styles.card, { backgroundColor: colors.surface, opacity: pressed ? 0.8 : 1 }]}>
     <View style={styles.heading}>
       <Text style={[styles.title, { color: colors.text }]}>Achievements</Text>
       <Ionicons name="chevron-forward" size={18} color={colors.textSecondary} />
@@ -32,7 +32,7 @@ export function AchievementPreview({ onPress }: { onPress: () => void }) {
   </Pressable>;
 }
 const styles = StyleSheet.create({
-  card: { borderRadius: radius.lg, borderWidth: StyleSheet.hairlineWidth, padding: spacing.md, gap: spacing.sm },
+  card: { borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
   heading: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   title: { fontSize: scaleFont(18), fontWeight: '700' },
   copy: { fontSize: scaleFont(13), lineHeight: scaleFont(19) },

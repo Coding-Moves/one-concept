@@ -21,6 +21,7 @@ export interface ThemeColors {
   offlineText: string;
   success: string;
   successSurface: string;
+  successBorder: string;
   streak: string;
   /** The Like heart — deliberately rose, not the streak's orange flame (#114). */
   like: string;
@@ -35,14 +36,15 @@ export const lightColors: ThemeColors = {
   surface: '#FFFFFF',
   text: '#171923',
   textSecondary: '#565D6D',
-  textMuted: '#8A91A0',
-  primary: '#6366F1',
+  textMuted: '#626B7D',
+  primary: '#5558DB',
   primaryPressed: '#4F46E5',
   onPrimary: '#FFFFFF',
   offlineBackground: '#3730A3',
   offlineText: '#FFFFFF',
-  success: '#16A34A',
+  success: '#137A3A',
   successSurface: '#E9F8EF',
+  successBorder: '#137A3A',
   streak: '#F97316',
   like: '#E11D48',
   border: '#E9EBF4',
@@ -56,14 +58,15 @@ export const darkColors: ThemeColors = {
   surface: '#141828',
   text: '#F1F3F9',
   textSecondary: '#A6ADC0',
-  textMuted: '#6E7688',
+  textMuted: '#A0A9BC',
   primary: '#818CF8',
-  primaryPressed: '#6366F1',
-  onPrimary: '#FFFFFF',
+  primaryPressed: '#A5B4FC',
+  onPrimary: '#0A0C14',
   offlineBackground: '#C7D2FE',
   offlineText: '#1E1B4B',
   success: '#34D399',
   successSurface: '#10291F',
+  successBorder: '#34D399',
   streak: '#FB923C',
   like: '#FB7185',
   border: '#20263D',
@@ -88,8 +91,7 @@ export const radius = {
   pill: 999,
 };
 
-/** Soft elevation for borderless cards. Invisible on dark backgrounds, where
- *  the hairline border carries the separation instead. */
+/** Soft elevation for borderless cards; theme surface colors provide separation. */
 export const shadows = {
   card: {
     shadowColor: '#101433',

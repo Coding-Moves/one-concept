@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { AchievementBadge } from '../components/AchievementBadge';
@@ -14,7 +13,6 @@ import { radius, scaleFont, spacing, typography } from '../theme';
 
 export function AchievementsScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { snapshot, loading, failed, fresh, refresh } = useAchievements();
   const { colors } = useTheme();
   const online = useOnline();
@@ -27,7 +25,7 @@ export function AchievementsScreen() {
   const earned = collection?.items.filter(a => a.earned_on).length ?? 0;
   const award = collection?.items.find(a => a.code === selected && a.earned_on);
   return <View style={[styles.screen, { backgroundColor: colors.background }]}>
-    <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
+    <View style={styles.top}>
       <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.goBack()} style={styles.back}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
       </Pressable>

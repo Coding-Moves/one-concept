@@ -9,13 +9,13 @@ import { scaleFont, scaleIcon, spacing, ThemeColors } from '../theme';
  * pushes content down (no overlap) and disappears cleanly when back online.
  * Sits under the status bar via the top safe-area inset.
  */
-export function OfflineBanner() {
+export function OfflineBanner({ insetTop = true }: { insetTop?: boolean }) {
   const { colors } = useTheme();
   const insets = useSafeAreaInsets();
   const styles = createStyles(colors);
   return (
     <View
-      style={[styles.container, { paddingTop: insets.top }]}
+      style={[styles.container, { paddingTop: insetTop ? insets.top : 0 }]}
       accessibilityRole="alert"
       accessibilityLabel="You are offline. Changes will sync when you reconnect."
     >

@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, ScrollView, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CollectionConceptRow } from '../components/CollectionConceptRow';
 import { SearchField } from '../components/SearchField';
 import { UnavailableState } from '../components/UnavailableState';
@@ -140,18 +140,18 @@ export function SavedScreen() {
           </View>
 
           {categories.length > 2 ? (
-            <FlatList
-              data={categories}
+            <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               keyboardShouldPersistTaps="handled"
-              keyExtractor={(c) => c}
               style={styles.filterRow}
               contentContainerStyle={styles.filterContent}
-              renderItem={({ item }) => {
+            >
+              {categories.map((item) => {
                 const active = item === effectiveCategory;
                 return (
                   <Pressable
+                    key={item}
                     onPress={() => setCategory(item)}
                     style={[styles.filterChip, active && styles.filterChipActive]}
                     accessibilityRole="button"
@@ -162,8 +162,8 @@ export function SavedScreen() {
                     </Text>
                   </Pressable>
                 );
-              }}
-            />
+              })}
+            </ScrollView>
           ) : null}
 
           <FlatList
@@ -213,10 +213,12 @@ const createStyles = (colors: ThemeColors) =>
     searchWrap: {
       marginHorizontal: spacing.lg,
     },
-    filterRow: { flexGrow: 0, marginTop: spacing.sm },
+    filterRow: { flexGrow: 0, flexShrink: 0, marginTop: spacing.sm },
     filterContent: { paddingHorizontal: spacing.lg, paddingVertical: spacing.xs, gap: spacing.sm },
     filterChip: {
       minHeight: 48,
+      flexShrink: 0,
+      paddingVertical: spacing.sm,
       justifyContent: 'center',
       paddingHorizontal: spacing.md,
       borderRadius: radius.pill,
@@ -225,7 +227,7 @@ const createStyles = (colors: ThemeColors) =>
       borderColor: colors.border,
     },
     filterChipActive: { backgroundColor: colors.primary, borderColor: colors.primary },
-    filterText: { fontSize: scaleFont(13), lineHeight: scaleFont(18), fontWeight: '600', color: colors.textSecondary },
+    filterText: { fontSize: scaleFont(13), fontWeight: '600', color: colors.textSecondary },
     filterTextActive: { color: colors.onPrimary },
     listContent: { padding: spacing.lg, paddingTop: spacing.md },
     noMatch: { fontSize: scaleFont(14), color: colors.textMuted, textAlign: 'center', marginTop: spacing.lg },

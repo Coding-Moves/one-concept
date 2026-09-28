@@ -12,7 +12,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { ComponentProps, useCallback, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AchievementCelebration } from './src/components/AchievementCelebration';
 import { AppRecoveryBoundary } from './src/components/AppRecoveryBoundary';
 import { ConfigurationState } from './src/components/ConfigurationState';
@@ -122,8 +122,8 @@ function ThemedApp() {
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      {!online && <OfflineBanner />}
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
+      {!online && <OfflineBanner insetTop={false} />}
       <SyncStatusBanner />
       <View style={{ flex: 1 }}>
         <NavigationContainer theme={navigationTheme}>
@@ -142,7 +142,7 @@ function ThemedApp() {
         <WhatsNewCard entry={whatsNew.entry} onDismiss={whatsNew.dismiss} />
       )}
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-    </View>
+    </SafeAreaView>
   );
 }
 

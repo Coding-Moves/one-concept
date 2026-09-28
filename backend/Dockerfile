@@ -11,6 +11,8 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY migrations ./migrations
+COPY schema ./schema
 
 # Railway supplies $PORT; default keeps `podman run` and local use working.
 ENV PORT=8000

@@ -30,6 +30,14 @@ claims as completed work.
   failures because the test fixture adds a subtopic. `0019` makes only an
   otherwise deletable topic cascade to its private taxonomy; populated topics
   remain protected by the existing content and user-topic foreign keys.
+- Second review follow-up: after #269 became the current base, its schema gate
+  correctly rejected the taxonomy migrations until the reviewed contract
+  included subtopics and `0017`–`0019`. The temporary retirement regression now
+  restores its fixture subtopic after the daily-selection function commits.
+- Local verification after those corrections: full disposable PostgreSQL 16
+  backend suite passed (**217 passed**, no skips); Ruff on the changed schema
+  verifier and regression test passed. Await the hosted rerun before treating
+  the PR as green.
 - Next: review the PR and its PostgreSQL quality-gate result; do not merge or
   apply the migration until the owner approves it.
 

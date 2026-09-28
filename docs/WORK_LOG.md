@@ -24,8 +24,10 @@ claims as completed work.
   (**20 skipped**) because Podman is not installed locally; GitHub's disposable
   PostgreSQL 16 quality gate remains required evidence. No production migration,
   deployment, release, or app update has occurred.
-- Next: finish the self-review, run all feasible checks, open a `develop` PR
-  with `Fixes #260`, and leave it open for owner review.
+- PR: [#270](https://github.com/Coding-Moves/one-concept/pull/270) targets
+  `develop` and uses `Fixes #260`; it remains open for owner review.
+- Next: review the PR and its PostgreSQL quality-gate result; do not merge or
+  apply the migration until the owner approves it.
 
 ### PR quality-gate PostgreSQL readiness follow-up — ready for review
 

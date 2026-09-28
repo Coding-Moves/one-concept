@@ -219,9 +219,10 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 
 ## Sustainable learning additions (#195)
 
-- `services/curriculum.py` validates subject/plan imports, duplicate candidates
-  and prerequisite graphs. `backend/content/subjects.json` retains the five
-  subjects; `curriculum.example.json` shows future data-only expansion.
+- `services/curriculum.py` validates subject/subtopic/plan imports, duplicate
+  candidates and prerequisite graphs. `backend/content/subjects.json` and
+  `backend/content/subtopics.json` retain the five-topic taxonomy;
+  `curriculum.example.json` shows future data-only expansion.
 - `services/supply.py` persists assigned-count-plus-reserve demand and plans for
   active readers. `pool.py` counts drafts/in-flight claims in capacity and calls
   the shared quota/concurrency checks before committing any provider request.
@@ -269,6 +270,7 @@ enforce one daily assignment and no concept repeats per user. RLS adds isolation
 | `0013_daily_reviews.sql` | Separate review activities; preserves new-assignment uniqueness. |
 | `0014_content_operations.sql` | Worker heartbeat and deduplicated condition state. |
 | `0015_revision_generation_claims.sql` | Durable claims for correction drafting. |
+| `0017_topic_subtopics.sql`, `0018_classify_legacy_backlog.sql` | Parent-scoped subtopics, explicit classification of published/planned content, and category integrity. |
 
 Migrations 0001–0015 are recorded in `migrations/applied.txt`. The owner applied
 0011–0015 during 1.9.0 release preparation, and a separate read-only production

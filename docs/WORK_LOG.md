@@ -7,6 +7,24 @@ claims as completed work.
 
 ## Current status
 
+### #260 topic and subtopic taxonomy — in progress
+
+- Scope: a dedicated PR for the first item in the owner-approved sequence. It
+  gives the existing five topics a durable, parent-scoped subtopic registry and
+  classifies every existing published lesson and planned backlog item. New
+  plans, generated drafts and editorial revisions must carry that category.
+- Commits: `bedf72a` adds the taxonomy migration, SQLAlchemy mirror and curated
+  registry. `52d7ec9` classifies legacy backlog and carries subtopics through
+  curriculum import, generation and review. `3604f2d` exposes the category in
+  daily/concept responses while preserving already assigned material if a
+  subtopic is retired.
+- Validation so far: Python compilation and whitespace checks passed. The local
+  PostgreSQL integration suite is unavailable because Podman is not installed;
+  the focused tests were collected and skipped for that reason. No production
+  migration, deployment, release, or app update has occurred.
+- Next: finish the self-review, run all feasible checks, open a `develop` PR
+  with `Fixes #260`, and leave it open for owner review.
+
 ### PR quality-gate PostgreSQL readiness follow-up — ready for review
 
 - GitHub-hosted CI exposed a real fixture race: `pg_isready` could succeed against the official PostgreSQL image's temporary initialization server, which then stopped before the migration harness ran.

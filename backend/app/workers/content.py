@@ -18,6 +18,7 @@ from app.services.curriculum import (
     PlannedLesson,
     Subject,
     import_lessons,
+    import_subtopics,
     import_subjects,
 )
 from app.services.publication import (
@@ -31,7 +32,7 @@ from app.services.publication import (
 def parser():
     root = argparse.ArgumentParser(description=__doc__)
     sub = root.add_subparsers(dest="command", required=True)
-    for name in ("import-subjects", "import-curriculum", "revise-plan"):
+    for name in ("import-subjects", "import-subtopics", "import-curriculum", "revise-plan"):
         p = sub.add_parser(name)
         p.add_argument("file", type=Path)
     p = sub.add_parser(
@@ -82,6 +83,13 @@ async def run(args):
                         args.file.read_text()
                     )
                     result = {"subjects": await import_subjects(session, rows)}
+                elif args.command == "import-subtopics":
+                    from app.services.curriculum import Subtopic
+
+                    rows = TypeAdapter(list[Subtopic]).validate_json(
+                        args.file.read_text()
+                    )
+                    result = {"subtopics": await import_subtopics(session, rows)}
                 elif args.command in ("import-curriculum", "revise-plan"):
                     rows = TypeAdapter(list[PlannedLesson]).validate_json(
                         args.file.read_text()

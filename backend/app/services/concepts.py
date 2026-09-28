@@ -7,7 +7,7 @@ app fetches the full concept (summary + example) by slug when a card is opened.
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.db.models import Concept, ConceptInteraction, Topic
+from app.db.models import Concept, ConceptInteraction, Subtopic, Topic
 from app.schemas.daily import ConceptOut
 
 
@@ -29,14 +29,15 @@ async def get_concept_out(db: AsyncSession, user_id, slug: str) -> ConceptOut | 
         .scalar_subquery()
     )
     stmt = (
-        select(Concept, Topic.slug, Topic.name, like_count)
+        select(Concept, Topic.slug, Topic.name, Subtopic.slug, Subtopic.name, like_count)
         .join(Topic, Topic.id == Concept.topic_id)
+        .join(Subtopic, Subtopic.id == Concept.subtopic_id)
         .where(Concept.slug == slug, Concept.status == "published")
     )
     row = (await db.execute(stmt)).first()
     if row is None:
         return None
-    concept, topic_slug, topic_name, likes = row
+    concept, topic_slug, topic_name, subtopic_slug, subtopic_name, likes = row
     return ConceptOut(
         id=concept.id,
         slug=concept.slug,
@@ -45,6 +46,8 @@ async def get_concept_out(db: AsyncSession, user_id, slug: str) -> ConceptOut | 
         example=concept.example,
         topic_slug=topic_slug,
         topic_name=topic_name,
+        subtopic_slug=subtopic_slug,
+        subtopic_name=subtopic_name,
         like_count=likes,
         content_version=concept.content_version,
     )

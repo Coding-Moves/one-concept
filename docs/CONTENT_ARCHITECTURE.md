@@ -43,7 +43,7 @@ reports use a maintainer CLI rather than exposing administrative routes to users
 
 | Layer | Main implementation | Durable identity |
 | --- | --- | --- |
-| Registry and curriculum | `curriculum.py`, `content/subjects.json` | Topic UUID + immutable slug; planned concept slug |
+| Registry and curriculum | `curriculum.py`, `content/subjects.json`, `content/subtopics.json` | Topic UUID + subtopic UUID scoped to its parent; planned concept slug |
 | Demand and generation | `supply.py`, `pool.py`, `prefetch.py`, `generation_budget.py` | One demand target per topic; backlog UUID |
 | Editorial changes | `publication.py`, `concept_revisions` | Concept UUID/slug + monotonically increasing content version |
 | Daily activity | `selection.py`, `reviews.py`, `interactions.py` | New assignment or review UUID + server local date |
@@ -126,7 +126,16 @@ new discovery, assignment and generation stop, while saved/history links and
 already chosen activities survive. Retirement is reversible; routine operations
 never physically delete a subject or reassign its identity.
 
-`curriculum.example.json` demonstrates adding plans for the existing five
+Each lesson also has one subtopic. A subtopic is identified by its stable slug
+**within its parent topic**; the database's composite foreign key makes a
+cross-topic assignment impossible. Existing published lessons and planned
+backlog are placed in an explicit reviewed category during the migration, never
+left uncategorized. New plans must name an active subtopic. Retiring a subtopic
+prevents new selection, generation and publication while preserving an already
+assigned daily lesson, history, saved links and review records.
+
+`subtopics.json` is the reviewed registry for the existing five topics; import
+it after a subject registry change and before importing plans. `curriculum.example.json` demonstrates adding plans for the existing five
 subjects through data. Difficulty defines foundations (1), intermediate ideas
 (2) and advanced applications (3). Objectives and prerequisite references are
 validated; missing references and cycles are rejected. Exact title/objective

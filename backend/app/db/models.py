@@ -12,6 +12,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Integer,
     SmallInteger,
     Text,
@@ -49,13 +50,37 @@ class Topic(Base):
     sort_order: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
 
 
+class Subtopic(Base):
+    """A curated grouping within one topic (migration 0017)."""
+
+    __tablename__ = "subtopics"
+    __table_args__ = (UniqueConstraint("topic_id", "slug"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    topic_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), nullable=False
+    )
+    slug: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class Concept(Base):
     __tablename__ = "concepts"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ("subtopic_id", "topic_id"), ("subtopics.id", "subtopics.topic_id")
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     topic_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("topics.id"), nullable=False
     )
+    subtopic_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
@@ -149,11 +174,17 @@ class ConceptBacklog(Base):
     """
 
     __tablename__ = "concept_backlog"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ("subtopic_id", "topic_id"), ("subtopics.id", "subtopics.topic_id")
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     topic_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("topics.id"), nullable=False
     )
+    subtopic_id: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True))
     slug: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     angle: Mapped[str | None] = mapped_column(Text)

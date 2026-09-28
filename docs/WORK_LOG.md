@@ -7,6 +7,18 @@ claims as completed work.
 
 ## Current status
 
+### #165 verify deployed schema — dedicated fix in progress
+
+- Owner requested a focused PR independent of deferred VM draft #231. Branch
+  starts at develop 61efc97; preserve the draft and its history.
+- Planned commits: read-only schema verifier and negative database tests;
+  Docker packaging and protected production/release gates; operating guide and
+  validation evidence. No migrations applied, ledger edits or production writes.
+- Reuse the reviewed migration contract from #231. Ordinary PR CI uses disposable
+  PostgreSQL; only trusted main runs may receive the protected database secret.
+- Railway will need the documented pre-deploy command configured manually on
+  each service. No billing, production dashboard or deployment changes here.
+
 ### PR quality-gate PostgreSQL readiness follow-up — ready for review
 
 - GitHub-hosted CI exposed a real fixture race: `pg_isready` could succeed against the official PostgreSQL image's temporary initialization server, which then stopped before the migration harness ran.

@@ -247,6 +247,11 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 
 ## Schema and migrations
 
+`db/schema.py` compares actual catalog metadata against `backend/schema/contract.json`.
+`workers/schema_check.py` performs the bounded read-only target check using
+`DIRECT_URL`; `docs/SCHEMA_VERIFICATION.md` covers contract maintenance and
+Railway/GitHub setup. No SQL is applied by verification.
+
 `db/models.py` mirrors the SQL schema; migrations are the schema authority.
 The seventeen tables cover profiles, topics, concepts, user topics, daily assignments,
 concept interactions, notification preferences, device tokens, the concept
@@ -309,7 +314,8 @@ and the session pooler. Applied migrations must not be rewritten.
   The backend job installs Podman and fails if its disposable PostgreSQL 16
   fixture skips, so a green backend result includes database coverage.
   `migrations.yml` separately checks the applied ledger on `main` and PRs into
-  `main`. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
+  `main`; trusted main runs also call protected `production-schema.yml`. The
+  Release OTA job requires that same actual-schema check. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
   files findings as issues. `cleanup.yml` manages stale issues; Dependabot
   schedules dependency updates with Expo-managed version restrictions.
 - `mobile/app.config.js` currently has app version `1.8.0` and native runtime

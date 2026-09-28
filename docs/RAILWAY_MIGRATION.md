@@ -87,7 +87,9 @@ the next day. Reminders checks due user-local slots every 15 minutes; it does
 not send everyone a notification each time it runs. Cron jobs exit after work;
 Completed/Ready between runs is normal.
 
-Keep custom build commands and pre-deploy commands empty. Railway detects
+Keep custom build commands empty. Once the schema-verification image is deployed,
+set the pre-deploy command on each service to `python -m app.workers.schema_check`;
+see [schema gate setup](SCHEMA_VERIFICATION.md). Railway detects
 `Dockerfile` in the configured source root. If a dashboard field explicitly asks
 for a repository-absolute Dockerfile path, use `/backend/Dockerfile`.
 New services cannot opt into legacy `railway.json` / `railway.toml` Config as

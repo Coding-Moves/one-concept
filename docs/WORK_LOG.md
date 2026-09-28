@@ -7,17 +7,30 @@ claims as completed work.
 
 ## Current status
 
-### #165 verify deployed schema — dedicated fix in progress
+### #165 verify deployed schema — dedicated fix
 
 - Owner requested a focused PR independent of deferred VM draft #231. Branch
-  starts at develop 61efc97; preserve the draft and its history.
-- Planned commits: read-only schema verifier and negative database tests;
-  Docker packaging and protected production/release gates; operating guide and
-  validation evidence. No migrations applied, ledger edits or production writes.
-- Reuse the reviewed migration contract from #231. Ordinary PR CI uses disposable
-  PostgreSQL; only trusted main runs may receive the protected database secret.
-- Railway will need the documented pre-deploy command configured manually on
-  each service. No billing, production dashboard or deployment changes here.
+  starts at develop 61efc97; the VM draft and its history remain untouched.
+- `82f221b` extracts the read-only metadata contract/verifier with negative
+  database and credential-redaction tests. `7bb42af` packages it in the Railway
+  image and legacy pre-deploy config. `3d7083a` adds a main-only protected check
+  and makes Release OTA depend on it; ordinary PRs receive no production secret.
+- Final review also preserves libpq `sslmode` as asyncpg's `ssl`, with connection
+  and TLS-policy regressions. No SQL is applied and the ledger is unchanged.
+- Passed: full backend suite 213 tests, zero skips, on disposable PostgreSQL 16;
+  nine Node 24 release-revision tests; Ruff F/E9; Actionlint for all three changed
+  workflows; local documentation links and whitespace checks. Follow-up URL
+  normalization passed all 20 focused schema tests, zero skips. Docker build and packaged
+  checker smoke passed for healthy schema, missing claimed_at and absent URL.
+- Production was not accessed. The owner must configure GitHub environment
+  production-schema (main-only, protected, PRODUCTION_SCHEMA_DIRECT_URL secret)
+  and Railway pre-deploy command on each service. Missing GitHub configuration
+  blocks the new Release flow; merging cannot set dashboard protection rules.
+- The contract checks required schema, not seed/backfill contents or migration
+  execution history. PostgreSQL-version differences need reviewed investigation.
+  Operating instructions and draft #231 reconciliation are in
+  [SCHEMA_VERIFICATION.md](SCHEMA_VERIFICATION.md).
+- Documentation/handoff commit: `docs: explain schema gate setup and validation`.
 
 ### PR quality-gate PostgreSQL readiness follow-up — ready for review
 

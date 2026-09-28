@@ -32,10 +32,13 @@ PACE_SECONDS = 6.0
 BACKOFF_START, BACKOFF_MAX, MAX_RATE_LIMIT_STREAK = 15.0, 120.0, 5
 
 _TODO = text("""
-    select c.id, c.title, c.content_version, c.curriculum, t.name as topic_name
+    select c.id, c.title, c.content_version, c.curriculum, t.name as topic_name,
+           s.slug as subtopic_slug, s.name as subtopic_name
       from public.concepts c join public.topics t on t.id = c.topic_id
+      join public.subtopics s on s.id=c.subtopic_id
      where c.status = 'published'
        and t.is_active
+       and s.is_active
        and coalesce(c.prompt_version, '') <> :pv
        and not exists (select 1 from public.concept_revisions r where r.concept_id=c.id
          and r.status in ('draft','generating'))
@@ -47,6 +50,7 @@ _CLAIM = text("""
     select id,content_version,'{}'::jsonb,'generating' from public.concepts c
     where id=:id and content_version=:version and status='published'
       and exists(select 1 from public.topics t where t.id=c.topic_id and t.is_active)
+      and exists(select 1 from public.subtopics s where s.id=c.subtopic_id and s.is_active)
       and not exists(select 1 from public.concept_revisions r where r.concept_id=c.id
         and r.status in ('draft','generating')) returning id
 """)
@@ -54,6 +58,7 @@ _CLAIM = text("""
 _UPDATE = text("""
     update public.concept_revisions r set body=jsonb_build_object('title',c.title,
       'summary',cast(:summary as text),'example',cast(:example as text),
+      'subtopic_slug',cast(:subtopic_slug as text),
       'curriculum',c.curriculum,'model',cast(:model as text),'prompt_version',cast(:pv as text)),
       status='draft'
     from public.concepts c where r.id=:revision and r.concept_id=c.id
@@ -125,6 +130,7 @@ async def main() -> None:
                         result = await generate_concept(
                             title=row.title,
                             topic_name=row.topic_name,
+                            subtopic_name=row.subtopic_name,
                             angle=None,
                             api_key=settings.gemini_api_key,
                             model=settings.gemini_model,
@@ -173,6 +179,7 @@ async def main() -> None:
                             "revision": revision,
                             "summary": result.summary,
                             "example": result.example,
+                            "subtopic_slug": row.subtopic_slug,
                             "model": result.model,
                             "pv": result.prompt_version,
                         },

@@ -83,6 +83,7 @@ async def test_three_readers_learn_for_a_year_through_refills_and_outages(
                 lesson = PlannedLesson(
                     slug=slug,
                     topic_slug=topic.slug,
+                    subtopic_slug="core-concepts",
                     title=f"Simulation objective {offset}",
                     curriculum={
                         "objective": f"Explain the distinct simulated behaviour numbered {offset}",

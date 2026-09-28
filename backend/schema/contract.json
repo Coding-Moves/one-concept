@@ -15,7 +15,10 @@
     "0013_daily_reviews.sql": "22569710fa76da5558c67bb90563824975d7c82ce33236a57fa85dfbfc046582",
     "0014_content_operations.sql": "35be688ceeb0e2e0438c82c712eaafb6b4f3e38fe7e18ee96358279e831f70cc",
     "0015_revision_generation_claims.sql": "0b7e75a9eb27cd6716878d7a00557cd26febe5d4982c1c858a82bb1567d3e8e9",
-    "0016_achievements.sql": "b2d4e2d053d57fe7b10289610896a612f066d65380a3ea806ac8ae8e8c2e012b"
+    "0016_achievements.sql": "b2d4e2d053d57fe7b10289610896a612f066d65380a3ea806ac8ae8e8c2e012b",
+    "0017_topic_subtopics.sql": "6ae4b04f79ee145404af4d551cdd12d7725696f800bd367f15a9176309149f62",
+    "0018_classify_legacy_backlog.sql": "1ee81d184523c781d86bf6491b40858367e3b2732c7d9ad5dc0116a454d41c9d",
+    "0019_subtopic_topic_cleanup.sql": "94fa1264d21e5ba721cc01a8c0df7da1c9f5d1c782d75160778a7327c4c6a52e"
   },
   "schema": {
     "columns": {
@@ -120,6 +123,12 @@
         "identity": "",
         "not_null": true,
         "type": "text"
+      },
+      "concept_backlog.subtopic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
       },
       "concept_backlog.title": {
         "default": null,
@@ -294,6 +303,12 @@
         "identity": "",
         "not_null": true,
         "type": "text"
+      },
+      "concepts.subtopic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
       },
       "concepts.summary": {
         "default": null,
@@ -631,6 +646,54 @@
         "not_null": true,
         "type": "uuid"
       },
+      "subtopics.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "subtopics.description": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "subtopics.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopics.is_active": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "subtopics.name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "subtopics.slug": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "subtopics.sort_order": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "subtopics.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
       "topics.created_at": {
         "default": "now()",
         "identity": "",
@@ -757,6 +820,10 @@
         "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'generating'::text, 'done'::text, 'failed'::text])))",
         "validated": true
       },
+      "concept_backlog.concept_backlog_subtopic_topic_fkey": {
+        "definition": "FOREIGN KEY (subtopic_id, topic_id) REFERENCES public.subtopics(id, topic_id)",
+        "validated": true
+      },
       "concept_backlog.concept_backlog_topic_id_fkey": {
         "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
         "validated": true
@@ -811,6 +878,10 @@
       },
       "concepts.concepts_status_check": {
         "definition": "CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])))",
+        "validated": true
+      },
+      "concepts.concepts_subtopic_topic_fkey": {
+        "definition": "FOREIGN KEY (subtopic_id, topic_id) REFERENCES public.subtopics(id, topic_id)",
         "validated": true
       },
       "concepts.concepts_topic_id_fkey": {
@@ -937,6 +1008,34 @@
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
       },
+      "subtopics.subtopics_id_topic_id_key": {
+        "definition": "UNIQUE (id, topic_id)",
+        "validated": true
+      },
+      "subtopics.subtopics_name_check": {
+        "definition": "CHECK (((length(TRIM(BOTH FROM name)) >= 2) AND (length(TRIM(BOTH FROM name)) <= 80)))",
+        "validated": true
+      },
+      "subtopics.subtopics_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "subtopics.subtopics_slug_check": {
+        "definition": "CHECK ((slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'::text))",
+        "validated": true
+      },
+      "subtopics.subtopics_sort_order_check": {
+        "definition": "CHECK ((sort_order >= 0))",
+        "validated": true
+      },
+      "subtopics.subtopics_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "subtopics.subtopics_topic_id_slug_key": {
+        "definition": "UNIQUE (topic_id, slug)",
+        "validated": true
+      },
       "topics.topics_pkey": {
         "definition": "PRIMARY KEY (id)",
         "validated": true
@@ -1018,6 +1117,11 @@
         "ready": true,
         "valid": true
       },
+      "concept_backlog_subtopic_pending_idx": {
+        "definition": "CREATE INDEX concept_backlog_subtopic_pending_idx ON public.concept_backlog USING btree (subtopic_id) WHERE (status = 'pending'::text)",
+        "ready": true,
+        "valid": true
+      },
       "concept_interactions_like_count_idx": {
         "definition": "CREATE INDEX concept_interactions_like_count_idx ON public.concept_interactions USING btree (concept_id) WHERE (liked_at IS NOT NULL)",
         "ready": true,
@@ -1055,6 +1159,11 @@
       },
       "concepts_slug_key": {
         "definition": "CREATE UNIQUE INDEX concepts_slug_key ON public.concepts USING btree (slug)",
+        "ready": true,
+        "valid": true
+      },
+      "concepts_subtopic_published_idx": {
+        "definition": "CREATE INDEX concepts_subtopic_published_idx ON public.concepts USING btree (subtopic_id) WHERE (status = 'published'::text)",
         "ready": true,
         "valid": true
       },
@@ -1160,6 +1269,26 @@
       },
       "reminder_log_pkey": {
         "definition": "CREATE UNIQUE INDEX reminder_log_pkey ON public.reminder_log USING btree (user_id, local_date, slot)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopics_active_topic_order_idx": {
+        "definition": "CREATE INDEX subtopics_active_topic_order_idx ON public.subtopics USING btree (topic_id, sort_order, name) WHERE is_active",
+        "ready": true,
+        "valid": true
+      },
+      "subtopics_id_topic_id_key": {
+        "definition": "CREATE UNIQUE INDEX subtopics_id_topic_id_key ON public.subtopics USING btree (id, topic_id)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopics_pkey": {
+        "definition": "CREATE UNIQUE INDEX subtopics_pkey ON public.subtopics USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopics_topic_id_slug_key": {
+        "definition": "CREATE UNIQUE INDEX subtopics_topic_id_slug_key ON public.subtopics USING btree (topic_id, slug)",
         "ready": true,
         "valid": true
       },
@@ -1375,6 +1504,9 @@
       "reminder_log": {
         "rls": true
       },
+      "subtopics": {
+        "rls": true
+      },
       "topics": {
         "rls": true
       },
@@ -1394,8 +1526,16 @@
         "definition": "CREATE TRIGGER concept_backlog_touch_updated_at BEFORE UPDATE ON public.concept_backlog FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
         "enabled": "O"
       },
+      "public.concept_backlog.test_assign_backlog_subtopic": {
+        "definition": "CREATE TRIGGER test_assign_backlog_subtopic BEFORE INSERT ON public.concept_backlog FOR EACH ROW EXECUTE FUNCTION public.test_assign_core_subtopic()",
+        "enabled": "O"
+      },
       "public.concept_interactions.concept_interactions_touch_updated_at": {
         "definition": "CREATE TRIGGER concept_interactions_touch_updated_at BEFORE UPDATE ON public.concept_interactions FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.concepts.test_assign_concept_subtopic": {
+        "definition": "CREATE TRIGGER test_assign_concept_subtopic BEFORE INSERT ON public.concepts FOR EACH ROW EXECUTE FUNCTION public.test_assign_core_subtopic()",
         "enabled": "O"
       },
       "public.notification_preferences.notification_preferences_touch_updated_at": {

@@ -6,8 +6,10 @@ import pytest
 from app.services import pool
 from app.services.curriculum import (
     PlannedLesson,
+    Subtopic,
     Subject,
     import_lessons,
+    import_subtopics,
     import_subjects,
 )
 from app.services.generation import GeneratedConcept
@@ -19,6 +21,10 @@ from sqlalchemy import text
 async def draft(session, monkeypatch, empty_generation_budget):
     slug = "editorial-" + uuid.uuid4().hex
     await import_subjects(session, [Subject(slug=slug, name="Editorial fixture")])
+    await import_subtopics(
+        session,
+        [Subtopic(topic_slug=slug, slug="foundations", name="Foundations")],
+    )
     data = {
         "objective": f"Explain and demonstrate {slug}",
         "difficulty": 1,
@@ -30,7 +36,11 @@ async def draft(session, monkeypatch, empty_generation_budget):
         session,
         [
             PlannedLesson(
-                slug=slug, topic_slug=slug, title=f"Lesson {slug}", curriculum=data
+                slug=slug,
+                topic_slug=slug,
+                subtopic_slug="foundations",
+                title=f"Lesson {slug}",
+                curriculum=data,
             )
         ],
     )

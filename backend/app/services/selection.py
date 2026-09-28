@@ -37,6 +37,8 @@ class ConceptPayload:
     example: str | None
     topic_slug: str
     topic_name: str
+    subtopic_slug: str
+    subtopic_name: str
     # Likes from OTHER users; the client adds the viewer's own like on top, so a
     # like/unlike is an instant +/-1 with no server round trip to see it.
     like_count: int = 0
@@ -64,12 +66,14 @@ _EXISTING = text("""
     select a.assigned_for, a.assigned_at, a.completed_at,
            c.id, c.slug, c.title, c.summary, c.example, c.content_version,
            t.slug as topic_slug, t.name as topic_name,
+           s.slug as subtopic_slug, s.name as subtopic_name,
            (select count(*) from public.concept_interactions ci
              where ci.concept_id = c.id and ci.liked_at is not null
                and ci.user_id <> :uid)::int as like_count
       from public.daily_assignments a
       join public.concepts c on c.id = a.concept_id
       join public.topics  t on t.id = c.topic_id
+      join public.subtopics s on s.id = c.subtopic_id
      where a.user_id = :uid and a.assigned_for = :today
 """)
 
@@ -85,6 +89,7 @@ _CANDIDATE = text("""
                     and prior.slug=required.slug)) as unmet
           from public.concepts c
           join public.topics t on t.id=c.topic_id and t.is_active
+          join public.subtopics s on s.id=c.subtopic_id and s.is_active
          where c.status = 'published'
            and (:ignore_follows or c.topic_id in (
                  select topic_id from public.user_topics where user_id = :uid))
@@ -139,6 +144,7 @@ _TOPIC_UNREAD = text("""
     select (select topic_id from target) as topic_id,
            (select count(*)
               from public.concepts c
+              join public.subtopics s on s.id=c.subtopic_id and s.is_active
              where c.status = 'published'
                and c.topic_id = (select topic_id from target)
                and not exists (
@@ -161,6 +167,8 @@ def _row_to_result(row, outside: bool) -> DailyResult:
             example=row.example,
             topic_slug=row.topic_slug,
             topic_name=row.topic_name,
+            subtopic_slug=row.subtopic_slug,
+            subtopic_name=row.subtopic_name,
             like_count=row.like_count,
             content_version=row.content_version,
         ),

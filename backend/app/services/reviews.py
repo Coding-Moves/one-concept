@@ -16,10 +16,13 @@ from app.services.achievements import award_streaks
 _EXISTING = text("""select r.id as review_id,r.assigned_for,r.assigned_at,r.completed_at,
   c.id,c.slug,c.title,c.summary,c.example,c.content_version,
   t.slug as topic_slug,t.name as topic_name,
+  s.slug as subtopic_slug,s.name as subtopic_name,
   (select count(*) from public.concept_interactions i where i.concept_id=c.id
     and i.liked_at is not null and i.user_id<>:uid)::int as like_count
   from public.daily_reviews r join public.concepts c on c.id=r.concept_id
-  join public.topics t on t.id=c.topic_id where r.user_id=:uid and r.assigned_for=:today""")
+  join public.topics t on t.id=c.topic_id
+  join public.subtopics s on s.id=c.subtopic_id
+  where r.user_id=:uid and r.assigned_for=:today""")
 
 
 async def existing_review(session: AsyncSession, user_id: uuid.UUID, today: date):

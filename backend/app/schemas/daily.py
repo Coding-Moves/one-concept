@@ -12,6 +12,8 @@ class ConceptOut(BaseModel):
     example: str | None = None
     topic_slug: str
     topic_name: str
+    subtopic_slug: str
+    subtopic_name: str
     # Likes from other users; the client adds the viewer's own like.
     like_count: int = 0
     content_version: int = 1

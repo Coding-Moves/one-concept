@@ -32,8 +32,9 @@ async def test_connection_errors_are_redacted(monkeypatch, capsys):
     }
 
 
-async def test_command_checks_target_in_read_only_transaction(database, monkeypatch, capsys):
-    monkeypatch.setenv("DIRECT_URL", database)
+@pytest.mark.parametrize("suffix", ["", "?sslmode=disable"])
+async def test_command_checks_target_in_read_only_transaction(database, monkeypatch, capsys, suffix):
+    monkeypatch.setenv("DIRECT_URL", database + suffix)
     original = schema_check.verify_schema
 
     async def verify(connection):
@@ -62,3 +63,10 @@ def test_postgres_url_normalization():
     url = schema_check.connection_url("postgres://postgres:example@localhost:5432/postgres")
     assert url.drivername == "postgresql+asyncpg"
     assert url.port == 5432
+
+
+def test_ssl_policy_is_preserved():
+    url = schema_check.connection_url("postgres://postgres:example@localhost/db?sslmode=verify-full")
+    assert url.query == {"ssl": "verify-full"}
+    with pytest.raises(ValueError, match="Conflicting SSL"):
+        schema_check.connection_url("postgresql://localhost/db?sslmode=require&ssl=disable")

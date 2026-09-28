@@ -22,6 +22,14 @@ def connection_url(value: str):
         raise ValueError("Expected PostgreSQL")
     if not url.host or not url.database or url.port == 6543:
         raise ValueError("Expected direct/session connection")
+    # Supabase/libpq URIs may use sslmode; asyncpg calls this parameter ssl.
+    # Preserve the selected TLS policy instead of dropping it or exposing the
+    # URL in an unexpected-keyword connection traceback.
+    if "sslmode" in url.query:
+        if "ssl" in url.query:
+            raise ValueError("Conflicting SSL options")
+        url = url.update_query_dict({"ssl": url.query["sslmode"]})
+        url = url.difference_update_query(["sslmode"])
     return url.set(drivername="postgresql+asyncpg")
 
 

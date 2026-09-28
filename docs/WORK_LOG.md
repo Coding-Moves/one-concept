@@ -40,7 +40,6 @@ claims as completed work.
   the PR as green.
 - Next: review the PR and its PostgreSQL quality-gate result; do not merge or
   apply the migration until the owner approves it.
-
 ### #165 verify deployed schema — dedicated fix
 
 - Owner requested a focused PR independent of deferred VM draft #231. Branch

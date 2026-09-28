@@ -37,6 +37,24 @@ async def test_same_day_is_idempotent(session, user):
     assert count == 1, "a repeat call must not create a second assignment"
 
 
+async def test_existing_daily_assignment_keeps_its_subtopic_after_retirement(session, user):
+    first = await get_or_create_daily(session, user, today=DAY)
+    await session.execute(
+        text("""update public.subtopics set is_active=false
+          where slug=:slug and id=(select subtopic_id from public.concepts where id=:id)"""),
+        {"slug": first.concept.subtopic_slug, "id": first.concept.id},
+    )
+    again = await get_or_create_daily(session, user, today=DAY)
+    assert again.concept.id == first.concept.id
+    assert again.concept.subtopic_slug == first.concept.subtopic_slug
+    await session.execute(
+        text("""update public.subtopics set is_active=true
+          where id=(select subtopic_id from public.concepts where id=:id)"""),
+        {"id": first.concept.id},
+    )
+    await session.commit()
+
+
 async def test_never_repeats_and_reports_exhaustion(session, user):
     """Every published concept, one per day, then an honest refusal.
 

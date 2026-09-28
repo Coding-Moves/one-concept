@@ -136,28 +136,39 @@ a test account, and verify next-day selection. Today's activity stays fixed.
 
 ## Extend, draft and approve a curriculum
 
-1. Prepare a JSON array using
+1. Add or review the parent topic first, then prepare a subtopic registry entry
+   with a stable slug that is unique within that topic. Import it before plans:
+
+   ```bash
+   .venv/bin/python -m app.workers.content import-subtopics subtopic-changes.json
+   ```
+
+   Retire a subtopic with `is_active: false`; do not delete it or reuse its
+   slug under another topic. Retirement stops new selection, generation and
+   publication but keeps previously assigned and saved material accessible.
+2. Prepare a JSON array using
    [the five-subject example](../backend/content/curriculum.example.json).
    It demonstrates extension, not a production seed or a complete reserve.
-2. Give every concept a stable unique slug, one learning objective, difficulty
+3. Give every concept a stable unique slug, its parent `topic_slug`, an active
+   `subtopic_slug`, one learning objective, difficulty
    **1 foundations / 2 intermediate / 3 advanced applications**, prerequisite
    slugs where useful, and relevant source references. Separate distinct ideas;
    a renamed duplicate is not library growth.
-3. Import with `python -m app.workers.content import-curriculum FILE.json`.
+4. Import with `python -m app.workers.content import-curriculum FILE.json`.
    Exact re-import is safe. Unknown subjects/prerequisites, cycles, duplicate
    slugs and exact title/objective matches are rejected. Similar title warnings
    require editorial inspection; this inexpensive heuristic is not semantic
    proof. Check objectives and source material for conceptual duplication too.
-4. Allow the background worker to draft within the shared quota. Daily HTTP
+5. Allow the background worker to draft within the shared quota. Daily HTTP
    requests never wait for this work. Use `drafts` and `show` to inspect results.
-5. Verify factual correctness, scope, example usefulness, reading length,
+6. Verify factual correctness, scope, example usefulness, reading length,
    prerequisite availability and references. Import warnings are not approval.
    A reference URL is not evidence that the generated text actually follows it.
-6. If a draft needs changes, save its lesson body as JSON and run
+7. If a draft needs changes, save its lesson body as JSON and run
    `python -m app.workers.content stage SLUG BODY.json`. The body contains
-   `title`, `summary`, `example`, `curriculum`, optional `model` and
+   `title`, `summary`, `example`, `subtopic_slug`, `curriculum`, optional `model` and
    `prompt_version`. The CLI prints a revision UUID.
-7. Publish the exact reviewed revision:
+8. Publish the exact reviewed revision:
 
    ```bash
    .venv/bin/python -m app.workers.content publish REVISION_UUID \

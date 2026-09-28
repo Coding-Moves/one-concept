@@ -36,6 +36,39 @@ claims as completed work.
   merge requires owner confirmation. Final bookkeeping commit updates this log
   and the codebase map.
 
+### #260 topic and subtopic taxonomy — in progress
+
+- Scope: a dedicated PR for the first item in the owner-approved sequence. It
+  gives the existing five topics a durable, parent-scoped subtopic registry and
+  classifies every existing published lesson and planned backlog item. New
+  plans, generated drafts and editorial revisions must carry that category.
+- Commits: `bedf72a` adds the taxonomy migration, SQLAlchemy mirror and curated
+  registry. `52d7ec9` classifies legacy backlog and carries subtopics through
+  curriculum import, generation and review. `3604f2d` exposes the category in
+  daily/concept responses while preserving already assigned material if a
+  subtopic is retired.
+- Validation: Python compilation and whitespace checks passed. Focused
+  generation checks passed (**17 passed**). The focused PostgreSQL-backed
+  curriculum/publication/selection/year checks were collected but skipped
+  (**20 skipped**) because Podman is not installed locally; GitHub's disposable
+  PostgreSQL 16 quality gate remains required evidence. No production migration,
+  deployment, release, or app update has occurred.
+- PR: [#270](https://github.com/Coding-Moves/one-concept/pull/270) targets
+  `develop` and uses `Fixes #260`; it remains open for owner review.
+- Review follow-up: GitHub's PostgreSQL suite exposed temporary-topic teardown
+  failures because the test fixture adds a subtopic. `0019` makes only an
+  otherwise deletable topic cascade to its private taxonomy; populated topics
+  remain protected by the existing content and user-topic foreign keys.
+- Second review follow-up: after #269 became the current base, its schema gate
+  correctly rejected the taxonomy migrations until the reviewed contract
+  included subtopics and `0017`–`0019`. The temporary retirement regression now
+  restores its fixture subtopic after the daily-selection function commits.
+- Local verification after those corrections: full disposable PostgreSQL 16
+  backend suite passed (**217 passed**, no skips); Ruff on the changed schema
+  verifier and regression test passed. Await the hosted rerun before treating
+  the PR as green.
+- Next: review the PR and its PostgreSQL quality-gate result; do not merge or
+  apply the migration until the owner approves it.
 ### #165 verify deployed schema — dedicated fix
 
 - Owner requested a focused PR independent of deferred VM draft #231. Branch

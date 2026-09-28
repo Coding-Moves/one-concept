@@ -37,8 +37,10 @@ MAX_CONSECUTIVE_RATE_LIMITS = 5
 _POOL_COUNTS = text("""
     select t.id, t.slug, t.name,
            (select count(*) from public.concepts c
+             join public.subtopics s on s.id=c.subtopic_id and s.is_active
              where c.topic_id = t.id and c.status in ('published','draft'))::int as published,
            (select count(*) from public.concept_backlog b
+             join public.subtopics s on s.id=b.subtopic_id and s.is_active
              where b.topic_id = t.id and b.status = 'pending')::int   as pending
       from public.topics t
      where t.is_active
@@ -78,11 +80,13 @@ _REAP_STALE = text("""
 _CLAIM = text("""
     update public.concept_backlog b
        set status = 'generating', attempts = b.attempts + 1, claimed_at = now()
-      from public.topics t
+      from public.topics t, public.subtopics s
      where b.id = (
          select b2.id from public.concept_backlog b2
           where b2.status = 'pending'
             and exists(select 1 from public.topics active where active.id=b2.topic_id and active.is_active)
+            and exists(select 1 from public.subtopics active where active.id=b2.subtopic_id
+              and active.topic_id=b2.topic_id and active.is_active)
             and (cast(:topic_id as uuid) is null or b2.topic_id = cast(:topic_id as uuid))
             and b2.attempts < 3 + (select count(*) from public.content_retry_log r where r.backlog_id=b2.id)
           order by b2.created_at
@@ -90,23 +94,28 @@ _CLAIM = text("""
           limit 1
      )
        and t.id = b.topic_id
-    returning b.id, b.slug, b.title, b.angle, b.difficulty, b.topic_id, b.curriculum,
-              t.name as topic_name
+       and s.id = b.subtopic_id
+       and s.topic_id = b.topic_id
+       and s.is_active
+    returning b.id, b.slug, b.title, b.angle, b.difficulty, b.topic_id, b.subtopic_id,
+              b.curriculum, t.name as topic_name, s.slug as subtopic_slug,
+              s.name as subtopic_name
 """)
 
 _PUBLISH = text("""
     with inserted as (
         insert into public.concepts
-            (topic_id, slug, title, summary, example, difficulty,
+            (topic_id, subtopic_id, slug, title, summary, example, difficulty,
              status, source, model, prompt_version, curriculum, content_version)
-        values (:topic_id, :slug, :title, :summary, :example, :difficulty,
+        values (:topic_id, :subtopic_id, :slug, :title, :summary, :example, :difficulty,
                 'draft', 'gemini', :model, :prompt_version, cast(:curriculum as jsonb), 0)
         on conflict (slug) do nothing
         returning *
     ), revision as (
         insert into public.concept_revisions(concept_id,base_version,body)
         select id,0,jsonb_build_object('title',title,'summary',summary,'example',example,
-          'curriculum',curriculum,'model',model,'prompt_version',prompt_version)
+          'subtopic_slug',cast(:subtopic_slug as text),'curriculum',curriculum,
+          'model',model,'prompt_version',prompt_version)
         from inserted returning id
     )
     update public.concept_backlog
@@ -164,8 +173,12 @@ async def generate_one(
             )
             inventory = await session.scalar(
                 text("""select
-              (select count(*) from public.concepts where topic_id=:t and status in ('published','draft')) +
-              (select count(*) from public.concept_backlog where topic_id=:t and status='generating')"""),
+              (select count(*) from public.concepts c join public.subtopics s
+                 on s.id=c.subtopic_id and s.is_active
+               where c.topic_id=:t and c.status in ('published','draft')) +
+              (select count(*) from public.concept_backlog b join public.subtopics s
+                 on s.id=b.subtopic_id and s.is_active
+               where b.topic_id=:t and b.status='generating')"""),
                 {"t": topic_id},
             )
             if not active or inventory >= supply_target:
@@ -190,6 +203,7 @@ async def generate_one(
         result = await generate_concept(
             title=claimed.title,
             topic_name=claimed.topic_name,
+            subtopic_name=claimed.subtopic_name,
             angle="\n".join(
                 filter(
                     None,
@@ -225,6 +239,8 @@ async def generate_one(
             _PUBLISH,
             {
                 "topic_id": claimed.topic_id,
+                "subtopic_id": claimed.subtopic_id,
+                "subtopic_slug": claimed.subtopic_slug,
                 "slug": claimed.slug,
                 "title": claimed.title,
                 "summary": result.summary,

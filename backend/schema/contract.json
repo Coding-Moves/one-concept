@@ -1,0 +1,1411 @@
+{
+  "migrations": {
+    "0001_schema.sql": "aaeb4af7b4f6dd38478e4874883fd36c2c0c255045e16d11e8ad91fbedde1958",
+    "0002_rls.sql": "6419c4d1f86d70ce457a658517aaad79f3ac1d999adaef0cc6354f77ca72984e",
+    "0003_seed_topics.sql": "757cf30c4095f085063b1fceb5e9f49e83f9a9c4224160d0ba0b20c90d1fd20e",
+    "0004_seed_concepts.sql": "acc20e170e567a2044449095d0ecebeb1a3239900350a10398d9deb199889e74",
+    "0005_concept_backlog.sql": "e3844d573009d3395aac425e0a30031aca28c3e4830d96cb78b97097228b5027",
+    "0006_seed_backlog.sql": "3aa361c675b0091a2feea903d3d716e1ef3129532d58487623aa4881a3ee50ea",
+    "0007_reminder_log.sql": "a296c18808bfb2ef8879f3b71f873a337ec0fd57778defb8a580fc7b4e4af831",
+    "0008_backlog_claimed_at.sql": "d8abde340335c9c35a7455e7edfb801ffe69ab3593a5ec019a92d98322b1bf0e",
+    "0009_like_count_index.sql": "4320855ca61269beca043dc4cc679b41b464e80faa3761002dead628ab9ecdee",
+    "0010_generation_daily_usage.sql": "c51653481676f4968029dff382644c97fa84df368b124c7957b08b1da8658d17",
+    "0011_content_supply.sql": "6faa9afa7ae74e4f03ad1cf5aea731301f5651c1a90a5d338018b9ae3badbbd8",
+    "0012_curriculum_publication.sql": "0c0208a48298e85c83a1b1fbd5ceac2c49e5a316f78ac2dd74d1dca64bb31759",
+    "0013_daily_reviews.sql": "22569710fa76da5558c67bb90563824975d7c82ce33236a57fa85dfbfc046582",
+    "0014_content_operations.sql": "35be688ceeb0e2e0438c82c712eaafb6b4f3e38fe7e18ee96358279e831f70cc",
+    "0015_revision_generation_claims.sql": "0b7e75a9eb27cd6716878d7a00557cd26febe5d4982c1c858a82bb1567d3e8e9",
+    "0016_achievements.sql": "b2d4e2d053d57fe7b10289610896a612f066d65380a3ea806ac8ae8e8c2e012b"
+  },
+  "schema": {
+    "columns": {
+      "achievement_definitions.artwork_key": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.code": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.description": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.metric": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.sort_order": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "achievement_definitions.threshold": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "concept_backlog.angle": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concept_backlog.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "concept_backlog.claimed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_backlog.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concept_backlog.curriculum": {
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "concept_backlog.difficulty": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "smallint"
+      },
+      "concept_backlog.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_backlog.last_error": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concept_backlog.slug": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concept_backlog.status": {
+        "default": "'pending'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concept_backlog.title": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concept_backlog.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_backlog.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concept_interactions.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_interactions.liked_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_interactions.saved_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_interactions.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concept_interactions.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_revisions.base_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "concept_revisions.body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "concept_revisions.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_revisions.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concept_revisions.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_revisions.review_note": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concept_revisions.reviewed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_revisions.reviewed_by": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concept_revisions.status": {
+        "default": "'draft'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.content_version": {
+        "default": "1",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "concepts.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concepts.curriculum": {
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "concepts.difficulty": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "smallint"
+      },
+      "concepts.example": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concepts.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concepts.model": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concepts.prompt_version": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concepts.published_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concepts.slug": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.source": {
+        "default": "'seed'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.status": {
+        "default": "'published'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.summary": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.title": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "content_conditions.active": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "content_conditions.changed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_conditions.key": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_conditions.observed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_retry_log.backlog_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "content_retry_log.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_retry_log.id": {
+        "default": null,
+        "identity": "a",
+        "not_null": true,
+        "type": "bigint"
+      },
+      "content_retry_log.operator": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_retry_log.reason": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_supply_targets.expires_at": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_supply_targets.requested_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_supply_targets.target_count": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "content_supply_targets.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "content_worker_runs.failed": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "content_worker_runs.finished_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "content_worker_runs.generated": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "content_worker_runs.outcome": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_worker_runs.started_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_worker_runs.worker": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "daily_assignments.assigned_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "daily_assignments.assigned_for": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "daily_assignments.completed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "daily_assignments.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_assignments.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_assignments.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_reviews.assigned_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "daily_reviews.assigned_for": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "daily_reviews.completed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "daily_reviews.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_reviews.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_reviews.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "device_tokens.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "device_tokens.expo_push_token": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "device_tokens.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "device_tokens.last_seen_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "device_tokens.platform": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "device_tokens.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "generation_daily_usage.budget_day": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "generation_daily_usage.calls_used": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "notification_preferences.enabled": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "notification_preferences.reminder_times": {
+        "default": "'{08:00:00,14:00:00,20:00:00}'::time without time zone[]",
+        "identity": "",
+        "not_null": true,
+        "type": "time without time zone[]"
+      },
+      "notification_preferences.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "notification_preferences.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profiles.avatar_url": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "profiles.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "profiles.display_name": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "profiles.id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profiles.timezone": {
+        "default": "'UTC'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "profiles.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "reminder_log.local_date": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "reminder_log.sent_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "reminder_log.slot": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "time without time zone"
+      },
+      "reminder_log.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "topics.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "topics.description": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "topics.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "topics.is_active": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "topics.name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "topics.slug": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "topics.sort_order": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "user_achievements.achievement_code": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "user_achievements.earned_on": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "user_achievements.recorded_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_achievements.seen_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "user_achievements.source": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "user_achievements.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_topics.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_topics.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_topics.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      }
+    },
+    "constraints": {
+      "achievement_definitions.achievement_definitions_metric_threshold_key": {
+        "definition": "UNIQUE (metric, threshold)",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_pkey": {
+        "definition": "PRIMARY KEY (code)",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_threshold_check": {
+        "definition": "CHECK ((threshold > 0))",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_difficulty_check": {
+        "definition": "CHECK (((difficulty >= 1) AND (difficulty <= 3)))",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_slug_key": {
+        "definition": "UNIQUE (slug)",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'generating'::text, 'done'::text, 'failed'::text])))",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "concept_interactions.concept_interactions_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "concept_interactions.concept_interactions_pkey": {
+        "definition": "PRIMARY KEY (user_id, concept_id)",
+        "validated": true
+      },
+      "concept_interactions.concept_interactions_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "concept_revisions.concept_revisions_base_version_check": {
+        "definition": "CHECK ((base_version >= 0))",
+        "validated": true
+      },
+      "concept_revisions.concept_revisions_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "concept_revisions.concept_revisions_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "concept_revisions.concept_revisions_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['generating'::text, 'draft'::text, 'published'::text, 'rejected'::text])))",
+        "validated": true
+      },
+      "concepts.concepts_content_version_check": {
+        "definition": "CHECK ((content_version >= 0))",
+        "validated": true
+      },
+      "concepts.concepts_difficulty_check": {
+        "definition": "CHECK (((difficulty >= 1) AND (difficulty <= 3)))",
+        "validated": true
+      },
+      "concepts.concepts_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "concepts.concepts_slug_key": {
+        "definition": "UNIQUE (slug)",
+        "validated": true
+      },
+      "concepts.concepts_source_check": {
+        "definition": "CHECK ((source = ANY (ARRAY['seed'::text, 'gemini'::text])))",
+        "validated": true
+      },
+      "concepts.concepts_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])))",
+        "validated": true
+      },
+      "concepts.concepts_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "content_conditions.content_conditions_pkey": {
+        "definition": "PRIMARY KEY (key)",
+        "validated": true
+      },
+      "content_retry_log.content_retry_log_backlog_id_fkey": {
+        "definition": "FOREIGN KEY (backlog_id) REFERENCES public.concept_backlog(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "content_retry_log.content_retry_log_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "content_supply_targets.content_supply_targets_pkey": {
+        "definition": "PRIMARY KEY (topic_id)",
+        "validated": true
+      },
+      "content_supply_targets.content_supply_targets_target_count_check": {
+        "definition": "CHECK ((target_count >= 0))",
+        "validated": true
+      },
+      "content_supply_targets.content_supply_targets_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "content_worker_runs.content_worker_runs_pkey": {
+        "definition": "PRIMARY KEY (worker)",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_no_repeat": {
+        "definition": "UNIQUE (user_id, concept_id)",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_one_per_day": {
+        "definition": "UNIQUE (user_id, assigned_for)",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "daily_reviews.daily_reviews_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "daily_reviews.daily_reviews_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "daily_reviews.daily_reviews_user_id_assigned_for_key": {
+        "definition": "UNIQUE (user_id, assigned_for)",
+        "validated": true
+      },
+      "daily_reviews.daily_reviews_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "device_tokens.device_tokens_expo_push_token_key": {
+        "definition": "UNIQUE (expo_push_token)",
+        "validated": true
+      },
+      "device_tokens.device_tokens_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "device_tokens.device_tokens_platform_check": {
+        "definition": "CHECK ((platform = ANY (ARRAY['ios'::text, 'android'::text])))",
+        "validated": true
+      },
+      "device_tokens.device_tokens_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "generation_daily_usage.generation_daily_usage_calls_used_check": {
+        "definition": "CHECK ((calls_used >= 0))",
+        "validated": true
+      },
+      "generation_daily_usage.generation_daily_usage_pkey": {
+        "definition": "PRIMARY KEY (budget_day)",
+        "validated": true
+      },
+      "notification_preferences.notification_preferences_max_three": {
+        "definition": "CHECK (((array_length(reminder_times, 1) >= 1) AND (array_length(reminder_times, 1) <= 3)))",
+        "validated": true
+      },
+      "notification_preferences.notification_preferences_pkey": {
+        "definition": "PRIMARY KEY (user_id)",
+        "validated": true
+      },
+      "notification_preferences.notification_preferences_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "profiles.profiles_id_fkey": {
+        "definition": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "profiles.profiles_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "profiles.profiles_timezone_not_blank": {
+        "definition": "CHECK ((length(btrim(timezone)) > 0))",
+        "validated": true
+      },
+      "reminder_log.reminder_log_pkey": {
+        "definition": "PRIMARY KEY (user_id, local_date, slot)",
+        "validated": true
+      },
+      "reminder_log.reminder_log_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "topics.topics_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "topics.topics_slug_key": {
+        "definition": "UNIQUE (slug)",
+        "validated": true
+      },
+      "user_achievements.user_achievements_achievement_code_fkey": {
+        "definition": "FOREIGN KEY (achievement_code) REFERENCES public.achievement_definitions(code)",
+        "validated": true
+      },
+      "user_achievements.user_achievements_pkey": {
+        "definition": "PRIMARY KEY (user_id, achievement_code)",
+        "validated": true
+      },
+      "user_achievements.user_achievements_source_check": {
+        "definition": "CHECK ((source = ANY (ARRAY['history'::text, 'completion'::text])))",
+        "validated": true
+      },
+      "user_achievements.user_achievements_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "user_topics.user_topics_pkey": {
+        "definition": "PRIMARY KEY (user_id, topic_id)",
+        "validated": true
+      },
+      "user_topics.user_topics_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "user_topics.user_topics_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      }
+    },
+    "functions": {
+      "handle_new_user": {
+        "definition": "CREATE OR REPLACE FUNCTION public.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  insert into public.profiles (id, display_name)\n  values (\n    new.id,\n    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1))\n  )\n  on conflict (id) do nothing;\n\n  insert into public.notification_preferences (user_id)\n  values (new.id)\n  on conflict (user_id) do nothing;\n\n  -- Follow every active topic by default, matching the app's current behaviour.\n  insert into public.user_topics (user_id, topic_id)\n  select new.id, t.id from public.topics t where t.is_active\n  on conflict do nothing;\n\n  return new;\nend;\n$function$\n"
+      },
+      "touch_updated_at": {
+        "definition": "CREATE OR REPLACE FUNCTION public.touch_updated_at()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nbegin\n  new.updated_at = now();\n  return new;\nend;\n$function$\n"
+      }
+    },
+    "indexes": {
+      "achievement_definitions_metric_threshold_key": {
+        "definition": "CREATE UNIQUE INDEX achievement_definitions_metric_threshold_key ON public.achievement_definitions USING btree (metric, threshold)",
+        "ready": true,
+        "valid": true
+      },
+      "achievement_definitions_pkey": {
+        "definition": "CREATE UNIQUE INDEX achievement_definitions_pkey ON public.achievement_definitions USING btree (code)",
+        "ready": true,
+        "valid": true
+      },
+      "assignments_streak_idx": {
+        "definition": "CREATE INDEX assignments_streak_idx ON public.daily_assignments USING btree (user_id, assigned_for) WHERE (completed_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "assignments_user_day_idx": {
+        "definition": "CREATE INDEX assignments_user_day_idx ON public.daily_assignments USING btree (user_id, assigned_for DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_backlog_pending_idx": {
+        "definition": "CREATE INDEX concept_backlog_pending_idx ON public.concept_backlog USING btree (topic_id, created_at) WHERE (status = 'pending'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_backlog_pkey": {
+        "definition": "CREATE UNIQUE INDEX concept_backlog_pkey ON public.concept_backlog USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_backlog_slug_key": {
+        "definition": "CREATE UNIQUE INDEX concept_backlog_slug_key ON public.concept_backlog USING btree (slug)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_interactions_like_count_idx": {
+        "definition": "CREATE INDEX concept_interactions_like_count_idx ON public.concept_interactions USING btree (concept_id) WHERE (liked_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_interactions_pkey": {
+        "definition": "CREATE UNIQUE INDEX concept_interactions_pkey ON public.concept_interactions USING btree (user_id, concept_id)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_revisions_generating_idx": {
+        "definition": "CREATE INDEX concept_revisions_generating_idx ON public.concept_revisions USING btree (created_at) WHERE (status = 'generating'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_revisions_pending_idx": {
+        "definition": "CREATE INDEX concept_revisions_pending_idx ON public.concept_revisions USING btree (concept_id) WHERE (status = 'draft'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_revisions_pkey": {
+        "definition": "CREATE UNIQUE INDEX concept_revisions_pkey ON public.concept_revisions USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "concepts_pkey": {
+        "definition": "CREATE UNIQUE INDEX concepts_pkey ON public.concepts USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "concepts_pool_idx": {
+        "definition": "CREATE INDEX concepts_pool_idx ON public.concepts USING btree (topic_id) WHERE (status = 'published'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concepts_slug_key": {
+        "definition": "CREATE UNIQUE INDEX concepts_slug_key ON public.concepts USING btree (slug)",
+        "ready": true,
+        "valid": true
+      },
+      "content_conditions_pkey": {
+        "definition": "CREATE UNIQUE INDEX content_conditions_pkey ON public.content_conditions USING btree (key)",
+        "ready": true,
+        "valid": true
+      },
+      "content_retry_log_pkey": {
+        "definition": "CREATE UNIQUE INDEX content_retry_log_pkey ON public.content_retry_log USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "content_supply_targets_pkey": {
+        "definition": "CREATE UNIQUE INDEX content_supply_targets_pkey ON public.content_supply_targets USING btree (topic_id)",
+        "ready": true,
+        "valid": true
+      },
+      "content_worker_runs_pkey": {
+        "definition": "CREATE UNIQUE INDEX content_worker_runs_pkey ON public.content_worker_runs USING btree (worker)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_assignments_no_repeat": {
+        "definition": "CREATE UNIQUE INDEX daily_assignments_no_repeat ON public.daily_assignments USING btree (user_id, concept_id)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_assignments_one_per_day": {
+        "definition": "CREATE UNIQUE INDEX daily_assignments_one_per_day ON public.daily_assignments USING btree (user_id, assigned_for)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_assignments_pkey": {
+        "definition": "CREATE UNIQUE INDEX daily_assignments_pkey ON public.daily_assignments USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_assignments_recent_reader_idx": {
+        "definition": "CREATE INDEX daily_assignments_recent_reader_idx ON public.daily_assignments USING btree (assigned_at, user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_reviews_pkey": {
+        "definition": "CREATE UNIQUE INDEX daily_reviews_pkey ON public.daily_reviews USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_reviews_rotation_idx": {
+        "definition": "CREATE INDEX daily_reviews_rotation_idx ON public.daily_reviews USING btree (user_id, concept_id, assigned_for DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_reviews_streak_idx": {
+        "definition": "CREATE INDEX daily_reviews_streak_idx ON public.daily_reviews USING btree (user_id, assigned_for) WHERE (completed_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_reviews_user_id_assigned_for_key": {
+        "definition": "CREATE UNIQUE INDEX daily_reviews_user_id_assigned_for_key ON public.daily_reviews USING btree (user_id, assigned_for)",
+        "ready": true,
+        "valid": true
+      },
+      "device_tokens_expo_push_token_key": {
+        "definition": "CREATE UNIQUE INDEX device_tokens_expo_push_token_key ON public.device_tokens USING btree (expo_push_token)",
+        "ready": true,
+        "valid": true
+      },
+      "device_tokens_pkey": {
+        "definition": "CREATE UNIQUE INDEX device_tokens_pkey ON public.device_tokens USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "device_tokens_user_idx": {
+        "definition": "CREATE INDEX device_tokens_user_idx ON public.device_tokens USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "generation_daily_usage_pkey": {
+        "definition": "CREATE UNIQUE INDEX generation_daily_usage_pkey ON public.generation_daily_usage USING btree (budget_day)",
+        "ready": true,
+        "valid": true
+      },
+      "interactions_liked_idx": {
+        "definition": "CREATE INDEX interactions_liked_idx ON public.concept_interactions USING btree (user_id, liked_at DESC) WHERE (liked_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "interactions_saved_idx": {
+        "definition": "CREATE INDEX interactions_saved_idx ON public.concept_interactions USING btree (user_id, saved_at DESC) WHERE (saved_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "notification_preferences_pkey": {
+        "definition": "CREATE UNIQUE INDEX notification_preferences_pkey ON public.notification_preferences USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "profiles_pkey": {
+        "definition": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "reminder_log_pkey": {
+        "definition": "CREATE UNIQUE INDEX reminder_log_pkey ON public.reminder_log USING btree (user_id, local_date, slot)",
+        "ready": true,
+        "valid": true
+      },
+      "topics_pkey": {
+        "definition": "CREATE UNIQUE INDEX topics_pkey ON public.topics USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "topics_slug_key": {
+        "definition": "CREATE UNIQUE INDEX topics_slug_key ON public.topics USING btree (slug)",
+        "ready": true,
+        "valid": true
+      },
+      "user_achievements_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_achievements_pkey ON public.user_achievements USING btree (user_id, achievement_code)",
+        "ready": true,
+        "valid": true
+      },
+      "user_topics_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_topics_pkey ON public.user_topics USING btree (user_id, topic_id)",
+        "ready": true,
+        "valid": true
+      }
+    },
+    "policies": {
+      "achievement_definitions.achievements_catalog_read": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "true",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "concept_interactions.concept_interactions_delete_own": {
+        "cmd": "DELETE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "concept_interactions.concept_interactions_insert_own": {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "qual": null,
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "concept_interactions.concept_interactions_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "concept_interactions.concept_interactions_update_own": {
+        "cmd": "UPDATE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "concepts.concepts_select_published": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(status = 'published'::text)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "daily_assignments.daily_assignments_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "device_tokens.device_tokens_delete_own": {
+        "cmd": "DELETE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "device_tokens.device_tokens_insert_own": {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "qual": null,
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "device_tokens.device_tokens_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "device_tokens.device_tokens_update_own": {
+        "cmd": "UPDATE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "notification_preferences.notification_preferences_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "notification_preferences.notification_preferences_update_own": {
+        "cmd": "UPDATE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "profiles.profiles_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "profiles.profiles_update_own": {
+        "cmd": "UPDATE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = id)",
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = id)"
+      },
+      "topics.topics_select_active": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "is_active",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "user_achievements.achievements_owner_read": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(user_id = auth.uid())",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "user_topics.user_topics_delete_own": {
+        "cmd": "DELETE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "user_topics.user_topics_insert_own": {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "qual": null,
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "user_topics.user_topics_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      }
+    },
+    "tables": {
+      "achievement_definitions": {
+        "rls": true
+      },
+      "concept_backlog": {
+        "rls": true
+      },
+      "concept_interactions": {
+        "rls": true
+      },
+      "concept_revisions": {
+        "rls": true
+      },
+      "concepts": {
+        "rls": true
+      },
+      "content_conditions": {
+        "rls": true
+      },
+      "content_retry_log": {
+        "rls": true
+      },
+      "content_supply_targets": {
+        "rls": true
+      },
+      "content_worker_runs": {
+        "rls": true
+      },
+      "daily_assignments": {
+        "rls": true
+      },
+      "daily_reviews": {
+        "rls": true
+      },
+      "device_tokens": {
+        "rls": true
+      },
+      "generation_daily_usage": {
+        "rls": true
+      },
+      "notification_preferences": {
+        "rls": true
+      },
+      "profiles": {
+        "rls": true
+      },
+      "reminder_log": {
+        "rls": true
+      },
+      "topics": {
+        "rls": true
+      },
+      "user_achievements": {
+        "rls": true
+      },
+      "user_topics": {
+        "rls": true
+      }
+    },
+    "triggers": {
+      "auth.users.on_auth_user_created": {
+        "definition": "CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user()",
+        "enabled": "O"
+      },
+      "public.concept_backlog.concept_backlog_touch_updated_at": {
+        "definition": "CREATE TRIGGER concept_backlog_touch_updated_at BEFORE UPDATE ON public.concept_backlog FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.concept_interactions.concept_interactions_touch_updated_at": {
+        "definition": "CREATE TRIGGER concept_interactions_touch_updated_at BEFORE UPDATE ON public.concept_interactions FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.notification_preferences.notification_preferences_touch_updated_at": {
+        "definition": "CREATE TRIGGER notification_preferences_touch_updated_at BEFORE UPDATE ON public.notification_preferences FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.profiles.profiles_touch_updated_at": {
+        "definition": "CREATE TRIGGER profiles_touch_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      }
+    }
+  }
+}

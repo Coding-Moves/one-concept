@@ -40,8 +40,10 @@ Production release flow. Keep it boring and repeatable.
    the full 40-character main commit SHA you verified on production API/workers
    in `backend_revision`. This is an operator attestation; the workflow does not
    inspect Railway deployments itself. Do not submit it until checks are complete.
-7. The workflow rejects another branch, an older deployment or a main revision
-   that advanced before validation. It then publishes production + preview OTA,
+7. The workflow first requires protected actual-schema verification (see
+   [setup and checks](docs/SCHEMA_VERIFICATION.md)). It rejects another branch,
+   an older deployment or a main revision that advanced before validation.
+   After those gates, it publishes production + preview OTA,
    cuts the version tag/GitHub Release, and dispatches the native-gated APK build.
    Do not merge another release while publication is running. The standalone
    EAS Update workflow publishes preview only; production uses this release path.
@@ -57,9 +59,12 @@ For each migration not yet applied to prod:
 2. Add its filename to **`backend/migrations/applied.txt`**.
 
 `.github/workflows/migrations.yml` fails on `main` and on release PRs if any migration
-isn't listed in `applied.txt`. It is a **required** check on `main`, so a release
-cannot merge with an unapplied migration. Migrations are immutable once applied —
-never edit an applied file; add a new one.
+isn't listed in `applied.txt`. That required filename check proves only that the
+operator recorded it. The main-only protected schema workflow and Railway
+pre-deploy check inspect actual database objects; follow
+[SCHEMA_VERIFICATION.md](docs/SCHEMA_VERIFICATION.md) to configure both gates.
+The Release workflow requires the protected check before publishing. Migrations
+are immutable once applied — never edit an applied file; add a new one.
 
 ## After a JS-only release
 Installed apps update over the air on next launch — no reinstall. The stable APK

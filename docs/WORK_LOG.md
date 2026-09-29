@@ -7,6 +7,32 @@ claims as completed work.
 
 ## Current status
 
+### #263 remote content-review dashboard — planning complete
+
+- Assigned scope: refine the parent issue and create dedicated sub-issues for
+  invited reviewer access, versioned human approval, review APIs, bounded AI
+  revisions, the branded web workspace, email deadlines, learner attribution
+  and free frontend deployment. This is issue planning, not implementation.
+- Reuse the existing editorial services and coordinate with #264 quality,
+  #255 staging, #256/#257 content packages and #171 email delivery. Preserve
+  existing published lessons without inventing reviewer provenance; new
+  content must pass exact-version human approval before learner publication.
+- Recommend static React/TypeScript/Vite on Cloudflare Pages Free with the
+  existing FastAPI/Supabase stack. Free frontend hosting does not remove
+  backend, AI or email quotas/costs. No paid setup or live deployment performed.
+- Delivery boundary: one focused future PR per child with small coherent
+  commits; no application-code commit is planned for this tracker-only task.
+  The unrelated mobile UI changes in the owner checkout remain untouched.
+- Updated [#263](https://github.com/Coding-Moves/one-concept/issues/263) and
+  created native sub-issues #274–#281 in the order above. Read-back verified
+  every body, all eight parent-child links and Muawiya-contact authorship.
+  Existing related issues remain separate dependencies. Whitespace check
+  passed; no application tests were needed because this task changes no code.
+- Next implementation slice: #274 reviewer identity plus the #275 provenance
+  contract, each in its own focused PR. Deadline length and email sender
+  feasibility remain explicit setup decisions. This local work-log note is
+  uncommitted; no unrelated branch or production setting was changed.
+
 ### #273 cohesive mobile UI/UX refinement — in progress
 
 - Scope: one dedicated mobile PR that builds on the merged #271 readability
@@ -23,6 +49,20 @@ claims as completed work.
 - Related issue #271 is already merged through PR #272. This PR must retain
   those fixes and close #273 only; it must not claim to close an issue that is
   already closed.
+- `24418cf` adds the semantic visual foundation, shared screen/surface
+  components, 44-point primary/follow controls, reduced-motion-aware tap
+  feedback, and the refined Today hierarchy. `83fe5de` clarifies Stats;
+  `a4e2ea2` refines History/Saved collection feedback; `2bbc20a` aligns
+  auth/profile states; `e41d649` aligns personalisation and About;
+  `0bc2ae3` replaces the recovery loop with a short entrance motion and makes
+  paused-sync recovery explicit. `86bbef6` updates the mocked browser coverage.
+- Passed: mobile TypeScript and all **69 Node 24** tests. A clean dummy-config
+  web export was produced at `/tmp/one-concept-273-web-final`; no production
+  service or user data was used. The optional mocked-browser scripts could not
+  run locally because Playwright is not installed. Android/iOS physical-device
+  checks for system font/display scaling, TalkBack/VoiceOver and reduced motion
+  remain required before release.
+- Next: push the dedicated branch and open a `develop` PR with `Closes #273`.
 
 ### #271 mobile readability and collection layout — ready for review
 

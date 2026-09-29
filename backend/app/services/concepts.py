@@ -44,6 +44,7 @@ async def get_concept_out(db: AsyncSession, user_id, slug: str) -> ConceptOut | 
         title=concept.title,
         summary=concept.summary,
         example=concept.example,
+        flashcard=concept.flashcard,
         topic_slug=topic_slug,
         topic_name=topic_name,
         subtopic_slug=subtopic_slug,

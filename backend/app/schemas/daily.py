@@ -10,6 +10,7 @@ class ConceptOut(BaseModel):
     title: str
     summary: str
     example: str | None = None
+    flashcard: dict[str, str] | None = None
     topic_slug: str
     topic_name: str
     subtopic_slug: str

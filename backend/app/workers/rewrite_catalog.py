@@ -58,6 +58,7 @@ _CLAIM = text("""
 _UPDATE = text("""
     update public.concept_revisions r set body=jsonb_build_object('title',c.title,
       'summary',cast(:summary as text),'example',cast(:example as text),
+      'flashcard',cast(:flashcard as jsonb),
       'subtopic_slug',cast(:subtopic_slug as text),
       'curriculum',c.curriculum,'model',cast(:model as text),'prompt_version',cast(:pv as text),
       'learning_package',cast(:learning_package as jsonb)),
@@ -180,6 +181,7 @@ async def main() -> None:
                             "revision": revision,
                             "summary": result.summary,
                             "example": result.example,
+                            "flashcard": result.learning_package.flashcard.model_dump_json(),
                             "subtopic_slug": row.subtopic_slug,
                             "model": result.model,
                             "pv": result.prompt_version,

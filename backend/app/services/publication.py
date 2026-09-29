@@ -124,7 +124,7 @@ async def publish_revision(
         text("""insert into public.concept_revisions
       (concept_id,base_version,body,status,review_note)
       select c.id,c.content_version-1,jsonb_build_object('title',c.title,
-        'summary',c.summary,'example',c.example,'curriculum',c.curriculum,
+        'summary',c.summary,'example',c.example,'flashcard',c.flashcard,'curriculum',c.curriculum,
         'subtopic_slug',s.slug,
         'model',c.model,'prompt_version',c.prompt_version),'published',
         'Legacy version captured before correction; original review was not recorded.'
@@ -136,7 +136,7 @@ async def publish_revision(
     )
     await session.execute(
         text("""update public.concepts set title=:title,summary=:summary,
-      example=:example,curriculum=cast(:curriculum as jsonb),difficulty=:difficulty,
+      example=:example,flashcard=cast(:flashcard as jsonb),curriculum=cast(:curriculum as jsonb),difficulty=:difficulty,
       model=:model,prompt_version=:prompt_version,content_version=content_version+1,
       status='published',published_at=now() where id=:id"""),
         {
@@ -144,6 +144,7 @@ async def publish_revision(
             "title": body.title,
             "summary": body.summary,
             "example": body.example,
+            "flashcard": body.learning_package.flashcard.model_dump_json(),
             "curriculum": body.curriculum.model_dump_json(),
             "difficulty": body.curriculum.difficulty,
             "model": body.model,

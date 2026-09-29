@@ -35,7 +35,7 @@ const server = http.createServer((req, res) => {
       const page = await context.newPage();
       page.on('pageerror', error => errors.push(error.message));
       await page.goto('http://127.0.0.1:4781');
-      await expect(page.getByText('Welcome back — sign in to pick up your streak.', {exact:true})).toBeVisible();
+      await expect(page.getByText('Welcome back', {exact:true})).toBeVisible();
       const password = page.getByPlaceholder('At least 6 characters');
       const show = page.getByRole('button', {name:'Show password', exact:true});
       const hide = page.getByRole('button', {name:'Hide password', exact:true});
@@ -86,7 +86,7 @@ const server = http.createServer((req, res) => {
       assert.equal(requests[1].body.password, value);
       release();
       await expect(page.getByText('Check your email', {exact:true})).toBeVisible();
-      await expect(page.getByText('Welcome back — sign in to pick up your streak.', {exact:true})).toBeVisible();
+      await expect(page.getByText('Welcome back', {exact:true})).toBeVisible();
       await expect(password).toHaveJSProperty('type', 'password');
       console.log(`PASS (${colorScheme}): in-flight requests mask/disable the field and signup returns masked`);
 

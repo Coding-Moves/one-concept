@@ -3,17 +3,33 @@ import uuid
 from unittest.mock import AsyncMock
 
 import pytest
+
 from app.services import pool
+from app.services.content_quality import QualityReview
 from app.services.curriculum import (
     PlannedLesson,
-    Subtopic,
     Subject,
+    Subtopic,
     import_lessons,
-    import_subtopics,
     import_subjects,
+    import_subtopics,
 )
 from app.services.generation import GeneratedConcept
-from app.services.publication import LessonBody, publish_revision, stage_revision
+from app.services.publication import LessonBody, stage_revision
+from app.services.publication import publish_revision as _publish_revision
+
+
+def _approved_review():
+    return QualityReview.model_validate({
+        "factual_accuracy": True, "usefulness": True, "clarity": True,
+        "topic_subtopic_accuracy": True, "example_quality": True,
+        "flashcard_quality": True, "mcq_quality": True, "references_checked": True,
+        "sensitive_topic_handling": "not_applicable",
+    })
+
+
+async def publish_revision(session, revision_id, reviewer, note):
+    return await _publish_revision(session, revision_id, reviewer, note, _approved_review())
 from sqlalchemy import text
 
 

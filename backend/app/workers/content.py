@@ -14,12 +14,13 @@ from pydantic import TypeAdapter
 from sqlalchemy import text
 
 from app.db.session import SessionLocal, engine
+from app.services.content_quality import QualityReview
 from app.services.curriculum import (
     PlannedLesson,
     Subject,
     import_lessons,
-    import_subtopics,
     import_subjects,
+    import_subtopics,
 )
 from app.services.publication import (
     LessonBody,
@@ -54,6 +55,9 @@ def parser():
         p.add_argument("revision", type=uuid.UUID)
         p.add_argument("--reviewed-by", required=True)
         p.add_argument("--note", required=True)
+        if name == "publish":
+            p.add_argument("--quality-review", required=True, type=Path,
+                           help="JSON human-review checklist for this exact draft")
     p = sub.add_parser("retry")
     p.add_argument("slug")
     p.add_argument("--operator", required=True)
@@ -113,7 +117,8 @@ async def run(args):
                 elif args.command == "publish":
                     result = {
                         "version": await publish_revision(
-                            session, args.revision, args.reviewed_by, args.note
+                            session, args.revision, args.reviewed_by, args.note,
+                            QualityReview.model_validate_json(args.quality_review.read_text())
                         )
                     }
                 elif args.command == "reject":

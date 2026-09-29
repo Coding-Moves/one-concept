@@ -243,3 +243,47 @@ from the retained version rather than rewriting history or dropping tables.
 An application rollback must retain the new tables and data. Rolling back to
 an old generator would bypass editorial gates; keep generation disabled until
 compatible workers are restored. Never delete review records to roll back a UI.
+
+## Content-quality gate
+
+Every new or corrected revision must include a learning package: one useful
+flashcard and exactly three multiple-choice questions. Each question has four
+distinct answers and one explicit correct index. The automated gate catches
+missing or malformed package fields, repeated flashcards/questions/options,
+invalid answer indexes, invalid Topic → Subtopic references, incomplete
+curriculum data, exact duplicates, and unsupported publication states. It does
+not certify facts, usefulness, or the plausibility of distractors.
+
+Before approval, a named human reviewer must inspect the exact revision and
+submit a JSON checklist. All checks must be `true`; `sensitive_topic_handling`
+must be explicitly `not_applicable` or `reviewed`. This immutable checklist and
+the substantive review note are stored only in the backend-only revision audit
+record. A reviewer must check factual accuracy against the listed references,
+usefulness, plain-language clarity, Topic → Subtopic fit, example relevance,
+flashcard recall value, all three MCQs, and sensitive-topic handling. Health,
+finance, legal, safety, or other consequential content requires the `reviewed`
+value and appropriate source scrutiny.
+
+```json
+{
+  "factual_accuracy": true,
+  "usefulness": true,
+  "clarity": true,
+  "topic_subtopic_accuracy": true,
+  "example_quality": true,
+  "flashcard_quality": true,
+  "mcq_quality": true,
+  "references_checked": true,
+  "sensitive_topic_handling": "not_applicable"
+}
+```
+
+Publish the reviewed draft with the checklist file; the command refuses drafts
+without it:
+
+```bash
+.venv/bin/python -m app.workers.content publish REVISION_UUID \
+  --reviewed-by 'Muawiya Amir' \
+  --note 'Checked claims, sources, example, flashcard, and every MCQ.' \
+  --quality-review quality-review.json
+```

@@ -11,6 +11,8 @@ export const scaleIcon = (n: number): number => Math.round(n * FONT_SCALE);
 export interface ThemeColors {
   background: string;
   surface: string;
+  /** A quiet inset surface for examples, selected metadata and inline states. */
+  surfaceSubtle: string;
   text: string;
   textSecondary: string;
   textMuted: string;
@@ -34,6 +36,7 @@ export interface ThemeColors {
 export const lightColors: ThemeColors = {
   background: '#F4F5FB',
   surface: '#FFFFFF',
+  surfaceSubtle: '#EEF0FF',
   text: '#171923',
   textSecondary: '#565D6D',
   textMuted: '#626B7D',
@@ -56,6 +59,7 @@ export const lightColors: ThemeColors = {
 export const darkColors: ThemeColors = {
   background: '#0A0C14',
   surface: '#141828',
+  surfaceSubtle: '#1D2242',
   text: '#F1F3F9',
   textSecondary: '#A6ADC0',
   textMuted: '#A0A9BC',
@@ -81,6 +85,15 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+};
+
+/** Minimum target size recommended by platform accessibility guidance. */
+export const touchTarget = 44;
+
+/** Short feedback timings keep actions responsive without becoming decoration. */
+export const motion = {
+  quick: 160,
+  standard: 220,
 };
 
 export const radius = {

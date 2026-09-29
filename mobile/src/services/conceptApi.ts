@@ -12,6 +12,7 @@ interface ConceptResponse {
   title: string;
   summary: string;
   example: string | null;
+  flashcard?: { front: string; back: string } | null;
   topic_slug: string;
   topic_name: string;
   like_count?: number;
@@ -31,6 +32,7 @@ async function downloadConcept(slug: string): Promise<Concept> {
     category: c.topic_name as Category,
     summary: c.summary,
     example: c.example ?? undefined,
+    flashcard: c.flashcard ?? undefined,
     likeCount: c.like_count ?? 0,
     contentVersion: c.content_version ?? 1,
   };

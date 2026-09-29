@@ -7,6 +7,8 @@ export interface Concept {
   summary: string;
   /** Optional concrete example that grounds the concept. */
   example?: string;
+  /** Optional reviewed recall prompt. Missing for legacy lessons. */
+  flashcard?: { front: string; back: string };
   /** Likes from other users; the viewer's own like is added on top for display. */
   likeCount?: number;
   contentVersion?: number;
@@ -59,6 +61,7 @@ export interface DailyPayload {
     title: string;
     summary: string;
     example: string | null;
+    flashcard?: { front: string; back: string } | null;
     topic_slug: string;
     topic_name: string;
     like_count?: number;

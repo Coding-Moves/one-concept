@@ -9,6 +9,7 @@ import { useHistory } from '../hooks/useHistory';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { CollectionConceptRow } from '../components/CollectionConceptRow';
 import { SearchField } from '../components/SearchField';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { SkeletonRow } from '../components/Skeleton';
 import { UnavailableState } from '../components/UnavailableState';
 import { useOnline } from '../context/ConnectivityContext';
@@ -17,7 +18,7 @@ import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
 import { RootStackParamList } from '../navigation';
 import { formatDateKey } from '../services/dates';
-import { scaleIcon, scaleFont, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, spacing, ThemeColors } from '../theme';
 import { Category, LearnedRecord } from '../types';
 
 
@@ -97,7 +98,11 @@ export function HistoryScreen() {
         contentContainerStyle={styles.content}
         ListHeaderComponent={
           <View style={styles.header}>
-            <Text style={styles.title}>History</Text>
+            <ScreenHeader
+              eyebrow="Your library"
+              title="History"
+              subtitle="Revisit the concepts you have learned."
+            />
             {refreshUI.action}
             <SearchField
               value={query}
@@ -161,10 +166,6 @@ const createStyles = (colors: ThemeColors) =>
     header: {
       gap: spacing.xs,
       marginBottom: spacing.lg,
-    },
-    title: {
-      ...typography.title,
-      color: colors.text,
     },
     subtitle: {
       fontSize: scaleFont(14),

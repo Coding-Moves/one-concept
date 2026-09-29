@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock
 from sqlalchemy import text
 
 from app.services import pool, selection
+from app.services.content_quality import QualityReview
 from app.services.curriculum import PlannedLesson, import_lessons
 from app.services.generation import GeneratedConcept
 from app.services.interactions import complete_today, set_followed_topics
@@ -15,6 +16,18 @@ from app.services.reviews import complete_review
 from app.services.selection import get_or_create_daily
 from app.services.streaks import compute_streaks
 from app.services.supply import signal_reader, target_for
+
+_APPROVED_QUALITY_REVIEW = QualityReview.model_validate({
+    "factual_accuracy": True,
+    "usefulness": True,
+    "clarity": True,
+    "topic_subtopic_accuracy": True,
+    "example_quality": True,
+    "flashcard_quality": True,
+    "mcq_quality": True,
+    "references_checked": True,
+    "sensitive_topic_handling": "not_applicable",
+})
 
 
 async def test_three_readers_learn_for_a_year_through_refills_and_outages(
@@ -134,6 +147,7 @@ async def test_three_readers_learn_for_a_year_through_refills_and_outages(
                     rid,
                     "Fixture reviewer",
                     "Verified simulated lesson and source for the yearly regression.",
+                    _APPROVED_QUALITY_REVIEW,
                 )
                 await session.commit()
             for uid in users:

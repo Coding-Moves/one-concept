@@ -5,6 +5,8 @@ import { useNavigation } from '@react-navigation/native';
 import { useMemo } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { FollowPill } from '../components/FollowPill';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { Surface } from '../components/Surface';
 import { UnavailableState } from '../components/UnavailableState';
 import { useOnline } from '../context/ConnectivityContext';
 import { useTheme } from '../context/ThemeContext';
@@ -22,19 +24,23 @@ export function PersonalizationScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
       {refreshUI.action}
-      <View style={styles.topBar}>
-        <Text style={styles.title}>Personalization</Text>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.6 }]}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        >
-          <Ionicons name="close" size={scaleIcon(24)} color={colors.text} />
-        </Pressable>
-      </View>
+      <ScreenHeader
+        eyebrow="Your learning plan"
+        title="Personalization"
+        subtitle="Choose the subjects that shape your next daily concept."
+        action={(
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.6 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Close personalization"
+          >
+            <Ionicons name="close" size={scaleIcon(24)} color={colors.text} />
+          </Pressable>
+        )}
+      />
 
-      <Text style={styles.sectionTitle}>Topics for you</Text>
+      <Text style={styles.sectionTitle}>Topics</Text>
       <Text style={styles.sectionHint}>
         Your daily concept is drawn from topics you follow. Changes apply from the next
         day’s concept.
@@ -52,7 +58,7 @@ export function PersonalizationScreen() {
       ) : topics.length === 0 ? (
         <Text style={styles.topicMeta}>No topics are available yet.</Text>
       ) : (
-        <View style={styles.list}>
+        <Surface style={styles.list}>
           {topics.map((topic, index) => (
             <View key={topic.slug}>
               {index > 0 && <View style={styles.separator} />}
@@ -65,7 +71,7 @@ export function PersonalizationScreen() {
               </View>
             </View>
           ))}
-        </View>
+        </Surface>
       )}
     </ScrollView>
   );
@@ -81,24 +87,17 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.lg,
       paddingBottom: spacing.xl,
     },
-    topBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: spacing.lg,
-    },
-    title: {
-      ...typography.title,
-      fontSize: scaleFont(24),
-      color: colors.text,
-    },
     closeButton: {
-      padding: spacing.xs,
+      minWidth: 44,
+      minHeight: 44,
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     sectionTitle: {
       ...typography.title,
       fontSize: scaleFont(22),
       color: colors.text,
+      marginTop: spacing.lg,
       marginBottom: spacing.xs,
     },
     sectionHint: {
@@ -109,6 +108,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     list: {
       gap: 0,
+      paddingVertical: spacing.xs,
     },
     separator: {
       height: 1,

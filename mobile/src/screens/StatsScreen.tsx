@@ -3,6 +3,8 @@ import { useRefreshControl } from '../hooks/useRefreshControl';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SkeletonBlock } from '../components/Skeleton';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { Surface } from '../components/Surface';
 import { StreakBadge } from '../components/StreakBadge';
 import { UnavailableState } from '../components/UnavailableState';
 import { useAuth } from '../context/AuthContext';
@@ -74,10 +76,11 @@ export function StatsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
       {refreshUI.action}
-      <View style={styles.header}>
-        <Text style={styles.title}>Stats</Text>
-        <Text style={styles.subtitle}>Your learning progress over time.</Text>
-      </View>
+      <ScreenHeader
+        eyebrow="Your progress"
+        title="Stats"
+        subtitle="The concepts and reviews you have completed."
+      />
 
       {loading || topicsLoading ? (
         <>
@@ -97,18 +100,18 @@ export function StatsScreen() {
             />
           ) : (
             <>
-              <View style={styles.card}>
+              <Surface style={styles.card}>
                 <View style={styles.overallRow}>
                   <Text style={styles.cardTitle}>Concepts learned</Text>
                   <Text style={styles.overallCount}>
                     {totalLearned}
                   </Text>
                 </View>
-              </View>
+              </Surface>
 
               <Text style={styles.sectionLabel}>By category</Text>
 
-              <View style={styles.card}>
+              <Surface style={styles.card}>
                 {categories.map((c) => (
                   <View key={c.label} style={styles.categoryBlock}>
                     <View style={styles.overallRow}>
@@ -119,17 +122,17 @@ export function StatsScreen() {
                     </View>
                   </View>
                 ))}
-              </View>
+              </Surface>
             </>
           )}
-          <View style={styles.reviewSummary}>
+          <Surface tone="subtle" style={styles.reviewSummary}>
             <Text style={styles.reviewCount}>
               {totalReviews == null ? 'Review activity unavailable' : totalReviews === 0
                 ? 'No reviews completed yet'
                 : `${totalReviews} ${totalReviews === 1 ? 'review' : 'reviews'} completed`}
             </Text>
             <Text style={styles.subtitle}>Reviews revisit a learned concept and count toward your streak.</Text>
-          </View>
+          </Surface>
         </>
       )}
     </ScrollView>
@@ -147,13 +150,6 @@ const createStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.xl,
       gap: spacing.lg,
     },
-    header: {
-      gap: spacing.xs,
-    },
-    title: {
-      ...typography.title,
-      color: colors.text,
-    },
     subtitle: {
       fontSize: scaleFont(14),
       color: colors.textMuted,
@@ -167,9 +163,6 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: -spacing.sm,
     },
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      padding: spacing.lg,
       gap: spacing.md,
     },
     cardTitle: {
@@ -206,7 +199,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     reviewSummary: {
       gap: spacing.xs,
-      paddingHorizontal: spacing.xs,
+      padding: spacing.md,
     },
     reviewCount: {
       fontSize: scaleFont(14),

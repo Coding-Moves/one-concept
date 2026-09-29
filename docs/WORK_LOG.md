@@ -1294,3 +1294,24 @@ Copy this structure when a task is assigned; replace placeholders with facts.
 - **Validation (passed / failed / skipped / not run):**
 - **Remaining work or blockers:**
 - **Handoff / next step:**
+
+### #264 production content-quality gate — in progress
+
+- Investigation confirmed #260 is merged into `develop`; the current pipeline
+  classified topics/subtopics and preserved a human publication gate, but only
+  generated a summary/example and recorded a free-form review note. It could
+  not demonstrate review of flashcards, three MCQs, sensitive-topic handling,
+  or each quality criterion.
+- `bdda622` adds strict generated learning-package validation: one non-repetitive
+  flashcard, exactly three distinct MCQs, four distinct options per question,
+  and a valid answer index. Gemini receives the matching structured-output
+  schema; malformed output remains a draft-generation failure. `ece01fa` adds
+  immutable backend-only quality-review evidence to each approved revision and
+  requires the protected CLI publish command to read the complete checklist.
+- The gate validates structure and records human judgment; it never claims that
+  automation proves factual accuracy. Existing published content is untouched.
+- Passed locally: focused generation and quality tests (19 passed, 13 database
+  tests skipped before disposable PostgreSQL startup), then the disposable
+  PostgreSQL 16 schema-contract migration test. Next: run the publication and
+  full backend tests, add the operations checklist, push and open the dedicated
+  `develop` PR with `Closes #264`.

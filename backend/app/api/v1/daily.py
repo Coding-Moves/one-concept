@@ -57,6 +57,7 @@ async def get_daily(
             title=concept.title,
             summary=concept.summary,
             example=concept.example,
+            flashcard=concept.flashcard,
             topic_slug=concept.topic_slug,
             topic_name=concept.topic_name,
             subtopic_slug=concept.subtopic_slug,

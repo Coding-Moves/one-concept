@@ -45,6 +45,7 @@ def _daily_out_or_none(result: DailyResult) -> DailyOut | None:
         outside_followed_topics=result.outside_followed_topics,
         concept=ConceptOut(
             id=c.id, slug=c.slug, title=c.title, summary=c.summary, example=c.example,
+            flashcard=c.flashcard,
             topic_slug=c.topic_slug, topic_name=c.topic_name, like_count=c.like_count,
             subtopic_slug=c.subtopic_slug, subtopic_name=c.subtopic_name,
             content_version=c.content_version,

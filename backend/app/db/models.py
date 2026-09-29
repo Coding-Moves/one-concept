@@ -85,6 +85,9 @@ class Concept(Base):
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     example: Mapped[str | None] = mapped_column(Text)
+    # Optional for legacy lessons. New approved revisions carry a reviewed
+    # front/back recall pair (migration 0021).
+    flashcard: Mapped[dict | None] = mapped_column(JSONB)
     difficulty: Mapped[int | None] = mapped_column(SmallInteger)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="published")
     source: Mapped[str] = mapped_column(Text, nullable=False, default="seed")

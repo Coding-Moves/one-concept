@@ -35,6 +35,7 @@ class ConceptPayload:
     title: str
     summary: str
     example: str | None
+    flashcard: dict[str, str] | None
     topic_slug: str
     topic_name: str
     subtopic_slug: str
@@ -64,7 +65,7 @@ _TODAY = text("""
 
 _EXISTING = text("""
     select a.assigned_for, a.assigned_at, a.completed_at,
-           c.id, c.slug, c.title, c.summary, c.example, c.content_version,
+           c.id, c.slug, c.title, c.summary, c.example, c.flashcard, c.content_version,
            t.slug as topic_slug, t.name as topic_name,
            s.slug as subtopic_slug, s.name as subtopic_name,
            (select count(*) from public.concept_interactions ci
@@ -165,6 +166,7 @@ def _row_to_result(row, outside: bool) -> DailyResult:
             title=row.title,
             summary=row.summary,
             example=row.example,
+            flashcard=row.flashcard,
             topic_slug=row.topic_slug,
             topic_name=row.topic_name,
             subtopic_slug=row.subtopic_slug,

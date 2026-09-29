@@ -18,6 +18,7 @@ export function toConcept(payload: DailyPayload): Concept {
     category: payload.concept.topic_name as Category,
     summary: payload.concept.summary,
     example: payload.concept.example ?? undefined,
+    flashcard: payload.concept.flashcard ?? undefined,
     likeCount: payload.concept.like_count ?? 0,
     contentVersion: payload.concept.content_version ?? 1,
   };

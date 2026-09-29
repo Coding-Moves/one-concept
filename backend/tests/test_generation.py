@@ -13,7 +13,13 @@ import pytest
 from sqlalchemy import text
 
 from app.services import generation, pool, selection
-from app.services.generation import GenerationError, RateLimitedError, build_prompt, generate_concept, validate
+from app.services.generation import (
+    GenerationError,
+    RateLimitedError,
+    build_prompt,
+    generate_concept,
+    validate,
+)
 from app.services.interactions import set_followed_topics
 from app.services.pool import generate_one, top_up
 from app.services.selection import get_or_create_daily
@@ -87,7 +93,7 @@ def test_prompt_carries_title_topic_and_angle():
 # ---------------------------------------------------------------- validation
 
 def test_validation_accepts_good_output():
-    summary, example = validate({"summary": GOOD_SUMMARY, "example": GOOD_EXAMPLE}, "x")
+    summary, _example = validate({"summary": GOOD_SUMMARY, "example": GOOD_EXAMPLE}, "x")
     assert summary == GOOD_SUMMARY
 
 

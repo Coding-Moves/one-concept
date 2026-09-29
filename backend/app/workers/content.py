@@ -14,14 +14,14 @@ from pydantic import TypeAdapter
 from sqlalchemy import text
 
 from app.db.session import SessionLocal, engine
+from app.services.content_quality import QualityReview
 from app.services.curriculum import (
     PlannedLesson,
     Subject,
     import_lessons,
-    import_subtopics,
     import_subjects,
+    import_subtopics,
 )
-from app.services.content_quality import QualityReview
 from app.services.publication import (
     LessonBody,
     publish_revision,

@@ -7,6 +7,23 @@ claims as completed work.
 
 ## Current status
 
+### #273 cohesive mobile UI/UX refinement — in progress
+
+- Scope: one dedicated mobile PR that builds on the merged #271 readability
+  fixes. It will establish a small shared visual foundation, apply it across
+  learning, collections, progress, profile, authentication and recovery
+  surfaces, and preserve the existing account, offline and API behaviours.
+- Planned commits: visual tokens and shared feedback primitives; learning and
+  collection screens; progress and profile/account surfaces; accessibility and
+  regression coverage; then the PR handoff. No native dependency, release
+  version, backend, schema or production change is part of this work.
+- Expo SDK 57 documentation was reviewed before mobile implementation. The
+  project can use the built-in React Native Animated API for short motion, so
+  this work will not add a native animation dependency.
+- Related issue #271 is already merged through PR #272. This PR must retain
+  those fixes and close #273 only; it must not claim to close an issue that is
+  already closed.
+
 ### #271 mobile readability and collection layout — ready for review
 
 - [PR #272](https://github.com/Coding-Moves/one-concept/pull/272) targets

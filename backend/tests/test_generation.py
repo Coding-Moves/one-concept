@@ -40,10 +40,21 @@ def _stub_transport(payload=None, status=200, body_text=None):
     return httpx.MockTransport(handler)
 
 
+def _learning_package():
+    return {
+        "flashcard": {"front": "What durable record makes crash recovery possible?", "back": "A write-ahead log records intended durable changes before applying them."},
+        "mcqs": [
+            {"question": "What does a write-ahead log record first?", "options": ["An intended change", "A random file", "A user password", "A network address"], "correct_index": 0},
+            {"question": "Why is a write-ahead log useful after a crash?", "options": ["It supports recovery", "It hides errors", "It removes backups", "It disables commits"], "correct_index": 0},
+            {"question": "Which system property does a write-ahead log support?", "options": ["Durability", "Screen brightness", "Keyboard layout", "Email delivery"], "correct_index": 0},
+        ],
+    }
+
+
 def _gemini_response(summary, example):
     return {
         "candidates": [
-            {"content": {"parts": [{"text": json.dumps({"summary": summary, "example": example})}]}}
+            {"content": {"parts": [{"text": json.dumps({"summary": summary, "example": example, "learning_package": _learning_package()})}]}}
         ]
     }
 

@@ -115,7 +115,8 @@ _PUBLISH = text("""
         insert into public.concept_revisions(concept_id,base_version,body)
         select id,0,jsonb_build_object('title',title,'summary',summary,'example',example,
           'subtopic_slug',cast(:subtopic_slug as text),'curriculum',curriculum,
-          'model',model,'prompt_version',prompt_version)
+          'model',model,'prompt_version',prompt_version,
+          'learning_package',cast(:learning_package as jsonb))
         from inserted returning id
     )
     update public.concept_backlog
@@ -250,6 +251,7 @@ async def generate_one(
                 "prompt_version": result.prompt_version,
                 "backlog_id": claimed.id,
                 "curriculum": json.dumps(claimed.curriculum),
+                "learning_package": result.learning_package.model_dump_json(),
             },
         )
     ).scalar_one_or_none()

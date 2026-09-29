@@ -59,7 +59,8 @@ _UPDATE = text("""
     update public.concept_revisions r set body=jsonb_build_object('title',c.title,
       'summary',cast(:summary as text),'example',cast(:example as text),
       'subtopic_slug',cast(:subtopic_slug as text),
-      'curriculum',c.curriculum,'model',cast(:model as text),'prompt_version',cast(:pv as text)),
+      'curriculum',c.curriculum,'model',cast(:model as text),'prompt_version',cast(:pv as text),
+      'learning_package',cast(:learning_package as jsonb)),
       status='draft'
     from public.concepts c where r.id=:revision and r.concept_id=c.id
       and r.status='generating' and c.content_version=r.base_version
@@ -182,6 +183,7 @@ async def main() -> None:
                             "subtopic_slug": row.subtopic_slug,
                             "model": result.model,
                             "pv": result.prompt_version,
+                            "learning_package": result.learning_package.model_dump_json(),
                         },
                     )
                     await session.commit()

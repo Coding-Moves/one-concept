@@ -11,14 +11,16 @@ pool topped up — so nobody waits on a model to read their daily concept.
 import json
 import logging
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 import httpx
+
+from app.services.content_quality import LearningPackage
 
 log = logging.getLogger(__name__)
 
 # Bump when the prompt changes so content can be found and regenerated later.
-PROMPT_VERSION = "2026-08-v2"
+PROMPT_VERSION = "2026-09-v3-quality"
 
 SUMMARY_MIN, SUMMARY_MAX = 100, 420
 EXAMPLE_MIN, EXAMPLE_MAX = 40, 300
@@ -75,8 +77,22 @@ _RESPONSE_SCHEMA = {
     "properties": {
         "summary": {"type": "string"},
         "example": {"type": "string"},
+        "learning_package": {
+            "type": "object",
+            "properties": {
+                "flashcard": {"type": "object", "properties": {
+                    "front": {"type": "string"}, "back": {"type": "string"}},
+                    "required": ["front", "back"]},
+                "mcqs": {"type": "array", "minItems": 3, "maxItems": 3,
+                    "items": {"type": "object", "properties": {
+                        "question": {"type": "string"},
+                        "options": {"type": "array", "minItems": 4, "maxItems": 4,
+                                    "items": {"type": "string"}},
+                        "correct_index": {"type": "integer", "minimum": 0, "maximum": 3}},
+                        "required": ["question", "options", "correct_index"]}}
+            }, "required": ["flashcard", "mcqs"]},
     },
-    "required": ["summary", "example"],
+    "required": ["summary", "example", "learning_package"],
 }
 
 
@@ -104,11 +120,24 @@ def _retry_after_seconds(response: httpx.Response) -> float | None:
     return float(match.group(1)) if match else None
 
 
+def _fixture_learning_package() -> LearningPackage:
+    """Fallback keeps non-network unit fixtures valid; live generation replaces it."""
+    return LearningPackage.model_validate({
+        "flashcard": {"front": "What should a learner recall from this concept?", "back": "Recall the core idea and apply it to a concrete situation."},
+        "mcqs": [
+            {"question": "Which statement best matches the concept described?", "options": ["The stated core idea", "An unrelated claim", "A contradictory claim", "A random fact"], "correct_index": 0},
+            {"question": "What is a useful way to apply this concept?", "options": ["Use the described practice", "Ignore the context", "Reverse the definition", "Choose an unrelated action"], "correct_index": 0},
+            {"question": "What should the learner verify before using this idea?", "options": ["That the situation matches", "Nothing at all", "Only the title", "An unrelated metric"], "correct_index": 0},
+        ],
+    })
+
+
 @dataclass
 class GeneratedConcept:
     summary: str
     example: str
     model: str
+    learning_package: LearningPackage = field(default_factory=_fixture_learning_package)
     prompt_version: str = PROMPT_VERSION
 
 
@@ -122,7 +151,7 @@ def build_prompt(
         f"Topic area: {topic_name}\n"
         f"Subtopic: {subtopic_name or 'Not specified'}\n"
         f"Title: {title}{steer}\n\n"
-        "Return JSON with exactly the keys \"summary\" and \"example\"."
+        "Also include learning_package: a non-repetitive flashcard and exactly three MCQs. Each MCQ needs four distinct options and correct_index 0-3. Return JSON matching the requested schema."
     )
 
 
@@ -217,4 +246,8 @@ async def generate_concept(
         raise GenerationError(f"response was not valid JSON: {exc}") from exc
 
     summary, example = validate(payload, title)
-    return GeneratedConcept(summary=summary, example=example, model=model)
+    try:
+        learning_package = LearningPackage.model_validate(payload.get("learning_package"))
+    except Exception as exc:
+        raise GenerationError(f"invalid learning package: {exc}") from exc
+    return GeneratedConcept(summary=summary, example=example, model=model, learning_package=learning_package)

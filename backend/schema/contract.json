@@ -20,7 +20,8 @@
     "0018_classify_legacy_backlog.sql": "1ee81d184523c781d86bf6491b40858367e3b2732c7d9ad5dc0116a454d41c9d",
     "0019_subtopic_topic_cleanup.sql": "94fa1264d21e5ba721cc01a8c0df7da1c9f5d1c782d75160778a7327c4c6a52e",
     "0020_content_quality_gate.sql": "8452e75646811903df08c85bb03221084292fe81a67428d12734f4fb2a41f04c",
-    "0021_concept_flashcards.sql": "7bb00f50cbe6e16d0b70411128d25b2cf5a25e0962b6603402f0c8c692248a95"
+    "0021_concept_flashcards.sql": "7bb00f50cbe6e16d0b70411128d25b2cf5a25e0962b6603402f0c8c692248a95",
+    "0022_weekly_quizzes.sql": "8faf72df5585b9f163fdf2514131b792bf14b743187520881ab3bad1a62bf8c7"
   },
   "schema": {
     "columns": {
@@ -281,6 +282,12 @@
         "identity": "",
         "not_null": true,
         "type": "uuid"
+      },
+      "concepts.mcqs": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "jsonb"
       },
       "concepts.model": {
         "default": null,
@@ -803,6 +810,72 @@
         "identity": "",
         "not_null": true,
         "type": "uuid"
+      },
+      "weekly_quiz_attempts.answers": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "weekly_quiz_attempts.attempted_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "weekly_quiz_attempts.correct_count": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "weekly_quiz_attempts.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_attempts.quiz_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_attempts.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quizzes.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "weekly_quizzes.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quizzes.questions": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "weekly_quizzes.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quizzes.week_start": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
       }
     },
     "constraints": {
@@ -1085,6 +1158,34 @@
       "user_topics.user_topics_user_id_fkey": {
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
+      },
+      "weekly_quiz_attempts.weekly_quiz_attempts_correct_count_check": {
+        "definition": "CHECK (((correct_count >= 0) AND (correct_count <= 7)))",
+        "validated": true
+      },
+      "weekly_quiz_attempts.weekly_quiz_attempts_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "weekly_quiz_attempts.weekly_quiz_attempts_quiz_id_fkey": {
+        "definition": "FOREIGN KEY (quiz_id) REFERENCES public.weekly_quizzes(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "weekly_quiz_attempts.weekly_quiz_attempts_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "weekly_quizzes.weekly_quizzes_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "weekly_quizzes.weekly_quizzes_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "weekly_quizzes.weekly_quizzes_user_id_week_start_key": {
+        "definition": "UNIQUE (user_id, week_start)",
+        "validated": true
       }
     },
     "functions": {
@@ -1325,6 +1426,31 @@
         "definition": "CREATE UNIQUE INDEX user_topics_pkey ON public.user_topics USING btree (user_id, topic_id)",
         "ready": true,
         "valid": true
+      },
+      "weekly_quiz_attempts_history_idx": {
+        "definition": "CREATE INDEX weekly_quiz_attempts_history_idx ON public.weekly_quiz_attempts USING btree (user_id, attempted_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quiz_attempts_pkey": {
+        "definition": "CREATE UNIQUE INDEX weekly_quiz_attempts_pkey ON public.weekly_quiz_attempts USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quizzes_owner_week_idx": {
+        "definition": "CREATE INDEX weekly_quizzes_owner_week_idx ON public.weekly_quizzes USING btree (user_id, week_start DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quizzes_pkey": {
+        "definition": "CREATE UNIQUE INDEX weekly_quizzes_pkey ON public.weekly_quizzes USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quizzes_user_id_week_start_key": {
+        "definition": "CREATE UNIQUE INDEX weekly_quizzes_user_id_week_start_key ON public.weekly_quizzes USING btree (user_id, week_start)",
+        "ready": true,
+        "valid": true
       }
     },
     "policies": {
@@ -1529,6 +1655,12 @@
       },
       "user_topics": {
         "rls": true
+      },
+      "weekly_quiz_attempts": {
+        "rls": true
+      },
+      "weekly_quizzes": {
+        "rls": true
       }
     },
     "triggers": {
@@ -1558,6 +1690,10 @@
       },
       "public.profiles.profiles_touch_updated_at": {
         "definition": "CREATE TRIGGER profiles_touch_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.weekly_quiz_attempts.weekly_quiz_attempts_immutable": {
+        "definition": "CREATE TRIGGER weekly_quiz_attempts_immutable BEFORE DELETE OR UPDATE ON public.weekly_quiz_attempts FOR EACH ROW EXECUTE FUNCTION public.reject_weekly_quiz_attempt_mutation()",
         "enabled": "O"
       }
     }

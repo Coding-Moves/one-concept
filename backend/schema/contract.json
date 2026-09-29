@@ -18,7 +18,8 @@
     "0016_achievements.sql": "b2d4e2d053d57fe7b10289610896a612f066d65380a3ea806ac8ae8e8c2e012b",
     "0017_topic_subtopics.sql": "6ae4b04f79ee145404af4d551cdd12d7725696f800bd367f15a9176309149f62",
     "0018_classify_legacy_backlog.sql": "1ee81d184523c781d86bf6491b40858367e3b2732c7d9ad5dc0116a454d41c9d",
-    "0019_subtopic_topic_cleanup.sql": "94fa1264d21e5ba721cc01a8c0df7da1c9f5d1c782d75160778a7327c4c6a52e"
+    "0019_subtopic_topic_cleanup.sql": "94fa1264d21e5ba721cc01a8c0df7da1c9f5d1c782d75160778a7327c4c6a52e",
+    "0020_content_quality_gate.sql": "8452e75646811903df08c85bb03221084292fe81a67428d12734f4fb2a41f04c"
   },
   "schema": {
     "columns": {
@@ -207,6 +208,12 @@
         "identity": "",
         "not_null": true,
         "type": "uuid"
+      },
+      "concept_revisions.quality_review": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "jsonb"
       },
       "concept_revisions.review_note": {
         "default": null,

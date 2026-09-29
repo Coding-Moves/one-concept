@@ -6,6 +6,7 @@ from pydantic import Field
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.content_quality import LearningPackage, QualityReview
 from app.services.curriculum import (
     Curriculum,
     StrictModel,
@@ -21,6 +22,7 @@ class LessonBody(StrictModel):
     example: str = Field(min_length=40, max_length=500)
     subtopic_slug: str = Field(pattern=r"^[a-z0-9]+(?:-[a-z0-9]+)*$", max_length=120)
     curriculum: Curriculum
+    learning_package: LearningPackage
     model: str | None = None
     prompt_version: str | None = None
 
@@ -57,7 +59,8 @@ async def stage_revision(
 
 
 async def publish_revision(
-    session: AsyncSession, revision_id: uuid.UUID, reviewer: str, note: str
+    session: AsyncSession, revision_id: uuid.UUID, reviewer: str, note: str,
+    quality_review: QualityReview,
 ) -> int:
     if not reviewer.strip() or len(note.strip()) < 10:
         raise ValueError(
@@ -149,8 +152,9 @@ async def publish_revision(
     )
     await session.execute(
         text("""update public.concept_revisions set status='published',
-      reviewed_by=:reviewer,review_note=:note,reviewed_at=now() where id=:id"""),
-        {"id": revision_id, "reviewer": reviewer.strip(), "note": note.strip()},
+      reviewed_by=:reviewer,review_note=:note,quality_review=cast(:quality_review as jsonb),reviewed_at=now() where id=:id"""),
+        {"id": revision_id, "reviewer": reviewer.strip(), "note": note.strip(),
+         "quality_review": quality_review.model_dump_json()},
     )
     return row.content_version + 1
 

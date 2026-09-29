@@ -155,6 +155,7 @@ export function SavedScreen() {
                     onPress={() => setCategory(item)}
                     style={[styles.filterChip, active && styles.filterChipActive]}
                     accessibilityRole="button"
+                    accessibilityLabel={`Show ${item === ALL ? 'all saved concepts' : `saved concepts in ${item}`}`}
                     accessibilityState={{ selected: active }}
                   >
                     <Text style={[styles.filterText, active && styles.filterTextActive]}>

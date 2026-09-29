@@ -68,9 +68,14 @@ All screens live in `mobile/src/screens/`. Reusable presentation in
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.
+`ScreenHeader` supplies the common eyebrow/title/supporting-copy hierarchy and
+`Surface` supplies the borderless elevated containers. `useReducedMotion` gates
+tap feedback, while `UnavailableState` uses a single short entrance motion and
+`SyncStatusBanner` gives paused offline writes a clear retry action.
 Saved uses a non-shrinking horizontal ScrollView for its short filter rail, with
 content-driven chip height and separate virtualized lesson rows.
-`src/theme/index.ts` defines readable text/control colors and completion colors.
+`src/theme/index.ts` defines readable text/control, success, danger and subtle
+surface colours plus touch-target and motion constants.
 Only Today’s green completion pill has a half-point UI outline; other containers
 use borderless surfaces and spacing. The theme also defines spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.

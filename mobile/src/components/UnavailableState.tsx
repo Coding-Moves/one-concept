@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, Animated, AppState, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 import { classifyRecoveryError } from '../api/errorRecovery';
 import { useTheme } from '../context/ThemeContext';
-import { radius, scaleFont, spacing, typography } from '../theme';
+import { motion, radius, scaleFont, spacing, typography } from '../theme';
 import { PrimaryButton } from './PrimaryButton';
 import { contactSupport } from './support';
 
@@ -40,10 +40,12 @@ export function UnavailableState({ offline, message, error, onRetry }: Props) {
 
   useEffect(() => {
     if (reduceMotion || !focused || !foreground || !isOffline) return;
-    const timing = (toValue: number) => Animated.timing(float, {
-      toValue, duration: 1400, useNativeDriver: Platform.OS !== 'web', isInteraction: false,
+    // One entrance acknowledgement gives the unavailable state a gentle handoff
+    // without a perpetual decorative loop or a distraction during recovery.
+    const timing = (toValue: number, duration: number) => Animated.timing(float, {
+      toValue, duration, useNativeDriver: Platform.OS !== 'web', isInteraction: false,
     });
-    const animation = Animated.loop(Animated.sequence([timing(-6), timing(0)]));
+    const animation = Animated.sequence([timing(-4, motion.standard), timing(0, motion.quick)]);
     animation.start();
     return () => { animation.stop(); float.setValue(0); };
   }, [float, reduceMotion, focused, foreground, isOffline]);

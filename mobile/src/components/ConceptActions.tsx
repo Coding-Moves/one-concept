@@ -3,12 +3,14 @@ import { useMemo, useRef } from 'react';
 import { Animated, Pressable, Share, StyleSheet, Text, View } from 'react-native';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
+import { useReducedMotion } from '../hooks/useReducedMotion';
 import { scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 
-function usePop() {
+function usePop(reducedMotion: boolean) {
   const scale = useRef(new Animated.Value(1)).current;
   const pop = () => {
+    if (reducedMotion) return;
     scale.setValue(0.7);
     Animated.spring(scale, {
       toValue: 1,
@@ -25,14 +27,15 @@ export function ConceptActions({ concept }: { concept: Concept }) {
   const { progress, toggleLike, toggleBookmark } = useProgress();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const reducedMotion = useReducedMotion();
 
   const liked = progress.likes.includes(concept.id);
   const saved = progress.bookmarks.includes(concept.id);
   // Others' likes (from the server) plus the viewer's own, optimistically — so
   // the number ticks up/down the instant you tap (issue #95). Hidden at zero.
   const likeTotal = (concept.likeCount ?? 0) + (liked ? 1 : 0);
-  const like = usePop();
-  const save = usePop();
+  const like = usePop(reducedMotion);
+  const save = usePop(reducedMotion);
 
   const onShare = async () => {
     try {

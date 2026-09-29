@@ -1,16 +1,17 @@
 import { useMemo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
+import { scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 import { CategoryChip } from './CategoryChip';
+import { Surface } from './Surface';
 
 export function ConceptCard({ concept }: { concept: Concept }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
 
   return (
-    <View style={styles.card}>
+    <Surface style={styles.card}>
       <CategoryChip category={concept.category} />
       <Text style={styles.title}>{concept.title}</Text>
       <Text style={styles.summary}>{concept.summary}</Text>
@@ -20,18 +21,15 @@ export function ConceptCard({ concept }: { concept: Concept }) {
           <Text style={styles.exampleText}>{concept.example}</Text>
         </View>
       ) : null}
-    </View>
+    </Surface>
   );
 }
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     card: {
-      backgroundColor: colors.surface,
       borderRadius: radius.xl,
-      padding: spacing.lg,
       gap: spacing.md,
-      ...shadows.card,
     },
     title: {
       fontSize: scaleFont(24),
@@ -45,7 +43,7 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.textSecondary,
     },
     exampleBox: {
-      backgroundColor: colors.categoryChip,
+      backgroundColor: colors.surfaceSubtle,
       borderRadius: radius.md,
       padding: spacing.md,
       gap: spacing.xs,

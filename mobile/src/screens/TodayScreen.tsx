@@ -8,6 +8,7 @@ import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { StreakBadge } from '../components/StreakBadge';
 import { UnavailableState } from '../components/UnavailableState';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +16,7 @@ import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { toConcept } from '../services/dailyApi';
-import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 
 export function TodayScreen() {
   const {
@@ -61,24 +62,26 @@ export function TodayScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
       {refreshUI.action}
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.appName}>One Concept</Text>
-          <Text style={styles.tagline}>One day. One concept. One small step forward.</Text>
-        </View>
-        <Pressable
-          onPress={toggle}
-          style={({ pressed }) => [styles.themeButton, pressed && styles.themeButtonPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          <Ionicons
-            name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
-            size={scaleIcon(20)}
-            color={colors.textSecondary}
-          />
-        </Pressable>
-      </View>
+      <ScreenHeader
+        eyebrow="Daily learning"
+        title="One Concept"
+        large
+        subtitle="One day. One concept. One small step forward."
+        action={(
+          <Pressable
+            onPress={toggle}
+            style={({ pressed }) => [styles.themeButton, pressed && styles.themeButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <Ionicons
+              name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
+              size={scaleIcon(20)}
+              color={colors.textSecondary}
+            />
+          </Pressable>
+        )}
+      />
 
       {loading ? (
         <>
@@ -175,29 +178,9 @@ const createStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.xl,
       gap: spacing.lg,
     },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: spacing.md,
-    },
-    headerText: {
-      gap: spacing.xs,
-      flexShrink: 1,
-    },
-    appName: {
-      ...typography.title,
-      fontSize: scaleFont(30),
-      color: colors.text,
-    },
-    tagline: {
-      fontSize: scaleFont(13.5),
-      lineHeight: scaleFont(19),
-      color: colors.textMuted,
-    },
     themeButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: radius.pill,
       backgroundColor: colors.surface,
       alignItems: 'center',

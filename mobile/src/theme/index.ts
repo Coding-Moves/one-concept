@@ -11,6 +11,8 @@ export const scaleIcon = (n: number): number => Math.round(n * FONT_SCALE);
 export interface ThemeColors {
   background: string;
   surface: string;
+  /** A quiet inset surface for examples, selected metadata and inline states. */
+  surfaceSubtle: string;
   text: string;
   textSecondary: string;
   textMuted: string;
@@ -22,6 +24,8 @@ export interface ThemeColors {
   success: string;
   successSurface: string;
   successBorder: string;
+  danger: string;
+  dangerSurface: string;
   streak: string;
   /** The Like heart — deliberately rose, not the streak's orange flame (#114). */
   like: string;
@@ -34,6 +38,7 @@ export interface ThemeColors {
 export const lightColors: ThemeColors = {
   background: '#F4F5FB',
   surface: '#FFFFFF',
+  surfaceSubtle: '#EEF0FF',
   text: '#171923',
   textSecondary: '#565D6D',
   textMuted: '#626B7D',
@@ -45,6 +50,8 @@ export const lightColors: ThemeColors = {
   success: '#137A3A',
   successSurface: '#E9F8EF',
   successBorder: '#137A3A',
+  danger: '#C81E3A',
+  dangerSurface: '#FFF0F2',
   streak: '#F97316',
   like: '#E11D48',
   border: '#E9EBF4',
@@ -56,6 +63,7 @@ export const lightColors: ThemeColors = {
 export const darkColors: ThemeColors = {
   background: '#0A0C14',
   surface: '#141828',
+  surfaceSubtle: '#1D2242',
   text: '#F1F3F9',
   textSecondary: '#A6ADC0',
   textMuted: '#A0A9BC',
@@ -67,6 +75,8 @@ export const darkColors: ThemeColors = {
   success: '#34D399',
   successSurface: '#10291F',
   successBorder: '#34D399',
+  danger: '#FB7185',
+  dangerSurface: '#3A1520',
   streak: '#FB923C',
   like: '#FB7185',
   border: '#20263D',
@@ -81,6 +91,15 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+};
+
+/** Minimum target size recommended by platform accessibility guidance. */
+export const touchTarget = 44;
+
+/** Short feedback timings keep actions responsive without becoming decoration. */
+export const motion = {
+  quick: 160,
+  standard: 220,
 };
 
 export const radius = {

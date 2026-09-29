@@ -5,6 +5,7 @@ import Constants from 'expo-constants';
 import { useMemo } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { API_BASE_URL } from '../api/client';
 import { scaleIcon, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
@@ -50,17 +51,21 @@ export function AboutScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <View style={styles.topBar}>
-        <Text style={styles.title}>About</Text>
-        <Pressable
-          onPress={() => navigation.goBack()}
-          style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.6 }]}
-          accessibilityRole="button"
-          accessibilityLabel="Close"
-        >
-          <Ionicons name="close" size={scaleIcon(24)} color={colors.text} />
-        </Pressable>
-      </View>
+      <ScreenHeader
+        eyebrow="One Concept"
+        title="About"
+        subtitle="A small daily learning habit, built in public."
+        action={(
+          <Pressable
+            onPress={() => navigation.goBack()}
+            style={({ pressed }) => [styles.closeButton, pressed && { opacity: 0.6 }]}
+            accessibilityRole="button"
+            accessibilityLabel="Close About"
+          >
+            <Ionicons name="close" size={scaleIcon(24)} color={colors.text} />
+          </Pressable>
+        )}
+      />
 
       <View style={styles.hero}>
         <View style={styles.badge}>
@@ -141,15 +146,8 @@ const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
     screen: { flex: 1, backgroundColor: colors.background },
     content: { padding: spacing.lg, paddingBottom: spacing.xl },
-    topBar: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      marginBottom: spacing.lg,
-    },
-    title: { ...typography.title, fontSize: scaleFont(24), color: colors.text },
-    closeButton: { padding: spacing.xs },
-    hero: { alignItems: 'center', gap: spacing.xs, marginBottom: spacing.lg },
+    closeButton: { minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' },
+    hero: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.lg, marginBottom: spacing.lg },
     badge: {
       width: 64,
       height: 64,
@@ -186,7 +184,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.lg,
       padding: spacing.md,
     },
-    pressed: { opacity: 0.7 },
+    pressed: { backgroundColor: colors.surfaceSubtle },
     actionText: { flex: 1, fontSize: scaleFont(15), fontWeight: '600', color: colors.text },
     footer: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
     footerText: { fontSize: scaleFont(13), color: colors.textMuted, textAlign: 'center' },

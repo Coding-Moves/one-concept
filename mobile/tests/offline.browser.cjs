@@ -288,7 +288,7 @@ const server = http.createServer((req,res) => {
     await expect.poll(()=>Boolean(releaseSaved)).toBe(true);
     await page.getByRole('button',{name:'Back',exact:true}).click();
     await page.getByText('Sign out',{exact:true}).click();
-    await expect(page.getByText('Welcome back — sign in to pick up your streak.',{exact:true})).toBeVisible();
+    await expect(page.getByText('Welcome back',{exact:true})).toBeVisible();
     holdSaved=false; releaseSaved(); await page.waitForTimeout(500);
     await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('one-concept/saved-list/') || k.startsWith('one-concept/concepts/')).length)).toBe(0);
     assert.deepEqual(errors,[]);
@@ -426,7 +426,7 @@ const server = http.createServer((req,res) => {
       await profile();
     }
     await page.getByText('Sign out',{exact:true}).click();
-    await expect(page.getByText('Welcome back — sign in to pick up your streak.',{exact:true})).toBeVisible();
+    await expect(page.getByText('Welcome back',{exact:true})).toBeVisible();
     if (releaseLike) { releaseLike(); await page.waitForTimeout(500); }
     await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(key=>key.startsWith('one-concept/concepts/') || key.startsWith('one-concept/topics/') || key.startsWith('one-concept/saved-list/') || key==='one-concept/mutation-queue/v1').length)).toBe(0);
     console.log('PASS: sign-out removes full lessons, topics, and queued actions');

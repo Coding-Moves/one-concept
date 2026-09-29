@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { AchievementPreview } from '../components/AchievementPreview';
 import { AnimatedFlame } from '../components/AnimatedFlame';
+import { Surface } from '../components/Surface';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
@@ -90,7 +91,7 @@ export function ProfileScreen() {
       </View>
 
       <View style={styles.cardsRow}>
-        <View style={styles.card}>
+        <Surface style={styles.card}>
           <AnimatedFlame
             size={scaleIcon(22)}
             color={streaks.current > 0 ? colors.streak : colors.textMuted}
@@ -98,14 +99,14 @@ export function ProfileScreen() {
           />
           <Text style={styles.cardValue}>{streaks.current} days</Text>
           <Text style={styles.cardLabel}>Daily streak</Text>
-        </View>
-        <View style={styles.card}>
+        </Surface>
+        <Surface style={styles.card}>
           <Ionicons name="pulse" size={scaleIcon(22)} color={colors.primary} />
           <Text style={styles.cardValue}>
             {progress.likes.length} likes · {progress.bookmarks.length} saved
           </Text>
           <Text style={styles.cardLabel}>Your activity</Text>
-        </View>
+        </Surface>
       </View>
 
       <AchievementPreview onPress={() => navigation.navigate('Achievements')} />
@@ -260,9 +261,7 @@ const createStyles = (colors: ThemeColors) =>
     },
     card: {
       flex: 1,
-      backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      ...shadows.card,
       padding: spacing.md,
       gap: spacing.xs,
       alignItems: 'flex-start',
@@ -285,9 +284,7 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.md,
       ...shadows.card,
     },
-    rowPressed: {
-      opacity: 0.7,
-    },
+    rowPressed: { backgroundColor: colors.surfaceSubtle },
     rowLeft: {
       flexDirection: 'row',
       alignItems: 'center',

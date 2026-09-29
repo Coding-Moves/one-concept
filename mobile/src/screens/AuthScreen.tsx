@@ -13,10 +13,11 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { PrimaryButton } from '../components/PrimaryButton';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { describeAuthError } from '../services/authErrors';
-import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 
 type Mode = 'signIn' | 'signUp';
 
@@ -112,14 +113,14 @@ export function AuthScreen() {
           />
         </Pressable>
 
-        <View style={styles.header}>
-          <Text style={styles.title}>One Concept</Text>
-          <Text style={styles.tagline}>
-            {mode === 'signIn'
-              ? 'Welcome back — sign in to pick up your streak.'
-              : 'Create an account to keep your streak across devices.'}
-          </Text>
-        </View>
+        <ScreenHeader
+          eyebrow="One Concept"
+          title={mode === 'signIn' ? 'Welcome back' : 'Start learning'}
+          large
+          subtitle={mode === 'signIn'
+            ? 'Sign in to pick up your streak.'
+            : 'Create an account to keep your streak across devices.'}
+        />
 
         <View style={styles.form}>
           <View style={styles.field}>
@@ -135,6 +136,8 @@ export function AuthScreen() {
               }}
               placeholder="you@example.com"
               placeholderTextColor={colors.textMuted}
+              accessibilityLabel="Email address"
+              accessibilityHint="Enter the email address for your One Concept account"
               autoCapitalize="none"
               autoComplete="email"
               keyboardType="email-address"
@@ -188,8 +191,8 @@ export function AuthScreen() {
 
           {error ? (
             <View style={[styles.banner, styles.errorBanner]} accessibilityRole="alert">
-              <Ionicons name="alert-circle-outline" size={scaleIcon(18)} color={colors.streak} />
-              <Text style={[styles.bannerText, { color: colors.streak }]}>{error}</Text>
+              <Ionicons name="alert-circle-outline" size={scaleIcon(18)} color={colors.danger} />
+              <Text style={[styles.bannerText, { color: colors.danger }]}>{error}</Text>
             </View>
           ) : null}
 
@@ -218,7 +221,7 @@ export function AuthScreen() {
 
           {busy ? (
             <View style={styles.busy}>
-              <ActivityIndicator color={colors.primary} />
+              <ActivityIndicator accessibilityLabel={mode === 'signIn' ? 'Signing in' : 'Creating your account'} color={colors.primary} />
             </View>
           ) : (
             <PrimaryButton
@@ -258,16 +261,13 @@ const createStyles = (colors: ThemeColors) =>
       position: 'absolute',
       right: spacing.lg,
       top: spacing.lg,
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: radius.pill,
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceSubtle,
       alignItems: 'center',
       justifyContent: 'center',
     },
-    header: { gap: spacing.sm },
-    title: { ...typography.title, fontSize: scaleFont(38), color: colors.text },
-    tagline: { fontSize: scaleFont(15), color: colors.textMuted, lineHeight: scaleFont(22) },
     form: { gap: spacing.md },
     field: { gap: spacing.sm },
     label: {
@@ -278,7 +278,7 @@ const createStyles = (colors: ThemeColors) =>
       color: colors.textMuted,
     },
     input: {
-      backgroundColor: colors.surface,
+      backgroundColor: colors.surfaceSubtle,
       borderRadius: radius.lg,
       paddingHorizontal: spacing.md + 2,
       paddingVertical: spacing.md,
@@ -305,7 +305,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.lg,
       padding: spacing.md,
     },
-    errorBanner: { backgroundColor: colors.categoryChip },
+    errorBanner: { backgroundColor: colors.dangerSurface },
     noticeBanner: { backgroundColor: colors.successSurface },
     bannerText: { flex: 1, fontSize: scaleFont(14), lineHeight: scaleFont(20) },
     bannerBody: { flex: 1, gap: 2 },

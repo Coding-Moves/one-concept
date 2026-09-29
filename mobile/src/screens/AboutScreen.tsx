@@ -186,7 +186,7 @@ const createStyles = (colors: ThemeColors) =>
       borderRadius: radius.lg,
       padding: spacing.md,
     },
-    pressed: { opacity: 0.7 },
+    pressed: { backgroundColor: colors.surfaceSubtle },
     actionText: { flex: 1, fontSize: scaleFont(15), fontWeight: '600', color: colors.text },
     footer: { alignItems: 'center', gap: spacing.xs, marginTop: spacing.sm },
     footerText: { fontSize: scaleFont(13), color: colors.textMuted, textAlign: 'center' },

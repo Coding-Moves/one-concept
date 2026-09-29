@@ -19,7 +19,8 @@
     "0017_topic_subtopics.sql": "6ae4b04f79ee145404af4d551cdd12d7725696f800bd367f15a9176309149f62",
     "0018_classify_legacy_backlog.sql": "1ee81d184523c781d86bf6491b40858367e3b2732c7d9ad5dc0116a454d41c9d",
     "0019_subtopic_topic_cleanup.sql": "94fa1264d21e5ba721cc01a8c0df7da1c9f5d1c782d75160778a7327c4c6a52e",
-    "0020_content_quality_gate.sql": "8452e75646811903df08c85bb03221084292fe81a67428d12734f4fb2a41f04c"
+    "0020_content_quality_gate.sql": "8452e75646811903df08c85bb03221084292fe81a67428d12734f4fb2a41f04c",
+    "0021_concept_flashcards.sql": "7bb00f50cbe6e16d0b70411128d25b2cf5a25e0962b6603402f0c8c692248a95"
   },
   "schema": {
     "columns": {
@@ -268,6 +269,12 @@
         "identity": "",
         "not_null": false,
         "type": "text"
+      },
+      "concepts.flashcard": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "jsonb"
       },
       "concepts.id": {
         "default": "gen_random_uuid()",

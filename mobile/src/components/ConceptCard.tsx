@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useReducedMotion } from '../hooks/useReducedMotion';
 import { scaleFont, radius, spacing, ThemeColors } from '../theme';
@@ -89,7 +89,7 @@ export function ConceptCard({ concept }: { concept: Concept }) {
       style={[styles.face, styles.backFace, { transform: [{ perspective: 900 }, { rotateY: backRotate }] }]}
       accessible={showingAnswer}
       accessibilityLabel="Showing recall answer"
-    ><Recall concept={concept} /></Animated.View>
+    ><ScrollView style={styles.backScroll} nestedScrollEnabled><Recall concept={concept} /></ScrollView></Animated.View>
   </Surface>;
 }
 
@@ -97,7 +97,8 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: { borderRadius: radius.xl, gap: spacing.md },
   flashcard: { minHeight: 340, position: 'relative' },
   face: { gap: spacing.md, backfaceVisibility: 'hidden' },
-  backFace: { position: 'absolute', left: spacing.lg, right: spacing.lg, top: spacing.lg },
+  backFace: { position: 'absolute', left: spacing.lg, right: spacing.lg, top: spacing.lg, bottom: spacing.lg },
+  backScroll: { flex: 1 },
   flipControl: { position: 'absolute', zIndex: 2, right: spacing.md, top: spacing.md, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surfaceSubtle, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: scaleFont(24), lineHeight: scaleFont(30), fontFamily: 'SpaceGrotesk_700Bold', color: colors.text, paddingRight: 48 },
   summary: { fontSize: scaleFont(16), lineHeight: scaleFont(26), color: colors.textSecondary },

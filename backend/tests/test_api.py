@@ -375,6 +375,12 @@ async def test_state_folds_in_todays_concept(client, sessionmaker_for_test, user
 
 
 async def test_review_opt_in_and_completion_contract(client, session, user):
+    await session.execute(
+        text("""update public.concepts set flashcard =
+          '{"front":"What should a learner recall from this lesson?",
+            "back":"Recall the concise, reviewed answer for the lesson."}'::jsonb
+          where status='published'""")
+    )
     await session.execute(text("""insert into public.daily_assignments(user_id,concept_id,assigned_for,completed_at)
       select :u,id,date '2000-01-01'+(row_number() over(order by id))::int,now()
       from public.concepts where status='published'"""), {'u':user})
@@ -383,6 +389,7 @@ async def test_review_opt_in_and_completion_contract(client, session, user):
     assert legacy['daily'] is None and legacy['review'] is None
     body = (await client.get('/v1/me/state?compact=true&reviews=true')).json()
     assert body['daily'] is None and body['review']['learned'] is False
+    assert body['review']['concept']['flashcard']['front'].startswith('What should')
     review_id = body['review']['review_id']
     response = await client.post(f'/v1/reviews/{review_id}/complete',json={'user_id':str(uuid.uuid4()),'assigned_for':'2000-01-01'})
     assert response.status_code == 200, response.text

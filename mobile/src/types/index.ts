@@ -91,6 +91,10 @@ export interface StreakStats {
 
 /** Everything the app persists locally. */
 export interface ProgressState {
+  /** Server profile identity; never substitute an account identifier when absent. */
+  displayName?: string | null;
+  /** IANA timezone returned by the profile and used for local-time presentation. */
+  timezone?: string;
   learned: LearnedRecord[];
   assignment: DailyAssignment | null;
   /** Topics the user follows; daily concepts are drawn from these. */

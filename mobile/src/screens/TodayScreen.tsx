@@ -16,6 +16,7 @@ import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { toConcept } from '../services/dailyApi';
+import { greetingFor } from '../services/greeting';
 import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 
 export function TodayScreen() {
@@ -26,6 +27,7 @@ export function TodayScreen() {
     hasLearned,
     learnedToday,
     streaks,
+    progress,
     markLearned,
     completeReview,
     refresh,
@@ -55,6 +57,7 @@ export function TodayScreen() {
   const done = review ? outcome.payload.learned : learnedToday || (!!serverConcept && hasLearned(serverConcept.id));
   const loading = localLoading;
   const exhausted = outcome?.status === 'exhausted';
+  const greeting = greetingFor(new Date(), progress.timezone, progress.displayName);
   const offline = (outcome?.status === 'ok' || outcome?.status === 'review') && outcome.stale;
   const outsideTopics =
     outcome?.status === 'ok' && outcome.payload.outside_followed_topics;
@@ -64,7 +67,7 @@ export function TodayScreen() {
       {refreshUI.action}
       <ScreenHeader
         eyebrow="Daily learning"
-        title="One Concept"
+        title={greeting}
         large
         subtitle="One day. One concept. One small step forward."
         action={(

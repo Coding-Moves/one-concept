@@ -51,6 +51,8 @@ interface StatePayload {
 
 function toProgressState(payload: StatePayload): ProgressState {
   return {
+    displayName: payload.display_name,
+    timezone: payload.timezone,
     learned: payload.learned.map((r) => ({
       conceptId: r.concept_slug,
       date: r.learned_on,

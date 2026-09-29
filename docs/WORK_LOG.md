@@ -55,7 +55,8 @@ claims as completed work.
   `a4e2ea2` refines History/Saved collection feedback; `2bbc20a` aligns
   auth/profile states; `e41d649` aligns personalisation and About;
   `0bc2ae3` replaces the recovery loop with a short entrance motion and makes
-  paused-sync recovery explicit. `86bbef6` updates the mocked browser coverage.
+  paused-sync recovery explicit. `86bbef6` updates the mocked browser coverage;
+  `3dd6a3e` guards feedback and subtle-surface contrast in both themes.
 - Passed: mobile TypeScript and all **69 Node 24** tests. A clean dummy-config
   web export was produced at `/tmp/one-concept-273-web-final`; no production
   service or user data was used. The optional mocked-browser scripts could not

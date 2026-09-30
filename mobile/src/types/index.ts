@@ -92,6 +92,16 @@ export interface StreakStats {
   totalReviews?: number;
 }
 
+/** A server-issued milestone for one exact published subtopic catalog. */
+export interface SubtopicCompletion {
+  id: string;
+  topic_slug: string;
+  topic_name: string;
+  subtopic_slug: string;
+  subtopic_name: string;
+  completed_at: string;
+}
+
 /** Everything the app persists locally. */
 export interface ProgressState {
   /** Server profile identity; never substitute an account identifier when absent. */
@@ -124,6 +134,8 @@ export interface ProgressState {
   stats?: StreakStats;
   /** Pre-completion totals, retained until a queued review is acknowledged. */
   pendingReviewStats?: { reviewId: string; stats?: StreakStats };
+  /** Ephemeral confirmed result; omitted from every fresh server state. */
+  recentSubtopicCompletion?: SubtopicCompletion;
   /**
    * Today's concept, folded into the server state so startup needs one request
    * (#102). Present only for server-backed state; the signed-out demo picks the

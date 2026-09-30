@@ -7,6 +7,7 @@ from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
 from app.schemas.daily import ConceptOut, DailyExhaustedOut, DailyOut
 from app.schemas.me import CompletedOut, StreakOut
+from app.schemas.subtopics import SubtopicCompletionOut
 from app.services.interactions import complete_today
 from app.services.selection import get_or_create_daily
 from app.services.streaks import compute_streaks, local_today
@@ -89,4 +90,8 @@ async def complete(
         completed=True,
         assigned_for=completion.assigned_for,
         stats=StreakOut(**vars(await compute_streaks(db, user.id, today))),
+        subtopic_completion=(
+            SubtopicCompletionOut(**vars(completion.subtopic_completion))
+            if completion.subtopic_completion else None
+        ),
     )

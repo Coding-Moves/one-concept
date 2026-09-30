@@ -8,6 +8,7 @@ import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
+import { SubtopicCompletionCard } from '../components/SubtopicCompletionCard';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { StreakBadge } from '../components/StreakBadge';
 import { UnavailableState } from '../components/UnavailableState';
@@ -147,10 +148,13 @@ export function TodayScreen() {
           ) : null}
 
           {concept && (done ? (
-            <View style={styles.doneBox}>
-              <Ionicons name="checkmark-circle" size={scaleIcon(20)} color={colors.success} />
-              <Text style={styles.doneText}>{review ? "Review complete — your learning day counts." : "Learned today — see you tomorrow!"}</Text>
-            </View>
+            <>
+              <View style={styles.doneBox}>
+                <Ionicons name="checkmark-circle" size={scaleIcon(20)} color={colors.success} />
+                <Text style={styles.doneText}>{review ? "Review complete — your learning day counts." : "Learned today — see you tomorrow!"}</Text>
+              </View>
+              {!review && progress.recentSubtopicCompletion ? <SubtopicCompletionCard completion={progress.recentSubtopicCompletion} /> : null}
+            </>
           ) : (
             <PrimaryButton
               label={review ? "Complete review" : "Mark as learned"}

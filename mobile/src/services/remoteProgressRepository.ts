@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError, apiRequest, apiRetryDelay } from '../api/client';
-import type { Category, DailyPayload, ReviewPayload, ProgressState } from '../types';
+import type { Category, DailyPayload, ReviewPayload, ProgressState, SubtopicCompletion } from '../types';
 import { todayKey } from './dates';
 import { cacheSavedConcepts, conceptCache } from './conceptApi';
 import { toConcept } from './dailyApi';
@@ -209,6 +209,7 @@ export class RemoteProgressRepository implements ProgressRepository {
       completed: boolean;
       assigned_for: string;
       stats: { current: number; longest: number; total_learned: number; total_reviews?: number };
+      subtopic_completion?: SubtopicCompletion | null;
     };
     try {
       done = await this.request(epoch, '/v1/daily/complete', { method: 'POST' });
@@ -244,7 +245,8 @@ export class RemoteProgressRepository implements ProgressRepository {
     // guess (the caller's concept id, no title). Without this the History tab
     // only caught up on a full reload, i.e. an app restart (issue #91).
     try {
-      return await this.fromState(await this.request<StatePayload>(epoch, '/v1/me/state?compact=true&reviews=true'), epoch);
+      const state = await this.fromState(await this.request<StatePayload>(epoch, '/v1/me/state?compact=true&reviews=true'), epoch);
+      return done.subtopic_completion ? { ...state, recentSubtopicCompletion: done.subtopic_completion } : state;
     } catch {
       // The completion already persisted; a failed reload must not roll it back.
       // Patch in place using the caller's concept id (the cached assignment can
@@ -253,7 +255,7 @@ export class RemoteProgressRepository implements ProgressRepository {
       const learned = this.cache.learned.some((r) => r.date === done.assigned_for)
         ? this.cache.learned
         : [...this.cache.learned, { conceptId, date: done.assigned_for }];
-      return this.remember({
+      const state = await this.remember({
         ...this.cache,
         learned,
         stats: {
@@ -263,6 +265,9 @@ export class RemoteProgressRepository implements ProgressRepository {
           totalReviews: done.stats.total_reviews ?? this.cache.stats?.totalReviews,
         },
       }, epoch);
+      // A completion notice is transient: keep it out of the account cache so
+      // an app restart cannot celebrate an event a second time.
+      return done.subtopic_completion ? { ...state, recentSubtopicCompletion: done.subtopic_completion } : state;
     }
   }
 

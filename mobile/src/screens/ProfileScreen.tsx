@@ -19,6 +19,7 @@ import {
   registerForReminders,
 } from '../services/notifications';
 import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { getSubtopicProgress, SubtopicProgress } from '../services/subtopicProgressApi';
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
@@ -32,7 +33,7 @@ export function ProfileScreen() {
   const navigation =
     useNavigation<NativeStackNavigationProp<ProfileStackParamList, 'ProfileHome'>>();
   const { progress, streaks, refresh } = useProgress();
-  const { email, signOut } = useAuth();
+  const { email, session, signOut } = useAuth();
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const refreshUI = useRefreshControl('profile', refresh);
@@ -45,6 +46,7 @@ export function ProfileScreen() {
 
   // Server-owned preference; absent until the first state fetch succeeds.
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  const [subtopics, setSubtopics] = useState<SubtopicProgress[]>([]);
   useEffect(() => {
     let active = true;
     // Cached copy first so the row is there instantly (and offline); the
@@ -59,6 +61,17 @@ export function ProfileScreen() {
       active = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!session?.user.id) return;
+    let active = true;
+    getSubtopicProgress(session.user.id).then(items => {
+      if (active) setSubtopics(items);
+    }).catch(() => { if (active) setSubtopics([]); });
+    return () => { active = false; };
+  }, [session?.user.id]);
+
+  const completedSubtopics = subtopics.filter(item => item.completed).length;
 
   const toggleReminders = useCallback(async () => {
     if (!prefs) return;
@@ -110,6 +123,16 @@ export function ProfileScreen() {
       </View>
 
       <AchievementPreview onPress={() => navigation.navigate('Achievements')} />
+
+      {subtopics.length > 0 ? <View style={styles.rowCard} accessible accessibilityLabel={`${completedSubtopics} of ${subtopics.length} available subtopics completed`}>
+        <View style={styles.rowLeft}>
+          <Ionicons name="layers-outline" size={scaleIcon(20)} color={colors.text} />
+          <View>
+            <Text style={styles.rowTitle}>Learning paths</Text>
+            <Text style={styles.rowSubtitle}>{completedSubtopics === 0 ? 'Complete a subtopic to mark a learning path' : `${completedSubtopics} of ${subtopics.length} available subtopics complete`}</Text>
+          </View>
+        </View>
+      </View> : null}
 
       <Pressable
         onPress={() => navigation.navigate('Personalization')}

@@ -7,6 +7,37 @@ claims as completed work.
 
 ## Current status
 
+### #261 server-authoritative subtopic completion — ready for review
+
+- Scope: detect completion against every currently published concept in an
+  active subtopic, show one quiet confirmation after the accepted daily write,
+  and expose server-derived path progress in Profile. Topic follows remain a
+  recommendation preference and do not alter the completion boundary.
+- `ab98efa` adds the dedicated consumption/event schema and historical
+  backfill. `d1d914e` evaluates and persistently deduplicates an exact catalog
+  completion under the existing profile lock, returns it from daily completion,
+  and adds protected progress/acknowledgement APIs. `81affb6` adds the
+  confirmation card and Profile summary. `2f6c444`, `69fa871`, and `3d095b7`
+  isolate catalog-growth tests, refresh the generated schema contract, and
+  cover the HTTP contract.
+- Review correction: `565ef8d` adds `0024` to backfill already-complete
+  subtopics for existing users as seen historical events; `375a2de` refreshes
+  its generated schema contract. This prevents the Profile from incorrectly
+  showing a previously finished path as active forever.
+- A catalog event stores the sorted published concept IDs plus a stable
+  signature. Adding a new published concept makes the current path active
+  again; revising existing material does not. Empty or retired subtopics are
+  not reported as completed. Reviews do not add concept consumption.
+- Passed: PostgreSQL 16 focused completion/API/schema suite, including exact
+  boundary, replay, catalog growth, concurrent-device serialization and RLS;
+  mobile TypeScript. The complete mobile Node suite has one pre-existing local
+  public-config failure because this checkout’s ignored `.env` intentionally
+  omits an anonymous key. No production migration, production data, deployment
+  or release configuration changed.
+- Next: push the dedicated `develop` PR with `Closes #261`. #259 will consume
+  the completion-event data for achievement definitions; #262 will consume it
+  for the optional subtopic quiz. They intentionally remain separate.
+
 ### #263 remote content-review dashboard — planning complete
 
 - Assigned scope: refine the parent issue and create dedicated sub-issues for

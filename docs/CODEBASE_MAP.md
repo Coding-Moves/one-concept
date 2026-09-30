@@ -35,6 +35,24 @@ fences async results, and `achievementCache` joins account cleanup. Profile open
 `AchievementsScreen`; shared badge/detail/celebration components render the
 collection. See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
 
+## Subtopic completion (#261)
+
+`user_concept_completions` is the authoritative record that a learner has
+consumed a concept, distinct from the date a daily assignment counts for a
+streak. Migration `0023_subtopic_completions.sql` backfills it from completed
+daily assignments; `0024_backfill_subtopic_completion_events.sql` records
+already-complete paths as seen historical events. `user_subtopic_completions` records an immutable event for
+the exact sorted set of published concept IDs in an active subtopic. A new
+published concept produces a different catalog signature and naturally returns
+the path to active progress; an editorial revision does not.
+
+`services/subtopic_progress.py` calculates boundaries server-side under the
+same profile lock as daily completion. `GET /v1/me/subtopics/progress` provides
+Profile’s learning-path summary; `POST /v1/daily/complete` returns a completion
+event only when it was newly recorded. The Today card appears only for that
+confirmed response, while the acknowledgement endpoint retains delivery state
+for later achievement and challenge work.
+
 ## Mobile navigation and presentation
 
 `App.tsx` composes SafeArea, Theme, Connectivity, Auth, and Progress providers.
@@ -57,7 +75,7 @@ inside a root stack, with a concept-detail modal above them.
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, result feedback and reattempts. |
-| `ProfileScreen.tsx` | Account, reminder preferences, theme, sign-out, and links to profile subpages. |
+| `ProfileScreen.tsx` | Account, learning-path progress, reminder preferences, theme, sign-out, and links to profile subpages. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
 | `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |

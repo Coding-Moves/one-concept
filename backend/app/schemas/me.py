@@ -3,6 +3,7 @@ from datetime import date
 from pydantic import BaseModel, Field
 
 from app.schemas.daily import DailyOut, ReviewOut
+from app.schemas.subtopics import SubtopicCompletionOut
 
 
 class StreakOut(BaseModel):
@@ -77,3 +78,4 @@ class CompletedOut(BaseModel):
     completed: bool
     assigned_for: date
     stats: StreakOut
+    subtopic_completion: SubtopicCompletionOut | None = None

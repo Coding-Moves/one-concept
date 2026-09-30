@@ -35,6 +35,7 @@ import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScree
 import { SavedScreen } from './src/screens/SavedScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { WeeklyQuizScreen } from './src/screens/WeeklyQuizScreen';
 import { RootStackParamList } from './src/navigation';
 import { isApiConfigured } from './src/api/client';
 import { isSupabaseConfigured } from './src/lib/supabase';
@@ -172,6 +173,11 @@ function Tabs() {
         name="History"
         component={HistoryScreen}
         options={{ tabBarIcon: tabIcon('library', 'library-outline') }}
+      />
+      <Tab.Screen
+        name="Quiz"
+        component={WeeklyQuizScreen}
+        options={{ tabBarIcon: tabIcon('help-circle', 'help-circle-outline') }}
       />
       <Tab.Screen
         name="Stats"

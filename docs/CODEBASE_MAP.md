@@ -56,6 +56,7 @@ inside a root stack, with a concept-detail modal above them.
 | `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states. |
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
+| `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, result feedback and reattempts. |
 | `ProfileScreen.tsx` | Account, reminder preferences, theme, sign-out, and links to profile subpages. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
@@ -247,6 +248,7 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   records. `selection.py` locks profiles across daily choice; `streaks.py`,
   `state.py` and reminders count completed review days without increasing unique
   learned totals. `me/state?reviews=true` opts into a separate review payload.
+- `services/weekly_quizzes.py` freezes one reviewed MCQ from each of seven completed concepts into a per-user weekly snapshot. `api/v1/quizzes.py` scores submissions server-side and appends immutable attempts; answer keys are only returned after submission.
 - `workers/content.py` exposes maintainer-only imports, revision inspection,
   approval, failed-plan correction/retry and health reports. `content_health.py`
   computes supply/queue/quota/worker conditions and deduplicates transitions.

@@ -1,5 +1,6 @@
 """Explicit review gates and version-safe corrections for the shared library."""
 
+import json
 import uuid
 
 from pydantic import Field
@@ -59,7 +60,10 @@ async def stage_revision(
 
 
 async def publish_revision(
-    session: AsyncSession, revision_id: uuid.UUID, reviewer: str, note: str,
+    session: AsyncSession,
+    revision_id: uuid.UUID,
+    reviewer: str,
+    note: str,
     quality_review: QualityReview,
 ) -> int:
     if not reviewer.strip() or len(note.strip()) < 10:
@@ -124,7 +128,7 @@ async def publish_revision(
         text("""insert into public.concept_revisions
       (concept_id,base_version,body,status,review_note)
       select c.id,c.content_version-1,jsonb_build_object('title',c.title,
-        'summary',c.summary,'example',c.example,'flashcard',c.flashcard,'curriculum',c.curriculum,
+        'summary',c.summary,'example',c.example,'flashcard',c.flashcard,'mcqs',c.mcqs,'curriculum',c.curriculum,
         'subtopic_slug',s.slug,
         'model',c.model,'prompt_version',c.prompt_version),'published',
         'Legacy version captured before correction; original review was not recorded.'
@@ -136,7 +140,7 @@ async def publish_revision(
     )
     await session.execute(
         text("""update public.concepts set title=:title,summary=:summary,
-      example=:example,flashcard=cast(:flashcard as jsonb),curriculum=cast(:curriculum as jsonb),difficulty=:difficulty,
+      example=:example,flashcard=cast(:flashcard as jsonb),mcqs=cast(:mcqs as jsonb),curriculum=cast(:curriculum as jsonb),difficulty=:difficulty,
       model=:model,prompt_version=:prompt_version,content_version=content_version+1,
       status='published',published_at=now() where id=:id"""),
         {
@@ -145,6 +149,9 @@ async def publish_revision(
             "summary": body.summary,
             "example": body.example,
             "flashcard": body.learning_package.flashcard.model_dump_json(),
+            "mcqs": json.dumps(
+                [item.model_dump() for item in body.learning_package.mcqs]
+            ),
             "curriculum": body.curriculum.model_dump_json(),
             "difficulty": body.curriculum.difficulty,
             "model": body.model,
@@ -154,8 +161,12 @@ async def publish_revision(
     await session.execute(
         text("""update public.concept_revisions set status='published',
       reviewed_by=:reviewer,review_note=:note,quality_review=cast(:quality_review as jsonb),reviewed_at=now() where id=:id"""),
-        {"id": revision_id, "reviewer": reviewer.strip(), "note": note.strip(),
-         "quality_review": quality_review.model_dump_json()},
+        {
+            "id": revision_id,
+            "reviewer": reviewer.strip(),
+            "note": note.strip(),
+            "quality_review": quality_review.model_dump_json(),
+        },
     )
     return row.content_version + 1
 

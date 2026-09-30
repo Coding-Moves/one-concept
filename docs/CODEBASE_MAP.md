@@ -40,7 +40,8 @@ collection. See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rul
 `user_concept_completions` is the authoritative record that a learner has
 consumed a concept, distinct from the date a daily assignment counts for a
 streak. Migration `0023_subtopic_completions.sql` backfills it from completed
-daily assignments. `user_subtopic_completions` records an immutable event for
+daily assignments; `0024_backfill_subtopic_completion_events.sql` records
+already-complete paths as seen historical events. `user_subtopic_completions` records an immutable event for
 the exact sorted set of published concept IDs in an active subtopic. A new
 published concept produces a different catalog signature and naturally returns
 the path to active progress; an editorial revision does not.

@@ -20,6 +20,10 @@ claims as completed work.
   confirmation card and Profile summary. `2f6c444`, `69fa871`, and `3d095b7`
   isolate catalog-growth tests, refresh the generated schema contract, and
   cover the HTTP contract.
+- Review correction: `565ef8d` adds `0024` to backfill already-complete
+  subtopics for existing users as seen historical events; `375a2de` refreshes
+  its generated schema contract. This prevents the Profile from incorrectly
+  showing a previously finished path as active forever.
 - A catalog event stores the sorted published concept IDs plus a stable
   signature. Adding a new published concept makes the current path active
   again; revising existing material does not. Empty or retired subtopics are

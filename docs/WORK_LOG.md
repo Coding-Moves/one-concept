@@ -1315,3 +1315,11 @@ Copy this structure when a task is assigned; replace placeholders with facts.
   PostgreSQL 16 schema-contract migration test. Next: run the publication and
   full backend tests, add the operations checklist, push and open the dedicated
   `develop` PR with `Closes #264`.
+
+
+### #257 weekly quiz — draft PR in progress
+
+- [PR #286](https://github.com/Coding-Moves/one-concept/pull/286) targets `develop` and uses `Closes #257`. It remains a draft while final validation and review are completed.
+- `b38aaf2` stores reviewed MCQs with published concepts, backfills exact-version approved revisions, and adds frozen weekly quiz/append-only attempt tables with the schema contract. `574de6b` adds the authenticated server selection and scoring endpoints plus PostgreSQL integration coverage. `32edf5c` adds the mobile Quiz tab with eligibility, seven answer choices, result feedback and reattempts.
+- Passed: disposable PostgreSQL 16 focused schema/publication/quiz tests (**16 passed**) and mobile TypeScript. The full mobile suite reported **70 passed, 1 failed** in the unrelated public-config subprocess test; a focused rerun also failed without its expected diagnostics.
+- No production migration, deployment, release version or OTA update has occurred. Next: inspect the final diff and hosted CI, resolve any actionable review finding, then mark the PR ready for owner review.

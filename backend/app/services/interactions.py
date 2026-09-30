@@ -9,6 +9,7 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.achievements import award_streaks
+from app.services.subtopic_progress import SubtopicCompletion, record_completion
 
 _CONCEPT_ID = text("select id from public.concepts where slug = :slug and status = 'published'")
 
@@ -58,7 +59,7 @@ _COMPLETE = text("""
           order by assigned_for desc
           limit 1
      )
-    returning assigned_for
+    returning id,concept_id,assigned_for,completed_at
 """)
 
 
@@ -67,6 +68,7 @@ class Completion:
     # The day the completion counts towards — today's normally, yesterday's
     # when the grace window catches a just-past-midnight tap.
     assigned_for: date
+    subtopic_completion: SubtopicCompletion | None = None
 
 
 async def complete_today(session: AsyncSession, user_id: uuid.UUID, today) -> Completion:
@@ -82,9 +84,19 @@ async def complete_today(session: AsyncSession, user_id: uuid.UUID, today) -> Co
             status.HTTP_404_NOT_FOUND,
             detail="No concept has been assigned recently. Fetch /v1/daily first.",
         )
+    await session.execute(text("""
+        insert into public.user_concept_completions
+          (user_id,concept_id,source_assignment_id,completed_at)
+        values (:uid,:concept_id,:assignment_id,:completed_at)
+        on conflict (user_id,concept_id) do nothing
+    """), {"uid": user_id, "concept_id": row.concept_id,
+             "assignment_id": row.id, "completed_at": row.completed_at})
+    subtopic_completion = await record_completion(session, user_id, row.concept_id)
     await award_streaks(session, user_id)
     await session.commit()
-    return Completion(assigned_for=row.assigned_for)
+    return Completion(
+        assigned_for=row.assigned_for, subtopic_completion=subtopic_completion
+    )
 
 
 async def set_followed_topics(

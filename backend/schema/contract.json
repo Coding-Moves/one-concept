@@ -21,7 +21,8 @@
     "0019_subtopic_topic_cleanup.sql": "94fa1264d21e5ba721cc01a8c0df7da1c9f5d1c782d75160778a7327c4c6a52e",
     "0020_content_quality_gate.sql": "8452e75646811903df08c85bb03221084292fe81a67428d12734f4fb2a41f04c",
     "0021_concept_flashcards.sql": "7bb00f50cbe6e16d0b70411128d25b2cf5a25e0962b6603402f0c8c692248a95",
-    "0022_weekly_quizzes.sql": "8faf72df5585b9f163fdf2514131b792bf14b743187520881ab3bad1a62bf8c7"
+    "0022_weekly_quizzes.sql": "8faf72df5585b9f163fdf2514131b792bf14b743187520881ab3bad1a62bf8c7",
+    "0023_subtopic_completions.sql": "00946c7a856e7b883174411d0f142839b47f25348780afbe24c784bdf4e1947b"
   },
   "schema": {
     "columns": {
@@ -793,6 +794,72 @@
         "not_null": true,
         "type": "uuid"
       },
+      "user_concept_completions.completed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_concept_completions.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_concept_completions.source_assignment_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "user_concept_completions.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_subtopic_completions.catalog_concept_ids": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid[]"
+      },
+      "user_subtopic_completions.catalog_signature": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "user_subtopic_completions.completed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_subtopic_completions.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_subtopic_completions.seen_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "user_subtopic_completions.subtopic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_subtopic_completions.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
       "user_topics.created_at": {
         "default": "now()",
         "identity": "",
@@ -1147,6 +1214,50 @@
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
       },
+      "user_concept_completions.user_concept_completions_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_pkey": {
+        "definition": "PRIMARY KEY (user_id, concept_id)",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_source_assignment_id_fkey": {
+        "definition": "FOREIGN KEY (source_assignment_id) REFERENCES public.daily_assignments(id) ON DELETE SET NULL",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_source_assignment_id_key": {
+        "definition": "UNIQUE (source_assignment_id)",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_catalog_concept_ids_check": {
+        "definition": "CHECK ((cardinality(catalog_concept_ids) > 0))",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_catalog_signature_check": {
+        "definition": "CHECK ((catalog_signature ~ '^[0-9a-f]{64}$'::text))",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_subtopic_id_fkey": {
+        "definition": "FOREIGN KEY (subtopic_id) REFERENCES public.subtopics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_user_id_subtopic_id_catalog_signa_key": {
+        "definition": "UNIQUE (user_id, subtopic_id, catalog_signature)",
+        "validated": true
+      },
       "user_topics.user_topics_pkey": {
         "definition": "PRIMARY KEY (user_id, topic_id)",
         "validated": true
@@ -1422,6 +1533,36 @@
         "ready": true,
         "valid": true
       },
+      "user_concept_completions_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_concept_completions_pkey ON public.user_concept_completions USING btree (user_id, concept_id)",
+        "ready": true,
+        "valid": true
+      },
+      "user_concept_completions_source_assignment_id_key": {
+        "definition": "CREATE UNIQUE INDEX user_concept_completions_source_assignment_id_key ON public.user_concept_completions USING btree (source_assignment_id)",
+        "ready": true,
+        "valid": true
+      },
+      "user_concept_completions_user_completed_idx": {
+        "definition": "CREATE INDEX user_concept_completions_user_completed_idx ON public.user_concept_completions USING btree (user_id, completed_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "user_subtopic_completions_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_subtopic_completions_pkey ON public.user_subtopic_completions USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "user_subtopic_completions_unseen_idx": {
+        "definition": "CREATE INDEX user_subtopic_completions_unseen_idx ON public.user_subtopic_completions USING btree (user_id, completed_at DESC) WHERE (seen_at IS NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "user_subtopic_completions_user_id_subtopic_id_catalog_signa_key": {
+        "definition": "CREATE UNIQUE INDEX user_subtopic_completions_user_id_subtopic_id_catalog_signa_key ON public.user_subtopic_completions USING btree (user_id, subtopic_id, catalog_signature)",
+        "ready": true,
+        "valid": true
+      },
       "user_topics_pkey": {
         "definition": "CREATE UNIQUE INDEX user_topics_pkey ON public.user_topics USING btree (user_id, topic_id)",
         "ready": true,
@@ -1651,6 +1792,12 @@
         "rls": true
       },
       "user_achievements": {
+        "rls": true
+      },
+      "user_concept_completions": {
+        "rls": true
+      },
+      "user_subtopic_completions": {
         "rls": true
       },
       "user_topics": {

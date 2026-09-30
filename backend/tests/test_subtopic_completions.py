@@ -77,6 +77,11 @@ async def test_new_published_concept_reopens_without_repeating_old_event(session
         select count(*) from public.user_subtopic_completions
          where user_id=:uid and subtopic_id=:sid
     """), {"uid": user, "sid": catalog[0].subtopic_id}) == 2
+    # The shared disposable schema intentionally persists fixture catalog
+    # rows between tests. Retire this temporary lesson so unrelated API tests
+    # retain the reviewed five-subject seed inventory.
+    await session.execute(text("update public.concepts set status='draft' where id=:id"), {"id": extra_id})
+    await session.commit()
 
 
 async def test_concurrent_devices_create_one_catalog_event(session, sessionmaker_for_test, user):

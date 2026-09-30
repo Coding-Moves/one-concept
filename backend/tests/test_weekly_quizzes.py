@@ -110,6 +110,15 @@ async def test_weekly_quiz_freezes_questions_and_records_append_only_attempts(
 
     again = (await client.get("/v1/quizzes/weekly")).json()
     assert again == quiz, "the current week's learner-facing quiz is frozen"
+    # The mobile client updates this profile setting when a learner travels.
+    # A changing local date must not mint a second weekly quiz snapshot.
+    async with sessionmaker_for_test() as session:
+        await session.execute(
+            text("update public.profiles set timezone='Pacific/Honolulu' where id=:id"),
+            {"id": user},
+        )
+        await session.commit()
+    assert (await client.get("/v1/quizzes/weekly")).json() == quiz
     answers = [
         {"question_id": question["id"], "selected_index": 0}
         for question in quiz["questions"]

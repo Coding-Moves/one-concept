@@ -38,8 +38,8 @@ class _Question:
     correct_index: int
 
 
-_PROFILE = text("""
-    select timezone from public.profiles where id=:uid for update
+_PROFILE_LOCK = text("""
+    select id from public.profiles where id=:uid for update
 """)
 _EXISTING = text("""
     select id, questions from public.weekly_quizzes
@@ -118,13 +118,12 @@ def _public_question(question: _Question | dict) -> WeeklyQuizQuestionOut:
 async def get_or_create_weekly_quiz(
     session: AsyncSession, user_id: uuid.UUID
 ) -> WeeklyQuizOut | WeeklyQuizUnavailableOut:
-    """Return this local week's frozen quiz, or an honest eligibility state."""
-    profile = (await session.execute(_PROFILE, {"uid": user_id})).one()
-    today = await session.scalar(
-        text("select (now() at time zone :timezone)::date"),
-        {"timezone": profile.timezone},
-    )
-    week_start = _week_start(today)
+    """Return this stable ISO week's frozen quiz, or an honest eligibility state."""
+    # Daily lessons use the learner's wall-clock timezone. A quiz belongs to a
+    # shared ISO week instead: profile timezones may change automatically when
+    # a learner travels, and a changed timezone must not mint another quiz.
+    await session.execute(_PROFILE_LOCK, {"uid": user_id})
+    week_start = _week_start(await session.scalar(text("select current_date")))
     existing = (
         await session.execute(_EXISTING, {"uid": user_id, "week_start": week_start})
     ).first()

@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import date, timedelta
+from pathlib import Path
 
 import pytest
 from sqlalchemy import text
@@ -105,6 +106,28 @@ async def test_concurrent_devices_create_one_catalog_event(session, sessionmaker
         select count(*) from public.user_subtopic_completions
          where user_id=:uid and subtopic_id=:sid
     """), {"uid": user, "sid": catalog[0].subtopic_id}) == 1
+
+
+async def test_historical_completion_backfill_marks_events_seen(session, user):
+    catalog = await _probability_catalog(session)
+    await session.execute(text("""
+        insert into public.user_concept_completions(user_id,concept_id,completed_at)
+        select :uid,unnest(cast(:concept_ids as uuid[])),now()
+    """), {"uid": user, "concept_ids": [concept.id for concept in catalog]})
+    await session.commit()
+
+    migration = (Path(__file__).parents[1] / "migrations" / "0024_backfill_subtopic_completion_events.sql").read_text()
+    body = migration[migration.index("begin;") + len("begin;"):migration.rindex("commit;")]
+    await session.execute(text(body))
+    await session.commit()
+
+    event = (await session.execute(text("""
+        select seen_at from public.user_subtopic_completions
+         where user_id=:uid and subtopic_id=:sid
+    """), {"uid": user, "sid": catalog[0].subtopic_id})).one()
+    assert event.seen_at is not None
+    item = next(item for item in await progress(session, user) if item.subtopic_slug == "probability")
+    assert item.completed is True
 
 
 async def test_authenticated_clients_cannot_mint_completion_events(session, user):

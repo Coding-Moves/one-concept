@@ -22,7 +22,8 @@
     "0020_content_quality_gate.sql": "8452e75646811903df08c85bb03221084292fe81a67428d12734f4fb2a41f04c",
     "0021_concept_flashcards.sql": "7bb00f50cbe6e16d0b70411128d25b2cf5a25e0962b6603402f0c8c692248a95",
     "0022_weekly_quizzes.sql": "8faf72df5585b9f163fdf2514131b792bf14b743187520881ab3bad1a62bf8c7",
-    "0023_subtopic_completions.sql": "00946c7a856e7b883174411d0f142839b47f25348780afbe24c784bdf4e1947b"
+    "0023_subtopic_completions.sql": "00946c7a856e7b883174411d0f142839b47f25348780afbe24c784bdf4e1947b",
+    "0024_backfill_subtopic_completion_events.sql": "d35b611207831e60942aafc9da73b0d558fa917df71113e83ad940cd6707f8a4"
   },
   "schema": {
     "columns": {

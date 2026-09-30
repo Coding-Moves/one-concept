@@ -48,7 +48,7 @@ async def test_health_touches_the_database(anon_client):
     assert response.json() == {"status": "ok", "database": "reachable"}
 
 
-@pytest.mark.parametrize("path", ["/v1/daily", "/v1/topics"])
+@pytest.mark.parametrize("path", ["/v1/daily", "/v1/topics", "/v1/me/subtopics/progress"])
 async def test_endpoints_require_a_token(anon_client, path):
     response = await anon_client.get(path)
     assert response.status_code == 401
@@ -90,6 +90,18 @@ async def test_topics_lists_the_catalog_with_follow_state(client):
     assert all(t["concept_count"] == 4 for t in topics)
     # The trigger follows every active topic by default.
     assert all(t["following"] is True for t in topics)
+
+
+async def test_subtopic_progress_is_server_authoritative(client):
+    response = await client.get("/v1/me/subtopics/progress")
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert items
+    assert all(item["available_concepts"] > 0 for item in items)
+    assert all(item["completed_concepts"] == 0 and item["completed"] is False for item in items)
+
+    invalid = await client.post("/v1/me/subtopics/completions/seen", json={"ids": []})
+    assert invalid.status_code == 422
 
 
 async def test_no_endpoint_accepts_a_user_id(client, user):

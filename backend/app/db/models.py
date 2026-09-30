@@ -136,6 +136,42 @@ class DailyAssignment(Base):
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class UserConceptCompletion(Base):
+    """A concept the learner completed, independent of daily streak activity."""
+
+    __tablename__ = "user_concept_completions"
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
+    )
+    concept_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("concepts.id"), primary_key=True
+    )
+    source_assignment_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("daily_assignments.id")
+    )
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class UserSubtopicCompletion(Base):
+    """An immutable completion against one exact published subtopic catalog."""
+
+    __tablename__ = "user_subtopic_completions"
+    __table_args__ = (UniqueConstraint("user_id", "subtopic_id", "catalog_signature"),)
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False
+    )
+    subtopic_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("subtopics.id"), nullable=False
+    )
+    catalog_signature: Mapped[str] = mapped_column(Text, nullable=False)
+    catalog_concept_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(PgUUID(as_uuid=True)), nullable=False
+    )
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class ConceptInteraction(Base):
     __tablename__ = "concept_interactions"
 

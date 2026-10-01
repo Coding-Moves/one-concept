@@ -21,6 +21,7 @@ class SubtopicProgressOut(BaseModel):
     completed_concepts: int
     available_concepts: int
     completed: bool
+    completion_id: uuid.UUID | None = None
 
 
 class SubtopicProgressCollectionOut(BaseModel):

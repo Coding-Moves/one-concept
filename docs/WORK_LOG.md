@@ -7,6 +7,31 @@ claims as completed work.
 
 ## Current status
 
+### #262 optional repeatable subtopic quizzes — ready for review
+
+- Scope: provide an optional, Profile-linked quiz only after a server-confirmed
+  subtopic completion. It remains separate from the weekly cross-concept quiz,
+  daily learning, streaks, achievements and release configuration.
+- `66c2ba5` adds the immutable quiz/attempt storage; `81d1fc2` adds the
+  server-owned snapshot, scoring, protected endpoints and integration coverage;
+  `f0dfb86` records the reviewed schema contract. `bfc3b40` covers Profile’s
+  completion-ID contract; `544c0a2` adds the dedicated mobile list/detail
+  screens; `6f889b4` adds composite database ownership constraints and a
+  cross-account regression; `8153f7a` rejects unknown history IDs and uses
+  lint-clean typed FastAPI dependencies.
+- A quiz freezes one deterministic reviewed MCQ per selected completed concept,
+  up to seven. It stores source slug/version and answer key in the server-only
+  snapshot. Later content changes cannot alter an existing quiz; each retry
+  appends a score and selected-answer record, while history keeps prior scores.
+  The feature honestly reports unavailable until enough reviewed MCQs exist.
+- Passed: full disposable PostgreSQL backend suite; focused quiz/completion/
+  weekly-quiz coverage (**13 passed**); regenerated schema contract; mobile
+  TypeScript and all **71** Node tests. No production migration, user-data
+  change, deployment, app-version or release configuration was performed.
+- PR: [#289](https://github.com/Coding-Moves/one-concept/pull/289) targets
+  `develop` and declares `Closes #262`. Obtain normal review and staging
+  validation before any merge.
+
 ### #261 server-authoritative subtopic completion — ready for review
 
 - Scope: detect completion against every currently published concept in an

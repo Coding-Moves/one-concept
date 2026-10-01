@@ -34,6 +34,8 @@ import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
 import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
 import { SavedScreen } from './src/screens/SavedScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
+import { SubtopicQuizScreen } from './src/screens/SubtopicQuizScreen';
+import { SubtopicQuizzesScreen } from './src/screens/SubtopicQuizzesScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
 import { WeeklyQuizScreen } from './src/screens/WeeklyQuizScreen';
 import { RootStackParamList } from './src/navigation';
@@ -59,6 +61,8 @@ function ProfileStackScreen() {
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <ProfileStack.Screen name="Achievements" component={AchievementsScreen} />
+      <ProfileStack.Screen name="SubtopicQuizzes" component={SubtopicQuizzesScreen} />
+      <ProfileStack.Screen name="SubtopicQuiz" component={SubtopicQuizScreen} />
       <ProfileStack.Screen name="Saved" component={SavedScreen} />
       <ProfileStack.Screen
         name="About"

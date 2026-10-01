@@ -27,6 +27,8 @@ export type ProfileStackParamList = {
   Saved: undefined;
   About: undefined;
   Achievements: undefined;
+  SubtopicQuizzes: undefined;
+  SubtopicQuiz: { completionId: string; topicName: string; subtopicName: string };
 };
 
 export function ProfileScreen() {
@@ -124,15 +126,21 @@ export function ProfileScreen() {
 
       <AchievementPreview onPress={() => navigation.navigate('Achievements')} />
 
-      {subtopics.length > 0 ? <View style={styles.rowCard} accessible accessibilityLabel={`${completedSubtopics} of ${subtopics.length} available subtopics completed`}>
+      {subtopics.length > 0 ? <Pressable
+        onPress={() => navigation.navigate('SubtopicQuizzes')}
+        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+        accessibilityLabel={`${completedSubtopics} of ${subtopics.length} available learning paths complete. Open optional quizzes.`}
+      >
         <View style={styles.rowLeft}>
           <Ionicons name="layers-outline" size={scaleIcon(20)} color={colors.text} />
           <View>
             <Text style={styles.rowTitle}>Learning paths</Text>
-            <Text style={styles.rowSubtitle}>{completedSubtopics === 0 ? 'Complete a subtopic to mark a learning path' : `${completedSubtopics} of ${subtopics.length} available subtopics complete`}</Text>
+            <Text style={styles.rowSubtitle}>{completedSubtopics === 0 ? 'Complete a subtopic to unlock optional quizzes' : `${completedSubtopics} of ${subtopics.length} available subtopics complete`}</Text>
           </View>
         </View>
-      </View> : null}
+        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
+      </Pressable> : null}
 
       <Pressable
         onPress={() => navigation.navigate('Personalization')}

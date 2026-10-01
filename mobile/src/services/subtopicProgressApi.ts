@@ -9,6 +9,7 @@ export interface SubtopicProgress {
   completed_concepts: number;
   available_concepts: number;
   completed: boolean;
+  completion_id: string | null;
 }
 
 export async function getSubtopicProgress(expectedUserId: string): Promise<SubtopicProgress[]> {

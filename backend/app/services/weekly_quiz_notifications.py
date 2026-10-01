@@ -287,8 +287,20 @@ async def send_weekly_quiz_notifications(session, *, at=None, window_minutes=15)
                 else {}
             )
             if ticket.get("status") == "ok":
-                await record(session, row, "accepted", at, ticket.get("id"))
-                sent += 1
+                ticket_id = ticket.get("id")
+                # Provider data must never become an invalid SQL parameter and
+                # roll back another device's valid result in the same batch.
+                if (
+                    isinstance(ticket_id, str)
+                    and 0 < len(ticket_id) <= 256
+                    and ticket_id.isascii()
+                    and ticket_id.isprintable()
+                    and not ticket_id.isspace()
+                ):
+                    await record(session, row, "accepted", at, ticket_id)
+                    sent += 1
+                else:
+                    await record(session, row, "unknown", at)
             elif ticket.get("status") == "error":
                 details = ticket.get("details")
                 error = details.get("error") if isinstance(details, dict) else None

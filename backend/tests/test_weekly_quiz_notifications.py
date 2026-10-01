@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import uuid
 from datetime import datetime, timedelta, timezone
 
 import httpx
@@ -12,11 +13,43 @@ from sqlalchemy.exc import DBAPIError
 
 from app.services import weekly_quiz_notifications as weekly
 from app.services.weekly_quizzes import get_or_create_weekly_quiz
-from tests import test_reminders
 from tests.test_reminders import _register_token
 
-capture_push = test_reminders.capture_push
 from tests.test_weekly_quizzes import _make_eligible
+
+
+@pytest.fixture
+def capture_push(monkeypatch):
+    """Model valid Expo tickets and receipts, counting only actual sends."""
+    sent = []
+
+    def use(ticket_for=lambda message: {"status": "ok"}):
+        def handler(request):
+            body = json.loads(request.content)
+            if request.url.path.endswith("getReceipts"):
+                return httpx.Response(
+                    200,
+                    json={"data": {ticket: {"status": "ok"} for ticket in body["ids"]}},
+                )
+            sent.extend(body)
+            tickets = []
+            for message in body:
+                ticket = ticket_for(message)
+                if ticket.get("status") == "ok" and "id" not in ticket:
+                    ticket = {**ticket, "id": str(uuid.uuid4())}
+                tickets.append(ticket)
+            return httpx.Response(200, json={"data": tickets})
+
+        original = httpx.AsyncClient
+        monkeypatch.setattr(
+            weekly.httpx,
+            "AsyncClient",
+            lambda **kw: original(**kw, transport=httpx.MockTransport(handler)),
+        )
+        return sent
+
+    return use
+
 
 AT = datetime(2026, 10, 5, 9, 5, tzinfo=timezone.utc)
 
@@ -432,3 +465,55 @@ async def test_queue_paginates_all_due_users_before_window_closes(
         )
         == 2
     )
+
+
+@pytest.mark.parametrize("bad_id", [None, {}, [], 123, "", "\x00", " ", "a" * 257])
+async def test_malformed_ticket_does_not_rollback_successful_peer(
+    session, sessionmaker_for_test, user, monkeypatch, bad_id
+):
+    await _make_eligible(sessionmaker_for_test, user)
+    await enable(session, user)
+    await _register_token(session, user, "ExponentPushToken[bad-ticket]")
+    sent = []
+
+    def handler(request):
+        if request.url.path.endswith("getReceipts"):
+            return httpx.Response(200, json={"data": {"good-ticket": {"status": "ok"}}})
+        messages = json.loads(request.content)
+        sent.extend(messages)
+        return httpx.Response(
+            200,
+            json={
+                "data": [
+                    {
+                        "status": "ok",
+                        "id": bad_id
+                        if m["to"].endswith("bad-ticket]")
+                        else "good-ticket",
+                    }
+                    for m in messages
+                ]
+            },
+        )
+
+    original = httpx.AsyncClient
+    monkeypatch.setattr(
+        weekly.httpx,
+        "AsyncClient",
+        lambda **kw: original(**kw, transport=httpx.MockTransport(handler)),
+    )
+    result = await weekly.send_weekly_quiz_notifications(session, at=AT)
+    assert result.sent == 1
+    states = (
+        await session.execute(
+            text("""select w.expo_push_token,w.status from weekly_quiz_notifications w
+        join weekly_quizzes q on q.id=w.quiz_id where q.user_id=:uid"""),
+            {"uid": user},
+        )
+    ).all()
+    assert dict(states) == {
+        "ExponentPushToken[test-1]": "accepted",
+        "ExponentPushToken[bad-ticket]": "unknown",
+    }
+    await weekly.send_weekly_quiz_notifications(session, at=AT + timedelta(minutes=16))
+    assert len(sent) == 2, "Neither successful nor uncertain deliveries may be replayed"

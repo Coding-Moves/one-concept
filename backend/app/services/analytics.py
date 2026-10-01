@@ -72,11 +72,11 @@ _ACTIVITY = text("""
       where occurred_at >= profile.window_start and occurred_at < profile.window_end
       group by (occurred_at at time zone profile.timezone)::date
     )
-    select day,coalesce(totals.concepts,0)::int as concepts,coalesce(totals.reviews,0)::int as reviews,
-           coalesce(totals.quizzes,0)::int as quizzes
+    select series.day::date as day,coalesce(totals.concepts,0)::int as concepts,
+           coalesce(totals.reviews,0)::int as reviews,coalesce(totals.quizzes,0)::int as quizzes
     from profile cross join generate_series(profile.today-27,profile.today,interval '1 day') series(day)
     left join totals on totals.day=series.day::date
-    order by day
+    order by series.day
 """)
 
 

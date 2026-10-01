@@ -17,9 +17,10 @@ function plural(count: number, noun: string) {
   return `${count} ${noun}${count === 1 ? '' : 's'}`;
 }
 
-function shortDay(day: string) {
-  const parsed = new Date(`${day}T12:00:00`);
-  return Number.isNaN(parsed.getTime()) ? day : parsed.toLocaleDateString(undefined, { weekday: 'short' });
+function activityDayLabel(day: string) {
+  const [year, month, date] = day.split('-').map(Number);
+  const monthName = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][month - 1];
+  return Number.isInteger(year) && monthName && Number.isInteger(date) ? `${monthName} ${date}` : day;
 }
 
 export function AnalyticsScreen() {
@@ -59,14 +60,18 @@ export function AnalyticsScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
       {refreshUI.action}
-      <ScreenHeader
-        eyebrow="Your learning"
-        title="Activity analytics"
-        subtitle="A private summary of progress accepted by your account."
-        action={<Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.goBack()} style={styles.back}>
+      <View style={styles.top}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.goBack()} style={styles.back}>
           <Ionicons name="arrow-back" size={24} color={colors.text} />
-        </Pressable>}
-      />
+        </Pressable>
+        <View style={styles.header}>
+          <ScreenHeader
+            eyebrow="Your learning"
+            title="Activity analytics"
+            subtitle="A private summary of progress accepted by your account."
+          />
+        </View>
+      </View>
 
       {loading ? <>
         <SkeletonBlock style={{ height: 96, borderRadius: radius.lg }} />
@@ -97,7 +102,7 @@ export function AnalyticsScreen() {
           {recentActivity.map((day) => {
             const count = day.concepts + day.reviews + day.quizzes;
             return <View key={day.day} style={styles.activityRow}>
-              <Text style={styles.rowName}>{shortDay(day.day)}</Text>
+              <Text style={styles.rowName}>{activityDayLabel(day.day)}</Text>
               <Text style={styles.rowValue}>{count === 0 ? 'No activity' : `${plural(day.concepts, 'concept')} · ${plural(day.reviews, 'review')} · ${plural(day.quizzes, 'quiz')}`}</Text>
             </View>;
           })}
@@ -161,7 +166,9 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: { padding: spacing.lg, paddingBottom: spacing.xl, gap: spacing.lg },
   metrics: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md },
+  top: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs },
   back: { minWidth: 48, minHeight: 48, alignItems: 'center', justifyContent: 'center' },
+  header: { flex: 1, paddingTop: spacing.xs },
   card: { gap: spacing.md },
   cardTitle: { ...typography.heading, fontSize: scaleFont(18), color: colors.text },
   copy: { fontSize: scaleFont(14), lineHeight: scaleFont(21), color: colors.textSecondary },

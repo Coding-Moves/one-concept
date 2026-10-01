@@ -1,4 +1,4 @@
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 from sqlalchemy import text
@@ -8,10 +8,43 @@ from app.services.collections import history_page, saved_page
 from app.services.concepts import get_concept_out
 from app.services.editorial_revisions import decide_revision, submit_revision
 from app.services.state import load_state
+from app.services.streaks import compute_streaks, local_today
 from tests import test_publication
 from tests.editorial_helpers import identity
 
 draft = test_publication.draft
+
+
+async def test_hiding_retired_content_preserves_earned_stats_and_visible_cursor(
+    session, user
+):
+    today = await local_today(session, user)
+    ids = (
+        (
+            await session.execute(
+                text("select id from concepts where status='published' limit 2")
+            )
+        )
+        .scalars()
+        .all()
+    )
+    for offset, cid in enumerate(ids):
+        await session.execute(
+            text("""insert into daily_assignments
+            (user_id,concept_id,assigned_for,completed_at)
+            values (:uid,:cid,:day,now())"""),
+            {"uid": user, "cid": cid, "day": today - timedelta(days=offset)},
+        )
+    before = await compute_streaks(session, user)
+    assert before.current == before.longest == before.total_learned == 2
+    for cid in ids:
+        await session.execute(
+            text("update concepts set status='archived' where id=:id"), {"id": cid}
+        )
+        state = await load_state(session, user, compact=True)
+        assert state.stats == before == await compute_streaks(session, user)
+        assert len(state.learned) == (1 if cid == ids[0] else 0)
+        assert state.history_next_cursor is None
 
 
 @pytest.mark.parametrize(

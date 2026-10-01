@@ -109,6 +109,13 @@ interaction references a draft. Quiz snapshots created from previously
 published lessons retain their frozen text; a pending correction does not
 replace them.
 
+Hiding a lesson does not erase a completed learning day: aggregate counts and
+streaks still use the retained completion records. History pagination uses only
+visible lessons, so hidden rows do not create empty cursors. An existing daily
+assignment or review still owns that day's slot after its lesson is retired.
+The daily endpoint returns the existing `exhausted` response without content
+instead of assigning a second activity; the following day selects normally.
+
 ## Rollout and operational boundary
 
 1. Keep production editorial activation disabled while #276–#281 are completed.

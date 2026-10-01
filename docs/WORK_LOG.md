@@ -7,6 +7,27 @@ claims as completed work.
 
 ## Current status
 
+### PR #299 follow-up code review — fixed and validated
+
+- Reviewed `82c80b1` against #275, including authenticated decisions, immutable
+  evidence, cutover, CLI bypass prevention and learner visibility. Three failing
+  PostgreSQL cases reproduced two P2 regressions before fixes.
+- `29ec677` preserves today's assignment/review slot when its lesson is hidden,
+  prevents a second activity and safely handles retirement before the payload
+  read. `f9eb91a` keeps earned counts/streaks independent of visible history and
+  uses visible counts for pagination (including an entirely hidden history).
+- **31 focused tests passed.** The first full review run had **403 passes and
+  one failure**: an old like-count test assumed no earlier likes on a shared seed
+  that API tests select randomly. `4765b57` checks the exact increment and own-like
+  exclusion without that assumption. The final full PostgreSQL 16 rerun passed
+  **404 tests, no skips**, including all four new regression cases.
+- Backend F/E9 lint, changed documentation links and whitespace checks passed.
+  Final exact-head hosted checks and review summary are recorded in PR #299.
+  The documentation commit is "Document PR 299 review fixes and validation".
+- No additional migration, environment setting or manual task for these fixes;
+  the staged editorial activation prerequisites remain unchanged. No merge or
+  production change. Preserve all original and follow-up commits.
+
 ### #275 exact-revision approval and provenance — implemented and validated
 
 - [PR #299](https://github.com/Coding-Moves/one-concept/pull/299) targets `develop`

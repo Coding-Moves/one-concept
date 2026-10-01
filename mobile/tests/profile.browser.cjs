@@ -43,6 +43,7 @@ const server=http.createServer((req,res)=>{
      }
      if(status===200)body=sharing;
     }
+    else if(endpoint.startsWith('/v1/public-profiles/'))body={display_name:'Amina',achievements:[]};
     else if(endpoint==='/v1/me/achievements')body={items:[{code:'concept_1',name:'First concept',earned_on:today,seen_at:today,metric:'concepts',threshold:1,description:'A beginning',artwork_key:'candle'}]};
     else if(endpoint==='/v1/topics')body=[{slug:'computer-science',name:'Computer Science',concept_count:125,following:true}];
     else if(endpoint==='/v1/me/notifications'){if(request.method()==='PUT'){if(failReminders)status=503;else remindersEnabled=request.postDataJSON().enabled;}body={enabled:remindersEnabled,reminder_times:['08:00']};}
@@ -82,17 +83,20 @@ const server=http.createServer((req,res)=>{
    await page.getByRole('button',{name:'Enable sharing with these choices'}).click();
    await expect(page.getByText('Sharing: On',{exact:true})).toBeVisible();
    assert.equal(sharing.show_name,true);assert.equal(sharing.show_streak,false);assert.deepEqual(sharing.achievement_codes,[]);
-   await page.getByRole('button',{name:'Show profile QR'}).click();
+   await page.getByRole('button',{name:'Preview & share profile'}).click();
+   await expect.poll(async()=> (await page.getByText('Share your progress',{exact:true}).boundingBox())?.y ?? 999).toBeLessThan(80);
    const qr=page.getByLabel('QR code containing only your public profile link');
    await qr.evaluate(el=>el.scrollIntoView({block:'center'}));await expect(qr).toBeVisible();
    const bounds=await qr.boundingBox();assert.ok(bounds.x>=0&&bounds.x+bounds.width<=321);
-   await page.screenshot({path:`/tmp/profile-sharing-${theme}.png`,fullPage:true});
+   await page.screenshot({path:`/tmp/profile-sharing-${theme}.png`,fullPage:true,animations:'disabled'});
+   await expect(page.getByText('Share your progress',{exact:true})).toBeVisible();
+   await page.getByRole('button',{name:'Close share preview'}).click();
    conflict=true;
    await page.getByRole('switch',{name:'Total concepts learned'}).check();
    await page.getByRole('button',{name:'Save public choices'}).click();
    await expect(page.getByText(/Changes were not confirmed/)).toBeVisible();
    await expect(page.getByRole('switch',{name:'Total concepts learned'})).toBeChecked();
-   await expect(page.getByRole('button',{name:'Show profile QR'})).toHaveCount(0);
+   await expect(page.getByRole('button',{name:'Preview & share profile'})).toHaveCount(0);
    conflict=false;
    await page.getByRole('button',{name:'Reload settings'}).click();
    await expect(page.getByRole('switch',{name:'Total concepts learned'})).not.toBeChecked();
@@ -104,7 +108,7 @@ const server=http.createServer((req,res)=>{
    }));
    await page.getByRole('button',{name:'Enable sharing with these choices'}).scrollIntoViewIfNeeded();
    await expect(page.getByRole('button',{name:'Enable sharing with these choices'})).toBeVisible();
-   await page.screenshot({path:`/tmp/profile-large-${theme}.png`,fullPage:true});
+   await page.screenshot({path:`/tmp/profile-large-${theme}.png`,fullPage:true,animations:'disabled'});
    assert.deepEqual(errors,[]);
    console.log(`${theme}: name validation/retry/duplicate prevention/state refresh, opt-in sharing, QR layout, stale-write recovery and disable passed`);
    await context.close();

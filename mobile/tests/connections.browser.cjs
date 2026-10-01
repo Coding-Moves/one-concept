@@ -66,6 +66,7 @@ const server=http.createServer((req,res)=>{
    await input.fill('invalid');await page.getByRole('button',{name:'Open shared profile',exact:true}).click();await expect(page.getByText(/Enter a valid One Concept/)).toBeVisible();
    await input.fill(`http://127.0.0.1:4781/api/p/${token}`);await page.getByRole('button',{name:'Open shared profile',exact:true}).click();
    await expect(page.getByText('Bea',{exact:true})).toBeVisible();
+   await expect(page.getByRole('button',{name:'Send connection request',exact:true})).toBeEnabled();
    offline=true;
    await page.getByRole('button',{name:'Send connection request',exact:true}).click();
    await expect(page.getByText(/Could not confirm that change/)).toBeVisible();assert.equal(requestCalls,0);

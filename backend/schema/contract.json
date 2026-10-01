@@ -25,12 +25,19 @@
     "0023_subtopic_completions.sql": "00946c7a856e7b883174411d0f142839b47f25348780afbe24c784bdf4e1947b",
     "0024_backfill_subtopic_completion_events.sql": "d35b611207831e60942aafc9da73b0d558fa917df71113e83ad940cd6707f8a4",
     "0025_subtopic_quizzes.sql": "e0edebb44215d6501566d2b268ac4542306b41d418635a36c7d76abde073fb9e",
-    "0026_subtopic_quiz_owner_integrity.sql": "e53d509dd9b2cb39cdaa353168328d0040a22845c4f4d30ec42165fc4e817204"
+    "0026_subtopic_quiz_owner_integrity.sql": "e53d509dd9b2cb39cdaa353168328d0040a22845c4f4d30ec42165fc4e817204",
+    "0027_expanded_achievements.sql": "b02bbcb95f44e9eebd4582bbb537dd02911ec0598699dc433aa15b7159746a67"
   },
   "schema": {
     "columns": {
       "achievement_definitions.artwork_key": {
         "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.category": {
+        "default": "'consistency'::text",
         "identity": "",
         "not_null": true,
         "type": "text"
@@ -58,6 +65,18 @@
         "identity": "",
         "not_null": true,
         "type": "text"
+      },
+      "achievement_definitions.requirement": {
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "achievement_definitions.show_progress": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
       },
       "achievement_definitions.sort_order": {
         "default": null,
@@ -1015,12 +1034,20 @@
       }
     },
     "constraints": {
+      "achievement_definitions.achievement_definitions_category_check": {
+        "definition": "CHECK ((category = ANY (ARRAY['consistency'::text, 'learning'::text, 'review'::text, 'quiz'::text, 'path'::text])))",
+        "validated": true
+      },
       "achievement_definitions.achievement_definitions_metric_threshold_key": {
         "definition": "UNIQUE (metric, threshold)",
         "validated": true
       },
       "achievement_definitions.achievement_definitions_pkey": {
         "definition": "PRIMARY KEY (code)",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_requirement_check": {
+        "definition": "CHECK ((jsonb_typeof(requirement) = 'object'::text))",
         "validated": true
       },
       "achievement_definitions.achievement_definitions_threshold_check": {
@@ -1328,7 +1355,7 @@
         "validated": true
       },
       "user_achievements.user_achievements_source_check": {
-        "definition": "CHECK ((source = ANY (ARRAY['history'::text, 'completion'::text])))",
+        "definition": "CHECK ((source = ANY (ARRAY['history'::text, 'completion'::text, 'review'::text, 'quiz'::text, 'subtopic'::text])))",
         "validated": true
       },
       "user_achievements.user_achievements_user_id_fkey": {

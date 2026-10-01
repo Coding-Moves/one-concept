@@ -19,7 +19,7 @@ async def _definition_awards(session, user):
 async def _concept_completions(session, user, count, at):
     await session.execute(text("""
         insert into public.user_concept_completions(user_id,concept_id,completed_at)
-        select :uid,id,:at + (n * interval '1 minute')
+        select :uid,id,cast(:at as timestamptz) + (n * interval '1 minute')
         from (select id,row_number() over(order by id)-1 as n from public.concepts limit :count) concepts
         on conflict (user_id,concept_id) do nothing
     """), {"uid": user, "count": count, "at": at})

@@ -27,6 +27,7 @@ class SubtopicProgress:
     completed_concepts: int
     available_concepts: int
     completed: bool
+    completion_id: uuid.UUID | None
 
 
 # `md5` is built into PostgreSQL, unlike optional extension functions. The
@@ -90,9 +91,9 @@ _PROGRESS = text(f"""
     )
     select progress.topic_slug,progress.topic_name,progress.subtopic_slug,progress.subtopic_name,
            progress.completed,progress.available,
-           exists(select 1 from public.user_subtopic_completions event
-                   where event.user_id=:uid and event.subtopic_id=progress.subtopic_id
-                     and event.catalog_signature={_signature('progress')}) as completed_catalog
+           (select event.id from public.user_subtopic_completions event
+             where event.user_id=:uid and event.subtopic_id=progress.subtopic_id
+               and event.catalog_signature={_signature('progress')}) as completion_id
       from progress
      order by progress.topic_name,progress.subtopic_name
 """)
@@ -122,7 +123,8 @@ async def progress(session: AsyncSession, user_id: uuid.UUID) -> list[SubtopicPr
             topic_slug=row["topic_slug"], topic_name=row["topic_name"],
             subtopic_slug=row["subtopic_slug"], subtopic_name=row["subtopic_name"],
             completed_concepts=row["completed"], available_concepts=row["available"],
-            completed=row["completed_catalog"],
+            completed=row["completion_id"] is not None,
+            completion_id=row["completion_id"],
         )
         for row in rows
     ]

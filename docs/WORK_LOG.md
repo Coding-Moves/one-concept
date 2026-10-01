@@ -7,6 +7,21 @@ claims as completed work.
 
 ## Current status
 
+### #258 serious learning and activity analytics — in progress
+
+- Scope: add one authenticated, server-derived analytics read model and a quiet
+  mobile Analytics screen. It will combine completed concepts, reviews, weekly
+  quiz attempts/scores, streaks, timezone-correct recent activity, actual topic
+  distribution, learning-path progress and achievements without client counters
+  or a productivity-dashboard score.
+- Planned commits: analytics schema and aggregation service; protected API and
+  PostgreSQL date-boundary coverage; mobile screen/navigation and focused tests;
+  documentation and PR handoff. No migration, production content, production
+  user data, release version or deployment belongs in this PR.
+- The exact Expo SDK 57 documentation was reviewed before mobile work. The
+  screen will use existing React Native primitives and project UI components;
+  no native dependency is needed.
+
 ### #259 expanded achievements — in progress
 
 - Scope: extend permanent, optional recognition beyond streaks without changing

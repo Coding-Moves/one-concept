@@ -24,6 +24,12 @@ claims as completed work.
   the pre-existing ignored-public-config assertion failure; all other 71 tests
   passed. No migration, production content, production user data, release
   version or deployment belongs in this PR.
+- Review correction: `271b097` keeps the back control in the conventional left
+  position and formats server-supplied local activity dates without using the
+  device timezone.
+- PR [#291](https://github.com/Coding-Moves/one-concept/pull/291) targets
+  `develop` and declares `Closes #258`. It is ready for review; no merge,
+  release or deployment action has been taken.
 - The exact Expo SDK 57 documentation was reviewed before mobile work. The
   screen uses existing React Native primitives and project UI components; no
   native dependency is needed.

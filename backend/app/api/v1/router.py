@@ -4,8 +4,10 @@ from app.api.v1 import analytics, achievements, concepts, daily, me, quizzes, re
 
 from app.api.v1.connections import router as connections_router
 from app.api.v1.profile_sharing import router as profile_sharing_router
+from app.api.v1.editorial import router as editorial_router
 
 api_router = APIRouter(prefix="/v1")
+api_router.include_router(editorial_router)
 api_router.include_router(topics.router)
 api_router.include_router(daily.router)
 api_router.include_router(concepts.router)

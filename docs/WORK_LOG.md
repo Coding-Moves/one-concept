@@ -7,9 +7,10 @@ claims as completed work.
 
 ## Current status
 
-### #268 weekly quiz notifications — final PR preparation
+### #268 weekly quiz notifications — PR opened
 
-- Dedicated `codex/268-weekly-quiz-notifications` branch from `develop` (`df67cae`).
+- [PR #296](https://github.com/Coding-Moves/one-concept/pull/296) targets `develop`
+  from `codex/268-weekly-quiz-notifications` (base `df67cae`), with `Closes #268`.
   Independent weekly opt-in respects the master switch, saved timezone, current
   quiz and completion. No production rollout, user-data change or release is part
   of this task; migration 0031 remains unapplied in the production ledger.
@@ -39,7 +40,10 @@ claims as completed work.
 - Remaining before production activation: ordered migration application, reviewed
   API/worker/mobile release, physical staging-phone cold/warm tap and delivery tests,
   then owner enables the flag on the existing reminders service. Local mocks do not
-  establish native delivery. No manual action is needed to open this feature PR.
+  establish native delivery. No manual action is needed to review this feature PR.
+- `1d82de9` records the rollout guide and codebase map. Final handoff commit
+  `docs: record weekly notification PR handoff` records this PR link. GitHub CI
+  status is reported separately on the PR; no merge or production activation occurred.
 
 
 ### PRs #293 / #295 owner-requested merge-readiness review — completed locally

@@ -25,6 +25,7 @@ export type ProfileStackParamList = {
   ProfileHome: undefined;
   EditProfile: undefined;
   ProfileSharing: undefined;
+  Connections: undefined;
   Personalization: undefined;
   Saved: undefined;
   About: undefined;
@@ -144,6 +145,10 @@ export function ProfileScreen() {
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('ProfileSharing')} style={styles.rowCard}>
         <Text style={styles.rowTitle}>Public profile & sharing</Text>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Connections')} style={styles.rowCard}>
+        <Text style={styles.rowTitle}>Connections</Text>
+        <Ionicons name="people-outline" size={22} color={colors.primary} />
       </Pressable>
       <View style={styles.cardsRow}>
         <Surface style={styles.card}>

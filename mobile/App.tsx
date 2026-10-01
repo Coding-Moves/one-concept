@@ -32,6 +32,7 @@ import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { AboutScreen } from './src/screens/AboutScreen';
 import { ConceptDetailScreen } from './src/screens/ConceptDetailScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
+import { ConnectionsScreen } from './src/screens/ConnectionsScreen';
 import { PublicProfileLink } from './src/components/PublicProfileLink';
 import { ProfileSharingScreen } from './src/screens/ProfileSharingScreen';
 import { EditProfileScreen } from './src/screens/EditProfileScreen';
@@ -61,6 +62,7 @@ function ProfileStackScreen() {
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
       <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
       <ProfileStack.Screen name="ProfileSharing" component={ProfileSharingScreen} />
+      <ProfileStack.Screen name="Connections" component={ConnectionsScreen} />
       <ProfileStack.Screen
         name="Personalization"
         component={PersonalizationScreen}

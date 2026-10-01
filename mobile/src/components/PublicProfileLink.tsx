@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { AppState, Linking, Modal, Pressable, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { ConnectionControls } from './ConnectionControls';
+import { onPublicProfileOpen } from '../services/publicProfileNavigation';
 import { useTheme } from '../context/ThemeContext';
 import { getPublicProfile, profileTokenFromLink, PublicProfile } from '../services/profileSharing';
 
@@ -18,9 +20,10 @@ export function PublicProfileLink() {
       const parsed = profileTokenFromLink(url);
       if (active && parsed) { setProfile(null); setError(false); setToken(parsed); setAttempt(n => n + 1); }
     };
+    const stopOpening = onPublicProfileOpen(receive);
     const listener = Linking.addEventListener('url', event => { receivedEvent = true; receive(event.url); });
     Linking.getInitialURL().then(url => { if (url && !receivedEvent) receive(url); }).catch(() => {});
-    return () => { active = false; listener.remove(); };
+    return () => { active = false; listener.remove(); stopOpening(); };
   }, []);
   useEffect(() => {
     let current = true;
@@ -47,6 +50,7 @@ export function PublicProfileLink() {
           {profile.achievements.map((a, i) => <Text key={i} style={{ color: colors.text }}>{a.name} — {a.description}</Text>)}
           {!profile.achievements.length && profile.current_streak === undefined && profile.concepts_learned === undefined && <Text style={{ color: colors.textMuted }}>No learning highlights have been shared.</Text>}
           <Text style={{ color: colors.textMuted }}>Shared with One Concept</Text>
+          {token && <ConnectionControls token={token} />}
         </> : <Text style={{ color: colors.text }}>Loading public profile…</Text>}
       </ScrollView>
     </SafeAreaView>

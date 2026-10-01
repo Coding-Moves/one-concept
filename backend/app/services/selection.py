@@ -72,7 +72,7 @@ _EXISTING = text("""
              where ci.concept_id = c.id and ci.liked_at is not null
                and ci.user_id <> :uid)::int as like_count
       from public.daily_assignments a
-      join public.concepts c on c.id = a.concept_id
+      join public.concepts c on c.id = a.concept_id and c.status='published'
       join public.topics  t on t.id = c.topic_id
       join public.subtopics s on s.id = c.subtopic_id
      where a.user_id = :uid and a.assigned_for = :today
@@ -101,7 +101,7 @@ _CANDIDATE = text("""
     last_seen as (
         select c.topic_id, max(a.assigned_for) as seen_on
           from public.daily_assignments a
-          join public.concepts c on c.id = a.concept_id
+          join public.concepts c on c.id = a.concept_id and c.status='published'
          where a.user_id = :uid
          group by c.topic_id
     )
@@ -127,7 +127,7 @@ _FOLLOWED_TOPIC_BY_STALENESS = text("""
       left join (
           select c.topic_id, max(a.assigned_for) as seen_on
             from public.daily_assignments a
-            join public.concepts c on c.id = a.concept_id
+            join public.concepts c on c.id = a.concept_id and c.status='published'
            where a.user_id = :uid
            group by c.topic_id
       ) ls on ls.topic_id = ut.topic_id

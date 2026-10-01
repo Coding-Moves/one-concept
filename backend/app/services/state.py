@@ -68,7 +68,7 @@ _STATE = text("""
     learned_rows as (
         select c.id as concept_id, c.slug, c.title, t.name as topic_name, a.assigned_for
           from public.daily_assignments a
-          join public.concepts c on c.id = a.concept_id
+          join public.concepts c on c.id = a.concept_id and c.status='published'
           join public.topics t on t.id = c.topic_id
          where a.user_id = :uid and a.completed_at is not null
     ),
@@ -94,11 +94,12 @@ _STATE = text("""
           coalesce(json_agg(c.slug) filter (where i.liked_at is not null), '[]'::json) as likes,
           coalesce(json_agg(c.slug) filter (where i.saved_at is not null), '[]'::json) as saves
           from public.concept_interactions i
-          join public.concepts c on c.id = i.concept_id
+          join public.concepts c on c.id = i.concept_id and c.status='published'
          where i.user_id = :uid
     ),
     saved_rows as materialized (
-        select concept_id, saved_at from public.concept_interactions
+        select concept_id, saved_at from public.concept_interactions i
+          join public.concepts c on c.id=i.concept_id and c.status='published'
          where user_id = :uid and saved_at is not null
          order by saved_at desc, concept_id desc limit :window_limit
     ),
@@ -111,13 +112,13 @@ _STATE = text("""
                                 and ci.liked_at is not null and ci.user_id <> :uid)::int)
                    order by i.saved_at desc, i.concept_id desc), '[]'::json) as v
           from saved_rows i
-          join public.concepts c on c.id = i.concept_id
+          join public.concepts c on c.id = i.concept_id and c.status='published'
           join public.topics t on t.id = c.topic_id
     ),
     assignment as (
         select c.slug
           from public.daily_assignments a
-          join public.concepts c on c.id = a.concept_id
+          join public.concepts c on c.id = a.concept_id and c.status='published'
          where a.user_id = :uid and a.assigned_for = (select today from prof)
     ),
     -- Gaps and islands: consecutive dates share (date - row_number()).

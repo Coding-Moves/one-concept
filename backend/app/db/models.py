@@ -176,7 +176,14 @@ class SubtopicQuiz(Base):
     """A frozen reviewed quiz for one completed subtopic catalog."""
 
     __tablename__ = "subtopic_quizzes"
-    __table_args__ = (UniqueConstraint("user_id", "subtopic_completion_id"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "subtopic_completion_id"),
+        UniqueConstraint("id", "user_id"),
+        ForeignKeyConstraint(
+            ("subtopic_completion_id", "user_id"),
+            ("user_subtopic_completions.id", "user_subtopic_completions.user_id"),
+        ),
+    )
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     user_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
@@ -194,6 +201,12 @@ class SubtopicQuizAttempt(Base):
     """An append-only submission against a frozen subtopic quiz."""
 
     __tablename__ = "subtopic_quiz_attempts"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ("quiz_id", "user_id"),
+            ("subtopic_quizzes.id", "subtopic_quizzes.user_id"),
+        ),
+    )
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     quiz_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("subtopic_quizzes.id", ondelete="RESTRICT"), nullable=False

@@ -24,7 +24,8 @@
     "0022_weekly_quizzes.sql": "8faf72df5585b9f163fdf2514131b792bf14b743187520881ab3bad1a62bf8c7",
     "0023_subtopic_completions.sql": "00946c7a856e7b883174411d0f142839b47f25348780afbe24c784bdf4e1947b",
     "0024_backfill_subtopic_completion_events.sql": "d35b611207831e60942aafc9da73b0d558fa917df71113e83ad940cd6707f8a4",
-    "0025_subtopic_quizzes.sql": "e0edebb44215d6501566d2b268ac4542306b41d418635a36c7d76abde073fb9e"
+    "0025_subtopic_quizzes.sql": "e0edebb44215d6501566d2b268ac4542306b41d418635a36c7d76abde073fb9e",
+    "0026_subtopic_quiz_owner_integrity.sql": "e53d509dd9b2cb39cdaa353168328d0040a22845c4f4d30ec42165fc4e817204"
   },
   "schema": {
     "columns": {
@@ -1246,8 +1247,20 @@
         "definition": "FOREIGN KEY (quiz_id) REFERENCES public.subtopic_quizzes(id) ON DELETE RESTRICT",
         "validated": true
       },
+      "subtopic_quiz_attempts.subtopic_quiz_attempts_quiz_owner_fkey": {
+        "definition": "FOREIGN KEY (quiz_id, user_id) REFERENCES public.subtopic_quizzes(id, user_id) ON DELETE RESTRICT",
+        "validated": true
+      },
       "subtopic_quiz_attempts.subtopic_quiz_attempts_user_id_fkey": {
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_completion_owner_fkey": {
+        "definition": "FOREIGN KEY (subtopic_completion_id, user_id) REFERENCES public.user_subtopic_completions(id, user_id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_id_user_id_key": {
+        "definition": "UNIQUE (id, user_id)",
         "validated": true
       },
       "subtopic_quizzes.subtopic_quizzes_pkey": {
@@ -1348,6 +1361,10 @@
       },
       "user_subtopic_completions.user_subtopic_completions_catalog_signature_check": {
         "definition": "CHECK ((catalog_signature ~ '^[0-9a-f]{64}$'::text))",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_id_user_id_key": {
+        "definition": "UNIQUE (id, user_id)",
         "validated": true
       },
       "user_subtopic_completions.user_subtopic_completions_pkey": {
@@ -1616,6 +1633,11 @@
         "ready": true,
         "valid": true
       },
+      "subtopic_quizzes_id_user_id_key": {
+        "definition": "CREATE UNIQUE INDEX subtopic_quizzes_id_user_id_key ON public.subtopic_quizzes USING btree (id, user_id)",
+        "ready": true,
+        "valid": true
+      },
       "subtopic_quizzes_owner_created_idx": {
         "definition": "CREATE INDEX subtopic_quizzes_owner_created_idx ON public.subtopic_quizzes USING btree (user_id, created_at DESC)",
         "ready": true,
@@ -1678,6 +1700,11 @@
       },
       "user_concept_completions_user_completed_idx": {
         "definition": "CREATE INDEX user_concept_completions_user_completed_idx ON public.user_concept_completions USING btree (user_id, completed_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "user_subtopic_completions_id_user_id_key": {
+        "definition": "CREATE UNIQUE INDEX user_subtopic_completions_id_user_id_key ON public.user_subtopic_completions USING btree (id, user_id)",
         "ready": true,
         "valid": true
       },

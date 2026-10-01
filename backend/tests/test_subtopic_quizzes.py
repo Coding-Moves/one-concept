@@ -208,3 +208,33 @@ async def test_authenticated_clients_cannot_write_subtopic_quiz_records(session,
             values (:uid,:completion_id,'[]'::jsonb)
         """), {"uid": user, "completion_id": completion_id})
     await session.rollback()
+
+async def test_database_rejects_cross_account_quiz_ownership(session, user):
+    rows = (await session.execute(text("""
+        select c.id,c.subtopic_id from public.concepts c join public.subtopics s on s.id=c.subtopic_id
+         where s.slug='probability' and c.status='published' order by c.id limit 3
+    """))).all()
+    other = uuid.uuid4()
+    completion_id = uuid.uuid4()
+    try:
+        await session.execute(text("""
+            insert into auth.users (id,email) values (:id,:email)
+        """), {"id": other, "email": f"{other}@example.invalid"})
+        await session.execute(text("""
+            insert into public.user_subtopic_completions
+              (id,user_id,subtopic_id,catalog_signature,catalog_concept_ids)
+            values (:id,:uid,:sid,
+              md5(array_to_string(cast(:concept_ids as uuid[]), ',')) ||
+                md5('one-concept-subtopic-v1:' || array_to_string(cast(:concept_ids as uuid[]), ',')),
+              cast(:concept_ids as uuid[]))
+        """), {"id": completion_id, "uid": user, "sid": rows[0].subtopic_id,
+                 "concept_ids": [row.id for row in rows]})
+        with pytest.raises(Exception, match="subtopic_quizzes_completion_owner_fkey"):
+            await session.execute(text("""
+                insert into public.subtopic_quizzes (user_id,subtopic_completion_id,questions)
+                values (:other,:completion_id,'[{}]'::jsonb)
+            """), {"other": other, "completion_id": completion_id})
+        await session.rollback()
+    finally:
+        async with session.begin():
+            await session.execute(text("delete from auth.users where id=:id"), {"id": other})

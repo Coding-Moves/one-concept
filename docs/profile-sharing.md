@@ -27,7 +27,9 @@ achievement codes are accepted. Disabling sharing rotates the token: old links
 remain unavailable even after sharing is enabled again. Already-viewed screenshots
 or copies cannot be recalled.
 
-The native Share sheet receives only the public HTTPS URL. QR generation uses a
+A dedicated share preview sheet shows a local avatar, the currently selected
+public highlights and a QR card. Its content comes from the anonymous public API,
+not private cached progress. The native Share sheet receives only the public HTTPS URL. QR generation uses a
 local pure-JavaScript library; no profile data or QR request goes to another
 service. Returning from background clears the displayed QR, and incoming profile
 views reload public data. Visitors do not send authentication tokens or persist

@@ -172,6 +172,40 @@ class UserSubtopicCompletion(Base):
     seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class SubtopicQuiz(Base):
+    """A frozen reviewed quiz for one completed subtopic catalog."""
+
+    __tablename__ = "subtopic_quizzes"
+    __table_args__ = (UniqueConstraint("user_id", "subtopic_completion_id"),)
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    subtopic_completion_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("user_subtopic_completions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    questions: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SubtopicQuizAttempt(Base):
+    """An append-only submission against a frozen subtopic quiz."""
+
+    __tablename__ = "subtopic_quiz_attempts"
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    quiz_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("subtopic_quizzes.id", ondelete="RESTRICT"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    answers: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    correct_count: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
 class ConceptInteraction(Base):
     __tablename__ = "concept_interactions"
 

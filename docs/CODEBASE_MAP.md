@@ -41,6 +41,16 @@ cleanup. Profile opens `AchievementsScreen`; shared badge/detail/celebration
 components render every category and a server-confirmed nearest milestone.
 See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
 
+## Future multilingual content (#265)
+
+`docs/multilingual-content/README.md` is the approved future-work design for
+localized daily lessons, flashcards and quizzes. Canonical concept identities
+remain the source of progress, history and analytics; future reviewed locale
+variants supply complete learner-facing payloads with server-selected fallback.
+Language-learning study cards and games are a separate future model, not copies
+of technical concepts or translations. This section documents no runtime
+implementation.
+
 ## Learning analytics (#258)
 
 `services/analytics.py` provides the single bounded, account-scoped read model

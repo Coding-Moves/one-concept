@@ -36,6 +36,7 @@ link's build current automatically.
 - [Backend](backend/README.md) — API endpoints, auth, running locally
 - [Email templates](docs/EMAIL_TEMPLATES.md) — branded Supabase emails and installation
 - [Deployment](mobile/DEPLOYMENT.md) — EAS builds, OTA updates, release runbook
+- [Multilingual content architecture](docs/multilingual-content/README.md) — future localization and language-course design
 
 ## Contributing
 

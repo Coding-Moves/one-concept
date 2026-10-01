@@ -64,8 +64,8 @@ async def authorize(
         text("""
         select exists(select 1 from auth.users u join auth.sessions s on s.user_id=u.id
           where u.id=:uid and s.id=:sid and u.email_confirmed_at is not null
-            and (u.banned_until is null or u.banned_until <= now())
-            and (s.not_after is null or s.not_after > now()))
+            and (u.banned_until is null or u.banned_until <= statement_timestamp())
+            and (s.not_after is null or s.not_after > statement_timestamp()))
     """),
         {"uid": user.id, "sid": session_id},
     )

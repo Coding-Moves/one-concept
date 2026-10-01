@@ -314,6 +314,61 @@ async def test_queued_mutation_rechecks_revocation(api, session, sessionmaker_fo
     )
 
 
+async def test_queued_mutation_rejects_session_that_expires_during_wait(
+    api, session, sessionmaker_for_test
+):
+    uid, sid, _ = await enroll(api, session)
+    await session.execute(
+        text("""update auth.sessions
+        set not_after=clock_timestamp()+interval '3 seconds' where id=:sid"""),
+        {"sid": sid},
+    )
+    await session.commit()
+    async with sessionmaker_for_test() as blocker:
+        await lock_accounts(blocker)
+        pending = asyncio.create_task(
+            api.client.patch(
+                "/v1/editorial/me/profile",
+                headers=api.headers(uid, sid),
+                json={"expected_version": 1, "registered_name": "Expired Session"},
+            )
+        )
+        try:
+            for _ in range(100):
+                waiting = await session.scalar(
+                    text("""select count(*) from pg_locks where locktype='advisory'
+                    and not granted and classid=274 and objid=263""")
+                )
+                if waiting:
+                    break
+                await asyncio.sleep(0.01)
+            assert waiting, "Request must reach the lock before its session expires"
+            # The deadline exists before the request; let it expire naturally.
+            # now() would still refer to the transaction started before the wait.
+            await asyncio.sleep(3.1)
+            await blocker.commit()
+            response = await asyncio.wait_for(pending, 5)
+            assert response.status_code == 401, response.text
+        finally:
+            await blocker.rollback()
+            if not pending.done():
+                pending.cancel()
+            await asyncio.gather(pending, return_exceptions=True)
+    member = (
+        await session.execute(
+            text("""select requested_name,version from editorial_memberships
+            where user_id=:uid"""),
+            {"uid": uid},
+        )
+    ).one()
+    assert member == (None, 1)
+    assert not await session.scalar(
+        text("""select exists(select 1 from editorial_account_events
+        where subject_id=:uid and action='profile_requested')"""),
+        {"uid": uid},
+    )
+
+
 async def test_invitation_failure_has_no_membership_and_retry_is_safe(
     api, session, monkeypatch
 ):

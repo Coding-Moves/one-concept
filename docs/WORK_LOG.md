@@ -7,18 +7,37 @@ claims as completed work.
 
 ## Current status
 
-### #274 reviewer identity foundation — implementation started
+### #274 reviewer identity foundation — implemented and locally validated
 
 - First child of #263, on `codex/274-editorial-reviewer-accounts`, based on
   `develop` after #296 merged. Scope: private memberships/audit, verified-session
   authorization, invitations, profile onboarding/name approval, owner controls,
   tests and an activation runbook. Frontend screens remain in #278.
-- Intended commits: storage/session contract; authorization and owner bootstrap;
-  invitation/profile/account APIs; regression coverage and integration fixes;
-  operator documentation and final validation. Preserve individual commits.
+- Commits: `0b19127` private storage/session contract; `aee2804` authorization and
+  owner bootstrap; `a481af9` invitation/profile/access APIs; `02dc854` origin and
+  bootstrap safeguards; `faf265d` secret-safe settings errors. The documentation
+  commit is identified by its subject, "Document editorial account activation and
+  frontend handoff". Preserve all individual commits.
 - Incorporate Faizan's multi-reviewer/profile flow using individual Supabase
   invitations and user-set passwords. Three is an initial team target, not a cap.
 - No live invitations, production schema/configuration or mobile release changes.
+- Verification: **367 backend tests passed, no skips**, using disposable PG16;
+  **63** focused security/schema tests passed before that run; the final settings
+  error-redaction change passed all **21** provider/configuration tests. Backend
+  F/E9 lint, local documentation links and whitespace checks passed. A profile
+  validator name collision initially blocked collection and was fixed before
+  these passing runs. No new dependency or frontend/native change was introduced.
+- Reusable authority checks verified JWT/session ownership, confirmed/unbanned
+  Auth user, live membership, approved name and independent capabilities with
+  MFA. Versioned writes recheck authority under the account lock. Tests include
+  queued writes versus revocation, team growth, duplicate invitations, provider
+  timeouts, stale name approvals, private storage and final-admin protection.
+- [editorial-accounts.md](editorial-accounts.md) records API contracts, bootstrap,
+  recovery, MFA, Auth sender/redirect setup, migration and rollback. Live mailbox
+  and browser acceptance await #278/#281. Keep `EDITORIAL_ENABLED=false` until
+  staging activation; #275/#276 still own exact-content provenance and publication.
+- Handoff: open the dedicated `develop` PR for #274 and confirm hosted CI. Do not
+  merge/close a PR or enable production in this task.
 
 
 ### #268 weekly quiz notifications — owner-requested review fixes completed

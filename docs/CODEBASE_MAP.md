@@ -23,6 +23,19 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
 | Engineering handbook | `docs/handbook/ONE_CONCEPT_HANDBOOK.md` explains the full stack and learning lifecycle; `docs/handbook/build_pdf.py` renders the printable guide with vector diagrams. Build and verification instructions are in `docs/handbook/README.md`. |
 
+## Editorial identities (#274)
+
+`api/v1/editorial.py` exposes private account/onboarding and owner-management APIs.
+`services/editorial_accounts.py` verifies current Supabase sessions, confirmed
+email, membership, capabilities and MFA; `editorial_management.py` serializes
+versioned account mutations and records their audit events. `editorial_invites.py`
+is the server-only Auth invitation adapter. Migration `0032_editorial_accounts.sql`
+keeps memberships and account events inaccessible to browser roles. The one-time
+owner CLI is `python -m app.workers.editorial_accounts`; see
+[editorial-accounts.md](editorial-accounts.md) for activation and frontend handoff.
+Dashboard screens (#278), content provenance (#275), publication enforcement
+(#276) and owner reporting (#297) remain separate children of #263.
+
 ## Achievements (#209, #259)
 
 `services/achievements.py` awards permanent, data-driven milestones under the

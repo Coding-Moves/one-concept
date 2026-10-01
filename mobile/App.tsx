@@ -3,6 +3,7 @@ import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
+  useNavigationContainerRef,
   Theme,
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -10,7 +11,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SpaceGrotesk_700Bold, useFonts } from '@expo-google-fonts/space-grotesk';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { ComponentProps, useCallback, useRef } from 'react';
+import { ComponentProps, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AchievementCelebration } from './src/components/AchievementCelebration';
@@ -33,6 +34,7 @@ import { AboutScreen } from './src/screens/AboutScreen';
 import { ConceptDetailScreen } from './src/screens/ConceptDetailScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
 import { ConnectionsScreen } from './src/screens/ConnectionsScreen';
+import { WeeklyQuizNotificationNavigator } from './src/components/WeeklyQuizNotificationNavigator';
 import { PublicProfileLink } from './src/components/PublicProfileLink';
 import { ProfileSharingScreen } from './src/screens/ProfileSharingScreen';
 import { EditProfileScreen } from './src/screens/EditProfileScreen';
@@ -93,6 +95,12 @@ function tabIcon(focusedName: IoniconName, name: IoniconName) {
 function ThemedApp() {
   const { colors, mode } = useTheme();
   const { loading, session } = useAuth();
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  const [readyAccount, setReadyAccount] = useState<string | null>(null);
+  useEffect(() => { if (loading || !session) setReadyAccount(null); }, [loading, session?.user.id]);
+  const openWeeklyQuiz = useCallback((notificationRequestId: string) => {
+    if (navigationRef.isReady()) navigationRef.navigate('Tabs', { screen: 'Quiz', params: { notificationRequestId } });
+  }, [navigationRef]);
   const whatsNew = useWhatsNew();
   const online = useOnline();
 
@@ -142,7 +150,8 @@ function ThemedApp() {
       <SyncStatusBanner />
       <PublicProfileLink />
       <View style={{ flex: 1 }}>
-        <NavigationContainer key={session.user.id} theme={navigationTheme}>
+        <NavigationContainer key={session.user.id} ref={navigationRef} onReady={() => setReadyAccount(session.user.id)} theme={navigationTheme}>
+          <WeeklyQuizNotificationNavigator ready={readyAccount === session.user.id} onOpen={openWeeklyQuiz} />
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
             <RootStack.Screen name="Tabs" component={Tabs} />
             <RootStack.Screen

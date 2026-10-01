@@ -14,8 +14,6 @@ from datetime import date, timedelta
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.services.achievements import award_eligible
-
 from app.schemas.quizzes import (
     WeeklyQuizAnswerResult,
     WeeklyQuizAttemptOut,
@@ -24,6 +22,7 @@ from app.schemas.quizzes import (
     WeeklyQuizSubmissionIn,
     WeeklyQuizUnavailableOut,
 )
+from app.services.achievements import award_eligible
 from app.services.content_quality import MultipleChoiceQuestion
 
 QUESTIONS_PER_WEEK = 7

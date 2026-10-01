@@ -5,7 +5,6 @@ import pytest
 from sqlalchemy import text
 
 from app.services.achievements import award_eligible, collection
-from tests.test_writes import _make_user
 
 
 async def _definition_awards(session, user):

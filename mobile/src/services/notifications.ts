@@ -31,13 +31,13 @@ Notifications.setNotificationHandler({
 });
 
 /**
- * Keep the server's idea of "your day" aligned with the phone's clock.
+ * Initialize new accounts once; preserve every existing server timezone.
  * Reminder times and streak boundaries are computed in this zone.
  */
-export async function syncTimezone(): Promise<void> {
+export async function syncTimezone(userId: string): Promise<void> {
   const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
   if (!timezone) return;
-  await apiRequest<unknown>('/v1/me?compact=true', { method: 'PATCH', body: { timezone } });
+  await apiRequest<unknown>('/v1/me?compact=true', { method: 'PATCH', expectedUserId: userId, body: { timezone, initialize_timezone: true } });
 }
 
 /** Ask permission (first run only) and register this handset's token. */

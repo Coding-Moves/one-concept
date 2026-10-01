@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!userId) return;
     // Best-effort; a token refresh must not block cached browsing.
     registerForReminders().catch(() => {});
-    syncTimezone().catch(() => {});
+    syncTimezone(userId).catch(() => {});
   }, [userId]);
 
   const signIn = useCallback(async (email: string, password: string) => {

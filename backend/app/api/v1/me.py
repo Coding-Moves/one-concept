@@ -292,8 +292,9 @@ async def patch_profile(
         if canonical is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Unknown timezone")
         await db.execute(
-            text("update public.profiles set timezone = :tz where id = :uid"),
-            {"tz": canonical, "uid": user.id},
+            text("""update public.profiles set timezone = :tz, timezone_initialized = true
+                    where id = :uid and (not :initialize or not timezone_initialized)"""),
+            {"tz": canonical, "uid": user.id, "initialize": body.initialize_timezone},
         )
     if body.display_name is not None:
         await db.execute(

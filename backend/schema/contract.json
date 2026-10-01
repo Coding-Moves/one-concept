@@ -27,7 +27,8 @@
     "0025_subtopic_quizzes.sql": "e0edebb44215d6501566d2b268ac4542306b41d418635a36c7d76abde073fb9e",
     "0026_subtopic_quiz_owner_integrity.sql": "e53d509dd9b2cb39cdaa353168328d0040a22845c4f4d30ec42165fc4e817204",
     "0027_expanded_achievements.sql": "b02bbcb95f44e9eebd4582bbb537dd02911ec0598699dc433aa15b7159746a67",
-    "0028_public_profiles.sql": "c693e786a2d787eef9128eddf1bd5cd0cd8a8d1a031212dd155c44bc181bfbe8"
+    "0028_public_profiles.sql": "c693e786a2d787eef9128eddf1bd5cd0cd8a8d1a031212dd155c44bc181bfbe8",
+    "0029_profile_timezone.sql": "cc14e637fe90172687eb25d10e0a354b32050c535541250f9955742526a5812e"
   },
   "schema": {
     "columns": {
@@ -708,6 +709,12 @@
         "identity": "",
         "not_null": true,
         "type": "text"
+      },
+      "profiles.timezone_initialized": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
       },
       "profiles.updated_at": {
         "default": "now()",

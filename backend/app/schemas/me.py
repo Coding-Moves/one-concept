@@ -80,6 +80,7 @@ class ProfileIn(BaseModel):
 
     # IANA zone name; owns every day boundary for this user.
     timezone: str | None = Field(default=None, max_length=64)
+    initialize_timezone: bool = False
 
 
 class CompletedOut(BaseModel):

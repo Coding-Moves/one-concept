@@ -7,6 +7,89 @@ claims as completed work.
 
 ## Current status
 
+### PRs #293 / #295 owner-requested merge-readiness review — completed locally
+
+- Reviewed current profile and Connections diffs, auth/ownership, public allowlist,
+  revocation, migrations, mobile account/foreground boundaries, consent races,
+  dependency order and hosted CI. No remaining blocker found in #293 at `3229a6f`.
+- Reproduced stale invitation reuse in #295, then fixed it in `ecd33b9`: renewed
+  requests receive a new action ID and ownership is rechecked after the pair lock.
+  The regression failed before the fix and passed afterward. Focused PostgreSQL
+  profile, sharing, Connections and schema checks: **45 passed, no skips**; F/E9
+  lint and whitespace checks passed. An initial test invocation used the wrong
+  working directory; rerunning from backend resolved collection.
+- Both PRs belong to the authorized owner account, so GitHub self-approval is
+  unavailable. Record review results without substituting another account.
+- Owner requested both PRs ready. Mark #295 ready after final hosted CI, preserving
+  the merge order **#293, then #295** and all individual commits. No merge occurs
+  in this task. Production migration/phone checks remain release prerequisites,
+  not a prerequisite to merging these feature branches into `develop`.
+
+### #294 complete mutual Connections — reviewed, merge after #293
+
+- [PR #295](https://github.com/Coding-Moves/one-concept/pull/295) targets `develop`
+  from `codex/294-mutual-connections`. Merge profile PR #293 first.
+  Its current develop diff includes that dependency; compare against
+  `codex/267-complete-profile` to review Connections alone. No merge is authorized.
+- `1e3f522`: constrained schema, private API and request controls; `9d28063`:
+  account-safe client and invitation-only cooldowns; `d6969d1`: full mobile
+  lifecycle and browser acceptance; `8ae1269`: blocking races and pagination;
+  `a04dd43`: privacy disclosure; `177d3f8`: wait for status before the offline test.
+  `400dc2e` preserves the latest profile share-sheet commits through a branch merge.
+- Covers opt-in requests, explicit acceptance, decline/cancel/remove/block/unblock,
+  private paginated lists, online-only mutations and server limits. Profile/QR
+  work stays in #293; there is no XP, leaderboard, public graph or paid service.
+- Passed: full PostgreSQL 16 suite **275 tests, no skips**, then **16 Connections
+  tests** including three additional race/pagination cases; mobile TypeScript
+  and **80 Node 24 tests**; backend F/E9 lint; web export. Final mocked browser
+  checks passed for both profile and Connections at 320px in both themes,
+  including failed saves, offline request retry and all relationship actions.
+  The offline fixture initially disconnected before status finished loading;
+  synchronizing that prerequisite resolved the test failure.
+- Migration `0030_connections.sql` follows #293's 0028/0029. Production ledger,
+  settings, users and release/runtime versions are unchanged. Physical two-phone,
+  native sharing, camera/deep-link and TalkBack checks remain before publication.
+  See [connections.md](connections.md) for the rollout and acceptance checklist.
+- Handoff: final hosted CI and review results are recorded on #295. Owner merges
+  #293 first, then #295 with green checks. Neither merge nor mobile publication
+  is part of this task.
+
+### #267 complete learner profile with opt-in sharing — completion review
+
+- PR [#293](https://github.com/Coding-Moves/one-concept/pull/293) keeps all profile
+  work together on `codex/267-complete-profile`, targeting `develop`.
+- `271f14e`: preferred-name editor, validation and confirmed account-safe cache/
+  greeting refresh. `d9cd8b0`: private-by-default field sharing, earned-award
+  allowlist, random revocable links, anonymous public HTML/JSON, RLS and contract.
+  `51ae52f`: preserve existing learning timezones during automatic phone sync.
+  `d374fcd`: privacy UI, native Share, local QR and uncached incoming-link view.
+  `5372fd3`: reminder permission/network feedback, retry and account-scoped cache.
+- Validation: full PostgreSQL 16 backend suite **260 passed, no skips**; backend
+  F/E9 lint passed; mobile TypeScript and **77 Node 24 tests passed**. Mocked
+  browser acceptance checks passed in both themes at 320px for failed/duplicate
+  name saves, confirmed header updates, reminder errors, field opt-in, QR,
+  conflicting privacy saves and disabling sharing. Earlier test failures were
+  resolved: stored-streak assertion now distinguishes the boolean visibility
+  preference, and browser fixtures acknowledge awards before navigating.
+- Migrations `0028_public_profiles.sql` and `0029_profile_timezone.sql` remain
+  unapplied to production; the ledger is unchanged. Deploy schema/backend before
+  mobile publication. No production settings, data, release version or runtime
+  were changed. See [profile-sharing.md](profile-sharing.md) for rollout and
+  required physical-phone/TalkBack/native-share/camera checks. Browser fallback
+  works independently of optional verified HTTPS App Links, which need separate
+  domain/native configuration; those associations are not claimed complete.
+- Exact Expo SDK 57 docs were reviewed. Public QR is pure JavaScript and uses the
+  existing API hostname; no new paid service or native package is introduced.
+- Follow-up: use the supplied screenshots as inspiration for a dedicated share
+  preview sheet, local avatar and QR card. Preview data comes only from the public
+  API allowlist; native Share is revalidated before use. No XP, leagues, leaderboard,
+  subscription promotion or external images were added.
+- User authorized a separate complete Connections issue/PR after #293. Created
+  [#294](https://github.com/Coding-Moves/one-concept/issues/294), with mutual request,
+  accept/decline/cancel, private lists, remove/block/unblock, server abuse controls
+  and acceptance tests in one scope. Keep this out of #293. Neither PR is
+  authorized to merge without the owner's specific confirmation.
+
 ### #265 multilingual daily digest, flashcard, and quiz content — architecture recorded
 
 - Scope: planning only. `docs/multilingual-content/README.md` records canonical

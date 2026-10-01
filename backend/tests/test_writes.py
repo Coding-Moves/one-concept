@@ -93,7 +93,9 @@ async def test_streaks_never_come_from_the_client(session, user):
     assert stats.current == 1
     columns = await session.scalar(
         text("""select count(*) from information_schema.columns
-                 where table_schema = 'public' and column_name ilike '%streak%'""")
+                 where table_schema = 'public' and column_name ilike '%streak%'
+                 and not (table_name = 'profile_sharing' and column_name = 'show_streak'
+                          and data_type = 'boolean')""")
     )
     assert columns == 0, "a stored streak column would be a source of drift"
 

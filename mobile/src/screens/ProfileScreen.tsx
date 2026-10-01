@@ -3,8 +3,8 @@ import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
 import { AchievementPreview } from '../components/AchievementPreview';
 import { AnimatedFlame } from '../components/AnimatedFlame';
 import { Surface } from '../components/Surface';
@@ -23,6 +23,9 @@ import { getSubtopicProgress, SubtopicProgress } from '../services/subtopicProgr
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
+  EditProfile: undefined;
+  ProfileSharing: undefined;
+  Connections: undefined;
   Personalization: undefined;
   Saved: undefined;
   About: undefined;
@@ -46,24 +49,30 @@ export function ProfileScreen() {
   // activity card above, and the one that updates optimistically on a save so
   // the two counts never disagree.
   const savedCount = progress.bookmarks.length;
+  const reminderPending = useRef(false);
+  const mounted = useRef(true);
+  const [reminderBusy, setReminderBusy] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState('');
+  useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   // Server-owned preference; absent until the first state fetch succeeds.
+  const [prefsReload, setPrefsReload] = useState(0);
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
   const [subtopics, setSubtopics] = useState<SubtopicProgress[]>([]);
   useEffect(() => {
     let active = true;
     // Cached copy first so the row is there instantly (and offline); the
     // server answer replaces it when it arrives.
-    getCachedNotificationPrefs().then((p) => {
+    getCachedNotificationPrefs(session!.user.id).then((p) => {
       if (active && p) setPrefs((current) => current ?? p);
     });
-    getNotificationPrefs()
+    getNotificationPrefs(session!.user.id)
       .then((p) => active && setPrefs(p))
-      .catch(() => {});
+      .catch(() => { if (active) setReminderMessage('Could not refresh reminder settings. Check your connection and reload.'); });
     return () => {
       active = false;
     };
-  }, []);
+  }, [session?.user.id, prefsReload]);
 
   useEffect(() => {
     if (!session?.user.id) return;
@@ -77,17 +86,40 @@ export function ProfileScreen() {
   const completedSubtopics = subtopics.filter(item => item.completed).length;
 
   const toggleReminders = useCallback(async () => {
-    if (!prefs) return;
+    if (!prefs || !session?.user.id || reminderPending.current) return;
+    reminderPending.current = true; setReminderBusy(true); setReminderMessage('');
     const next = { ...prefs, enabled: !prefs.enabled };
-    setPrefs(next); // optimistic; revert on failure
     try {
-      setPrefs(await putNotificationPrefs(next));
-      if (next.enabled) registerForReminders().catch(() => {});
+      const confirmed = await putNotificationPrefs(next, session.user.id);
+      if (!mounted.current) return;
+      setPrefs(confirmed);
+      if (next.enabled) {
+        try {
+          const result = await registerForReminders(session.user.id);
+          if (mounted.current && result !== 'registered') setReminderMessage(result === 'denied'
+            ? 'Reminders are enabled, but this device blocks notifications. Allow them in your phone settings.'
+            : 'Reminders are enabled for your account. Push notifications require a supported physical device.');
+        } catch {
+          if (mounted.current) setReminderMessage('Reminders are enabled, but this device could not register. Check your connection, then use Retry device registration.');
+        }
+      }
     } catch {
-      setPrefs(prefs); // revert the visual toggle…
-      Alert.alert("Couldn't update reminders", 'Check your connection and try again.');
+      if (mounted.current) setReminderMessage('Could not save reminder settings. Check your connection and try again.');
+    } finally {
+      reminderPending.current = false;
+      if (mounted.current) setReminderBusy(false);
     }
-  }, [prefs]);
+  }, [prefs, session?.user.id]);
+
+  const retryReminders = async () => {
+    if (!session?.user.id || reminderPending.current) return;
+    reminderPending.current = true; setReminderBusy(true);
+    try {
+      const status = await registerForReminders(session.user.id);
+      if (mounted.current) setReminderMessage(status === 'registered' ? 'This device is ready for reminders.' : 'Allow notifications in your phone settings on a supported physical device.');
+    } catch { if (mounted.current) setReminderMessage('Could not register this device. Check your connection and retry.'); }
+    finally { reminderPending.current = false; if (mounted.current) setReminderBusy(false); }
+  };
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
@@ -98,7 +130,7 @@ export function ProfileScreen() {
         </View>
         <View style={styles.headerText}>
           <Text style={styles.name}>
-            {email ? email.split('@')[0] : 'Learner'}
+            {progress.displayName?.trim() || (email ? email.split('@')[0] : 'Learner')}
           </Text>
           <Text style={styles.subtitle}>
             {email ?? 'Signed out'}
@@ -106,6 +138,18 @@ export function ProfileScreen() {
         </View>
       </View>
 
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('EditProfile')} style={styles.rowCard}>
+        <Text style={styles.rowTitle}>Edit profile</Text>
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('ProfileSharing')} style={styles.rowCard}>
+        <Text style={styles.rowTitle}>Public profile & sharing</Text>
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Connections')} style={styles.rowCard}>
+        <Text style={styles.rowTitle}>Connections</Text>
+        <Ionicons name="people-outline" size={22} color={colors.primary} />
+      </Pressable>
       <View style={styles.cardsRow}>
         <Surface style={styles.card}>
           <AnimatedFlame
@@ -169,7 +213,7 @@ export function ProfileScreen() {
           <View>
             <Text style={styles.rowTitle}>Personalize your feed</Text>
             <Text style={styles.rowSubtitle}>
-              Following {progress.followedTopics.length} of 5 topics
+              Following {progress.followedTopics.length} topics
             </Text>
           </View>
         </View>
@@ -208,6 +252,15 @@ export function ProfileScreen() {
         />
       </View>
 
+      <View style={styles.rowCard}>
+        <View style={styles.rowLeft}>
+          <View>
+            <Text style={styles.rowTitle}>Learning timezone</Text>
+            <Text style={styles.rowSubtitle}>{progress.timezone ?? 'Loading…'} · Daily lessons and reminders</Text>
+          </View>
+        </View>
+      </View>
+
       {prefs ? (
         <View style={styles.rowCard}>
           <View style={styles.rowLeft}>
@@ -222,6 +275,8 @@ export function ProfileScreen() {
             </View>
           </View>
           <Switch
+            accessibilityLabel="Daily reminders"
+            disabled={reminderBusy}
             value={prefs.enabled}
             onValueChange={toggleReminders}
             trackColor={{ true: colors.primary, false: colors.border }}
@@ -229,6 +284,14 @@ export function ProfileScreen() {
           />
         </View>
       ) : null}
+
+      {reminderMessage ? <Pressable accessibilityRole="button" disabled={reminderBusy} onPress={() => { setReminderMessage(''); setPrefsReload(n => n + 1); }} style={styles.rowCard}>
+        <Text style={styles.rowTitle}>Reload reminder settings</Text>
+      </Pressable> : null}
+      {reminderMessage ? <Text accessibilityLiveRegion="polite" style={styles.rowSubtitle}>{reminderMessage}</Text> : null}
+      {prefs?.enabled && reminderMessage ? <Pressable accessibilityRole="button" disabled={reminderBusy} onPress={() => void retryReminders()} style={styles.rowCard}>
+        <Text style={styles.rowTitle}>Retry device registration</Text>
+      </Pressable> : null}
 
       <Pressable
         onPress={() => navigation.navigate('Saved')}

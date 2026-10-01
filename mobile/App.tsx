@@ -32,6 +32,10 @@ import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { AboutScreen } from './src/screens/AboutScreen';
 import { ConceptDetailScreen } from './src/screens/ConceptDetailScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
+import { ConnectionsScreen } from './src/screens/ConnectionsScreen';
+import { PublicProfileLink } from './src/components/PublicProfileLink';
+import { ProfileSharingScreen } from './src/screens/ProfileSharingScreen';
+import { EditProfileScreen } from './src/screens/EditProfileScreen';
 import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
 import { SavedScreen } from './src/screens/SavedScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
@@ -56,6 +60,9 @@ function ProfileStackScreen() {
   return (
     <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
+      <ProfileStack.Screen name="ProfileSharing" component={ProfileSharingScreen} />
+      <ProfileStack.Screen name="Connections" component={ConnectionsScreen} />
       <ProfileStack.Screen
         name="Personalization"
         component={PersonalizationScreen}
@@ -110,6 +117,7 @@ function ThemedApp() {
       <View style={{ flex: 1 }}>
         {!online && <OfflineBanner />}
         <AuthScreen />
+        <PublicProfileLink />
         <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       </View>
     );
@@ -132,8 +140,9 @@ function ThemedApp() {
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
       {!online && <OfflineBanner insetTop={false} />}
       <SyncStatusBanner />
+      <PublicProfileLink />
       <View style={{ flex: 1 }}>
-        <NavigationContainer theme={navigationTheme}>
+        <NavigationContainer key={session.user.id} theme={navigationTheme}>
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
             <RootStack.Screen name="Tabs" component={Tabs} />
             <RootStack.Screen

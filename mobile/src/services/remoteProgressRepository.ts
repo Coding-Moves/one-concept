@@ -169,6 +169,15 @@ export class RemoteProgressRepository implements ProgressRepository {
     }
   }
 
+  async updateDisplayName(name: string, userId: string): Promise<ProgressState> {
+    const epoch = this.epoch;
+    const payload = await this.request<StatePayload>(epoch, '/v1/me?compact=true', {
+      method: 'PATCH', body: { display_name: name }, expectedUserId: userId,
+    });
+    if (epoch !== this.epoch) throw new ApiError(401, 'Account changed');
+    return this.fromState(payload, epoch);
+  }
+
   async load(): Promise<ProgressState> {
     const epoch = this.epoch;
     try {

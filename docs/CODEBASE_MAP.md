@@ -129,6 +129,8 @@ inside a root stack, with a concept-detail modal above them.
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, result feedback and reattempts. |
 | `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, retries, and prior-score history. |
 | `ProfileScreen.tsx` | Account, learning-path progress, reminder preferences, theme, sign-out, and links to profile subpages. |
+| `EditProfileScreen.tsx` | Preferred-name editing; confirmed, account-fenced Progress state update. |
+| `ProfileSharingScreen.tsx` / `PublicProfileLink.tsx` | Opt-in field choices, native share/local QR and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
 | `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |
@@ -429,3 +431,13 @@ the implementation or older documentation:
   background scheduling remains outside the current APK's capabilities.
 - The backend README's test-count/phase notes are historical. See
   [WORK_LOG.md](WORK_LOG.md) for the actual local validation baseline.
+
+### Public profile privacy
+
+`api/v1/profile_sharing.py` exposes caller-owned settings and separately filtered
+public JSON/browser reads. `services/profile_sharing.py` owns row locking, version
+checks, earned-achievement filtering and revocable random tokens. Migration 0028
+adds the backend-only sharing table; 0029 preserves stored timezones during phone
+initialization. `mobile/src/services/profileSharing.ts` owns link parsing, local QR
+and anonymous visitor requests. See [profile-sharing.md](profile-sharing.md) for
+privacy guarantees, migration order and phone acceptance checks.

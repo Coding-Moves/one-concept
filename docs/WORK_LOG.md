@@ -7,21 +7,37 @@ claims as completed work.
 
 ## Current status
 
-### #267 complete learner profile with opt-in sharing — in progress
+### #267 complete learner profile with opt-in sharing — completion review
 
-- Scope: one dedicated PR for an authenticated editable preferred name and
-  server-enforced opt-in public profile. Existing `profiles.display_name`, JWT
-  identity, Progress state, learner-safe recovery UI, and React Native Share
-  will be reused; no sign-in field, legal-name, age or other personal data will
-  be introduced.
-- Planned commits: profile-name normalizer/API contract and account-isolation
-  coverage; private edit screen and immediate state refresh; privacy settings,
-  opaque public identifier and filtered public endpoint; public web fallback,
-  sharing/QR presentation; accessibility, documentation and handoff.
-- #265 is now a closed design tracker, not a runtime blocker. Localized profile
-  presentation remains a later enhancement. Public universal links need a stable
-  verified domain, Android `assetlinks.json`, and a new native APK; this PR can
-  prepare safe browser fallback but must not claim those external steps complete.
+- PR [#293](https://github.com/Coding-Moves/one-concept/pull/293) keeps all profile
+  work together on `codex/267-complete-profile`, targeting `develop`.
+- `271f14e`: preferred-name editor, validation and confirmed account-safe cache/
+  greeting refresh. `d9cd8b0`: private-by-default field sharing, earned-award
+  allowlist, random revocable links, anonymous public HTML/JSON, RLS and contract.
+  `51ae52f`: preserve existing learning timezones during automatic phone sync.
+  `d374fcd`: privacy UI, native Share, local QR and uncached incoming-link view.
+  `5372fd3`: reminder permission/network feedback, retry and account-scoped cache.
+- Validation: full PostgreSQL 16 backend suite **260 passed, no skips**; backend
+  F/E9 lint passed; mobile TypeScript and **77 Node 24 tests passed**. Mocked
+  browser acceptance checks passed in both themes at 320px for failed/duplicate
+  name saves, confirmed header updates, reminder errors, field opt-in, QR,
+  conflicting privacy saves and disabling sharing. Earlier test failures were
+  resolved: stored-streak assertion now distinguishes the boolean visibility
+  preference, and browser fixtures acknowledge awards before navigating.
+- Migrations `0028_public_profiles.sql` and `0029_profile_timezone.sql` remain
+  unapplied to production; the ledger is unchanged. Deploy schema/backend before
+  mobile publication. No production settings, data, release version or runtime
+  were changed. See [profile-sharing.md](profile-sharing.md) for rollout and
+  required physical-phone/TalkBack/native-share/camera checks. Browser fallback
+  works independently of optional verified HTTPS App Links, which need separate
+  domain/native configuration; those associations are not claimed complete.
+- Exact Expo SDK 57 docs were reviewed. Public QR is pure JavaScript and uses the
+  existing API hostname; no new paid service or native package is introduced.
+- User authorized a separate complete Connections issue/PR after #293. Created
+  [#294](https://github.com/Coding-Moves/one-concept/issues/294), with mutual request,
+  accept/decline/cancel, private lists, remove/block/unblock, server abuse controls
+  and acceptance tests in one scope. Keep this out of #293. Neither PR is
+  authorized to merge without the owner's specific confirmation.
 
 ### #265 multilingual daily digest, flashcard, and quiz content — architecture recorded
 

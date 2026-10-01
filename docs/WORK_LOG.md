@@ -17,7 +17,8 @@ claims as completed work.
   `f0dfb86` records the reviewed schema contract. `bfc3b40` covers Profile’s
   completion-ID contract; `544c0a2` adds the dedicated mobile list/detail
   screens; `6f889b4` adds composite database ownership constraints and a
-  cross-account regression.
+  cross-account regression; `8153f7a` rejects unknown history IDs and uses
+  lint-clean typed FastAPI dependencies.
 - A quiz freezes one deterministic reviewed MCQ per selected completed concept,
   up to seven. It stores source slug/version and answer key in the server-only
   snapshot. Later content changes cannot alter an existing quiz; each retry

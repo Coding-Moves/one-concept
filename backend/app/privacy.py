@@ -57,6 +57,15 @@ PRIVACY_POLICY = """<!doctype html>
        old link, including after you enable sharing again, but cannot erase
        screenshots or copies already made by a visitor.</p>
 
+    <h2>Optional Connections</h2>
+    <p>If you use Connections, we store requests, accepted relationships and blocks
+       to provide your private lists and prevent unwanted invitations. Receiving
+       new requests is off by default. The other learner sees only the profile
+       information you currently choose to share. You can decline, cancel, remove
+       or block a connection. Blocking stops connection requests; it does not make
+       an otherwise public profile link private. Turn off sharing to revoke that
+       link. We keep limited request-event timestamps to enforce invitation limits.</p>
+
     <h2>Service providers</h2>
     <p>We use Supabase to provide authentication and database infrastructure.
        We use Expo's push-notification service to deliver reminders when enabled.

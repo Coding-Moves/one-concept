@@ -57,6 +57,9 @@ class Settings(BaseSettings):
     generation_on_demand: bool = True
 
     allowed_origins: str = "http://localhost:8081"
+    # Off until migration, owner bootstrap and dashboard/Auth setup are verified.
+    editorial_enabled: bool = False
+    editorial_invite_redirect_url: str = ""
 
     @property
     def cors_origins(self) -> list[str]:

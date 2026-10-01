@@ -1,5 +1,7 @@
 from datetime import date, datetime
 
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
@@ -10,6 +12,10 @@ class AchievementOut(BaseModel):
     name: str
     description: str
     artwork_key: str
+    category: str
+    requirement: dict[str, Any]
+    show_progress: bool
+    progress: int | None
     earned_on: date | None
     source: str | None
     seen_at: datetime | None

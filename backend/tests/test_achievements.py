@@ -29,7 +29,7 @@ async def history(session, user, count, start=DAY):
 
 
 async def earned(session, user):
-    return (await session.execute(text("select * from public.user_achievements where user_id=:u order by earned_on"), {"u": user})).mappings().all()
+    return (await session.execute(text("""select u.* from public.user_achievements u join public.achievement_definitions d on d.code=u.achievement_code where u.user_id=:u and d.metric='consecutive_days' order by u.earned_on"""), {"u": user})).mappings().all()
 
 
 @pytest.mark.parametrize('milestone', [7, 30, 90, 180, 365, 500, 1000, 5000, 10000])
@@ -126,7 +126,7 @@ async def test_api_ownership_and_ack_cannot_grant_awards(client, session, user):
     await session.commit()
     response = await client.get('/v1/me/achievements')
     assert response.status_code == 200
-    assert len(response.json()['items']) == 9
+    assert len(response.json()['items']) == 32
     assert all(a['earned_on'] is None for a in response.json()['items'])
     assert (await client.post('/v1/me/achievements/seen', json={'codes':['streak_7']})).status_code == 204
     assert not await earned(session, user)
@@ -152,9 +152,9 @@ async def test_collection_reconciles_deployment_gap_without_another_completion(c
     assert not await earned(session, user)
     response = await client.get('/v1/me/achievements')
     assert response.status_code == 200
-    unlocked = [a for a in response.json()['items'] if a['earned_on']]
+    unlocked = [a for a in response.json()['items'] if a['earned_on'] and a['metric'] == 'consecutive_days']
     assert [a['code'] for a in unlocked] == ['streak_7', 'streak_30']
     assert all(a['source'] == 'history' for a in unlocked)
     await client.post('/v1/me/achievements/seen', json={'codes': ['streak_7', 'streak_30']})
     again = await client.get('/v1/me/achievements')
-    assert all(a['seen_at'] for a in again.json()['items'] if a['earned_on'])
+    assert all(a['seen_at'] for a in again.json()['items'] if a['code'] in {'streak_7', 'streak_30'})

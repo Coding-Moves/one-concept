@@ -14,6 +14,8 @@ from datetime import date, timedelta
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.services.achievements import award_eligible
+
 from app.schemas.quizzes import (
     WeeklyQuizAnswerResult,
     WeeklyQuizAttemptOut,
@@ -170,6 +172,7 @@ async def submit_weekly_quiz(
     submission: WeeklyQuizSubmissionIn,
 ) -> WeeklyQuizAttemptOut:
     """Score only the frozen server snapshot and append one immutable attempt."""
+    await session.execute(text("select id from public.profiles where id=:uid for update"), {"uid": user_id})
     quiz = (
         await session.execute(
             _QUIZ_FOR_SUBMISSION, {"quiz_id": quiz_id, "uid": user_id}
@@ -214,6 +217,7 @@ async def submit_weekly_quiz(
             },
         )
     ).one()
+    await award_eligible(session, user_id)
     return WeeklyQuizAttemptOut(
         attempt_id=attempt.id,
         quiz_id=quiz.id,

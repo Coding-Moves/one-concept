@@ -99,6 +99,12 @@ const server=http.createServer((req,res)=>{
    await page.getByRole('button',{name:'Turn off sharing now'}).click();
    await expect(page.getByText('Sharing: Off',{exact:true})).toBeVisible();
    await expect(qr).toHaveCount(0);assert.equal(sharing.public_path,null);
+   await page.evaluate(()=>document.querySelectorAll('div,span').forEach(el=>{
+    if(el.childNodes.length===1&&el.firstChild?.nodeType===Node.TEXT_NODE){const style=getComputedStyle(el);el.style.fontSize=(parseFloat(style.fontSize)*1.8)+'px';}
+   }));
+   await page.getByRole('button',{name:'Enable sharing with these choices'}).scrollIntoViewIfNeeded();
+   await expect(page.getByRole('button',{name:'Enable sharing with these choices'})).toBeVisible();
+   await page.screenshot({path:`/tmp/profile-large-${theme}.png`,fullPage:true});
    assert.deepEqual(errors,[]);
    console.log(`${theme}: name validation/retry/duplicate prevention/state refresh, opt-in sharing, QR layout, stale-write recovery and disable passed`);
    await context.close();

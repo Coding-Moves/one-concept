@@ -28,7 +28,8 @@
     "0026_subtopic_quiz_owner_integrity.sql": "e53d509dd9b2cb39cdaa353168328d0040a22845c4f4d30ec42165fc4e817204",
     "0027_expanded_achievements.sql": "b02bbcb95f44e9eebd4582bbb537dd02911ec0598699dc433aa15b7159746a67",
     "0028_public_profiles.sql": "c693e786a2d787eef9128eddf1bd5cd0cd8a8d1a031212dd155c44bc181bfbe8",
-    "0029_profile_timezone.sql": "cc14e637fe90172687eb25d10e0a354b32050c535541250f9955742526a5812e"
+    "0029_profile_timezone.sql": "cc14e637fe90172687eb25d10e0a354b32050c535541250f9955742526a5812e",
+    "0030_connections.sql": "1dedd4fef237cf0b012bff1969c4edcb9ab3f67abecbdcdb354b95ef4e193941"
   },
   "schema": {
     "columns": {
@@ -373,6 +374,108 @@
         "identity": "",
         "not_null": true,
         "type": "uuid"
+      },
+      "connection_blocks.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "connection_blocks.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_blocks.owner_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_blocks.target_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_preferences.accepting_requests": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "connection_preferences.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_preferences.version": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "connection_request_events.id": {
+        "default": null,
+        "identity": "a",
+        "not_null": true,
+        "type": "bigint"
+      },
+      "connection_request_events.requested_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "connection_request_events.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.changed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "connections.high_user": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.initiator": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.low_user": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.requested_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "connections.state": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
       },
       "content_conditions.active": {
         "default": null,
@@ -1194,6 +1297,78 @@
         "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
         "validated": true
       },
+      "connection_blocks.connection_blocks_check": {
+        "definition": "CHECK ((owner_id <> target_id))",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_owner_id_fkey": {
+        "definition": "FOREIGN KEY (owner_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_owner_id_target_id_key": {
+        "definition": "UNIQUE (owner_id, target_id)",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_target_id_fkey": {
+        "definition": "FOREIGN KEY (target_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connection_preferences.connection_preferences_pkey": {
+        "definition": "PRIMARY KEY (user_id)",
+        "validated": true
+      },
+      "connection_preferences.connection_preferences_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connection_preferences.connection_preferences_version_check": {
+        "definition": "CHECK ((version >= 0))",
+        "validated": true
+      },
+      "connection_request_events.connection_request_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "connection_request_events.connection_request_events_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connections.connections_check": {
+        "definition": "CHECK ((low_user < high_user))",
+        "validated": true
+      },
+      "connections.connections_check1": {
+        "definition": "CHECK (((initiator = low_user) OR (initiator = high_user)))",
+        "validated": true
+      },
+      "connections.connections_high_user_fkey": {
+        "definition": "FOREIGN KEY (high_user) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connections.connections_initiator_fkey": {
+        "definition": "FOREIGN KEY (initiator) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connections.connections_low_user_fkey": {
+        "definition": "FOREIGN KEY (low_user) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connections.connections_low_user_high_user_key": {
+        "definition": "UNIQUE (low_user, high_user)",
+        "validated": true
+      },
+      "connections.connections_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "connections.connections_state_check": {
+        "definition": "CHECK ((state = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'canceled'::text, 'removed'::text])))",
+        "validated": true
+      },
       "content_conditions.content_conditions_pkey": {
         "definition": "PRIMARY KEY (key)",
         "validated": true
@@ -1625,6 +1800,56 @@
         "ready": true,
         "valid": true
       },
+      "connection_blocks_owner_id": {
+        "definition": "CREATE INDEX connection_blocks_owner_id ON public.connection_blocks USING btree (owner_id, id)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_blocks_owner_id_target_id_key": {
+        "definition": "CREATE UNIQUE INDEX connection_blocks_owner_id_target_id_key ON public.connection_blocks USING btree (owner_id, target_id)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_blocks_pkey": {
+        "definition": "CREATE UNIQUE INDEX connection_blocks_pkey ON public.connection_blocks USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_preferences_pkey": {
+        "definition": "CREATE UNIQUE INDEX connection_preferences_pkey ON public.connection_preferences USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_request_events_limit": {
+        "definition": "CREATE INDEX connection_request_events_limit ON public.connection_request_events USING btree (user_id, requested_at)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_request_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX connection_request_events_pkey ON public.connection_request_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "connections_high_state": {
+        "definition": "CREATE INDEX connections_high_state ON public.connections USING btree (high_user, state, id)",
+        "ready": true,
+        "valid": true
+      },
+      "connections_low_state": {
+        "definition": "CREATE INDEX connections_low_state ON public.connections USING btree (low_user, state, id)",
+        "ready": true,
+        "valid": true
+      },
+      "connections_low_user_high_user_key": {
+        "definition": "CREATE UNIQUE INDEX connections_low_user_high_user_key ON public.connections USING btree (low_user, high_user)",
+        "ready": true,
+        "valid": true
+      },
+      "connections_pkey": {
+        "definition": "CREATE UNIQUE INDEX connections_pkey ON public.connections USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
       "content_conditions_pkey": {
         "definition": "CREATE UNIQUE INDEX content_conditions_pkey ON public.content_conditions USING btree (key)",
         "ready": true,
@@ -2027,6 +2252,18 @@
         "rls": true
       },
       "concepts": {
+        "rls": true
+      },
+      "connection_blocks": {
+        "rls": true
+      },
+      "connection_preferences": {
+        "rls": true
+      },
+      "connection_request_events": {
+        "rls": true
+      },
+      "connections": {
         "rls": true
       },
       "content_conditions": {

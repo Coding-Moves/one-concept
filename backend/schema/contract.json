@@ -31,7 +31,8 @@
     "0029_profile_timezone.sql": "cc14e637fe90172687eb25d10e0a354b32050c535541250f9955742526a5812e",
     "0030_connections.sql": "1dedd4fef237cf0b012bff1969c4edcb9ab3f67abecbdcdb354b95ef4e193941",
     "0031_weekly_quiz_notifications.sql": "63f5323681092ee1790a16c4e6f7120172f7f9eb94bd125082424297cbc6125a",
-    "0032_editorial_accounts.sql": "3cb659dcc3c67150dcfa857882d105bedc55ace7a1ba00aef41d169a63f6d400"
+    "0032_editorial_accounts.sql": "3cb659dcc3c67150dcfa857882d105bedc55ace7a1ba00aef41d169a63f6d400",
+    "0033_editorial_provenance.sql": "766fba13569238cd61132bbe645f02f12737d379405757204697aae0e3f26076"
   },
   "schema": {
     "columns": {
@@ -737,6 +738,30 @@
         "not_null": true,
         "type": "uuid"
       },
+      "editorial_legacy_versions.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_legacy_versions.content_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_legacy_versions.inventoried_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_versions.snapshot": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
       "editorial_memberships.approved_name": {
         "default": null,
         "identity": "",
@@ -790,6 +815,114 @@
         "identity": "",
         "not_null": true,
         "type": "integer"
+      },
+      "editorial_publications.approval_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_publications.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_publications.content_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_publications.recorded_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_publications.snapshot": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_revision_events.action": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_revision_events.actor_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_revision_events.base_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_revision_events.checklist_version": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "integer"
+      },
+      "editorial_revision_events.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_revision_events.created_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_revision_events.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_revision_events.note": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_revision_events.quality_review": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "jsonb"
+      },
+      "editorial_revision_events.registered_name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_revision_events.revision_body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_revision_events.revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_revision_events.source_snapshot": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
       },
       "generation_daily_usage.budget_day": {
         "default": null,
@@ -1414,7 +1547,7 @@
         "validated": true
       },
       "concept_revisions.concept_revisions_status_check": {
-        "definition": "CHECK ((status = ANY (ARRAY['generating'::text, 'draft'::text, 'published'::text, 'rejected'::text])))",
+        "definition": "CHECK ((status = ANY (ARRAY['generating'::text, 'draft'::text, 'validation_failed'::text, 'pending_review'::text, 'changes_requested'::text, 'approved'::text, 'rejected'::text, 'published'::text, 'retired'::text])))",
         "validated": true
       },
       "concepts.concepts_content_version_check": {
@@ -1609,6 +1742,14 @@
         "definition": "PRIMARY KEY (id)",
         "validated": true
       },
+      "editorial_legacy_versions.editorial_legacy_versions_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_legacy_versions.editorial_legacy_versions_pkey": {
+        "definition": "PRIMARY KEY (concept_id, content_version)",
+        "validated": true
+      },
       "editorial_memberships.editorial_memberships_approved_name_check": {
         "definition": "CHECK (((length(approved_name) >= 2) AND (length(approved_name) <= 80)))",
         "validated": true
@@ -1635,6 +1776,58 @@
       },
       "editorial_memberships.editorial_memberships_version_check": {
         "definition": "CHECK ((version > 0))",
+        "validated": true
+      },
+      "editorial_publications.editorial_publications_approval_id_fkey": {
+        "definition": "FOREIGN KEY (approval_id) REFERENCES public.editorial_revision_events(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_publications.editorial_publications_approval_id_key": {
+        "definition": "UNIQUE (approval_id)",
+        "validated": true
+      },
+      "editorial_publications.editorial_publications_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_publications.editorial_publications_pkey": {
+        "definition": "PRIMARY KEY (concept_id, content_version)",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_action_check": {
+        "definition": "CHECK ((action = ANY (ARRAY['pending_review'::text, 'validation_failed'::text, 'changes_requested'::text, 'approved'::text, 'rejected'::text, 'retired'::text, 'published'::text, 'attested'::text])))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_base_version_check": {
+        "definition": "CHECK ((base_version >= 0))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_check": {
+        "definition": "CHECK ((((action = ANY (ARRAY['approved'::text, 'attested'::text])) AND (checklist_version IS NOT NULL) AND (checklist_version = 1) AND (quality_review IS NOT NULL)) OR ((action <> ALL (ARRAY['approved'::text, 'attested'::text])) AND (checklist_version IS NULL) AND (quality_review IS NULL))))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_check1": {
+        "definition": "CHECK (((action = 'attested'::text) = (revision_id IS NULL)))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_note_check": {
+        "definition": "CHECK ((length(btrim(note)) >= 10))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_registered_name_check": {
+        "definition": "CHECK ((length(btrim(registered_name)) >= 2))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_revision_id_fkey": {
+        "definition": "FOREIGN KEY (revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
         "validated": true
       },
       "generation_daily_usage.generation_daily_usage_calls_used_check": {
@@ -1918,6 +2111,12 @@
       "handle_new_user": {
         "definition": "CREATE OR REPLACE FUNCTION public.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  insert into public.profiles (id, display_name)\n  values (\n    new.id,\n    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1))\n  )\n  on conflict (id) do nothing;\n\n  insert into public.notification_preferences (user_id)\n  values (new.id)\n  on conflict (user_id) do nothing;\n\n  -- Follow every active topic by default, matching the app's current behaviour.\n  insert into public.user_topics (user_id, topic_id)\n  select new.id, t.id from public.topics t where t.is_active\n  on conflict do nothing;\n\n  return new;\nend;\n$function$\n"
       },
+      "prevent_editorial_evidence_mutation": {
+        "definition": "CREATE OR REPLACE FUNCTION public.prevent_editorial_evidence_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  raise exception 'Editorial evidence is append-only';\nend $function$\n"
+      },
+      "protect_reviewed_revision_body": {
+        "definition": "CREATE OR REPLACE FUNCTION public.protect_reviewed_revision_body()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  if (new.body,new.concept_id,new.base_version) is distinct from\n     (old.body,old.concept_id,old.base_version)\n     and exists(select 1 from public.editorial_revision_events where revision_id=old.id) then\n    raise exception 'Reviewed revisions are immutable; create a new revision';\n  end if;\n  return new;\nend $function$\n"
+      },
       "touch_updated_at": {
         "definition": "CREATE OR REPLACE FUNCTION public.touch_updated_at()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nbegin\n  new.updated_at = now();\n  return new;\nend;\n$function$\n"
       }
@@ -2143,8 +2342,38 @@
         "ready": true,
         "valid": true
       },
+      "editorial_legacy_versions_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_versions_pkey ON public.editorial_legacy_versions USING btree (concept_id, content_version)",
+        "ready": true,
+        "valid": true
+      },
       "editorial_memberships_pkey": {
         "definition": "CREATE UNIQUE INDEX editorial_memberships_pkey ON public.editorial_memberships USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_publications_approval_id_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_publications_approval_id_key ON public.editorial_publications USING btree (approval_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_publications_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_publications_pkey ON public.editorial_publications USING btree (concept_id, content_version)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_revision_events_approval_idx": {
+        "definition": "CREATE UNIQUE INDEX editorial_revision_events_approval_idx ON public.editorial_revision_events USING btree (revision_id) WHERE (action = 'approved'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_revision_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_revision_events_pkey ON public.editorial_revision_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_revision_events_revision_idx": {
+        "definition": "CREATE INDEX editorial_revision_events_revision_idx ON public.editorial_revision_events USING btree (revision_id, created_at)",
         "ready": true,
         "valid": true
       },
@@ -2528,7 +2757,16 @@
       "editorial_account_events": {
         "rls": true
       },
+      "editorial_legacy_versions": {
+        "rls": true
+      },
       "editorial_memberships": {
+        "rls": true
+      },
+      "editorial_publications": {
+        "rls": true
+      },
+      "editorial_revision_events": {
         "rls": true
       },
       "generation_daily_usage": {
@@ -2597,8 +2835,24 @@
         "definition": "CREATE TRIGGER concept_interactions_touch_updated_at BEFORE UPDATE ON public.concept_interactions FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
         "enabled": "O"
       },
+      "public.concept_revisions.reviewed_revision_body_immutable": {
+        "definition": "CREATE TRIGGER reviewed_revision_body_immutable BEFORE UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.protect_reviewed_revision_body()",
+        "enabled": "O"
+      },
       "public.concepts.test_assign_concept_subtopic": {
         "definition": "CREATE TRIGGER test_assign_concept_subtopic BEFORE INSERT ON public.concepts FOR EACH ROW EXECUTE FUNCTION public.test_assign_core_subtopic()",
+        "enabled": "O"
+      },
+      "public.editorial_legacy_versions.editorial_legacy_immutable": {
+        "definition": "CREATE TRIGGER editorial_legacy_immutable BEFORE DELETE OR UPDATE ON public.editorial_legacy_versions FOR EACH ROW EXECUTE FUNCTION public.prevent_editorial_evidence_mutation()",
+        "enabled": "O"
+      },
+      "public.editorial_publications.editorial_publications_immutable": {
+        "definition": "CREATE TRIGGER editorial_publications_immutable BEFORE DELETE OR UPDATE ON public.editorial_publications FOR EACH ROW EXECUTE FUNCTION public.prevent_editorial_evidence_mutation()",
+        "enabled": "O"
+      },
+      "public.editorial_revision_events.editorial_events_immutable": {
+        "definition": "CREATE TRIGGER editorial_events_immutable BEFORE DELETE OR UPDATE ON public.editorial_revision_events FOR EACH ROW EXECUTE FUNCTION public.prevent_editorial_evidence_mutation()",
         "enabled": "O"
       },
       "public.notification_preferences.notification_preferences_touch_updated_at": {

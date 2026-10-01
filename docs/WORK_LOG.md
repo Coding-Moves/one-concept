@@ -7,6 +7,18 @@ claims as completed work.
 
 ## Current status
 
+### #294 complete mutual Connections — in progress
+
+- One dedicated PR for the full request/accept/decline/cancel/remove/block/unblock
+  lifecycle, private paginated lists, opt-in requests, database-backed limits,
+  mobile states and acceptance tests. Keep all Connections changes outside #293.
+- Initially stack on `codex/267-complete-profile` so the diff contains only this
+  feature. Retarget to `develop` after the owner merges #293; no merge is authorized.
+- Planned coherent commits: constrained relationship schema and protected API;
+  privacy/state-transition and concurrency tests; mobile lists/request controls;
+  full browser/mobile validation and rollout documentation. No paid service or
+  new native dependency is planned. Public disclosure remains controlled by #293.
+
 ### #267 complete learner profile with opt-in sharing — completion review
 
 - PR [#293](https://github.com/Coding-Moves/one-concept/pull/293) keeps all profile

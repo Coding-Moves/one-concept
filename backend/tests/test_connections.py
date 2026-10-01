@@ -196,3 +196,33 @@ async def test_authentication_required(anon_client):
     for path in ['/v1/me/connections', '/v1/me/connections/settings', '/v1/me/connections/with/' + 'a'*43]:
         assert (await anon_client.get(path)).status_code == 401
     assert (await anon_client.post('/v1/me/connections/with/' + 'a'*43)).status_code == 401
+
+
+async def test_accept_racing_block_never_preserves_a_connection(api, people):
+    a, b, _ = people
+    pair = (await send(api, a, b)).json()['id']
+    accepted, blocked = await asyncio.gather(action(api, b, pair, 'accept'), action(api, a, pair, 'block'))
+    assert accepted.status_code in (204, 404)
+    assert blocked.status_code == 204
+    assert (await listing(api, a)).json()['items'] == []
+    assert (await listing(api, b, 'incoming')).json()['items'] == []
+    assert (await send(api, b, a)).status_code == 404
+
+
+async def test_block_shared_profile_before_any_request(api, people):
+    a, b, _ = people
+    response = await api.post('/v1/me/connections/with/' + b[1] + '/block', headers=auth(a))
+    assert response.status_code == 204
+    assert (await send(api, b, a)).status_code == 404
+    assert len((await listing(api, a, 'blocked')).json()['items']) == 1
+
+
+async def test_private_list_paginates_without_repeating_rows(api, people):
+    a, b, c = people
+    await send(api, b, a)
+    await send(api, c, a)
+    first = (await listing(api, a, 'incoming', limit=1)).json()
+    assert len(first['items']) == 1 and first['next_cursor']
+    second = (await listing(api, a, 'incoming', limit=1, cursor=first['next_cursor'])).json()
+    assert len(second['items']) == 1 and second['next_cursor'] is None
+    assert first['items'][0]['id'] != second['items'][0]['id']

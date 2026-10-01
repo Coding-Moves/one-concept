@@ -213,6 +213,11 @@ async def submit_subtopic_quiz(
 async def subtopic_quiz_history(
     session: AsyncSession, user_id: uuid.UUID, completion_id: uuid.UUID,
 ) -> SubtopicQuizAttemptHistoryOut:
+    completion = (await session.execute(
+        _COMPLETION, {"uid": user_id, "completion_id": completion_id}
+    )).first()
+    if completion is None:
+        raise ValueError("Completed subtopic not found")
     rows = (await session.execute(
         _HISTORY, {"uid": user_id, "completion_id": completion_id}
     )).all()

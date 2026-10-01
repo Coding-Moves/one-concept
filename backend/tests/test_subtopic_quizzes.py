@@ -165,6 +165,7 @@ async def test_subtopic_quiz_rejects_changed_question_set(client, sessionmaker_f
     )
     assert rejected.status_code == 400
     assert (await client.get(f"/v1/quizzes/subtopics/{completion_id}/attempts")).json()["items"] == []
+    assert (await client.get(f"/v1/quizzes/subtopics/{uuid.uuid4()}/attempts")).status_code == 404
 
 
 async def test_subtopic_quiz_history_is_account_scoped(client, sessionmaker_for_test, user):

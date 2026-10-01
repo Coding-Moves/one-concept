@@ -51,7 +51,9 @@ _TOPICS = text("""
 # window keeps the response bounded and the chart useful on small screens.
 _ACTIVITY = text("""
     with profile as (
-      select timezone,(now() at time zone timezone)::date as today
+      select timezone,(now() at time zone timezone)::date as today,
+             ((now() at time zone timezone)::date-27)::timestamp at time zone timezone as window_start,
+             ((now() at time zone timezone)::date+1)::timestamp at time zone timezone as window_end
       from public.profiles where id=:uid
     ), events as (
       select completed_at as occurred_at,'concept'::text as kind
@@ -67,7 +69,7 @@ _ACTIVITY = text("""
              count(*) filter (where kind='review')::int as reviews,
              count(*) filter (where kind='quiz')::int as quizzes
       from events cross join profile
-      where (occurred_at at time zone profile.timezone)::date between profile.today-27 and profile.today
+      where occurred_at >= profile.window_start and occurred_at < profile.window_end
       group by (occurred_at at time zone profile.timezone)::date
     )
     select day,coalesce(totals.concepts,0)::int as concepts,coalesce(totals.reviews,0)::int as reviews,

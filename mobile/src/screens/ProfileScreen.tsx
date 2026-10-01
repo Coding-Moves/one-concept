@@ -85,15 +85,15 @@ export function ProfileScreen() {
 
   const completedSubtopics = subtopics.filter(item => item.completed).length;
 
-  const toggleReminders = useCallback(async () => {
+  const toggleReminders = useCallback(async (weekly = false) => {
     if (!prefs || !session?.user.id || reminderPending.current) return;
     reminderPending.current = true; setReminderBusy(true); setReminderMessage('');
-    const next = { ...prefs, enabled: !prefs.enabled };
+    const next = weekly ? { ...prefs, weekly_quiz_enabled: !prefs.weekly_quiz_enabled } : { ...prefs, enabled: !prefs.enabled };
     try {
       const confirmed = await putNotificationPrefs(next, session.user.id);
       if (!mounted.current) return;
       setPrefs(confirmed);
-      if (next.enabled) {
+      if (next.enabled && (!weekly || next.weekly_quiz_enabled)) {
         try {
           const result = await registerForReminders(session.user.id);
           if (mounted.current && result !== 'registered') setReminderMessage(result === 'denied'
@@ -266,24 +266,36 @@ export function ProfileScreen() {
           <View style={styles.rowLeft}>
             <Ionicons name="notifications-outline" size={scaleIcon(20)} color={colors.text} />
             <View>
-              <Text style={styles.rowTitle}>Daily reminders</Text>
+              <Text style={styles.rowTitle}>Notifications</Text>
               <Text style={styles.rowSubtitle}>
                 {prefs.enabled
-                  ? `Until you finish: ${prefs.reminder_times.join(' · ')}`
+                  ? `Daily reminders: ${prefs.reminder_times.join(' · ')}`
                   : 'Off — no nudges'}
               </Text>
             </View>
           </View>
           <Switch
-            accessibilityLabel="Daily reminders"
+            accessibilityLabel="Notifications"
             disabled={reminderBusy}
             value={prefs.enabled}
-            onValueChange={toggleReminders}
+            onValueChange={() => void toggleReminders()}
             trackColor={{ true: colors.primary, false: colors.border }}
             thumbColor={colors.surface}
           />
         </View>
       ) : null}
+
+      {prefs && <View style={styles.rowCard}>
+        <View style={styles.rowLeft}><View style={{ flex: 1 }}>
+          <Text style={styles.rowTitle}>Weekly quiz ready</Text>
+          <Text style={styles.rowSubtitle}>{prefs.enabled
+            ? `Once per quiz, at 9 AM (${progress.timezone ?? 'your learning timezone'}). Completed quizzes stay quiet.`
+            : 'Turn on Notifications above to receive weekly quiz alerts.'}</Text>
+        </View></View>
+        <Switch accessibilityLabel="Weekly quiz notifications" disabled={reminderBusy || !prefs.enabled}
+          value={prefs.weekly_quiz_enabled ?? false} onValueChange={() => void toggleReminders(true)}
+          trackColor={{ true: colors.primary, false: colors.border }} thumbColor={colors.onPrimary} />
+      </View>}
 
       {reminderMessage ? <Pressable accessibilityRole="button" disabled={reminderBusy} onPress={() => { setReminderMessage(''); setPrefsReload(n => n + 1); }} style={styles.rowCard}>
         <Text style={styles.rowTitle}>Reload reminder settings</Text>

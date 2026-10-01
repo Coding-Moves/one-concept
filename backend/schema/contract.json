@@ -29,7 +29,8 @@
     "0027_expanded_achievements.sql": "b02bbcb95f44e9eebd4582bbb537dd02911ec0598699dc433aa15b7159746a67",
     "0028_public_profiles.sql": "c693e786a2d787eef9128eddf1bd5cd0cd8a8d1a031212dd155c44bc181bfbe8",
     "0029_profile_timezone.sql": "cc14e637fe90172687eb25d10e0a354b32050c535541250f9955742526a5812e",
-    "0030_connections.sql": "1dedd4fef237cf0b012bff1969c4edcb9ab3f67abecbdcdb354b95ef4e193941"
+    "0030_connections.sql": "1dedd4fef237cf0b012bff1969c4edcb9ab3f67abecbdcdb354b95ef4e193941",
+    "0031_weekly_quiz_notifications.sql": "63f5323681092ee1790a16c4e6f7120172f7f9eb94bd125082424297cbc6125a"
   },
   "schema": {
     "columns": {
@@ -735,6 +736,12 @@
         "not_null": true,
         "type": "uuid"
       },
+      "notification_preferences.weekly_quiz_enabled": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
       "profile_sharing.achievement_codes": {
         "default": "'{}'::text[]",
         "identity": "",
@@ -1161,6 +1168,54 @@
         "not_null": true,
         "type": "uuid"
       },
+      "weekly_quiz_notifications.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "weekly_quiz_notifications.expo_push_token": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "weekly_quiz_notifications.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_notifications.next_attempt_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "weekly_quiz_notifications.quiz_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_notifications.status": {
+        "default": "'pending'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "weekly_quiz_notifications.ticket_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "weekly_quiz_notifications.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
       "weekly_quizzes.created_at": {
         "default": "now()",
         "identity": "",
@@ -1172,6 +1227,12 @@
         "identity": "",
         "not_null": true,
         "type": "uuid"
+      },
+      "weekly_quizzes.notification_queued_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
       },
       "weekly_quizzes.questions": {
         "default": null,
@@ -1693,6 +1754,26 @@
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
       },
+      "weekly_quiz_notifications.weekly_quiz_notifications_attempts_check": {
+        "definition": "CHECK (((attempts >= 0) AND (attempts <= 3)))",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_quiz_id_expo_push_token_key": {
+        "definition": "UNIQUE (quiz_id, expo_push_token)",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_quiz_id_fkey": {
+        "definition": "FOREIGN KEY (quiz_id) REFERENCES public.weekly_quizzes(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'sending'::text, 'accepted'::text, 'retry'::text, 'failed'::text, 'unknown'::text, 'skipped'::text])))",
+        "validated": true
+      },
       "weekly_quizzes.weekly_quizzes_pkey": {
         "definition": "PRIMARY KEY (id)",
         "validated": true
@@ -2080,6 +2161,21 @@
         "ready": true,
         "valid": true
       },
+      "weekly_quiz_notifications_due": {
+        "definition": "CREATE INDEX weekly_quiz_notifications_due ON public.weekly_quiz_notifications USING btree (next_attempt_at, id) WHERE (status = ANY (ARRAY['pending'::text, 'retry'::text]))",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quiz_notifications_pkey": {
+        "definition": "CREATE UNIQUE INDEX weekly_quiz_notifications_pkey ON public.weekly_quiz_notifications USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quiz_notifications_quiz_id_expo_push_token_key": {
+        "definition": "CREATE UNIQUE INDEX weekly_quiz_notifications_quiz_id_expo_push_token_key ON public.weekly_quiz_notifications USING btree (quiz_id, expo_push_token)",
+        "ready": true,
+        "valid": true
+      },
       "weekly_quizzes_owner_week_idx": {
         "definition": "CREATE INDEX weekly_quizzes_owner_week_idx ON public.weekly_quizzes USING btree (user_id, week_start DESC)",
         "ready": true,
@@ -2327,6 +2423,9 @@
         "rls": true
       },
       "weekly_quiz_attempts": {
+        "rls": true
+      },
+      "weekly_quiz_notifications": {
         "rls": true
       },
       "weekly_quizzes": {

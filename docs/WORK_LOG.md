@@ -7,6 +7,57 @@ claims as completed work.
 
 ## Current status
 
+### #268 weekly quiz notifications — owner-requested review fixes completed
+
+- Review scope: current PR diff, delivery boundaries, mobile account safety and
+  CI. Add focused regression/fix commits for candidate-queue starvation and
+  malformed provider ticket isolation; preserve all existing commits.
+- Both defects reproduced before the fixes (six failing regression cases).
+  `12f033e` pages the complete due cohort; its 28 weekly regression tests passed.
+  `f3dae3e` isolates malformed success IDs as unknown while valid
+  peers retain their accepted receipts. Existing mobile code required no changes.
+- Post-fix local validation: **51 passed, no skips** across weekly delivery, daily
+  reminders, notification preferences and quiz lifecycle; F/E9 lint and whitespace
+  checks passed. This includes **36 weekly notification cases**. Initial PR CI was
+  green; final-revision hosted checks are reported on the PR. Physical staging
+  delivery/tap verification and migration 0031 remain activation prerequisites.
+- [PR #296](https://github.com/Coding-Moves/one-concept/pull/296) targets `develop`
+  from `codex/268-weekly-quiz-notifications` (base `df67cae`), with `Closes #268`.
+  Independent weekly opt-in respects the master switch, saved timezone, current
+  quiz and completion. No production rollout, user-data change or release is part
+  of this task; migration 0031 remains unapplied in the production ledger.
+- `1d945d0` stores preferences/outbox and preserves old-client updates;
+  `405e7a8` adds local 09:00 selection, durable claims, per-device tickets/receipts,
+  bounded definite-failure retries and concurrency/failure regression tests.
+  `fdf048a` adds settings/browser coverage; `6055d08` adds authenticated
+  notification-tap routing and stale quiz-response protection.
+- Worker uses the existing reminders cron after daily reminders, behind default-off
+  `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED`. Ambiguous outcomes/crash claims are never
+  replayed; Expo cannot guarantee exactly-once handset display. Frozen quiz identity
+  retains the shared ISO week, independent of local delivery time.
+- Passed: full disposable PostgreSQL 16 suite **307 tests, no skips**, including
+  schema contract, daily reminders and 27 weekly-notification cases; F/E9 lint;
+  mobile TypeScript and **83 Node 24 tests**; final web export. Mocked browser
+  settings checks passed at 320px in both themes, covering failures, weekly opt-in,
+  retained preference under the master switch, and existing profile regression.
+- Earlier targeted failures were test isolation issues (persistent test users and
+  unscoped outbox assertions); owner-scoped assertions and isolated device fixtures
+  resolved them. The full suite passed afterward. A final export permission review
+  timed out; the permitted single retry succeeded. The mobile-control commit
+  approval also timed out and succeeded on its single retry.
+- Exact Expo SDK 57 response APIs and official push receipt/error docs informed the
+  implementation. No new native dependency, secret, service or runtime change.
+  `docs/weekly-quiz-notifications.md` records behavior, delivery limits, aggregate
+  verification SQL, staging acceptance and the production activation/rollback order.
+- Remaining before production activation: ordered migration application, reviewed
+  API/worker/mobile release, physical staging-phone cold/warm tap and delivery tests,
+  then owner enables the flag on the existing reminders service. Local mocks do not
+  establish native delivery. No manual action is needed to review this feature PR.
+- `1d82de9` records the rollout guide and codebase map. Final handoff commit
+  `docs: record weekly notification PR handoff` records this PR link. GitHub CI
+  status is reported separately on the PR; no merge or production activation occurred.
+
+
 ### PRs #293 / #295 owner-requested merge-readiness review — completed locally
 
 - Reviewed current profile and Connections diffs, auth/ownership, public allowlist,

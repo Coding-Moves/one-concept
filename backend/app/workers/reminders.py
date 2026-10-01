@@ -7,6 +7,8 @@ passed in their own timezone and who have not finished today's concept.
 import asyncio
 import logging
 
+from app.config import get_settings
+from app.services.weekly_quiz_notifications import send_weekly_quiz_notifications
 from app.db.session import SessionLocal, engine
 from app.services.reminders import send_due_reminders
 
@@ -18,6 +20,10 @@ async def main() -> None:
         result = await send_due_reminders(session, window_minutes=15)
 
     logging.info("sent %s, dropped %s stale tokens", result.sent, result.dropped_tokens)
+    if get_settings().weekly_quiz_notifications_enabled:
+        async with SessionLocal() as session:
+            weekly = await send_weekly_quiz_notifications(session)
+        logging.info("weekly quiz: accepted %s, dropped %s stale tokens", weekly.sent, weekly.dropped_tokens)
     await engine.dispose()
 
 

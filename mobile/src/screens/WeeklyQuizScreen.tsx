@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useRoute } from '@react-navigation/native';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../api/client';
 import { PrimaryButton } from '../components/PrimaryButton';
@@ -14,6 +15,8 @@ import { radius, scaleFont, spacing, ThemeColors, typography } from '../theme';
 /** A server-frozen weekly quiz: questions never include answer keys until submitted. */
 export function WeeklyQuizScreen() {
   const { session } = useAuth();
+  const route = useRoute();
+  const notificationRequestId = (route.params as { notificationRequestId?: string } | undefined)?.notificationRequestId;
   const online = useOnline();
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
@@ -26,18 +29,21 @@ export function WeeklyQuizScreen() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<unknown>(null);
 
+  const loadGeneration = useRef(0);
   const load = useCallback(async () => {
     if (!userId) return;
-    setLoading(true); setError(null); setAttempt(null); setAnswers({});
+    const generation = ++loadGeneration.current;
+    setLoading(true); setError(null); setQuiz(null); setUnavailable(null); setAttempt(null); setAnswers({});
     try {
       const response = await fetchWeeklyQuiz(userId);
+      if (generation !== loadGeneration.current) return;
       if (response.available) { setQuiz(response); setUnavailable(null); }
       else { setQuiz(null); setUnavailable({ detail: response.detail, available: response.available_concepts, required: response.required_concepts }); }
-    } catch (cause) { setError(cause); }
-    finally { setLoading(false); }
+    } catch (cause) { if (generation === loadGeneration.current) setError(cause); }
+    finally { if (generation === loadGeneration.current) setLoading(false); }
   }, [userId]);
 
-  useEffect(() => { void load(); }, [load]);
+  useEffect(() => { void load(); return () => { loadGeneration.current++; }; }, [load, notificationRequestId]);
 
   const choose = (questionId: string, option: number) => {
     if (attempt) return;
@@ -46,9 +52,13 @@ export function WeeklyQuizScreen() {
   const complete = !!quiz && quiz.questions.every(question => answers[question.id] != null);
   const submit = async () => {
     if (!quiz || !complete || submitting || !userId) return;
+    const generation = loadGeneration.current;
     setSubmitting(true); setError(null);
-    try { setAttempt(await submitWeeklyQuiz(userId, quiz.quiz_id, quiz.questions.map(question => ({ question_id: question.id, selected_index: answers[question.id] })))); }
-    catch (cause) { setError(cause); }
+    try {
+      const result = await submitWeeklyQuiz(userId, quiz.quiz_id, quiz.questions.map(question => ({ question_id: question.id, selected_index: answers[question.id] })));
+      if (generation === loadGeneration.current) setAttempt(result);
+    }
+    catch (cause) { if (generation === loadGeneration.current) setError(cause); }
     finally { setSubmitting(false); }
   };
 

@@ -21,7 +21,7 @@ TABLES = (
     "content_supply_targets", "concept_revisions", "content_retry_log",
     "daily_reviews", "content_worker_runs", "content_conditions",
     "achievement_definitions", "user_achievements", "user_concept_completions",
-    "user_subtopic_completions", "weekly_quizzes",
+    "user_subtopic_completions", "weekly_quizzes", "weekly_quiz_notifications",
     "weekly_quiz_attempts", "subtopic_quizzes", "subtopic_quiz_attempts",
 )
 

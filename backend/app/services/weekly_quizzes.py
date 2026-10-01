@@ -117,14 +117,14 @@ def _public_question(question: _Question | dict) -> WeeklyQuizQuestionOut:
 
 
 async def get_or_create_weekly_quiz(
-    session: AsyncSession, user_id: uuid.UUID
+    session: AsyncSession, user_id: uuid.UUID, *, today: date | None = None
 ) -> WeeklyQuizOut | WeeklyQuizUnavailableOut:
     """Return this stable ISO week's frozen quiz, or an honest eligibility state."""
     # Daily lessons use the learner's wall-clock timezone. A quiz belongs to a
     # shared ISO week instead: profile timezones may change automatically when
     # a learner travels, and a changed timezone must not mint another quiz.
     await session.execute(_PROFILE_LOCK, {"uid": user_id})
-    week_start = _week_start(await session.scalar(text("select current_date")))
+    week_start = _week_start(today or await session.scalar(text("select current_date")))
     existing = (
         await session.execute(_EXISTING, {"uid": user_id, "week_start": week_start})
     ).first()

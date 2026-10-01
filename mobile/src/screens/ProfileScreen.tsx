@@ -23,6 +23,8 @@ import { getSubtopicProgress, SubtopicProgress } from '../services/subtopicProgr
 
 export type ProfileStackParamList = {
   ProfileHome: undefined;
+  EditProfile: undefined;
+  ProfileSharing: undefined;
   Personalization: undefined;
   Saved: undefined;
   About: undefined;
@@ -98,7 +100,7 @@ export function ProfileScreen() {
         </View>
         <View style={styles.headerText}>
           <Text style={styles.name}>
-            {email ? email.split('@')[0] : 'Learner'}
+            {progress.displayName?.trim() || (email ? email.split('@')[0] : 'Learner')}
           </Text>
           <Text style={styles.subtitle}>
             {email ?? 'Signed out'}
@@ -106,6 +108,10 @@ export function ProfileScreen() {
         </View>
       </View>
 
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('EditProfile')} style={styles.rowCard}>
+        <Text style={styles.rowTitle}>Edit profile</Text>
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </Pressable>
       <View style={styles.cardsRow}>
         <Surface style={styles.card}>
           <AnimatedFlame
@@ -169,7 +175,7 @@ export function ProfileScreen() {
           <View>
             <Text style={styles.rowTitle}>Personalize your feed</Text>
             <Text style={styles.rowSubtitle}>
-              Following {progress.followedTopics.length} of 5 topics
+              Following {progress.followedTopics.length} topics
             </Text>
           </View>
         </View>

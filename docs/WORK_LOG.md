@@ -18,15 +18,17 @@ claims as completed work.
   timezone-correct aggregation, typed response contract and PostgreSQL coverage.
   `6ceb7e4` adds the typed, account-fenced mobile API client; `eea476e` adds the
   Profile-linked screen with empty, loading, pull-to-refresh and safe recovery states.
-- Passed: backend F/E9 lint and Python compilation; mobile TypeScript. The
-  PostgreSQL-backed analytics tests are present but skipped locally because the
-  Podman service cannot start in this environment. The full mobile Node run has
-  the pre-existing ignored-public-config assertion failure; all other 71 tests
-  passed. No migration, production content, production user data, release
-  version or deployment belongs in this PR.
-- Review correction: `271b097` keeps the back control in the conventional left
+- Passed: backend F/E9 lint, Python compilation and the focused PostgreSQL
+  analytics suite (**2 passed**); mobile TypeScript. The full mobile Node run
+  has the pre-existing ignored-public-config assertion failure; all other 71
+  tests passed. GitHub’s Backend lint and tests and Mobile typecheck and tests
+  checks are green. No migration, production content, production user data,
+  release version or deployment belongs in this PR.
+- Review corrections: `271b097` keeps the back control in the conventional left
   position and formats server-supplied local activity dates without using the
-  device timezone.
+  device timezone. `79f551a` adds profile-timezone window bounds before activity
+  grouping; `f43054e` disambiguates the generated date series, with the real
+  PostgreSQL integration test proving the endpoint now returns its contract.
 - PR [#291](https://github.com/Coding-Moves/one-concept/pull/291) targets
   `develop` and declares `Closes #258`. It is ready for review; no merge,
   release or deployment action has been taken.

@@ -147,8 +147,9 @@ def test_profile_and_capabilities_are_validated():
     ],
 )
 def test_enabled_editorial_requires_explicit_secure_origins(origin):
-    with pytest.raises(ValidationError):
+    with pytest.raises(ValidationError) as exc:
         config(editorial_enabled=True, allowed_origins=origin)
+    assert "test-server-secret" not in str(exc.value)
 
 
 async def test_malformed_callback_is_configuration_error():

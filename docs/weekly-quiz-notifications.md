@@ -73,7 +73,9 @@ exclusive in the profile timezone and in the original quiz week. Once queued,
 turning preferences off and later on does not schedule a second announcement.
 
 Read/write timeouts, 5xx responses, malformed or incomplete ticket arrays are
-ambiguous and are not replayed. A crash between claim and result persistence can
+ambiguous and are not replayed. An individual success ticket without a bounded,
+nonempty printable ASCII ID is also unknown; it cannot roll back valid peer
+results or inflate the accepted count. A crash between claim and result persistence can
 therefore miss an alert. This deliberately favors avoiding duplicate successful
 submissions. Expo itself is best effort; neither this worker nor Expo can promise
 exactly-once handset display. Ticket acceptance is not proof of device delivery.
@@ -85,10 +87,12 @@ are removed only if they still belong to the quiz owner. A successful peer devic
 is never replayed because another device failed. Tokens and ticket identifiers
 remain backend-only under RLS; logs expose counts, not tokens or user records.
 
-Each pass queues at most 100 eligible users, sends at most 100 device deliveries
-and checks at most 100 receipts. Existing queued deliveries can drain later in
-the daytime; excess users at the initial window are considered the next morning.
-Monitor volume before increasing these bounds for a larger rollout. Missed cron
+Each pass walks all due users in pages of 100, retaining bounded candidate memory
+without postponing later pages to another day. Profile-lock rechecks and unique
+queue markers still prevent duplicate work when workers overlap. Each pass sends
+at most 100 device deliveries and checks at most 100 receipts; queued deliveries
+drain during local daytime. Monitor queue age and worker duration before a larger
+rollout and adjust sending capacity if it cannot drain within the quiz week. Missed cron
 windows do not produce an immediate late-night catch-up notification. Preferences
 or quiz completion changed after a committed claim cannot recall an in-flight push.
 

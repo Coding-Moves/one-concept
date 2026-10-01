@@ -7,8 +7,20 @@ claims as completed work.
 
 ## Current status
 
-### #268 weekly quiz notifications — PR opened
+### #268 weekly quiz notifications — owner-requested review fixes completed
 
+- Review scope: current PR diff, delivery boundaries, mobile account safety and
+  CI. Add focused regression/fix commits for candidate-queue starvation and
+  malformed provider ticket isolation; preserve all existing commits.
+- Both defects reproduced before the fixes (six failing regression cases).
+  `12f033e` pages the complete due cohort; its 28 weekly regression tests passed.
+  `f3dae3e` isolates malformed success IDs as unknown while valid
+  peers retain their accepted receipts. Existing mobile code required no changes.
+- Post-fix local validation: **51 passed, no skips** across weekly delivery, daily
+  reminders, notification preferences and quiz lifecycle; F/E9 lint and whitespace
+  checks passed. This includes **36 weekly notification cases**. Initial PR CI was
+  green; final-revision hosted checks are reported on the PR. Physical staging
+  delivery/tap verification and migration 0031 remain activation prerequisites.
 - [PR #296](https://github.com/Coding-Moves/one-concept/pull/296) targets `develop`
   from `codex/268-weekly-quiz-notifications` (base `df67cae`), with `Closes #268`.
   Independent weekly opt-in respects the master switch, saved timezone, current

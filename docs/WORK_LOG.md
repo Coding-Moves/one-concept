@@ -26,8 +26,10 @@ claims as completed work.
   ignored-public-config assertion, caused by this checkout intentionally lacking
   a public API URL. No production migration, user-data change, deployment,
   version or release configuration has occurred.
-- Next: finish documentation/final review, push a `develop` PR with `Closes #259`,
-  then require normal review and staging migration verification before merge.
+- PR: [#290](https://github.com/Coding-Moves/one-concept/pull/290) targets `develop`
+  and declares `Closes #259`. It is ready for review, not merged. Staging must
+  apply and verify migration `0027` before production; do not add it to
+  `backend/migrations/applied.txt` until actual production verification.
 
 ### #262 optional repeatable subtopic quizzes — ready for review
 

@@ -226,3 +226,19 @@ async def test_private_list_paginates_without_repeating_rows(api, people):
     second = (await listing(api, a, 'incoming', limit=1, cursor=first['next_cursor'])).json()
     assert len(second['items']) == 1 and second['next_cursor'] is None
     assert first['items'][0]['id'] != second['items'][0]['id']
+
+
+async def test_finished_invitation_id_cannot_answer_a_later_request(api, people, session):
+    a, b, _ = people
+    old_pair = (await send(api, a, b)).json()['id']
+    assert (await action(api, b, old_pair, 'decline')).status_code == 204
+    await session.execute(text("update connections set changed_at=now()-interval '8 days' where id=:id"), {'id': uuid.UUID(old_pair)})
+    await session.commit()
+    new_pair = (await send(api, a, b)).json()['id']
+    # A second device can retain an old request screen for longer than cooldown.
+    # Answering it must never approve/cancel/remove the replacement invitation.
+    assert new_pair != old_pair
+    for owner, verb in [(b, 'accept'), (b, 'decline'), (a, 'cancel'), (a, 'remove')]:
+        assert (await action(api, owner, old_pair, verb)).status_code == 404
+    assert (await listing(api, b, 'incoming')).json()['items'][0]['id'] == new_pair
+    assert (await action(api, b, new_pair, 'accept')).status_code == 204

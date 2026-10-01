@@ -94,10 +94,11 @@ async def request_connection(db, actor, token):
     own_pending = await db.scalar(text("select count(*) from connections where state='pending' and (low_user=:uid or high_user=:uid)"), {'uid': actor})
     if count >= REQUEST_LIMIT or pending >= PENDING_LIMIT or own_pending >= PENDING_LIMIT:
         raise HTTPException(429, 'Connection request limit reached. Try later.', headers={'Retry-After': '86400'})
+    # Each new invitation has a fresh action ID; pending retries return above.
     low, high = sorted([actor, peer])
     result = await db.scalar(text('''insert into connections(low_user,high_user,initiator,state)
         values (:low,:high,:actor,'pending') on conflict(low_user,high_user) do update
-        set initiator=:actor,state='pending',requested_at=now(),changed_at=now() returning id'''), {'low': low, 'high': high, 'actor': actor})
+        set id=gen_random_uuid(),initiator=:actor,state='pending',requested_at=now(),changed_at=now() returning id'''), {'low': low, 'high': high, 'actor': actor})
     await db.execute(text('insert into connection_request_events(user_id) values (:uid)'), {'uid': actor})
     # Limit ledger retention as well as query work; keep only the rolling window.
     await db.execute(text("delete from connection_request_events where user_id=:uid and requested_at <= now()-interval '24 hours'"), {'uid': actor})
@@ -111,7 +112,12 @@ async def owned_pair(db, actor, pair_id):
         raise unavailable()
     peer = row.high_user if row.low_user == actor else row.low_user
     await lock_pair(db, actor, peer)
-    return await pair_row(db, actor, peer), peer
+    current = await pair_row(db, actor, peer)
+    # A new invitation may replace a finished one while this action waits for
+    # the pair lock. Never apply a stale screen's consent to the new invitation.
+    if current is None or current.id != pair_id:
+        raise unavailable()
+    return current, peer
 
 
 async def block_peer(db, actor, peer):

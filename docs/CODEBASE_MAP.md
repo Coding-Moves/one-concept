@@ -441,3 +441,14 @@ adds the backend-only sharing table; 0029 preserves stored timezones during phon
 initialization. `mobile/src/services/profileSharing.ts` owns link parsing, local QR
 and anonymous visitor requests. See [profile-sharing.md](profile-sharing.md) for
 privacy guarantees, migration order and phone acceptance checks.
+
+### Mutual Connections
+
+`api/v1/connections.py`, `schemas/connections.py` and `services/connections.py`
+provide the private consent lifecycle, request preferences, blocks and database
+rate/cooldown limits. Migration 0030 adds the RLS-protected tables and pair/index
+constraints. `ConnectionsScreen.tsx` owns private list/settings states;
+`ConnectionControls.tsx` adds explicit actions to a shared-profile view. The typed
+`services/connections.ts` client and transient `publicProfileNavigation.ts` keep
+navigation/account boundaries separate from anonymous profile data. See
+[connections.md](connections.md) for API, privacy, deployment and acceptance steps.

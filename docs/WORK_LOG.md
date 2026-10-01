@@ -7,17 +7,33 @@ claims as completed work.
 
 ## Current status
 
-### #294 complete mutual Connections — in progress
+### #294 complete mutual Connections — implementation complete, dependency draft
 
-- One dedicated PR for the full request/accept/decline/cancel/remove/block/unblock
-  lifecycle, private paginated lists, opt-in requests, database-backed limits,
-  mobile states and acceptance tests. Keep all Connections changes outside #293.
-- Initially stack on `codex/267-complete-profile` so the diff contains only this
-  feature. Retarget to `develop` after the owner merges #293; no merge is authorized.
-- Planned coherent commits: constrained relationship schema and protected API;
-  privacy/state-transition and concurrency tests; mobile lists/request controls;
-  full browser/mobile validation and rollout documentation. No paid service or
-  new native dependency is planned. Public disclosure remains controlled by #293.
+- [PR #295](https://github.com/Coding-Moves/one-concept/pull/295) targets `develop`
+  from `codex/294-mutual-connections`. It remains draft until profile PR #293 is
+  merged. Its current develop diff includes that dependency; compare against
+  `codex/267-complete-profile` to review Connections alone. No merge is authorized.
+- `1e3f522`: constrained schema, private API and request controls; `9d28063`:
+  account-safe client and invitation-only cooldowns; `d6969d1`: full mobile
+  lifecycle and browser acceptance; `8ae1269`: blocking races and pagination;
+  `a04dd43`: privacy disclosure; `177d3f8`: wait for status before the offline test.
+  `400dc2e` preserves the latest profile share-sheet commits through a branch merge.
+- Covers opt-in requests, explicit acceptance, decline/cancel/remove/block/unblock,
+  private paginated lists, online-only mutations and server limits. Profile/QR
+  work stays in #293; there is no XP, leaderboard, public graph or paid service.
+- Passed: full PostgreSQL 16 suite **275 tests, no skips**, then **16 Connections
+  tests** including three additional race/pagination cases; mobile TypeScript
+  and **80 Node 24 tests**; backend F/E9 lint; web export. Final mocked browser
+  checks passed for both profile and Connections at 320px in both themes,
+  including failed saves, offline request retry and all relationship actions.
+  The offline fixture initially disconnected before status finished loading;
+  synchronizing that prerequisite resolved the test failure.
+- Migration `0030_connections.sql` follows #293's 0028/0029. Production ledger,
+  settings, users and release/runtime versions are unchanged. Physical two-phone,
+  native sharing, camera/deep-link and TalkBack checks remain before publication.
+  See [connections.md](connections.md) for the rollout and acceptance checklist.
+- Handoff: push final commits, verify hosted CI, then owner review. Keep #295 draft
+  until #293 merges; neither merge nor mobile publication is part of this task.
 
 ### #267 complete learner profile with opt-in sharing — completion review
 

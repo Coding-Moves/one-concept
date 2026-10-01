@@ -26,6 +26,8 @@ claims as completed work.
   ignored-public-config assertion, caused by this checkout intentionally lacking
   a public API URL. No production migration, user-data change, deployment,
   version or release configuration has occurred.
+- Review correction: `eca8237` removes an unused test import and restores the
+  service import ordering so the backend's required F/E9 lint check stays clean.
 - PR: [#290](https://github.com/Coding-Moves/one-concept/pull/290) targets `develop`
   and declares `Closes #259`. It is ready for review, not merged. Staging must
   apply and verify migration `0027` before production; do not add it to

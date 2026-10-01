@@ -7,6 +7,22 @@ claims as completed work.
 
 ## Current status
 
+### #267 complete learner profile with opt-in sharing — in progress
+
+- Scope: one dedicated PR for an authenticated editable preferred name and
+  server-enforced opt-in public profile. Existing `profiles.display_name`, JWT
+  identity, Progress state, learner-safe recovery UI, and React Native Share
+  will be reused; no sign-in field, legal-name, age or other personal data will
+  be introduced.
+- Planned commits: profile-name normalizer/API contract and account-isolation
+  coverage; private edit screen and immediate state refresh; privacy settings,
+  opaque public identifier and filtered public endpoint; public web fallback,
+  sharing/QR presentation; accessibility, documentation and handoff.
+- #265 is now a closed design tracker, not a runtime blocker. Localized profile
+  presentation remains a later enhancement. Public universal links need a stable
+  verified domain, Android `assetlinks.json`, and a new native APK; this PR can
+  prepare safe browser fallback but must not claim those external steps complete.
+
 ### #265 multilingual daily digest, flashcard, and quiz content — architecture recorded
 
 - Scope: planning only. `docs/multilingual-content/README.md` records canonical

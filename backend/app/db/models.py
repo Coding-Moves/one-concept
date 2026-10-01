@@ -240,6 +240,7 @@ class NotificationPreference(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
     )
+    weekly_quiz_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     reminder_times: Mapped[list[time]] = mapped_column(ARRAY(Time), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))

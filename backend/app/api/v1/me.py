@@ -221,13 +221,14 @@ async def deregister_push_token(
 
 async def _load_prefs(db: AsyncSession, user_id) -> NotificationPrefs:
     row = (await db.execute(
-        text("select enabled, reminder_times from public.notification_preferences where user_id = :uid"),
+        text("select enabled, reminder_times, weekly_quiz_enabled from public.notification_preferences where user_id = :uid"),
         {"uid": user_id},
     )).first()
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No preferences yet")
     return NotificationPrefs(
         enabled=row.enabled,
+        weekly_quiz_enabled=row.weekly_quiz_enabled,
         reminder_times=[t.strftime("%H:%M") for t in row.reminder_times],
     )
 
@@ -244,10 +245,11 @@ async def save_notification_prefs(
         text("""
             update public.notification_preferences
                set enabled = :enabled,
-                   reminder_times = :times
+                   reminder_times = :times,
+                   weekly_quiz_enabled = coalesce(:weekly, weekly_quiz_enabled)
              where user_id = :uid
         """).bindparams(bindparam("times", type_=ARRAY(Time))),
-        {"enabled": prefs.enabled, "times": times, "uid": user_id},
+        {"enabled": prefs.enabled, "times": times, "weekly": prefs.weekly_quiz_enabled, "uid": user_id},
     )
     await db.commit()
 

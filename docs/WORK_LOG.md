@@ -7,6 +7,21 @@ claims as completed work.
 
 ## Current status
 
+### #268 weekly quiz notifications — implementation in progress
+
+- Dedicated `codex/268-weekly-quiz-notifications` branch from current `develop`;
+  predecessor profile/Connections work is merged. No production rollout is authorized.
+- Scope: independent opt-in under the global notification switch; 09:00 in the
+  stored user timezone; eligible, unfinished weekly quiz only; durable per-device
+  send state; safe retries only for definite non-delivery; notification tap to Quiz.
+- Preserve the existing stable ISO quiz-week identity and daily reminder slots.
+  Reuse the 15-minute worker, with a default-off backend rollout switch.
+- Planned commits: migration/preferences; worker selection/claim/retry tests;
+  mobile controls/tap routing/tests; operations docs and final verification.
+- Exact Expo SDK 57 notifications docs and push-delivery guidance were inspected.
+  No new native module, paid service or production credentials are needed.
+
+
 ### PRs #293 / #295 owner-requested merge-readiness review — completed locally
 
 - Reviewed current profile and Connections diffs, auth/ownership, public allowlist,

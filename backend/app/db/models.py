@@ -324,6 +324,9 @@ class AchievementDefinition(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     artwork_key: Mapped[str] = mapped_column(Text, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    category: Mapped[str] = mapped_column(Text, nullable=False, default="consistency")
+    requirement: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    show_progress: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     __table_args__ = (UniqueConstraint("metric", "threshold"),)
 
 

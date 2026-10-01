@@ -7,6 +7,10 @@ export interface Achievement {
   name: string;
   description: string;
   artwork_key: string;
+  category?: string;
+  requirement?: Record<string, string>;
+  show_progress?: boolean;
+  progress?: number | null;
   earned_on: string | null;
   source: string | null;
   seen_at: string | null;
@@ -105,6 +109,28 @@ export class AchievementStore {
 export function uncelebrated(snapshot: AchievementSnapshot | null): Achievement[] {
   return snapshot?.collection.items.filter(a => a.earned_on && !a.seen_at && !snapshot.dismissed.includes(a.code)) ?? [];
 }
+export function achievementRequirement(award: Achievement): string {
+  const units: Record<string, string> = {
+    consecutive_days: 'consecutive days',
+    completed_concepts: 'concepts completed',
+    completed_reviews: 'reviews completed',
+    weekly_quizzes_completed: 'weekly quizzes completed',
+    weekly_perfect_scores: 'perfect weekly scores',
+    completed_subtopics: 'learning paths completed',
+  };
+  return `${award.threshold.toLocaleString()} ${units[award.metric] ?? 'learning milestone'}`;
+}
+
+export function achievementProgress(award: Achievement): number {
+  return Math.min(Math.max(award.progress ?? 0, 0), award.threshold);
+}
+
 export function nextMilestone(collection: AchievementCollection | null): Achievement | undefined {
-  return collection?.items.find(a => a.metric === 'consecutive_days' && !a.earned_on);
+  return collection?.items
+    .filter(award => !award.earned_on && award.show_progress !== false)
+    .sort((left, right) => {
+      const leftRemaining = left.threshold - achievementProgress(left);
+      const rightRemaining = right.threshold - achievementProgress(right);
+      return leftRemaining - rightRemaining || left.threshold - right.threshold;
+    })[0];
 }

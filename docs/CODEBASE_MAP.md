@@ -23,17 +23,23 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
 | Engineering handbook | `docs/handbook/ONE_CONCEPT_HANDBOOK.md` explains the full stack and learning lifecycle; `docs/handbook/build_pdf.py` renders the printable guide with vector diagrams. Build and verification instructions are in `docs/handbook/README.md`. |
 
-## Achievements (#209)
+## Achievements (#209, #259)
 
-`services/achievements.py` awards permanent streak milestones under the existing
-completion transaction/profile lock. Migration `0016_achievements.sql` adds the
-catalog and per-user awards and backfills historical milestones. The owner
-confirmed production application and both tables on 2026-09-25.
-`api/v1/achievements.py` serves collection and seen APIs.
-On mobile, `AchievementsContext` owns one keyed account instance, `achievementStore`
-fences async results, and `achievementCache` joins account cleanup. Profile opens
-`AchievementsScreen`; shared badge/detail/celebration components render the
-collection. See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
+`services/achievements.py` awards permanent, data-driven milestones under the
+existing profile lock and caller transaction. Migration `0016_achievements.sql`
+introduces streak awards; `0027_expanded_achievements.sql` adds categorized
+concept, review, weekly-quiz, perfect-score and distinct learning-path
+achievements with a historical backfill. The evaluator reads only accepted
+server records, with the composite award key preserving a first-earned date on
+retries or concurrent devices. Weekly quiz submission takes the profile lock
+before scoring and evaluating awards. `api/v1/achievements.py` serves the
+collection, category/requirement/progress metadata and seen APIs.
+
+On mobile, `AchievementsContext` owns one keyed account instance,
+`achievementStore` fences async results, and `achievementCache` joins account
+cleanup. Profile opens `AchievementsScreen`; shared badge/detail/celebration
+components render every category and a server-confirmed nearest milestone.
+See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
 
 ## Subtopic completion (#261)
 

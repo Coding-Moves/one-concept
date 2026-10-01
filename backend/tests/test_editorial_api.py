@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from uuid import uuid4
 
 import httpx
+import pytest
 import pytest_asyncio
 from sqlalchemy import text
 
@@ -366,6 +367,115 @@ async def test_queued_mutation_rejects_session_that_expires_during_wait(
         text("""select exists(select 1 from editorial_account_events
         where subject_id=:uid and action='profile_requested')"""),
         {"uid": uid},
+    )
+
+
+@pytest.mark.parametrize(
+    "denial,status",
+    [
+        ("nonmember", 403),
+        ("revoked", 403),
+        ("missing_capability", 403),
+        ("missing_name", 403),
+        ("aal1", 403),
+        ("expired_session", 401),
+        ("deleted_session", 401),
+        ("unconfirmed", 401),
+        ("banned", 401),
+    ],
+)
+async def test_unauthorized_mutations_do_not_wait_for_account_lock(
+    api, session, sessionmaker_for_test, denial, status
+):
+    headers = api.headers()
+    if denial == "nonmember":
+        uid, sid, _ = await auth_account(session)
+        headers = api.headers(uid, sid)
+    elif denial == "aal1":
+        headers = api.headers(aal="aal1")
+    else:
+        queries = {
+            "revoked": "update editorial_memberships set status='revoked'",
+            "missing_capability": "update editorial_memberships set capabilities='{}'",
+            "missing_name": "update editorial_memberships set approved_name=null",
+            "expired_session": "update auth.sessions set not_after=now()-interval '1 second' where user_id=:uid",
+            "deleted_session": "delete from auth.sessions where user_id=:uid",
+            "unconfirmed": "update auth.users set email_confirmed_at=null where id=:uid",
+            "banned": "update auth.users set banned_until=now()+interval '1 day' where id=:uid",
+        }
+        await session.execute(text(queries[denial]), {"uid": api.owner.id})
+        await session.commit()
+    async with sessionmaker_for_test() as blocker:
+        await lock_accounts(blocker)
+        # The lock remains held until AFTER the response. Any attempt to wait
+        # on it would time out instead of promptly denying the request.
+        try:
+            response = await asyncio.wait_for(
+                api.client.post(
+                    "/v1/editorial/reviewers",
+                    headers=headers,
+                    json={"email": "not-invited@example.invalid"},
+                ),
+                timeout=2,
+            )
+            assert response.status_code == status, response.text
+        finally:
+            await blocker.rollback()
+    assert not await session.scalar(
+        text("select exists(select 1 from editorial_account_events where action='invite')")
+    )
+
+
+async def test_queued_mutation_rechecks_capability(api, session, sessionmaker_for_test):
+    uid, sid, _ = await enroll(api, session, ["manage_reviewers"])
+    member = await profile_and_approve(api, uid, sid)
+    # Use an existing Auth account so a broken guard cannot send live email.
+    other_uid, _, email = await auth_account(session)
+    async with sessionmaker_for_test() as blocker:
+        await lock_accounts(blocker)
+        pending = asyncio.create_task(
+            api.client.post(
+                "/v1/editorial/reviewers",
+                headers=api.headers(uid, sid),
+                json={"email": email},
+            )
+        )
+        try:
+            for _ in range(100):
+                waiting = await session.scalar(
+                    text("""select count(*) from pg_locks where locktype='advisory'
+                    and not granted and classid=274 and objid=263""")
+                )
+                if waiting:
+                    break
+                await asyncio.sleep(0.01)
+            assert waiting
+            await change_access(
+                blocker,
+                api.owner,
+                api.settings,
+                uid,
+                AccessInput(
+                    expected_version=member["version"],
+                    status="active",
+                    capabilities=["review"],
+                ),
+            )
+            await blocker.commit()
+            response = await asyncio.wait_for(pending, 5)
+            assert response.status_code == 403, response.text
+        finally:
+            await blocker.rollback()
+            if not pending.done():
+                pending.cancel()
+            await asyncio.gather(pending, return_exceptions=True)
+    assert not await session.scalar(
+        text("select exists(select 1 from editorial_memberships where user_id=:uid)"),
+        {"uid": other_uid},
+    )
+    assert not await session.scalar(
+        text("select exists(select 1 from editorial_account_events where subject_id=:uid)"),
+        {"uid": other_uid},
     )
 
 

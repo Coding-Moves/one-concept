@@ -1,7 +1,8 @@
 """Backend-only editorial authority, independent of editable Auth metadata.
 
-Account mutations share one transaction advisory lock. Recheck authorization
-AFTER taking it so a queued write cannot outrun a revocation or role change.
+Account mutations share one transaction advisory lock. Authorize before waiting
+so denied requests do not queue, then recheck AFTER taking it so a queued write
+cannot outrun a revocation or role change.
 Callers own commit/rollback; the lock lasts until the transaction ends.
 """
 
@@ -52,14 +53,25 @@ async def authorize(
 ) -> Member:
     if not settings.editorial_enabled:
         raise HTTPException(503, "Editorial access is disabled")
+    member = await _authorize_current(db, user, capability)
     if mutation:
         await lock_accounts(db)
+        # READ COMMITTED reads fresh authority after any lock wait. Never reuse
+        # the preliminary membership: another transaction may have revoked it.
+        member = await _authorize_current(db, user, capability)
+    return member
+
+
+async def _authorize_current(
+    db: AsyncSession, user: CurrentUser, capability: Capability | None
+) -> Member:
     try:
         session_id = UUID(user.session_id or "")
     except ValueError:
         raise HTTPException(401, "A current Supabase session is required") from None
     # Authoritative confirmation and current session ownership, not JWT email,
     # role, app_metadata or user_metadata. Expiry/signature are checked by deps.
+    # statement_timestamp() includes elapsed lock waits; now() would not.
     valid = await db.scalar(
         text("""
         select exists(select 1 from auth.users u join auth.sessions s on s.user_id=u.id

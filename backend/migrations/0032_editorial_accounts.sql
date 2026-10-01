@@ -29,10 +29,12 @@ create index editorial_account_events_subject on public.editorial_account_events
 alter table public.editorial_memberships enable row level security;
 alter table public.editorial_account_events enable row level security;
 revoke all on public.editorial_memberships, public.editorial_account_events from public, authenticated;
+revoke all on sequence public.editorial_account_events_id_seq from public, authenticated;
 -- Some disposable PostgreSQL installations do not have the Supabase anon role.
 do $$ begin
   if exists (select 1 from pg_roles where rolname='anon') then
     revoke all on public.editorial_memberships, public.editorial_account_events from anon;
+    revoke all on sequence public.editorial_account_events_id_seq from anon;
   end if;
 end $$;
 

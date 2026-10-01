@@ -133,3 +133,25 @@ def test_profile_and_capabilities_are_validated():
             ProfileInput(expected_version=1, registered_name=name)
     with pytest.raises(ValidationError):
         InviteInput(email="reviewer@example.invalid", capabilities=["super_admin"])
+
+
+@pytest.mark.parametrize(
+    "origin",
+    [
+        "*",
+        "https://*.example.invalid",
+        "http://review.example.invalid",
+        "https://review.example.invalid/path",
+        "https://review.example.invalid?next=x",
+        "",
+    ],
+)
+def test_enabled_editorial_requires_explicit_secure_origins(origin):
+    with pytest.raises(ValidationError):
+        config(editorial_enabled=True, allowed_origins=origin)
+
+
+async def test_malformed_callback_is_configuration_error():
+    with pytest.raises(HTTPException) as exc:
+        invitation_redirect(config(editorial_invite_redirect_url="https://[invalid"))
+    assert exc.value.status_code == 503

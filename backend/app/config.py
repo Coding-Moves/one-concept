@@ -1,6 +1,7 @@
 from functools import lru_cache
+from urllib.parse import urlsplit
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -60,6 +61,32 @@ class Settings(BaseSettings):
     # Off until migration, owner bootstrap and dashboard/Auth setup are verified.
     editorial_enabled: bool = False
     editorial_invite_redirect_url: str = ""
+
+    @model_validator(mode="after")
+    def editorial_origins(self):
+        if not self.editorial_enabled:
+            return self
+        if not self.cors_origins:
+            raise ValueError("Editorial access requires explicit dashboard origins")
+        for origin in self.cors_origins:
+            parts = urlsplit(origin)
+            local = (
+                parts.hostname in ("localhost", "127.0.0.1") and not self.is_production
+            )
+            if (
+                "*" in origin
+                or not parts.hostname
+                or parts.username
+                or parts.password
+                or parts.path
+                or parts.query
+                or parts.fragment
+                or (parts.scheme != "https" and not (local and parts.scheme == "http"))
+            ):
+                raise ValueError(
+                    "Editorial access requires exact HTTPS origins (HTTP localhost in development only)"
+                )
+        return self
 
     @property
     def cors_origins(self) -> list[str]:

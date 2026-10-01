@@ -109,7 +109,8 @@ async def bootstrap_owner(db: AsyncSession, email: str, name: str) -> Member:
     name = validate_registered_name(name)
     await lock_accounts(db)
     if await db.scalar(
-        text("select exists(select 1 from public.editorial_memberships)")
+        text("""select exists(select 1 from public.editorial_memberships)
+            or exists(select 1 from public.editorial_account_events where action='bootstrap')""")
     ):
         raise HTTPException(
             409, "Bootstrap is only available before the first editorial account"

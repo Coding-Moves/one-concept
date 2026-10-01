@@ -31,7 +31,7 @@
     "0029_profile_timezone.sql": "cc14e637fe90172687eb25d10e0a354b32050c535541250f9955742526a5812e",
     "0030_connections.sql": "1dedd4fef237cf0b012bff1969c4edcb9ab3f67abecbdcdb354b95ef4e193941",
     "0031_weekly_quiz_notifications.sql": "63f5323681092ee1790a16c4e6f7120172f7f9eb94bd125082424297cbc6125a",
-    "0032_editorial_accounts.sql": "0eb7a100ff27e26dc620d84abdfe7bc9703dba1ddcb74ef8fcfe001ae176ec9a"
+    "0032_editorial_accounts.sql": "3cb659dcc3c67150dcfa857882d105bedc55ace7a1ba00aef41d169a63f6d400"
   },
   "schema": {
     "columns": {

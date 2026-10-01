@@ -133,3 +133,24 @@ async def test_bootstrap_requires_confirmed_account(session, user):
     with pytest.raises(HTTPException) as exc:
         await bootstrap_owner(session, f"{user}@example.invalid", "Unconfirmed")
     assert exc.value.status_code == 409
+
+
+async def test_bootstrap_cannot_replace_deleted_team(session, editorial):
+    user, _ = editorial
+    await session.execute(text("delete from editorial_memberships"))
+    with pytest.raises(HTTPException) as exc:
+        await bootstrap_owner(session, f"{user.id}@example.invalid", "Replacement")
+    assert exc.value.status_code == 409
+
+
+@pytest.mark.parametrize("cap", CAPABILITIES)
+async def test_each_capability_is_independent(session, editorial, cap):
+    user, settings = editorial
+    await session.execute(
+        text("update editorial_memberships set capabilities=:caps"), {"caps": [cap]}
+    )
+    assert await authorize(session, user, settings, cap)
+    for other in set(CAPABILITIES) - {cap}:
+        with pytest.raises(HTTPException) as exc:
+            await authorize(session, user, settings, other)
+        assert exc.value.status_code == 403

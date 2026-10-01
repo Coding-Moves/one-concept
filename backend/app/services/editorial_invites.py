@@ -11,7 +11,12 @@ from app.config import Settings
 
 def invitation_redirect(settings: Settings) -> str:
     value = settings.editorial_invite_redirect_url
-    parts = urlsplit(value)
+    try:
+        parts = urlsplit(value)
+    except ValueError:
+        raise HTTPException(
+            503, "Configure a valid editorial invitation callback"
+        ) from None
     origin = f"{parts.scheme}://{parts.netloc}"
     local = parts.hostname in ("localhost", "127.0.0.1") and not settings.is_production
     if (

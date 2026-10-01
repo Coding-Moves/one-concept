@@ -16,6 +16,7 @@ import { apiRequest } from '../api/client';
 
 export interface NotificationPrefs {
   enabled: boolean;
+  weekly_quiz_enabled?: boolean; // Older API/cache payloads mean off.
   reminder_times: string[]; // "HH:MM" in the user's profile timezone
 }
 
@@ -55,7 +56,7 @@ export async function registerForReminders(userId: string): Promise<'registered'
     // creation, so upgrading the old quiet 'default' channel in place is
     // impossible — 'reminders' starts loud from day one.
     await Notifications.setNotificationChannelAsync('reminders', {
-      name: 'Daily reminders',
+      name: 'Learning reminders',
       importance: Notifications.AndroidImportance.HIGH,
       sound: 'default',
       vibrationPattern: [0, 250, 250, 250],

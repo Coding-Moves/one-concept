@@ -65,7 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!userId) return;
     // Best-effort; a token refresh must not block cached browsing.
-    registerForReminders().catch(() => {});
+    registerForReminders(userId).catch(() => {});
     syncTimezone(userId).catch(() => {});
   }, [userId]);
 

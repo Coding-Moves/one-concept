@@ -41,14 +41,14 @@ export async function syncTimezone(userId: string): Promise<void> {
 }
 
 /** Ask permission (first run only) and register this handset's token. */
-export async function registerForReminders(): Promise<void> {
-  if (!Device.isDevice) return; // emulators cannot receive pushes
+export async function registerForReminders(userId: string): Promise<'registered' | 'unsupported' | 'denied'> {
+  if (!Device.isDevice) return 'unsupported'; // emulators cannot receive pushes
 
   let { status } = await Notifications.getPermissionsAsync();
   if (status !== 'granted') {
     ({ status } = await Notifications.requestPermissionsAsync());
   }
-  if (status !== 'granted') return;
+  if (status !== 'granted') return 'denied';
 
   if (Platform.OS === 'android') {
     // A fresh channel id: Android freezes a channel's importance after first
@@ -69,6 +69,7 @@ export async function registerForReminders(): Promise<void> {
 
   await apiRequest<void>('/v1/me/push-token', {
     method: 'POST',
+    expectedUserId: userId,
     body: {
       expo_push_token: token,
       platform: Platform.OS === 'ios' ? 'ios' : 'android',
@@ -77,34 +78,37 @@ export async function registerForReminders(): Promise<void> {
   // Remembered so sign-out can deregister without asking Expo again. Not in
   // clearAccountCaches: deregistration consumes it, then removes it itself.
   AsyncStorage.setItem(REGISTERED_TOKEN_KEY, token).catch(() => {});
+  return 'registered';
 }
 
 const REGISTERED_TOKEN_KEY = 'one-concept/push-token/v1';
 
 const PREFS_CACHE_KEY = 'one-concept/notification-prefs/v1';
 
-function rememberPrefs(prefs: NotificationPrefs): NotificationPrefs {
-  AsyncStorage.setItem(PREFS_CACHE_KEY, JSON.stringify(prefs)).catch(() => {});
+let prefsWrites: Promise<unknown> = Promise.resolve();
+function rememberPrefs(prefs: NotificationPrefs, userId: string): NotificationPrefs {
+  prefsWrites = prefsWrites.then(() => AsyncStorage.setItem(PREFS_CACHE_KEY, JSON.stringify({ userId, prefs }))).catch(() => {});
   return prefs;
 }
 
 /** Last known preferences from disk; keeps the settings row visible offline. */
-export async function getCachedNotificationPrefs(): Promise<NotificationPrefs | null> {
+export async function getCachedNotificationPrefs(userId: string): Promise<NotificationPrefs | null> {
   const raw = await AsyncStorage.getItem(PREFS_CACHE_KEY).catch(() => null);
   try {
-    return raw ? (JSON.parse(raw) as NotificationPrefs) : null;
+    const cached = raw ? JSON.parse(raw) : null;
+    return cached?.userId === userId ? cached.prefs as NotificationPrefs : null;
   } catch {
     return null;
   }
 }
 
-export async function getNotificationPrefs(): Promise<NotificationPrefs> {
-  return rememberPrefs(await apiRequest<NotificationPrefs>('/v1/me/notifications'));
+export async function getNotificationPrefs(userId: string): Promise<NotificationPrefs> {
+  return rememberPrefs(await apiRequest<NotificationPrefs>('/v1/me/notifications', { expectedUserId: userId }), userId);
 }
 
-export async function putNotificationPrefs(prefs: NotificationPrefs): Promise<NotificationPrefs> {
+export async function putNotificationPrefs(prefs: NotificationPrefs, userId: string): Promise<NotificationPrefs> {
   return rememberPrefs(
-    await apiRequest<NotificationPrefs>('/v1/me/notifications', { method: 'PUT', body: prefs })
+    await apiRequest<NotificationPrefs>('/v1/me/notifications', { method: 'PUT', body: prefs, expectedUserId: userId }), userId
   );
 }
 
@@ -126,5 +130,6 @@ export async function deregisterForReminders(): Promise<void> {
 
 /** Called on sign-out; reminder times are account data, not device data. */
 export async function clearNotificationPrefsCache(): Promise<void> {
-  await AsyncStorage.removeItem(PREFS_CACHE_KEY).catch(() => {});
+  prefsWrites = prefsWrites.then(() => AsyncStorage.removeItem(PREFS_CACHE_KEY)).catch(() => {});
+  await prefsWrites;
 }

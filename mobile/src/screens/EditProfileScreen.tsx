@@ -40,7 +40,7 @@ export function EditProfileScreen() {
     <Text style={{ color: colors.text }}>Preferred name</Text>
     <TextInput accessibilityLabel="Preferred name" value={name} onChangeText={setName} editable={!saving} autoCapitalize="words" autoCorrect={false} returnKeyType="done" onSubmitEditing={() => void save()} style={{ color: colors.text, backgroundColor: colors.surface, borderRadius: 16, padding: 16, fontSize: 18, minHeight: 52 }} />
     {!online && <Text style={{ color: colors.textMuted }}>You need a connection to save. You can retry when you reconnect.</Text>}
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={() => void save()} style={{ minHeight: 48, backgroundColor: colors.primary, padding: 16, borderRadius: 16, opacity: saving ? 0.6 : 1 }}><Text style={{ color: colors.background, textAlign: 'center', fontWeight: '700' }}>{saving ? 'Saving…' : 'Save name'}</Text></Pressable>
+    <Pressable accessibilityRole="button" accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={() => void save()} style={({ pressed }) => ({ minHeight: 48, backgroundColor: pressed ? colors.primaryPressed : colors.primary, padding: 16, borderRadius: 16, opacity: saving ? 0.6 : 1 })}><Text style={{ color: colors.onPrimary, textAlign: 'center', fontWeight: '700' }}>{saving ? 'Saving…' : 'Save name'}</Text></Pressable>
     {message ? <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{message}</Text> : null}
   </ScrollView>;
 }

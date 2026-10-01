@@ -27,6 +27,7 @@ export type ProfileStackParamList = {
   Saved: undefined;
   About: undefined;
   Achievements: undefined;
+  Analytics: undefined;
   SubtopicQuizzes: undefined;
   SubtopicQuiz: { completionId: string; topicName: string; subtopicName: string };
 };
@@ -125,6 +126,22 @@ export function ProfileScreen() {
       </View>
 
       <AchievementPreview onPress={() => navigation.navigate('Achievements')} />
+
+      <Pressable
+        onPress={() => navigation.navigate('Analytics')}
+        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+        accessibilityLabel="Open learning activity analytics"
+      >
+        <View style={styles.rowLeft}>
+          <Ionicons name="bar-chart-outline" size={scaleIcon(20)} color={colors.text} />
+          <View>
+            <Text style={styles.rowTitle}>Learning analytics</Text>
+            <Text style={styles.rowSubtitle}>Progress, activity, quizzes, and achievements</Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
+      </Pressable>
 
       {subtopics.length > 0 ? <Pressable
         onPress={() => navigation.navigate('SubtopicQuizzes')}

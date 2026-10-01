@@ -22,7 +22,8 @@ A previous decline, cancellation or removal starts a seven-day wait before anoth
 request for that pair. Each account can send at most 20 new requests in a rolling
 24 hours, and either participant can have at most 100 pending requests. Idempotent
 retries are not new invitations. Crossed invitations require explicit acceptance;
-they never connect people automatically.
+they never connect people automatically. Each renewed invitation gets a fresh
+action ID, so an old screen cannot answer a later invitation for the same pair.
 
 ## Privacy and blocking
 
@@ -73,8 +74,8 @@ retryable without exposing backend details.
 ## PR dependency and deployment
 
 PR #295 targets `develop` under the repository rules and depends on profile PR
-#293. Keep it draft until #293 is merged: its current develop comparison necessarily
-includes the inherited profile commits. The dedicated Connections diff is the
+#293. Merge #293 first: the current develop comparison includes the inherited
+profile commits. Both can be ready for review while this merge order is preserved. The dedicated Connections diff is the
 comparison from `codex/267-complete-profile` to `codex/294-mutual-connections`.
 Merging #293 first lets GitHub reduce #295 to Connections alone. Do not merge #295
 first; no PR merge is authorized by the implementation task.

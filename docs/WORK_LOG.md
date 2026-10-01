@@ -7,11 +7,29 @@ claims as completed work.
 
 ## Current status
 
-### #294 complete mutual Connections — implementation complete, dependency draft
+### PRs #293 / #295 owner-requested merge-readiness review — completed locally
+
+- Reviewed current profile and Connections diffs, auth/ownership, public allowlist,
+  revocation, migrations, mobile account/foreground boundaries, consent races,
+  dependency order and hosted CI. No remaining blocker found in #293 at `3229a6f`.
+- Reproduced stale invitation reuse in #295, then fixed it in `ecd33b9`: renewed
+  requests receive a new action ID and ownership is rechecked after the pair lock.
+  The regression failed before the fix and passed afterward. Focused PostgreSQL
+  profile, sharing, Connections and schema checks: **45 passed, no skips**; F/E9
+  lint and whitespace checks passed. An initial test invocation used the wrong
+  working directory; rerunning from backend resolved collection.
+- Both PRs belong to the authorized owner account, so GitHub self-approval is
+  unavailable. Record review results without substituting another account.
+- Owner requested both PRs ready. Mark #295 ready after final hosted CI, preserving
+  the merge order **#293, then #295** and all individual commits. No merge occurs
+  in this task. Production migration/phone checks remain release prerequisites,
+  not a prerequisite to merging these feature branches into `develop`.
+
+### #294 complete mutual Connections — reviewed, merge after #293
 
 - [PR #295](https://github.com/Coding-Moves/one-concept/pull/295) targets `develop`
-  from `codex/294-mutual-connections`. It remains draft until profile PR #293 is
-  merged. Its current develop diff includes that dependency; compare against
+  from `codex/294-mutual-connections`. Merge profile PR #293 first.
+  Its current develop diff includes that dependency; compare against
   `codex/267-complete-profile` to review Connections alone. No merge is authorized.
 - `1e3f522`: constrained schema, private API and request controls; `9d28063`:
   account-safe client and invitation-only cooldowns; `d6969d1`: full mobile
@@ -32,8 +50,9 @@ claims as completed work.
   settings, users and release/runtime versions are unchanged. Physical two-phone,
   native sharing, camera/deep-link and TalkBack checks remain before publication.
   See [connections.md](connections.md) for the rollout and acceptance checklist.
-- Handoff: push final commits, verify hosted CI, then owner review. Keep #295 draft
-  until #293 merges; neither merge nor mobile publication is part of this task.
+- Handoff: final hosted CI and review results are recorded on #295. Owner merges
+  #293 first, then #295 with green checks. Neither merge nor mobile publication
+  is part of this task.
 
 ### #267 complete learner profile with opt-in sharing — completion review
 

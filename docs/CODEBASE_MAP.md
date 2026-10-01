@@ -27,7 +27,9 @@ learned history, streaks, likes, saved concepts, and push reminders.
 
 `api/v1/editorial.py` exposes private account/onboarding and owner-management APIs.
 `services/editorial_accounts.py` verifies current Supabase sessions, confirmed
-email, membership, capabilities and MFA; `editorial_management.py` serializes
+email, membership, capabilities and MFA before account-lock acquisition and
+again afterward, using current-query time for session deadlines;
+`editorial_management.py` serializes
 versioned account mutations and records their audit events. `editorial_invites.py`
 is the server-only Auth invitation adapter. Migration `0032_editorial_accounts.sql`
 keeps memberships and account events inaccessible to browser roles. The one-time

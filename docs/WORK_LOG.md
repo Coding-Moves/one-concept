@@ -7,6 +7,29 @@ claims as completed work.
 
 ## Current status
 
+### PR #298 review fixes — implemented and validated
+
+- Owner requested both reproduced findings fixed in the same PR. The original
+  review at `b8807a9` demonstrated an expired session still saving a queued
+  profile and a nonmember occupying the shared advisory-lock queue.
+- `8ab74c0` checks session deadlines against the post-wait statement timestamp;
+  its regression lets a pre-existing deadline expire naturally during contention
+  and verifies HTTP 401, unchanged profile/version and no profile audit write.
+- `c89877e` checks current session, membership and required capability/name/MFA
+  before taking the lock, then repeats all checks afterward. Nine denial cases
+  finish while another transaction still holds the lock; queued revocation and
+  capability-removal cases remain denied. No preliminary authority is reused.
+- Validation: **38 focused tests passed**, then **378 backend tests passed, no
+  skips**, against disposable PostgreSQL 16. Full backend F/E9 lint, local
+  documentation links and `git diff --check` passed. No live providers were used.
+- Runbook and codebase map document pre/post-lock authorization and the READ
+  COMMITTED requirement. These corrections add no migration, configuration or
+  manual setup step. Authorized writes still serialize across invitation HTTP.
+- Handoff: preserve all focused commits in [PR #298](https://github.com/Coding-Moves/one-concept/pull/298).
+  The final pushed revision's hosted CI result is recorded on the PR; this log's
+  commit is "Document editorial authorization review fixes". No merge or
+  production activation; existing #274 staging prerequisites remain unchanged.
+
 ### #274 reviewer identity foundation — implemented and locally validated
 
 - First child of #263, on `codex/274-editorial-reviewer-accounts`, based on

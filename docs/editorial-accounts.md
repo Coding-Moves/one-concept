@@ -47,6 +47,8 @@ Membership is keyed by the signed JWT `sub`. Neither JWT email, editable
 `user_metadata`, a submitted name nor a role chosen in the browser grants access.
 The API also checks the token's `session_id` against `auth.sessions`, including
 ownership and `not_after`, and checks authoritative email confirmation and bans.
+Session deadlines use the current query's timestamp, so a session that expires
+while waiting for an account lock cannot authorize the queued write.
 Signed JWT expiration, algorithm, issuer and audience checks remain in force.
 Supabase-managed Auth tables are read, never altered by the application migration.
 
@@ -76,7 +78,13 @@ every reviewer by this change.
 
 Future content APIs must call `authorize(..., capability, mutation=True)` within
 the same transaction as the protected mutation and retain the transaction lock
-until commit. This serializes writes against access changes. For operations
+until commit. Authorization first rejects invalid sessions, inactive/nonmembers
+and missing capabilities/name/MFA before waiting on the shared account lock.
+After acquiring it, all checks run again using fresh READ COMMITTED queries;
+never reuse the preliminary membership or change these transactions to snapshot
+isolation. This serializes writes against access changes while keeping denied
+requests out of the lock queue. Authorized account writes still serialize, and
+an invitation may hold the lock while awaiting the Auth provider. For operations
 requiring two capabilities, check both while retaining that lock. The current CLI
 publication path is unchanged; closing the bypasses across CLI/workers/imports is
 part of #275/#276, not a completed claim of this identity PR.

@@ -35,6 +35,9 @@ class Settings(BaseSettings):
     # Supabase's auth REST endpoint; the page is inert without it.
     supabase_anon_key: str | None = None
 
+    # Enable only after schema, worker and mobile staging verification.
+    weekly_quiz_notifications_enabled: bool = False
+
     # Generation. The key lives here and only here — never in the app bundle.
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.1-flash-lite"

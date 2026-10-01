@@ -68,7 +68,10 @@ async def _completed_probability_subtopic(sessionmaker_for_test, user, reviewed:
         await session.execute(text("""
             insert into public.user_subtopic_completions
               (id,user_id,subtopic_id,catalog_signature,catalog_concept_ids)
-            values (:id,:uid,:sid,repeat('0',64),cast(:concept_ids as uuid[]))
+            values (:id,:uid,:sid,
+              md5(array_to_string(cast(:concept_ids as uuid[]), ',')) ||
+                md5('one-concept-subtopic-v1:' || array_to_string(cast(:concept_ids as uuid[]), ',')),
+              cast(:concept_ids as uuid[]))
         """), {
             "id": uuid.uuid4(), "uid": user, "sid": rows[0].subtopic_id,
             "concept_ids": ids,
@@ -90,6 +93,9 @@ async def test_subtopic_quiz_waits_for_reviewed_questions(client, sessionmaker_f
     body = response.json()
     assert body["available"] is False
     assert (body["reviewed_concepts"], body["required_concepts"]) == (0, 3)
+    progress = (await client.get("/v1/me/subtopics/progress")).json()["items"]
+    probability = next(item for item in progress if item["subtopic_slug"] == "probability")
+    assert probability["completion_id"] == str(completion_id)
 
 
 async def test_subtopic_quiz_freezes_completed_catalog_and_preserves_attempt_history(

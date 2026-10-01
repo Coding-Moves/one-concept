@@ -7,6 +7,17 @@ claims as completed work.
 
 ## Current status
 
+### #265 multilingual daily digest, flashcard, and quiz content — architecture recorded
+
+- Scope: planning only. `docs/multilingual-content/README.md` records canonical
+  concept localization, reviewed complete-payload fallback, locale preferences,
+  translation-version provenance, and the later separate study-card/game model.
+- No schema, mobile or backend runtime behavior, content translation, user data,
+  release configuration, deployment or production setting changed. The owner
+  requested this tracker be closed after the documentation PR is opened; future
+  implementation requires a new focused issue and PR after pilot-language,
+  fallback, reviewer and content-pack decisions are made.
+
 ### #258 serious learning and activity analytics — ready for review
 
 - Scope: add one authenticated, server-derived analytics read model and a quiet

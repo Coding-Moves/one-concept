@@ -1,0 +1,43 @@
+import './helpers/resolve-ts.mjs';
+import assert from 'node:assert/strict';
+import { test } from 'node:test';
+process.env.EXPO_PUBLIC_API_BASE_URL ||= 'https://api.example.org';
+const { API_BASE_URL, setTokenProvider, invalidateAccountRequests } = await import('../src/api/client.ts');
+const { profileQr, publicProfileUrl, profileTokenFromLink, getPublicProfile, getSharing, putSharing } = await import('../src/services/profileSharing.ts');
+const token = 'a'.repeat(43);
+test('shared links and QR use only an opaque public URL', () => {
+  const url = publicProfileUrl(`/p/${token}`);
+  assert.equal(url, `${API_BASE_URL}/p/${token}`);
+  assert.equal(profileTokenFromLink(url), token);
+  assert.equal(profileTokenFromLink(`com.codingmoves.oneconcept://p/${token}`), token);
+  for (const invalid of [`https://evil.invalid/p/${token}`, `${url}?token=secret`, `${url}#email`, 'com.codingmoves.oneconcept://p/private-id']) assert.equal(profileTokenFromLink(invalid), null);
+  assert.throws(() => publicProfileUrl('//evil.invalid/p/x'));
+  assert.throws(() => profileQr(url + '?email=private'));
+  const matrix = profileQr(url);
+  assert.ok(matrix.length >= 21);
+  assert.ok(matrix.every(row => row.length === matrix.length && row.every(cell => typeof cell === 'boolean')));
+});
+test('public profile requests send no authentication and never serve cached revoked content', async t => {
+  let requests = [];
+  t.mock.method(globalThis, 'fetch', async (url, init) => { requests.push({url,init}); return new Response('{"achievements":[]}'); });
+  assert.deepEqual(await getPublicProfile(token), {achievements:[]});
+  assert.equal(requests[0].init.headers, undefined);
+  assert.equal(requests[0].init.cache, 'no-store');
+  globalThis.fetch.mock.mockImplementation(async () => new Response('{}', {status:404}));
+  await assert.rejects(getPublicProfile(token), e => e.status === 404);
+});
+test('private sharing requests require owning account and omit server-only public path', async t => {
+  invalidateAccountRequests();
+  setTokenProvider(async uid => { assert.equal(uid, 'owner'); return 'owner-token'; });
+  let sent;
+  t.mock.method(globalThis, 'fetch', async (_, init) => { sent=init; return new Response('{"enabled":false}'); });
+  await putSharing('owner', { enabled:false, show_name:false, show_streak:false, show_learning:false, achievement_codes:[], version:1, public_path:`/p/${token}` });
+  assert.equal(JSON.parse(sent.body).public_path, undefined);
+  assert.equal(sent.headers.Authorization, 'Bearer owner-token');
+  let resolve;
+  globalThis.fetch.mock.mockImplementation(() => new Promise(r => {resolve=r;}));
+  const request = getSharing('owner');
+  await new Promise(r=>setImmediate(r)); invalidateAccountRequests();
+  resolve(new Response('{"enabled":true}'));
+  await assert.rejects(request, e => e.status === 401);
+});

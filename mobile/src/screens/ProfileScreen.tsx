@@ -112,6 +112,10 @@ export function ProfileScreen() {
         <Text style={styles.rowTitle}>Edit profile</Text>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </Pressable>
+      <Pressable accessibilityRole="button" onPress={() => navigation.navigate('ProfileSharing')} style={styles.rowCard}>
+        <Text style={styles.rowTitle}>Public profile & sharing</Text>
+        <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
+      </Pressable>
       <View style={styles.cardsRow}>
         <Surface style={styles.card}>
           <AnimatedFlame

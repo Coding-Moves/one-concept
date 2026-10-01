@@ -168,13 +168,10 @@ a test account, and verify next-day selection. Today's activity stays fixed.
    `python -m app.workers.content stage SLUG BODY.json`. The body contains
    `title`, `summary`, `example`, `subtopic_slug`, `curriculum`, optional `model` and
    `prompt_version`. The CLI prints a revision UUID.
-8. Publish the exact reviewed revision:
-
-   ```bash
-   .venv/bin/python -m app.workers.content publish REVISION_UUID \
-     --reviewed-by 'Muawiya Amir' \
-     --note 'Explain which source, factual claims and example were verified'
-   ```
+8. Use authenticated exact-revision approval/publication as described in
+   [editorial provenance](editorial-provenance.md). The old free-text
+   `publish --reviewed-by` command is disabled; authenticated entry points are
+   delivered in #276. Keep publication paused until that coordinated rollout.
 
 Publication requires complete metadata, valid prerequisites already published,
 an active subject, and a current base version. It rejects exact duplicates and
@@ -189,8 +186,9 @@ new publication gate: complete it through `stage` before approval. The example
 extension and existing plans must continue to grow through maintainer work;
 there is no automatic source of infinite high-quality titles.
 
-Reject an unsuitable revision with `reject REVISION_UUID --reviewed-by NAME
---note REASON`. Rejection preserves the audit trail. A new draft concept remains
+Reject an unsuitable revision through the authenticated review service (#276
+entry points). Free-text CLI rejection is disabled. Rejection preserves the audit
+trail. A new draft concept remains
 in inventory so it can be corrected with `stage`; do not repeatedly generate
 new copies to evade review. Resolve rejected inventory during the weekly review.
 
@@ -278,12 +276,7 @@ value and appropriate source scrutiny.
 }
 ```
 
-Publish the reviewed draft with the checklist file; the command refuses drafts
-without it:
-
-```bash
-.venv/bin/python -m app.workers.content publish REVISION_UUID \
-  --reviewed-by 'Muawiya Amir' \
-  --note 'Checked claims, sources, example, flashcard, and every MCQ.' \
-  --quality-review quality-review.json
-```
+Approval records this checklist through the authenticated review service with
+the exact revision and the account's approved registered name. Publication reads
+that stored evidence; a checklist file and a typed reviewer name cannot authorize
+publication. See [the provenance contract and rollout](editorial-provenance.md).

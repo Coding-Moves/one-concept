@@ -79,6 +79,8 @@ class TokenClaims:
     user_id: str
     email: str | None
     expires_at: int
+    session_id: str | None = None
+    aal: str = "aal1"
 
 
 async def verify_token(token: str, jwks: JwksCache, issuer: str) -> TokenClaims:
@@ -119,4 +121,6 @@ async def verify_token(token: str, jwks: JwksCache, issuer: str) -> TokenClaims:
         user_id=str(subject),
         email=payload.get("email"),
         expires_at=int(payload["exp"]),
+        session_id=payload.get("session_id") if isinstance(payload.get("session_id"), str) else None,
+        aal=payload.get("aal") if payload.get("aal") in ("aal1", "aal2") else "aal1",
     )

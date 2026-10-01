@@ -7,6 +7,20 @@ claims as completed work.
 
 ## Current status
 
+### #274 reviewer identity foundation — implementation started
+
+- First child of #263, on `codex/274-editorial-reviewer-accounts`, based on
+  `develop` after #296 merged. Scope: private memberships/audit, verified-session
+  authorization, invitations, profile onboarding/name approval, owner controls,
+  tests and an activation runbook. Frontend screens remain in #278.
+- Intended commits: storage/session contract; authorization and owner bootstrap;
+  invitation/profile/account APIs; regression coverage and integration fixes;
+  operator documentation and final validation. Preserve individual commits.
+- Incorporate Faizan's multi-reviewer/profile flow using individual Supabase
+  invitations and user-set passwords. Three is an initial team target, not a cap.
+- No live invitations, production schema/configuration or mobile release changes.
+
+
 ### #268 weekly quiz notifications — owner-requested review fixes completed
 
 - Review scope: current PR diff, delivery boundaries, mobile account safety and

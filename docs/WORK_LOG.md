@@ -7,7 +7,7 @@ claims as completed work.
 
 ## Current status
 
-### #262 optional repeatable subtopic quizzes — ready for PR
+### #262 optional repeatable subtopic quizzes — ready for review
 
 - Scope: provide an optional, Profile-linked quiz only after a server-confirmed
   subtopic completion. It remains separate from the weekly cross-concept quiz,
@@ -28,8 +28,9 @@ claims as completed work.
   weekly-quiz coverage (**13 passed**); regenerated schema contract; mobile
   TypeScript and all **71** Node tests. No production migration, user-data
   change, deployment, app-version or release configuration was performed.
-- Next: push the dedicated `develop` PR with `Closes #262`, then obtain normal
-  review and staging validation before any merge.
+- PR: [#289](https://github.com/Coding-Moves/one-concept/pull/289) targets
+  `develop` and declares `Closes #262`. Obtain normal review and staging
+  validation before any merge.
 
 ### #261 server-authoritative subtopic completion — ready for review
 

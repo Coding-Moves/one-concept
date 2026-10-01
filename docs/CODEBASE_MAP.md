@@ -53,6 +53,23 @@ event only when it was newly recorded. The Today card appears only for that
 confirmed response, while the acknowledgement endpoint retains delivery state
 for later achievement and challenge work.
 
+## Optional subtopic quizzes (#262)
+
+`subtopic_quizzes` freezes up to seven reviewed MCQs against a learner-owned
+`user_subtopic_completions` event. The snapshot stores every source concept
+slug, content version, question, option and answer key. A new content catalog
+therefore creates a distinct future completion event, while an already opened
+quiz stays unchanged. `subtopic_quiz_attempts` is append-only: retries create
+new answer/score rows and the history endpoint retains earlier results.
+
+`services/subtopic_quizzes.py` chooses only reviewed MCQs from the completion
+record’s exact concept IDs and never generates questions at request time.
+`api/v1/subtopic_quizzes.py` keeps answer keys server-side until submission.
+Composite ownership constraints keep quizzes and attempts bound to the same
+account as their completion parent. Profile exposes completed paths through
+`SubtopicQuizzesScreen` and `SubtopicQuizScreen`; the feature is optional and
+never changes a daily lesson, streak or weekly quiz.
+
 ## Mobile navigation and presentation
 
 `App.tsx` composes SafeArea, Theme, Connectivity, Auth, and Progress providers.
@@ -75,6 +92,7 @@ inside a root stack, with a concept-detail modal above them.
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, result feedback and reattempts. |
+| `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, retries, and prior-score history. |
 | `ProfileScreen.tsx` | Account, learning-path progress, reminder preferences, theme, sign-out, and links to profile subpages. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
@@ -267,6 +285,7 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   `state.py` and reminders count completed review days without increasing unique
   learned totals. `me/state?reviews=true` opts into a separate review payload.
 - `services/weekly_quizzes.py` freezes one reviewed MCQ from each of seven completed concepts into a per-user weekly snapshot. `api/v1/quizzes.py` scores submissions server-side and appends immutable attempts; answer keys are only returned after submission.
+- `services/subtopic_quizzes.py` independently freezes reviewed questions from one completed subtopic’s exact catalog. `api/v1/subtopic_quizzes.py` permits repeat attempts and returns account-scoped attempt history; it does not couple the subtopic flow to the weekly quiz.
 - `workers/content.py` exposes maintainer-only imports, revision inspection,
   approval, failed-plan correction/retry and health reports. `content_health.py`
   computes supply/queue/quota/worker conditions and deduplicates transitions.

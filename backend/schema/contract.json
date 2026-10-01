@@ -26,7 +26,8 @@
     "0024_backfill_subtopic_completion_events.sql": "d35b611207831e60942aafc9da73b0d558fa917df71113e83ad940cd6707f8a4",
     "0025_subtopic_quizzes.sql": "e0edebb44215d6501566d2b268ac4542306b41d418635a36c7d76abde073fb9e",
     "0026_subtopic_quiz_owner_integrity.sql": "e53d509dd9b2cb39cdaa353168328d0040a22845c4f4d30ec42165fc4e817204",
-    "0027_expanded_achievements.sql": "b02bbcb95f44e9eebd4582bbb537dd02911ec0598699dc433aa15b7159746a67"
+    "0027_expanded_achievements.sql": "b02bbcb95f44e9eebd4582bbb537dd02911ec0598699dc433aa15b7159746a67",
+    "0028_public_profiles.sql": "c693e786a2d787eef9128eddf1bd5cd0cd8a8d1a031212dd155c44bc181bfbe8"
   },
   "schema": {
     "columns": {
@@ -629,6 +630,54 @@
         "identity": "",
         "not_null": true,
         "type": "uuid"
+      },
+      "profile_sharing.achievement_codes": {
+        "default": "'{}'::text[]",
+        "identity": "",
+        "not_null": true,
+        "type": "text[]"
+      },
+      "profile_sharing.enabled": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profile_sharing.public_token": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "profile_sharing.show_learning": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profile_sharing.show_name": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profile_sharing.show_streak": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profile_sharing.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profile_sharing.version": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
       },
       "profiles.avatar_url": {
         "default": null,
@@ -1238,6 +1287,30 @@
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
       },
+      "profile_sharing.profile_sharing_achievement_codes_check": {
+        "definition": "CHECK ((cardinality(achievement_codes) <= 32))",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_pkey": {
+        "definition": "PRIMARY KEY (user_id)",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_public_token_check": {
+        "definition": "CHECK ((public_token ~ '^[A-Za-z0-9_-]{43}$'::text))",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_public_token_key": {
+        "definition": "UNIQUE (public_token)",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_version_check": {
+        "definition": "CHECK ((version >= 0))",
+        "validated": true
+      },
       "profiles.profiles_id_fkey": {
         "definition": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE",
         "validated": true
@@ -1640,6 +1713,16 @@
         "ready": true,
         "valid": true
       },
+      "profile_sharing_pkey": {
+        "definition": "CREATE UNIQUE INDEX profile_sharing_pkey ON public.profile_sharing USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "profile_sharing_public_token_key": {
+        "definition": "CREATE UNIQUE INDEX profile_sharing_public_token_key ON public.profile_sharing USING btree (public_token)",
+        "ready": true,
+        "valid": true
+      },
       "profiles_pkey": {
         "definition": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)",
         "ready": true,
@@ -1964,6 +2047,9 @@
         "rls": true
       },
       "notification_preferences": {
+        "rls": true
+      },
+      "profile_sharing": {
         "rls": true
       },
       "profiles": {

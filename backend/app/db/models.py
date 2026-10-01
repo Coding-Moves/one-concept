@@ -378,3 +378,15 @@ class WeeklyQuizAttempt(Base):
     attempted_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), nullable=False
     )
+
+
+class ProfileSharing(Base):
+    __tablename__ = "profile_sharing"
+    user_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True)
+    public_token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_name: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_streak: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_learning: Mapped[bool] = mapped_column(Boolean, default=False)
+    achievement_codes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    version: Mapped[int] = mapped_column(Integer, default=0)

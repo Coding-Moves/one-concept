@@ -26,6 +26,8 @@ async def test_migrations_produce_reviewed_schema_contract(database):
 
 @pytest.mark.parametrize("damage, expected", [
     ("alter table public.concept_backlog drop column claimed_at", "columns: concept_backlog.claimed_at"),
+    ("alter table public.profile_sharing disable row level security", "tables: profile_sharing"),
+    ("create policy leaked_profiles on public.profile_sharing for select using (true)", "Unexpected policy:"),
     ("drop table public.content_conditions", "tables: content_conditions"),
     ("drop table public.user_achievements", "tables: user_achievements"),
     ("alter table public.daily_assignments drop constraint daily_assignments_no_repeat", "constraints: daily_assignments.daily_assignments_no_repeat"),

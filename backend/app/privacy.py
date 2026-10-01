@@ -22,7 +22,7 @@ PRIVACY_POLICY = """<!doctype html>
 <body>
   <main>
     <h1>Privacy Policy</h1>
-    <p class="updated">Effective: September 25, 2026</p>
+    <p class="updated">Effective: October 1, 2026</p>
     <p>One Concept is operated by Coding Moves. This policy explains the data
        used to provide the app and how to contact us about it.</p>
 
@@ -48,6 +48,15 @@ PRIVACY_POLICY = """<!doctype html>
        when you enable them. We do not use the app for advertising, and the app
        does not include behavioural analytics or crash-reporting SDKs.</p>
 
+    <h2>Optional public profile</h2>
+    <p>Profile sharing is off by default. If you enable it, anyone with your link
+       or QR code can view only the display name, streaks, learned-concept count
+       and individual achievements you select. Email addresses, saved concepts,
+       account identifiers and private activity are not included. You can change
+       these choices or turn sharing off in the app. Turning it off revokes the
+       old link, including after you enable sharing again, but cannot erase
+       screenshots or copies already made by a visitor.</p>
+
     <h2>Service providers</h2>
     <p>We use Supabase to provide authentication and database infrastructure.
        We use Expo's push-notification service to deliver reminders when enabled.
@@ -62,7 +71,7 @@ PRIVACY_POLICY = """<!doctype html>
        the service.</p>
 
     <h2>Security</h2>
-    <p>Application requests use a verified account token, and access controls are
+    <p>Private application requests use a verified account token, and access controls are
        designed to limit data access to the signed-in account. No method of
        internet transmission or storage is completely secure.</p>
 

@@ -1,22 +1,26 @@
 # Achievements
 
-Streak awards recognize 7, 30, 90, 180, 365, 500, 1,000, 5,000 and 10,000
-consecutive learning days. They remain earned after a streak ends. Lessons and
-daily reviews count together, once per recorded `assigned_for` date, using the
-existing streak semantics. Device timestamps and client counters cannot award badges.
+Achievements recognize sustained learning without making any reward mandatory. Streak awards recognize 7, 30, 90, 180, 365, 500, 1,000, 5,000 and 10,000 consecutive learning days. The expanded catalog also recognizes completed concepts (1, 5, 10, 25, 50, 100), completed reviews (1, 5, 10, 25, 50, 100), distinct weekly quizzes (1, 5, 10, 25, 50), perfect weekly quiz scores (1, 5), and distinct completed learning paths (1, 5, 10, 25). They remain earned after activity changes. Device timestamps and client counters cannot award badges.
 
 ## Server architecture
 
-- `achievement_definitions`: stable code, metric, threshold, title, description,
-  artwork key and display order. `user_achievements`: user, achievement code,
-  first qualifying date, recording time, source and acknowledgement time.
-- The composite user/code primary key prevents duplicate awards. Both completion
-  services evaluate awards under their existing profile lock before committing;
-  completion and awards roll back together on failure.
-- Migration 0016 backfills historical consecutive-date runs, including ended
-  streaks. Collection reads reconcile under the same lock to catch completions
-  accepted by an older API during deployment, or newly introduced thresholds.
-  Conflicts preserve existing earned dates and acknowledgements.
+- `achievement_definitions`: stable code, category, metric, threshold, requirement
+  metadata, title, description, artwork key, display order and progress visibility.
+  `user_achievements`: user, achievement code, first qualifying date, recording
+  time, origin and acknowledgement time.
+- The shared server evaluator derives every award from immutable accepted records:
+  completed concepts, completed reviews, first attempt for each weekly quiz,
+  first perfect attempt for each weekly quiz, and first completion for each
+  subtopic. It never trusts a mobile counter. A retry, a second device, or a new
+  catalog signature for an already completed subtopic cannot inflate a metric.
+- The composite user/code primary key prevents duplicate awards. Accepted lesson
+  and review writes already hold the profile lock; weekly quiz submission now
+  takes that same lock before writing its immutable attempt. Award insertion
+  remains in the surrounding transaction, so a failed award rolls back the write.
+- Migration 0027 adds the expanded definitions and backfills their actual first
+  qualifying date. Collection reads reconcile under the profile lock to catch
+  records accepted by an older API or newly introduced definitions. Conflicts
+  preserve existing earned dates and acknowledgements.
 - `GET /v1/me/achievements` returns definitions, own awards and confirmed current/
   longest streaks. `POST /v1/me/achievements/seen` acknowledges up to 100 codes.
   Both use JWT identity; acknowledgement cannot create an award.
@@ -25,11 +29,13 @@ existing streak semantics. Device timestamps and client counters cannot award ba
 
 ## Mobile experience and isolation
 
-Profile previews the collection and next target. The collection switches to one
-column on narrow screens or with larger system text. Locked artwork is hidden
-behind a lock silhouette; milestone requirements remain readable and locked
-cards do not open. Earned badges use local vector artwork and static accent
-rings. Detail sheets support scrolling, Android Back and reduced motion.
+Profile previews the collection and its nearest available target. The collection
+uses server-provided progress for every visible category, not a client-derived
+counter. It switches to one column on narrow screens or with larger system text.
+Locked artwork is hidden behind a lock silhouette; milestone requirements and
+confirmed progress remain readable and locked cards do not open. Earned badges
+use local vector artwork and static accent rings. Detail sheets support
+scrolling, Android Back and reduced motion.
 
 One grouped celebration covers unseen confirmed awards, including historical
 credit. It waits for What's New to close. Continuing dismisses the group; the
@@ -49,22 +55,22 @@ badges. Cached viewing remains available.
 
 ## Extension rules
 
-Add streak thresholds through a new ordered migration inserting catalog rows.
-Keep existing codes, metrics and thresholds stable: changing them changes the
-meaning of earned awards. Add artwork mappings if desired; unknown artwork has
-a generic medal fallback. Screens do not hardcode the number of milestones.
+Add definitions through a new ordered migration. Keep existing codes, metrics and
+thresholds stable: changing them changes the meaning of earned awards. Every new
+metric needs an accepted server record, an evaluator fact query, an honest
+requirement description and regression coverage for replay and first-earned
+semantics. Add artwork mappings if desired; unknown artwork has a generic medal
+fallback. Screens do not hardcode the number of milestones.
 
-New categories need server evaluators in their accepted-write transactions,
-metric-specific progress/wording and regression tests. Catalog, award storage,
-ownership, caching, acknowledgement and detail components remain reusable.
-The first UI deliberately describes streaks; a new metric requires appropriate
-presentation as well as inserting a definition.
+The catalog, award storage, ownership, caching, acknowledgement and detail
+components remain reusable. A new category must return server-confirmed progress
+where that progress is meaningful; it must not add a local or AI-estimated score.
 
 ## Rollout
 
-1. Review and apply `backend/migrations/0016_achievements.sql` using the normal
-   migration/backup procedure. This PR has not applied it to production.
-2. Verify the tables, policies, nine definitions and historical awards. Only
+1. Review and apply `backend/migrations/0027_expanded_achievements.sql` using the normal
+   migration/backup procedure after 0016–0026. This PR has not applied it to production.
+2. Verify the tables, policies, 32 definitions and historical awards. Only
    then record the migration in `backend/migrations/applied.txt`.
 3. Deploy the API before the mobile update. Existing completion response shapes
    are unchanged and older clients remain compatible.
@@ -76,10 +82,7 @@ PR. Deployment, release preparation and physical Android testing are separate.
 
 ## Validation
 
-`backend/tests/test_achievements.py` uses PostgreSQL to cover all thresholds,
-first-earned dates, gaps, retention, mixed lesson/review dates, midnight grace,
-duplicate days, concurrent completion, rollback, migration backfill, rollout-gap
-reconciliation, JWT ownership, acknowledgement and denied direct client writes.
+`backend/tests/test_achievements.py` and `test_expanded_achievements.py` use PostgreSQL to cover streak retention, concept thresholds, review/quiz/path facts, first-earned dates, replay safety, distinct quiz attempts, distinct subtopic paths, collection progress, migration/schema reconciliation, JWT ownership, acknowledgement and denied direct client writes.
 
 `mobile/tests/achievementStore.test.mjs` covers persistence, storage failure,
 offline acknowledgement retry, direct account replacement, sign-out fencing and

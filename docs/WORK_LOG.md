@@ -7,6 +7,28 @@ claims as completed work.
 
 ## Current status
 
+### #259 expanded achievements — in progress
+
+- Scope: extend permanent, optional recognition beyond streaks without changing
+  the daily-learning, streak or offline-write contracts. Definitions cover
+  concepts, reviews, distinct weekly quizzes, perfect weekly scores and distinct
+  completed learning paths; no leaderboard, adaptive score or client-side award
+  exists.
+- `33af2e5` adds migration `0027`, definition metadata, source constraints and
+  a historical backfill. `c251da0` adds the shared server evaluator, confirmed
+  progress response and weekly-quiz transaction integration. `73d3542` makes
+  the mobile collection show every category and its server-confirmed nearest
+  target while retaining account fencing and one-time acknowledgement.
+- PostgreSQL coverage proves threshold dates, quiz retry deduplication, exact
+  perfect scoring, distinct-subtopic counting, RLS denial and category progress.
+  The schema contract was regenerated from a disposable PostgreSQL 16 instance.
+  Mobile TypeScript passed; all mobile Node tests passed except the pre-existing
+  ignored-public-config assertion, caused by this checkout intentionally lacking
+  a public API URL. No production migration, user-data change, deployment,
+  version or release configuration has occurred.
+- Next: finish documentation/final review, push a `develop` PR with `Closes #259`,
+  then require normal review and staging migration verification before merge.
+
 ### #262 optional repeatable subtopic quizzes — ready for review
 
 - Scope: provide an optional, Profile-linked quiz only after a server-confirmed

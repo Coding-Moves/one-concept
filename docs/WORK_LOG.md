@@ -36,8 +36,10 @@ claims as completed work.
   recovery, MFA, Auth sender/redirect setup, migration and rollback. Live mailbox
   and browser acceptance await #278/#281. Keep `EDITORIAL_ENABLED=false` until
   staging activation; #275/#276 still own exact-content provenance and publication.
-- Handoff: open the dedicated `develop` PR for #274 and confirm hosted CI. Do not
-  merge/close a PR or enable production in this task.
+- Handoff: [PR #298](https://github.com/Coding-Moves/one-concept/pull/298) targets
+  `develop` and closes only #274 when merged. Hosted CI is checked on the final
+  pushed revision and reported on the PR. No merge/closure or production
+  activation is authorized by this implementation task.
 
 
 ### #268 weekly quiz notifications — owner-requested review fixes completed

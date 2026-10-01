@@ -33,7 +33,7 @@ async def isolated_push_devices(session):
     await session.commit()
 
 
-async def enable(session, user, zone="UTC"):
+async def enable(session, user, zone="UTC", token="ExponentPushToken[test-1]"):
     await session.execute(
         text("update profiles set timezone=:zone where id=:uid"),
         {"uid": user, "zone": zone},
@@ -45,7 +45,7 @@ async def enable(session, user, zone="UTC"):
         {"uid": user},
     )
     await session.commit()
-    await _register_token(session, user)
+    await _register_token(session, user, token)
 
 
 async def test_one_quiz_notice_per_week_per_device(
@@ -395,4 +395,40 @@ async def test_rate_limit_retry_expires_with_quiz_week(
             {"uid": user},
         )
         == "skipped"
+    )
+
+
+async def test_queue_paginates_all_due_users_before_window_closes(
+    session, sessionmaker_for_test, user, monkeypatch
+):
+    import uuid
+
+    other = uuid.uuid4()
+    await session.execute(
+        text("insert into auth.users(id,email) values(:uid,:email)"),
+        {"uid": other, "email": f"{other}@example.invalid"},
+    )
+    await session.commit()
+    for uid in (user, other):
+        await _make_eligible(sessionmaker_for_test, uid)
+        await enable(session, uid, token=f"ExponentPushToken[{uid}]")
+    monkeypatch.setattr(weekly, "LIMIT", 1)
+    await weekly.enqueue_due(session, AT, 15)
+    count = await session.scalar(
+        text("""select count(distinct q.user_id)
+        from weekly_quiz_notifications w join weekly_quizzes q on q.id=w.quiz_id
+        where q.user_id in (:first,:second)"""),
+        {"first": user, "second": other},
+    )
+    assert count == 2, (
+        "The SQL page size must not postpone eligible users to another day"
+    )
+    await weekly.enqueue_due(session, AT, 15)
+    assert (
+        await session.scalar(
+            text("""select count(*) from weekly_quiz_notifications w
+        join weekly_quizzes q on q.id=w.quiz_id where q.user_id in (:first,:second)"""),
+            {"first": user, "second": other},
+        )
+        == 2
     )

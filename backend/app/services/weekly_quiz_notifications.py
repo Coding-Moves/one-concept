@@ -45,40 +45,48 @@ _VALID = """
 async def enqueue_due(session, at, window):
     week = _week_start(at.date())
     params = {"at": at, "window": window, "week": week}
-    # A bounded run; later cron runs handle additional users. Never generate AI.
-    users = (
-        (
-            await session.execute(
-                text(_DUE + " order by p.id limit :limit"), {**params, "limit": LIMIT}
-            )
-        )
-        .scalars()
-        .all()
-    )
-    await session.commit()
-    for uid in users:
-        await session.execute(
-            text("select id from profiles where id=:uid for update"), {"uid": uid}
-        )
-        due = await session.scalar(
-            text(_DUE + " and p.id=:uid"), {**params, "uid": uid}
-        )
-        if due:
-            quiz = await get_or_create_weekly_quiz(session, uid, today=at.date())
-            if quiz.available:
-                queued = await session.scalar(
-                    text("""update weekly_quizzes set notification_queued_at=:at
-                    where id=:id and notification_queued_at is null returning id"""),
-                    {"id": quiz.quiz_id, "at": at},
+    # Page the whole due cohort in bounded memory. A per-run candidate limit
+    # silently starves later users when the narrow local window closes.
+    after = None
+    while True:
+        cursor = " and p.id > cast(:after as uuid)" if after is not None else ""
+        users = (
+            (
+                await session.execute(
+                    text(_DUE + cursor + " order by p.id limit :limit"),
+                    {**params, "after": after, "limit": LIMIT},
                 )
-                if queued:
-                    await session.execute(
-                        text("""insert into weekly_quiz_notifications(quiz_id,expo_push_token,next_attempt_at,updated_at)
-                        select :qid,expo_push_token,:at,:at from device_tokens where user_id=:uid
-                        on conflict do nothing"""),
-                        {"qid": queued, "uid": uid, "at": at},
-                    )
+            )
+            .scalars()
+            .all()
+        )
         await session.commit()
+        if not users:
+            return
+        for uid in users:
+            await session.execute(
+                text("select id from profiles where id=:uid for update"), {"uid": uid}
+            )
+            due = await session.scalar(
+                text(_DUE + " and p.id=:uid"), {**params, "uid": uid}
+            )
+            if due:
+                quiz = await get_or_create_weekly_quiz(session, uid, today=at.date())
+                if quiz.available:
+                    queued = await session.scalar(
+                        text("""update weekly_quizzes set notification_queued_at=:at
+                        where id=:id and notification_queued_at is null returning id"""),
+                        {"id": quiz.quiz_id, "at": at},
+                    )
+                    if queued:
+                        await session.execute(
+                            text("""insert into weekly_quiz_notifications(quiz_id,expo_push_token,next_attempt_at,updated_at)
+                            select :qid,expo_push_token,:at,:at from device_tokens where user_id=:uid
+                            on conflict do nothing"""),
+                            {"qid": queued, "uid": uid, "at": at},
+                        )
+            await session.commit()
+        after = users[-1]
 
 
 async def claim_due(session, at):

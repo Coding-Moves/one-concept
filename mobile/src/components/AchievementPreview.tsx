@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useAchievements } from '../context/AchievementsContext';
 import { useTheme } from '../context/ThemeContext';
-import { nextMilestone } from '../services/achievementStore';
+import { achievementProgress, achievementRequirement, nextMilestone } from '../services/achievementStore';
 import { radius, scaleFont, spacing } from '../theme';
 import { AchievementBadge } from './AchievementBadge';
 
@@ -26,9 +26,9 @@ export function AchievementPreview({ onPress }: { onPress: () => void }) {
         <AchievementBadge key={a.code} artwork={a.artwork_key} locked={!a.earned_on} size={52} />)}
     </View>
     {next && <Text style={[styles.copy, { color: colors.textSecondary }]}>
-      Next milestone: {Math.min(collection!.current_streak, next.threshold)} of {next.threshold.toLocaleString()} days
+      Next milestone: {achievementProgress(next)} of {achievementRequirement(next)}
     </Text>}
-    {collection && !next && <Text style={[styles.copy, { color: colors.textSecondary }]}>Every streak milestone earned. Keep your curiosity going.</Text>}
+    {collection && !next && <Text style={[styles.copy, { color: colors.textSecondary }]}>Every available milestone earned. Keep your curiosity going.</Text>}
   </Pressable>;
 }
 const styles = StyleSheet.create({

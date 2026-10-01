@@ -87,3 +87,11 @@ test('sign-out during hydration prevents the waiting refresh from fetching or sa
  assert.equal(await refresh,null);
  assert.equal(loads,0);assert.equal(rows.size,0);
 });
+test('next milestone considers confirmed progress across achievement categories',()=>{
+ const expanded={current_streak:9,longest_streak:9,items:[
+  {...badge,code:'streak_30',threshold:30,earned_on:null,progress:9,show_progress:true},
+  {...badge,code:'concept_10',metric:'completed_concepts',threshold:10,earned_on:null,progress:8,show_progress:true},
+  {...badge,code:'review_1',metric:'completed_reviews',threshold:1,earned_on:'2026-09-20',progress:1,show_progress:true},
+ ]};
+ assert.equal(nextMilestone(expanded).code,'concept_10');
+});

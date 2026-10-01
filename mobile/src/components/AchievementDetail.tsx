@@ -3,7 +3,7 @@ import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useReducedMotion } from '../hooks/useReducedMotion';
-import { Achievement } from '../services/achievementStore';
+import { Achievement, achievementRequirement } from '../services/achievementStore';
 import { scaleFont, spacing, radius, typography } from '../theme';
 import { AchievementBadge } from './AchievementBadge';
 
@@ -35,12 +35,12 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
               <AchievementBadge artwork={award.artwork_key} size={128} />
             </Animated.View>
             <Text style={[styles.title, { color: colors.text }]}>{award.name}</Text>
-            <Text style={[styles.days, { color: colors.text }]}>{award.threshold.toLocaleString()} consecutive days</Text>
+            <Text style={[styles.days, { color: colors.text }]}>{achievementRequirement(award)}</Text>
             <Text style={[styles.copy, { color: colors.textSecondary }]}>{award.description}</Text>
             <Text style={[styles.copy, { color: colors.textSecondary }]}>Earned {award.earned_on}</Text>
             <View style={[styles.note, { backgroundColor: colors.background }]}>
               <Text style={[styles.copy, { color: colors.textSecondary }]}>
-                {count > 1 ? 'Your previous learning counts. All earned badges are waiting in your collection.' : 'Earned by completing daily lessons or reviews. This badge is yours to keep, even if your streak ends.'}
+                {count > 1 ? 'Your previous learning counts. All earned badges are waiting in your collection.' : 'This badge is based on your confirmed learning activity. It is yours to keep.'}
               </Text>
             </View>
           </ScrollView>

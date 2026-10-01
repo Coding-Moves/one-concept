@@ -45,6 +45,10 @@ claims as completed work.
   domain/native configuration; those associations are not claimed complete.
 - Exact Expo SDK 57 docs were reviewed. Public QR is pure JavaScript and uses the
   existing API hostname; no new paid service or native package is introduced.
+- Follow-up: use the supplied screenshots as inspiration for a dedicated share
+  preview sheet, local avatar and QR card. Preview data comes only from the public
+  API allowlist; native Share is revalidated before use. No XP, leagues, leaderboard,
+  subscription promotion or external images were added.
 - User authorized a separate complete Connections issue/PR after #293. Created
   [#294](https://github.com/Coding-Moves/one-concept/issues/294), with mutual request,
   accept/decline/cancel, private lists, remove/block/unblock, server abuse controls

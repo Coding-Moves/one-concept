@@ -7,22 +7,28 @@ claims as completed work.
 
 ## Current status
 
-### #258 serious learning and activity analytics — in progress
+### #258 serious learning and activity analytics — ready for review
 
 - Scope: add one authenticated, server-derived analytics read model and a quiet
   mobile Analytics screen. It will combine completed concepts, reviews, weekly
   quiz attempts/scores, streaks, timezone-correct recent activity, actual topic
   distribution, learning-path progress and achievements without client counters
   or a productivity-dashboard score.
-- Planned commits: analytics schema and aggregation service; protected API and
-  PostgreSQL date-boundary coverage; mobile screen/navigation and focused tests;
-  documentation and PR handoff. No migration, production content, production
-  user data, release version or deployment belongs in this PR.
+- `41707a8` adds the protected `GET /v1/me/analytics` endpoint, bounded
+  timezone-correct aggregation, typed response contract and PostgreSQL coverage.
+  `6ceb7e4` adds the typed, account-fenced mobile API client; `eea476e` adds the
+  Profile-linked screen with empty, loading, pull-to-refresh and safe recovery states.
+- Passed: backend F/E9 lint and Python compilation; mobile TypeScript. The
+  PostgreSQL-backed analytics tests are present but skipped locally because the
+  Podman service cannot start in this environment. The full mobile Node run has
+  the pre-existing ignored-public-config assertion failure; all other 71 tests
+  passed. No migration, production content, production user data, release
+  version or deployment belongs in this PR.
 - The exact Expo SDK 57 documentation was reviewed before mobile work. The
-  screen will use existing React Native primitives and project UI components;
-  no native dependency is needed.
+  screen uses existing React Native primitives and project UI components; no
+  native dependency is needed.
 
-### #259 expanded achievements — in progress
+### #259 expanded achievements — merged
 
 - Scope: extend permanent, optional recognition beyond streaks without changing
   the daily-learning, streak or offline-write contracts. Definitions cover
@@ -43,10 +49,10 @@ claims as completed work.
   version or release configuration has occurred.
 - Review correction: `eca8237` removes an unused test import and restores the
   service import ordering so the backend's required F/E9 lint check stays clean.
-- PR: [#290](https://github.com/Coding-Moves/one-concept/pull/290) targets `develop`
-  and declares `Closes #259`. It is ready for review, not merged. Staging must
-  apply and verify migration `0027` before production; do not add it to
-  `backend/migrations/applied.txt` until actual production verification.
+- PR [#290](https://github.com/Coding-Moves/one-concept/pull/290) was merged by
+  the owner. Staging must apply and verify migration `0027` before production;
+  do not add it to `backend/migrations/applied.txt` until actual production
+  verification.
 
 ### #262 optional repeatable subtopic quizzes — ready for review
 

@@ -41,6 +41,24 @@ cleanup. Profile opens `AchievementsScreen`; shared badge/detail/celebration
 components render every category and a server-confirmed nearest milestone.
 See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
 
+## Learning analytics (#258)
+
+`services/analytics.py` provides the single bounded, account-scoped read model
+behind `GET /v1/me/analytics`. It counts accepted concept completions, completed
+reviews and immutable weekly quiz attempts; derives streaks with the existing
+service; groups the fixed 28-day activity window in the profile IANA timezone;
+and reuses the existing server evaluators for topic, subtopic and achievement
+progress. It does not write client-derived counters or expose another account’s
+data. `schemas/analytics.py` owns the response contract and
+`tests/test_analytics.py` covers authentication and local-day aggregation.
+
+`services/analyticsApi.ts` supplies an account-fenced typed client. Profile opens
+`AnalyticsScreen`, which displays a quiet server-confirmed summary, seven-day
+activity view, quiz performance, actual topic distribution, learning-path
+progress, recent concepts and achievement totals. Empty/loading/unavailable
+states are explicit; the screen fetches only for the signed-in account and can
+be refreshed manually.
+
 ## Subtopic completion (#261)
 
 `user_concept_completions` is the authoritative record that a learner has
@@ -97,6 +115,7 @@ inside a root stack, with a concept-detail modal above them.
 | `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states. |
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
+| `AnalyticsScreen.tsx` | Profile-linked, server-confirmed concepts, reviews, activity, quizzes, topics, learning paths and achievements with empty/recovery states. |
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, result feedback and reattempts. |
 | `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, retries, and prior-score history. |
 | `ProfileScreen.tsx` | Account, learning-path progress, reminder preferences, theme, sign-out, and links to profile subpages. |
@@ -227,6 +246,7 @@ Authenticated routes pass through `core/rate_limit.py` after JWT verification. I
 | `daily.py`: `GET /v1/daily`, `POST /v1/daily/complete` | Selection, completion, server-derived date and streaks. Exhaustion returns 409 with `catalog_exhausted`. |
 | `me.py`: `GET /v1/me/state`, `/stats` | Optional compact state, exact totals, today's lesson. |
 | `me.py`: `GET /v1/me/history`, `/saved` | Cursor pages through `services/collections.py`; default 50, maximum 100 items. |
+| `analytics.py`: `GET /v1/me/analytics` | Bounded account-owned learning totals, timezone-grouped activity, quizzes, topic/subtopic progress and achievement collection. |
 | `me.py`: `PUT /v1/me/topics`, `PATCH /v1/me` | Whole-set follows, profile name, PostgreSQL-validated timezone. |
 | `me.py`: `GET/PUT /v1/me/notifications`, `POST/DELETE /v1/me/push-token` | Reminder preferences and scoped device registration/removal. |
 | `concepts.py`: `GET /v1/concepts/{slug}`, `PUT/DELETE .../like`, `.../save` | Published lesson detail and independent interaction writes. |

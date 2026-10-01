@@ -7,6 +7,64 @@ claims as completed work.
 
 ## Current status
 
+### PR #298 review fixes — implemented and validated
+
+- Owner requested both reproduced findings fixed in the same PR. The original
+  review at `b8807a9` demonstrated an expired session still saving a queued
+  profile and a nonmember occupying the shared advisory-lock queue.
+- `8ab74c0` checks session deadlines against the post-wait statement timestamp;
+  its regression lets a pre-existing deadline expire naturally during contention
+  and verifies HTTP 401, unchanged profile/version and no profile audit write.
+- `c89877e` checks current session, membership and required capability/name/MFA
+  before taking the lock, then repeats all checks afterward. Nine denial cases
+  finish while another transaction still holds the lock; queued revocation and
+  capability-removal cases remain denied. No preliminary authority is reused.
+- Validation: **38 focused tests passed**, then **378 backend tests passed, no
+  skips**, against disposable PostgreSQL 16. Full backend F/E9 lint, local
+  documentation links and `git diff --check` passed. No live providers were used.
+- Runbook and codebase map document pre/post-lock authorization and the READ
+  COMMITTED requirement. These corrections add no migration, configuration or
+  manual setup step. Authorized writes still serialize across invitation HTTP.
+- Handoff: preserve all focused commits in [PR #298](https://github.com/Coding-Moves/one-concept/pull/298).
+  The final pushed revision's hosted CI result is recorded on the PR; this log's
+  commit is "Document editorial authorization review fixes". No merge or
+  production activation; existing #274 staging prerequisites remain unchanged.
+
+### #274 reviewer identity foundation — implemented and locally validated
+
+- First child of #263, on `codex/274-editorial-reviewer-accounts`, based on
+  `develop` after #296 merged. Scope: private memberships/audit, verified-session
+  authorization, invitations, profile onboarding/name approval, owner controls,
+  tests and an activation runbook. Frontend screens remain in #278.
+- Commits: `0b19127` private storage/session contract; `aee2804` authorization and
+  owner bootstrap; `a481af9` invitation/profile/access APIs; `02dc854` origin and
+  bootstrap safeguards; `faf265d` secret-safe settings errors. The documentation
+  commit is identified by its subject, "Document editorial account activation and
+  frontend handoff". Preserve all individual commits.
+- Incorporate Faizan's multi-reviewer/profile flow using individual Supabase
+  invitations and user-set passwords. Three is an initial team target, not a cap.
+- No live invitations, production schema/configuration or mobile release changes.
+- Verification: **367 backend tests passed, no skips**, using disposable PG16;
+  **63** focused security/schema tests passed before that run; the final settings
+  error-redaction change passed all **21** provider/configuration tests. Backend
+  F/E9 lint, local documentation links and whitespace checks passed. A profile
+  validator name collision initially blocked collection and was fixed before
+  these passing runs. No new dependency or frontend/native change was introduced.
+- Reusable authority checks verified JWT/session ownership, confirmed/unbanned
+  Auth user, live membership, approved name and independent capabilities with
+  MFA. Versioned writes recheck authority under the account lock. Tests include
+  queued writes versus revocation, team growth, duplicate invitations, provider
+  timeouts, stale name approvals, private storage and final-admin protection.
+- [editorial-accounts.md](editorial-accounts.md) records API contracts, bootstrap,
+  recovery, MFA, Auth sender/redirect setup, migration and rollback. Live mailbox
+  and browser acceptance await #278/#281. Keep `EDITORIAL_ENABLED=false` until
+  staging activation; #275/#276 still own exact-content provenance and publication.
+- Handoff: [PR #298](https://github.com/Coding-Moves/one-concept/pull/298) targets
+  `develop` and closes only #274 when merged. Hosted CI is checked on the final
+  pushed revision and reported on the PR. No merge/closure or production
+  activation is authorized by this implementation task.
+
+
 ### #268 weekly quiz notifications — owner-requested review fixes completed
 
 - Review scope: current PR diff, delivery boundaries, mobile account safety and

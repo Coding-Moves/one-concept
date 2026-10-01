@@ -1,6 +1,7 @@
 from functools import lru_cache
+from urllib.parse import urlsplit
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -8,7 +9,7 @@ class Settings(BaseSettings):
     """Server-side configuration. Missing required values fail at startup, loudly."""
 
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", hide_input_in_errors=True
     )
 
     environment: str = "development"
@@ -57,6 +58,35 @@ class Settings(BaseSettings):
     generation_on_demand: bool = True
 
     allowed_origins: str = "http://localhost:8081"
+    # Off until migration, owner bootstrap and dashboard/Auth setup are verified.
+    editorial_enabled: bool = False
+    editorial_invite_redirect_url: str = ""
+
+    @model_validator(mode="after")
+    def editorial_origins(self):
+        if not self.editorial_enabled:
+            return self
+        if not self.cors_origins:
+            raise ValueError("Editorial access requires explicit dashboard origins")
+        for origin in self.cors_origins:
+            parts = urlsplit(origin)
+            local = (
+                parts.hostname in ("localhost", "127.0.0.1") and not self.is_production
+            )
+            if (
+                "*" in origin
+                or not parts.hostname
+                or parts.username
+                or parts.password
+                or parts.path
+                or parts.query
+                or parts.fragment
+                or (parts.scheme != "https" and not (local and parts.scheme == "http"))
+            ):
+                raise ValueError(
+                    "Editorial access requires exact HTTPS origins (HTTP localhost in development only)"
+                )
+        return self
 
     @property
     def cors_origins(self) -> list[str]:

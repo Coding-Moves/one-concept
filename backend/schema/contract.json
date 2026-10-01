@@ -30,7 +30,8 @@
     "0028_public_profiles.sql": "c693e786a2d787eef9128eddf1bd5cd0cd8a8d1a031212dd155c44bc181bfbe8",
     "0029_profile_timezone.sql": "cc14e637fe90172687eb25d10e0a354b32050c535541250f9955742526a5812e",
     "0030_connections.sql": "1dedd4fef237cf0b012bff1969c4edcb9ab3f67abecbdcdb354b95ef4e193941",
-    "0031_weekly_quiz_notifications.sql": "63f5323681092ee1790a16c4e6f7120172f7f9eb94bd125082424297cbc6125a"
+    "0031_weekly_quiz_notifications.sql": "63f5323681092ee1790a16c4e6f7120172f7f9eb94bd125082424297cbc6125a",
+    "0032_editorial_accounts.sql": "3cb659dcc3c67150dcfa857882d105bedc55ace7a1ba00aef41d169a63f6d400"
   },
   "schema": {
     "columns": {
@@ -699,6 +700,96 @@
         "identity": "",
         "not_null": true,
         "type": "uuid"
+      },
+      "editorial_account_events.action": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_account_events.actor_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_account_events.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_account_events.details": {
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_account_events.id": {
+        "default": null,
+        "identity": "a",
+        "not_null": true,
+        "type": "bigint"
+      },
+      "editorial_account_events.subject_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_memberships.approved_name": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_memberships.capabilities": {
+        "default": "'{}'::text[]",
+        "identity": "",
+        "not_null": true,
+        "type": "text[]"
+      },
+      "editorial_memberships.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_memberships.invited_email": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_memberships.requested_name": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_memberships.status": {
+        "default": "'active'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_memberships.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_memberships.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_memberships.version": {
+        "default": "1",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
       },
       "generation_daily_usage.budget_day": {
         "default": null,
@@ -1510,6 +1601,42 @@
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
       },
+      "editorial_account_events.editorial_account_events_action_check": {
+        "definition": "CHECK ((action = ANY (ARRAY['bootstrap'::text, 'invite'::text, 'profile_requested'::text, 'profile_approved'::text, 'access_changed'::text])))",
+        "validated": true
+      },
+      "editorial_account_events.editorial_account_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_approved_name_check": {
+        "definition": "CHECK (((length(approved_name) >= 2) AND (length(approved_name) <= 80)))",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_capabilities_check": {
+        "definition": "CHECK ((capabilities <@ ARRAY['review'::text, 'approve'::text, 'publish'::text, 'request_generation'::text, 'manage_reviewers'::text]))",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_pkey": {
+        "definition": "PRIMARY KEY (user_id)",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_requested_name_check": {
+        "definition": "CHECK (((length(requested_name) >= 2) AND (length(requested_name) <= 80)))",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['active'::text, 'revoked'::text])))",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_version_check": {
+        "definition": "CHECK ((version > 0))",
+        "validated": true
+      },
       "generation_daily_usage.generation_daily_usage_calls_used_check": {
         "definition": "CHECK ((calls_used >= 0))",
         "validated": true
@@ -2006,6 +2133,21 @@
         "ready": true,
         "valid": true
       },
+      "editorial_account_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_account_events_pkey ON public.editorial_account_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_account_events_subject": {
+        "definition": "CREATE INDEX editorial_account_events_subject ON public.editorial_account_events USING btree (subject_id, id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_memberships_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_memberships_pkey ON public.editorial_memberships USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
       "generation_daily_usage_pkey": {
         "definition": "CREATE UNIQUE INDEX generation_daily_usage_pkey ON public.generation_daily_usage USING btree (budget_day)",
         "ready": true,
@@ -2381,6 +2523,12 @@
         "rls": true
       },
       "device_tokens": {
+        "rls": true
+      },
+      "editorial_account_events": {
+        "rls": true
+      },
+      "editorial_memberships": {
         "rls": true
       },
       "generation_daily_usage": {

@@ -396,3 +396,48 @@ async def test_crash_after_acceptance_keeps_attempt_and_stable_retry(
     await notices.run(session, settings, sender=sender)
     assert sender.call_args.args[1]["id"] == delivered[0]
     assert sender.call_args.args[1]["attempts"] == 2
+
+
+async def test_newer_reminder_waits_for_collection_before_coalescing(
+    api, session, draft
+):
+    rid, settings = await ready(api, session, draft)
+    await session.execute(
+        text(
+            "update concept_revisions set review_assigned_at=now()-interval '25 hours' where id=:id"
+        ),
+        {"id": rid},
+    )
+    await session.commit()
+    sender = AsyncMock()
+    # The initial event is old enough, but the newly created reminder is not.
+    await notices.run(session, settings, sender=sender)
+    sender.assert_not_awaited()
+    rows = (
+        await session.execute(
+            text(
+                "select ordinal,suppressed from editorial_notification_outbox where revision_id=:id order by ordinal"
+            ),
+            {"id": rid},
+        )
+    ).all()
+    assert rows == [(0, False), (1, False)]
+    await session.execute(
+        text(
+            "update editorial_notification_outbox set created_at=now()-interval '6 minutes' where revision_id=:id"
+        ),
+        {"id": rid},
+    )
+    await session.commit()
+    await notices.run(session, settings, sender=sender)
+    await notices.run(session, settings, sender=sender)
+    assert sender.await_count == 1
+    rows = (
+        await session.execute(
+            text(
+                "select ordinal,suppressed,batch_id is not null from editorial_notification_outbox where revision_id=:id order by ordinal"
+            ),
+            {"id": rid},
+        )
+    ).all()
+    assert rows == [(0, True, False), (1, False, True)]

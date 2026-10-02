@@ -71,6 +71,8 @@ async def prepare(db, settings):
             + ")"
         )
     )
+    # Select the latest pending ordinal before applying its collection window.
+    # An older ready event must never consume a newer event that is still aging.
     rows = (
         (
             await db.execute(
@@ -80,6 +82,11 @@ async def prepare(db, settings):
         """
                     + ELIGIBLE
                     + """ and o.batch_id is null and o.created_at <= now()-interval '5 minutes'
+        and not exists (
+          select 1 from editorial_notification_outbox newer
+          where newer.revision_id=o.revision_id and newer.epoch=o.epoch
+            and not newer.suppressed and newer.batch_id is null and newer.ordinal>o.ordinal
+        )
         and (:production or lower(u.email)=any(:recipients))
         order by o.recipient_id,o.revision_id,o.ordinal desc limit 250"""
                 ),
@@ -142,9 +149,12 @@ async def prepare(db, settings):
             {"bid": bid, "ids": ids},
         )
         await db.execute(
-            text("""update editorial_notification_outbox set suppressed=true
-            where batch_id is null and revision_id=any(:rids) and id<>all(:ids)"""),
-            {"rids": [item["revision_id"] for item in selected], "ids": ids},
+            text("""update editorial_notification_outbox o set suppressed=true
+            from editorial_notification_outbox chosen
+            where chosen.id=any(:ids) and o.batch_id is null
+              and o.revision_id=chosen.revision_id and o.epoch=chosen.epoch
+              and o.ordinal<chosen.ordinal"""),
+            {"ids": ids},
         )
 
 

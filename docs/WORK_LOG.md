@@ -7,7 +7,7 @@ claims as completed work.
 
 ## Current status
 
-### PR #310 follow-up code review — fixes under validation
+### PR #310 follow-up code review — fixed and validated
 
 - Reviewed `6402cf7`: asynchronous cancellation/concurrency, exact revision
   evidence, private prompt handling, status APIs and rollout.
@@ -20,12 +20,18 @@ claims as completed work.
   before serialization while retaining immutable original evidence.
 - PostgreSQL 16 migration/job suite: **40 passed, no skips**. Four prompt tests
   passed; quotes, backslashes and newlines failed before the correction. Full
-  backend regression and hosted exact-head checks are pending. F/E9 lint and
-  whitespace checks passed. Initial root-directory pytest attempts failed
+  local backend suite: **474 passed, no skips** (209 seconds). Hosted run
+  [36992838352](https://github.com/Coding-Moves/one-concept/actions/runs/36992838352)
+  passed on `962b0c5`: **474 backend tests**, lint, mobile typecheck and mobile
+  tests. Documentation file links and whitespace checks passed. Initial
+  root-directory pytest attempts failed
   collection; the reported tests ran from backend with test-only configuration.
 - Updated staging instructions: 0035 then 0036 after 0034, compatible worker/API
   images; no immediate production action needed to merge into develop. No
   production changes, live provider calls, release or merge performed.
+- Review corrections and documentation are pushed to the same PR; no remaining
+  actionable blocker found. Final documentation-only handoff commit:
+  `docs: record PR 310 review validation`. Latest-head CI is recorded in the PR.
 
 ### #277 bounded draft replenishment and AI revisions — PR #310
 

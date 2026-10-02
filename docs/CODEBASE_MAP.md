@@ -49,6 +49,13 @@ operator client `python -m app.workers.editorial_review` uses those same HTTP
 gates. See [editorial-api.md](editorial-api.md) for permissions, retry semantics
 and rollout. The `admin/` website (#278) consumes these APIs; mobile attribution (#280)
 and owner reporting (#297) remain separate children of #263.
+`services/editorial_notifications.py` drains the private #279 outbox through the
+existing reminders worker; `editorial_mail.py` uses Gmail HTTPS/OAuth (no Railway
+SMTP upgrade). `api/v1/editorial_notifications.py` exposes owner delivery/policy
+controls and the reviewer timezone. `admin/src/Notifications.tsx` shows overdue
+work and safe retries. See [editorial-notifications.md](editorial-notifications.md)
+for migration 0038, free sender setup and staging acceptance.
+
 `editorial_generation.py` owns #277 authenticated durable revision requests,
 claim fencing, provider orchestration and private draft completion. Migration
 0035 stores immutable source/feedback/result links and backlog claim tokens.

@@ -483,3 +483,100 @@ async def test_health_report_exposes_only_aggregate_job_states(api, session, que
     assert report["revision_jobs"]["pending"] >= 1
     assert "private provider diagnostics" not in json.dumps(report, default=str)
     assert job["id"] not in json.dumps(report, default=str)
+
+
+async def test_cancelled_inflight_call_keeps_shared_provider_slot(
+    api, session, queued, monkeypatch, sessionmaker_for_test
+):
+    from app.config import get_settings
+    from app.services import pool
+    from app.services.generation_budget import GenerationBusy
+
+    job, _, _, _, generator = queued
+    monkeypatch.setattr(get_settings(), "generation_max_concurrent", 1)
+    entered, release = asyncio.Event(), asyncio.Event()
+    output = generator.return_value
+
+    async def delayed(**kwargs):
+        entered.set()
+        await release.wait()
+        return output
+
+    generator.side_effect = delayed
+    await session.execute(
+        text("""insert into concept_backlog(topic_id,subtopic_id,slug,title)
+      select topic_id,subtopic_id,:slug,'Queued while cancelling' from concepts where id=:id"""),
+        {"id": UUID(job["concept_id"]), "slug": "cancel-slot-" + uuid4().hex},
+    )
+    await session.commit()
+
+    async def worker():
+        async with sessionmaker_for_test() as db:
+            return await jobs.run_one(db, api.settings)
+
+    running = asyncio.create_task(worker())
+    await asyncio.wait_for(entered.wait(), 5)
+    try:
+        current = await get(api, job)
+        response = await api.client.post(
+            f"{ROOT}/generation-jobs/{job['id']}/cancel",
+            headers=api.headers(),
+            json={
+                "request_id": str(uuid4()),
+                "expected_token": current["token"],
+                "note": NOTE,
+            },
+        )
+        assert response.status_code == 200 and response.json()["status"] == "cancelled"
+        with pytest.raises(GenerationBusy):
+            await pool.generate_one(
+                session, "fixture", "fixture", UUID(job["topic_id"]), call_cap=20
+            )
+    finally:
+        release.set()
+        await running
+    assert (await get(api, job))["result_revision_id"] is None
+    assert await pool.generate_one(
+        session, "fixture", "fixture", UUID(job["topic_id"]), call_cap=20
+    )
+
+
+async def test_abandoned_cancelled_lease_expires_without_retry(api, session, queued):
+    job, _, _, _, generator = queued
+    claimed, state = await jobs.claim(session, api.settings)
+    assert state == "generating"
+    current = await get(api, job)
+    response = await api.client.post(
+        f"{ROOT}/generation-jobs/{job['id']}/cancel",
+        headers=api.headers(),
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": current["token"],
+            "note": NOTE,
+        },
+    )
+    assert response.status_code == 200
+    assert (
+        await session.scalar(
+            text("select claim_token from editorial_generation_jobs where id=:id"),
+            {"id": UUID(job["id"])},
+        )
+        == claimed["claim_token"]
+    )
+    await session.execute(
+        text(
+            "update editorial_generation_jobs set claimed_at=now()-interval '31 minutes' where id=:id"
+        ),
+        {"id": UUID(job["id"])},
+    )
+    await session.commit()
+    assert await jobs.run_one(session, api.settings) == "empty"
+    current = await jobs.get_job(session, UUID(job["id"]))
+    assert current["status"] == "cancelled" and current["attempts"] == 1
+    assert current["claim_token"] is None and current["claimed_at"] is None
+    assert (
+        await jobs.finish(session, api.settings, claimed, result=generator.return_value)
+        == "superseded"
+    )
+    assert (await get(api, job))["result_revision_id"] is None
+    generator.assert_not_awaited()

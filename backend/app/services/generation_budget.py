@@ -58,7 +58,7 @@ async def check_generation_capacity(session: AsyncSession) -> None:
         and claimed_at>=now()-interval '30 minutes') +
       (select count(*) from public.concept_revisions where status='generating'
         and created_at>=now()-interval '30 minutes') +
-      (select count(*) from public.editorial_generation_jobs where status='generating'
+      (select count(*) from public.editorial_generation_jobs where claim_token is not null
         and claimed_at>=now()-interval '30 minutes')""")
     )
     if count > get_settings().generation_max_concurrent:

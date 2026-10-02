@@ -34,7 +34,8 @@
     "0032_editorial_accounts.sql": "3cb659dcc3c67150dcfa857882d105bedc55ace7a1ba00aef41d169a63f6d400",
     "0033_editorial_provenance.sql": "766fba13569238cd61132bbe645f02f12737d379405757204697aae0e3f26076",
     "0034_editorial_workflow.sql": "8fb7506328b2e29c2d7550309587269897d83e4af9679b9350408e0728092e07",
-    "0035_editorial_generation.sql": "596c08467bfd22bbaf13d9f4770618b716c8222848fe11775a2d5258b7d13d18"
+    "0035_editorial_generation.sql": "596c08467bfd22bbaf13d9f4770618b716c8222848fe11775a2d5258b7d13d18",
+    "0036_editorial_cancelled_leases.sql": "99405898aa81f1e2f54481d7c3343576c8039c8b64a7b93f33498e76ebed6394"
   },
   "schema": {
     "columns": {
@@ -1964,10 +1965,6 @@
         "definition": "CHECK (((attempts >= 0) AND (attempts <= 3)))",
         "validated": true
       },
-      "editorial_generation_jobs.editorial_generation_jobs_check": {
-        "definition": "CHECK (((status = 'generating'::text) = ((claim_token IS NOT NULL) AND (claimed_at IS NOT NULL))))",
-        "validated": true
-      },
       "editorial_generation_jobs.editorial_generation_jobs_check1": {
         "definition": "CHECK (((status = 'ready_for_review'::text) = (result_revision_id IS NOT NULL)))",
         "validated": true
@@ -2014,6 +2011,10 @@
       },
       "editorial_generation_jobs.editorial_generation_jobs_topic_id_fkey": {
         "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_provider_lease_check": {
+        "definition": "CHECK ((((claim_token IS NULL) = (claimed_at IS NULL)) AND ((status <> 'generating'::text) OR (claim_token IS NOT NULL)) AND ((claim_token IS NULL) OR (status = ANY (ARRAY['generating'::text, 'cancelled'::text])))))",
         "validated": true
       },
       "editorial_legacy_versions.editorial_legacy_versions_concept_id_fkey": {
@@ -2672,6 +2673,11 @@
       },
       "editorial_generation_pending_idx": {
         "definition": "CREATE INDEX editorial_generation_pending_idx ON public.editorial_generation_jobs USING btree (available_at, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'generating'::text]))",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_provider_lease_idx": {
+        "definition": "CREATE INDEX editorial_generation_provider_lease_idx ON public.editorial_generation_jobs USING btree (claimed_at) WHERE (claim_token IS NOT NULL)",
         "ready": true,
         "valid": true
       },

@@ -188,7 +188,7 @@ async def cancel(db, actor, settings, jid, command):
     workflow.expect(job_token(row), command.expected_token)
     if row["status"] not in ("pending", "generating"):
         raise ValueError("Only pending or generating jobs can be cancelled")
-    await transition(db, jid, "cancelled")
+    await transition(db, jid, "cancelled", preserve_claim=row["status"] == "generating")
     await workflow.audit(
         db,
         member,
@@ -204,12 +204,20 @@ async def cancel(db, actor, settings, jid, command):
     )
 
 
-async def transition(db, jid, state, code=None, result=None):
+async def transition(db, jid, state, code=None, result=None, *, preserve_claim=False):
     await db.execute(
         text("""update editorial_generation_jobs set status=:state,
-      failure_code=:code,result_revision_id=:result,claim_token=null,claimed_at=null,
+      failure_code=:code,result_revision_id=:result,
+      claim_token=case when :keep then claim_token else null end,
+      claimed_at=case when :keep then claimed_at else null end,
       available_at=now()+interval '5 minutes',updated_at=clock_timestamp() where id=:id"""),
-        {"id": jid, "state": state, "code": code, "result": result},
+        {
+            "id": jid,
+            "state": state,
+            "code": code,
+            "result": result,
+            "keep": preserve_claim,
+        },
     )
 
 
@@ -248,6 +256,13 @@ async def claim(db, settings):
           set status=case when attempts>=3 then 'failed' else 'pending' end,
           claim_token=null,claimed_at=null,failure_code='stale_claim',updated_at=clock_timestamp()
           where status='generating' and claimed_at<now()-interval '30 minutes'""")
+        )
+        # Cancellation discards the output, but cannot stop another process's
+        # HTTP request. Keep its provider lease until completion or stale expiry.
+        await db.execute(
+            text("""update editorial_generation_jobs set claim_token=null,claimed_at=null,
+          updated_at=clock_timestamp() where status='cancelled'
+          and claimed_at<now()-interval '30 minutes'""")
         )
         row = (
             (
@@ -333,6 +348,13 @@ async def finish(db, settings, job, result=None, failure=None):
     try:
         await worker_locks(db)
         current = await get_job(db, job["id"], lock=True)
+        if (
+            current["status"] == "cancelled"
+            and current["claim_token"] == job["claim_token"]
+        ):
+            await transition(db, job["id"], "cancelled", current["failure_code"])
+            await db.commit()
+            return "cancelled"
         if (
             current["status"] != "generating"
             or current["claim_token"] != job["claim_token"]

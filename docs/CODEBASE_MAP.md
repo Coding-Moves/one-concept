@@ -47,8 +47,8 @@ versioned actions. `editorial_queries.py` builds private read models;
 audit. Migration 0034 adds private workflow evidence/assignment metadata. The
 operator client `python -m app.workers.editorial_review` uses those same HTTP
 gates. See [editorial-api.md](editorial-api.md) for permissions, retry semantics
-and rollout. The `admin/` website (#278) consumes these APIs; mobile attribution (#280)
-and owner reporting (#297) remain separate children of #263.
+and rollout. The `admin/` website (#278) consumes these APIs; mobile attribution (#280) projects exact-version evidence through learner reads;
+owner reporting (#297) remains a separate child of #263.
 `services/editorial_notifications.py` drains the private #279 outbox through the
 existing reminders worker; `editorial_mail.py` uses Gmail HTTPS/OAuth (no Railway
 SMTP upgrade). `editorial_email_template.py` renders the escaped HTML template
@@ -66,6 +66,18 @@ claim fencing, provider orchestration and private draft completion. Migration
 The existing `workers/pool_topup.py` runs a bounded revision batch before refill;
 `content_health.py` adds aggregate job conditions. See
 [editorial-generation.md](editorial-generation.md) for API and staging contracts.
+
+## Learner review attribution (#280)
+
+`services/review_attribution.py` selects public name/date/version evidence in the
+same SQL statement as a published lesson. `schemas/daily.py` adds nullable
+`ConceptOut.review`; detail, daily selection and folded state/review paths use it.
+`mobile/src/services/conceptMapping.ts` shares version validation across detail,
+daily and cached reads. `components/ReviewAttribution.tsx` renders borderless credit only in
+`ConceptDetailScreen`, below the card opened from History/Saved. Today/review
+cards and legacy/mismatched metadata have no label.
+See [editorial-provenance.md](editorial-provenance.md#learner-attribution-280)
+for compatibility, historical offline semantics and rollout.
 
 ## Editorial website (#278)
 

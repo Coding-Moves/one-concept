@@ -1,3 +1,10 @@
+/** Authenticated approval snapshot for one exact lesson version. */
+export interface ReviewAttribution {
+  name: string;
+  reviewedAt: string;
+  contentVersion: number;
+}
+
 /** A single learnable concept. */
 export interface Concept {
   id: string;
@@ -12,6 +19,7 @@ export interface Concept {
   /** Likes from other users; the viewer's own like is added on top for display. */
   likeCount?: number;
   contentVersion?: number;
+  review?: ReviewAttribution;
 }
 
 /** Display labels come from the subject registry. The bundled five are demo data. */
@@ -66,6 +74,7 @@ export interface DailyPayload {
     topic_name: string;
     like_count?: number;
     content_version?: number;
+    review?: { name: string; reviewed_at: string; content_version: number } | null;
   };
 }
 

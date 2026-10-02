@@ -7,6 +7,53 @@ claims as completed work.
 
 ## Current status
 
+### PR #314 — code review fixes complete
+
+- Reviewed head `0e762b6` against #280, including SQL snapshot/version matching,
+  public-field projection, mapping, caches and detail-only UI. Used an isolated
+  checkout because the main workspace belongs to another task.
+- `5f24e6a` fixes cached text/reviewer credit surviving authoritative 403/404/410
+  responses. Detail load/refresh now removes the entry and shows unavailable;
+  bundled demo fallback cannot hide removal. Offline/503 reading remains usable.
+- The exported-app regression failed on the old implementation, then passed in
+  both themes. Covers removal on refresh/reopen, bundled slug, cache eviction,
+  transient failures and existing attribution/offline/account cases. Inspected
+  the dark detail screenshot: long credit wraps below the card with no border.
+- Node 24: **88 passed, no skips**; TypeScript, web export and diff check passed.
+  Initial sandbox-only run blocked the validator subprocess; unsandboxed rerun
+  passed. Backend unchanged; previous full CI: **502 passed**, no skips. New
+  hosted CI follows this push. No production or merge action was performed.
+- This documentation commit records the reviewed behavior and test coverage.
+  No owner setup is required; native screen-reader/device font-scaling checks
+  remain unverified. Credit stays only in History/Saved detail screens.
+
+### #280 — exact-version learner attribution implemented
+
+- [PR #314](https://github.com/Coding-Moves/one-concept/pull/314) targets
+  `develop`. Owner requested the complete dedicated PR. Branch
+  `codex/280-reviewed-attribution` starts at merged #312 (`3d361d8`).
+- `fca5754`: nullable public reviewer name/date/version on full detail, daily,
+  folded state and review responses; content/evidence selected in one SQL
+  snapshot. Full PostgreSQL suite: **502 passed, no skips**; F/E9 lint passed.
+- `5b89a4d`: shared mobile mapping, strict version checks, full cache pair
+  replacement and account-change rejection. Node 24 suite: **87 passed**;
+  TypeScript passed. Old payloads/caches show no invented attribution.
+- `9b33935`: borderless accessible credit outside card flip faces. Both-theme
+  exported-app browser checks passed for legacy/attested/new versions, long
+  names, Today, History/Saved, recall, offline reload, corrupt cache and sign-out.
+  Inspected light Today and dark recall screenshots after animation settled.
+- This documentation commit records contract, tests, offline limits and rollout.
+  Exact Expo SDK 57 docs were read. No native dependency, schema migration,
+  app/runtime version bump, production action or issue closure. Deploy compatible
+  backend first, then mobile JavaScript through the normal release procedure.
+- Owner then requested detail-only credit. This follow-up restores the shared
+  card to its base presentation and renders credit below the card only in
+  History/Saved details. Updated both-theme browser scenarios and TypeScript
+  pass; inspected the final light detail screenshot. Initial PR CI was all green;
+  final-placement CI follows this push.
+- Native screen-reader/font-scaling QA is not claimed by browser checks. #313
+  hosting/email activation is independent. No manual configuration is required to merge.
+- Existing unrelated demo and previous email handoff log edits remain unstaged.
 
 ### #287 — production email confirmation redirect prepared
 

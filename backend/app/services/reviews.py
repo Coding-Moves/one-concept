@@ -12,9 +12,11 @@ from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.services.achievements import award_streaks
+from app.services.review_attribution import REVIEW_ATTRIBUTION_SQL
 
-_EXISTING = text("""select r.id as review_id,r.assigned_for,r.assigned_at,r.completed_at,
+_EXISTING = text(f"""select r.id as review_id,r.assigned_for,r.assigned_at,r.completed_at,
   c.id,c.slug,c.title,c.summary,c.example,c.flashcard,c.content_version,
+  {REVIEW_ATTRIBUTION_SQL} as review,
   t.slug as topic_slug,t.name as topic_name,
   s.slug as subtopic_slug,s.name as subtopic_name,
   (select count(*) from public.concept_interactions i where i.concept_id=c.id

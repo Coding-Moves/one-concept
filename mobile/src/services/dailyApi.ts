@@ -1,5 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Category, Concept, DailyPayload } from '../types';
+import { Concept, DailyPayload } from '../types';
+import { mapConcept } from './conceptMapping';
 
 const CACHE_KEY = 'one-concept/daily-cache/v1';
 
@@ -12,16 +13,7 @@ const CACHE_KEY = 'one-concept/daily-cache/v1';
  * server-supplied concepts.
  */
 export function toConcept(payload: DailyPayload): Concept {
-  return {
-    id: payload.concept.slug,
-    title: payload.concept.title,
-    category: payload.concept.topic_name as Category,
-    summary: payload.concept.summary,
-    example: payload.concept.example ?? undefined,
-    flashcard: payload.concept.flashcard ?? undefined,
-    likeCount: payload.concept.like_count ?? 0,
-    contentVersion: payload.concept.content_version ?? 1,
-  };
+  return mapConcept(payload.concept);
 }
 
 /** Clear the legacy standalone daily cache. Today's concept now rides on the

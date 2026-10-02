@@ -152,15 +152,21 @@ export function Review({
   }, [api, path]);
   useEffect(() => {
     let active = true;
+    if (!detail) return;
     allPages<Job>(api, "/generation-jobs?concept_id=" + cid)
       .then((rows) => {
         if (active) setJobs(rows.filter((j) => j.concept_id === cid));
       })
-      .catch(() => {});
+      .catch((e) => {
+        if (active && !(e instanceof ApiError && e.status === 499))
+          setError(
+            "AI correction status could not be refreshed. Reload to try again.",
+          );
+      });
     return () => {
       active = false;
     };
-  }, [api, cid, detail?.token]);
+  }, [api, cid, detail]);
   useEffect(() => {
     setDirty(!!note || !!edit || !!op.pending);
     return () => setDirty(false);

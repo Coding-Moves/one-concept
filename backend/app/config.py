@@ -62,6 +62,16 @@ class Settings(BaseSettings):
     # Off until migration, owner bootstrap and dashboard/Auth setup are verified.
     editorial_enabled: bool = False
     editorial_invite_redirect_url: str = ""
+    # Dedicated backend delivery; Supabase Auth templates are not a mail API.
+    editorial_email_enabled: bool = False
+    editorial_email_staging_verified: bool = False
+    editorial_email_dashboard_url: str = ""
+    editorial_email_test_recipients: str = ""
+    editorial_email_daily_cap: int = Field(default=40, ge=0, le=500)
+    editorial_email_from: str = ""
+    editorial_gmail_client_id: str = ""
+    editorial_gmail_client_secret: str = Field(default="", repr=False)
+    editorial_gmail_refresh_token: str = Field(default="", repr=False)
 
     @model_validator(mode="after")
     def editorial_origins(self):

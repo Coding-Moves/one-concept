@@ -471,3 +471,15 @@ async def test_batch_produces_private_draft_without_publication(api, session, qu
         )
         == 0
     )
+
+
+async def test_health_report_exposes_only_aggregate_job_states(api, session, queued):
+    from app.services.content_health import health_report
+
+    job, _, _, _, generator = queued
+    generator.side_effect = GenerationError("private provider diagnostics")
+    await jobs.run_one(session, api.settings)
+    report = await health_report(session)
+    assert report["revision_jobs"]["pending"] >= 1
+    assert "private provider diagnostics" not in json.dumps(report, default=str)
+    assert job["id"] not in json.dumps(report, default=str)

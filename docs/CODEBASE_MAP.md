@@ -12,6 +12,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Area | Entry points and purpose |
 | --- | --- |
 | Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
+| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private FastAPI calls. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
@@ -46,8 +47,8 @@ versioned actions. `editorial_queries.py` builds private read models;
 audit. Migration 0034 adds private workflow evidence/assignment metadata. The
 operator client `python -m app.workers.editorial_review` uses those same HTTP
 gates. See [editorial-api.md](editorial-api.md) for permissions, retry semantics
-and rollout. Dashboard screens (#278), mobile attribution (#280) and owner
-reporting (#297) remain separate children of #263.
+and rollout. The `admin/` website (#278) consumes these APIs; mobile attribution (#280)
+and owner reporting (#297) remain separate children of #263.
 `editorial_generation.py` owns #277 authenticated durable revision requests,
 claim fencing, provider orchestration and private draft completion. Migration
 0035 stores immutable source/feedback/result links and backlog claim tokens.
@@ -56,6 +57,20 @@ claim fencing, provider orchestration and private draft completion. Migration
 The existing `workers/pool_topup.py` runs a bounded revision batch before refill;
 `content_health.py` adds aggregate job conditions. See
 [editorial-generation.md](editorial-generation.md) for API and staging contracts.
+
+## Editorial website (#278)
+
+`admin/src/App.tsx` owns session fencing, capability gates and navigation.
+`Auth.tsx` handles invitation/recovery, password and MFA; `Settings.tsx` handles
+registered identity. `Queue.tsx` supplies topic/status/deadline filtering and
+shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete
+packages, diffs, history, comments, checklist decisions and safe corrections.
+`Team.tsx` manages owner-only membership; `Generation.tsx` requests bounded work.
+`api.ts` and `useCommand.ts` preserve exact operation retries and stale-token
+failures. Migration 0037 adds audited review deadlines. Queue totals are computed
+with page results in one statement; published rows require matching exact-version
+provenance. Build/browser CI uses public fixture values only. See
+[the review website guide](../admin/README.md) for staging and hosting boundaries.
 
 ## Achievements (#209, #259)
 

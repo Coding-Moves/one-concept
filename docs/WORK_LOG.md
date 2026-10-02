@@ -7,6 +7,40 @@ claims as completed work.
 
 ## Current status
 
+### #278 One Concept Review website — implementation and local review complete
+
+- Dedicated `codex/278-review-workspace` from `develop` at `411c9af`, after #310
+  merged; step 5/9 of #263. Deliver only #278, with #279 next.
+- `3246bd9`: shared queue totals, taxonomy/subtopic/deadline filters, exact-version
+  published view, owner-audited deadlines and forward migration 0037.
+  `68f6312`: independent static web/auth foundation. `1d15cb8`: reviewer comments
+  on existing lessons and concept-scoped correction-job queries.
+- `adbc898`: complete review/diff/history/checklist, approved/published/legacy
+  queues, safe manual and AI corrections, owner assignment/account/invitation
+  controls, profile/MFA gates, light/dark responsive UI. One reviewer approval
+  is shared; another reviewer cannot approve the same revision again.
+  `e5e7ffb`: fixture browser coverage and a separate website CI job.
+- Local validation: full disposable PostgreSQL 16 backend suite **478 passed,
+  no skips** (207 seconds), backend F/E9 lint; web TypeScript/build, **8 unit
+  tests**, **13 browser tests** passed. Browser cases include shared approval,
+  conflicts, lost-response identical retries, expiry/revocation, MFA/onboarding,
+  invitation password setup, topic filters, owner controls and safe text/links.
+- Visually inspected desktop light queue, dark complete lesson and narrow dark
+  review; no horizontal overflow. Build with a forbidden fixture secret key
+  failed before emission; sentinel absent from static output. Local documentation
+  links and whitespace checks passed. Node 24 used; no mobile code changed.
+- Initial browser attempt preceded browser installation; first installed-browser
+  run exposed exact-label lookup failures and a test expiry race. Explicit form
+  labels and synchronized assertions fixed them; all 13 cases passed afterward.
+  Initial backend fixture failures were corrected before the full passing run.
+- `admin/README.md` documents staging migration 0037 after 0036, compatible API/
+  worker, public web config, HTTPS callback/CORS/headers, owner bootstrap and
+  different-account live acceptance. Real hosting/email/device verification is
+  deferred to #281; deadline email delivery #279 and owner analytics #297 remain
+  outside this chunk. Production migration ledger and infrastructure untouched.
+- Next: open the dedicated `develop` PR, inspect hosted CI and record the link.
+  No production flags, real invitations, paid requests, deployment or merge.
+
 ### PR #310 follow-up code review — fixed and validated
 
 - Reviewed `6402cf7`: asynchronous cancellation/concurrency, exact revision

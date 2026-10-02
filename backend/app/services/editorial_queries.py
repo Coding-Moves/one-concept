@@ -15,7 +15,18 @@ from app.services import editorial_workflow as workflow
 from app.services.publication import LessonBody, validate_candidate
 
 
-async def queue(db, kind, status, topic_id, assignee_id, search, cursor, limit):
+async def queue(
+    db,
+    kind,
+    status,
+    topic_id,
+    assignee_id,
+    search,
+    cursor,
+    limit,
+    subtopic_id=None,
+    urgency=None,
+):
     params = dict(
         status=status,
         topic=topic_id,
@@ -23,37 +34,89 @@ async def queue(db, kind, status, topic_id, assignee_id, search, cursor, limit):
         search=search,
         cursor=cursor,
         take=limit + 1,
+        subtopic=subtopic_id,
+        urgency=urgency,
     )
-    if kind == "legacy":
-        if status is not None or assignee_id is not None:
+    if kind in ("legacy", "published"):
+        if status is not None or assignee_id is not None or urgency is not None:
             raise HTTPException(
-                422, "Status and assignee filters apply to the revision queue"
+                422, "Status, assignee and urgency apply to revisions only"
             )
+        if kind == "legacy":
+            join = "editorial_legacy_versions l"
+            version = "l"
+            extra = "not exists(select 1 from editorial_publications p where p.concept_id=c.id and p.content_version=c.content_version)"
+            extra_select = f",(l.snapshot={revisions.SNAPSHOT}) as unchanged"
+        else:
+            join = "editorial_publications l"
+            version = "l"
+            extra = f"l.snapshot={revisions.SNAPSHOT}"
+            extra_select = ",true as verified,(select e.registered_name from editorial_revision_events e where e.id=l.approval_id) as approved_by"
         query = f"""select c.id,c.slug,c.title,c.content_version,t.name as topic_name,
-            s.name as subtopic_name, (l.snapshot={revisions.SNAPSHOT}) as unchanged
-            from editorial_legacy_versions l join concepts c
-              on c.id=l.concept_id and c.content_version=l.content_version
-            join topics t on t.id=c.topic_id join subtopics s on s.id=c.subtopic_id
-            where c.status='published' and not exists(select 1 from editorial_publications p
-              where p.concept_id=c.id and p.content_version=c.content_version)
-            and (cast(:topic as uuid) is null or c.topic_id=:topic)
-            and (cast(:cursor as uuid) is null or c.id>:cursor)
-            and (:search='' or strpos(lower(c.title),lower(:search))>0)
-            order by c.id limit :take"""
+          s.name as subtopic_name,c.topic_id,c.subtopic_id,c.status {extra_select}
+          from {join} join concepts c on {version}.concept_id=c.id
+            and {version}.content_version=c.content_version
+          join topics t on t.id=c.topic_id join subtopics s on s.id=c.subtopic_id
+          where c.status='published' and {extra}
+          and (cast(:topic as uuid) is null or c.topic_id=:topic)
+          and (cast(:subtopic as uuid) is null or c.subtopic_id=:subtopic)
+          and (:search='' or strpos(lower(c.title),lower(:search))>0)"""
     else:
         query = """select r.id,r.concept_id,c.slug,r.body->>'title' as title,r.status,
-            r.base_version,r.assigned_to,r.created_at,c.content_version,
-            t.name as topic_name,s.name as subtopic_name
-            from concept_revisions r join concepts c on c.id=r.concept_id
-            join topics t on t.id=c.topic_id join subtopics s on s.id=c.subtopic_id
-            where ((cast(:status as text) is not null and r.status=:status)
-              or (:status is null and r.status not in ('published','retired')))
-            and (cast(:topic as uuid) is null or c.topic_id=:topic)
-            and (cast(:assignee as uuid) is null or r.assigned_to=:assignee)
-            and (cast(:cursor as uuid) is null or r.id>:cursor)
-            and (:search='' or strpos(lower(coalesce(r.body->>'title',c.title)),lower(:search))>0)
-            order by r.id limit :take"""
-    rows = (await db.execute(text(query), params)).mappings().all()
+          r.base_version,r.assigned_to,r.review_due_at,r.created_at,c.content_version,
+          t.name as topic_name,s.name as subtopic_name,c.topic_id,c.subtopic_id,
+          (select e.registered_name from editorial_revision_events e
+            where e.revision_id=r.id and e.action='approved' limit 1) as approved_by,
+          (r.review_due_at<statement_timestamp() and r.status not in ('published','retired')) as overdue
+          from concept_revisions r join concepts c on c.id=r.concept_id
+          join topics t on t.id=c.topic_id join subtopics s on s.id=c.subtopic_id
+          where ((cast(:status as text) is not null and r.status=:status)
+            or (:status is null and r.status not in ('published','retired')))
+          and (cast(:topic as uuid) is null or c.topic_id=:topic)
+          and (cast(:subtopic as uuid) is null or c.subtopic_id=:subtopic)
+          and (cast(:assignee as uuid) is null or r.assigned_to=:assignee)
+          and (cast(:urgency as text) is null or
+            (:urgency='overdue' and r.review_due_at<statement_timestamp() and r.status not in ('published','retired')) or
+            (:urgency='scheduled' and r.review_due_at>=statement_timestamp() and r.status not in ('published','retired')) or
+            (:urgency='unscheduled' and r.review_due_at is null))
+          and (:search='' or strpos(lower(coalesce(r.body->>'title',c.title)),lower(:search))>0)"""
+    # One statement: total and page describe the same database snapshot, including
+    # an empty page. Total excludes the cursor so pagination doesn't shrink it.
+    result = (
+        (
+            await db.execute(
+                text(f"""with filtered as ({query}), page as (
+      select * from filtered where (cast(:cursor as uuid) is null or id>:cursor)
+      order by id limit :take)
+      select (select count(*) from filtered) as total,
+        coalesce((select jsonb_agg(to_jsonb(page) order by id) from page),'[]'::jsonb) as items"""),
+                params,
+            )
+        )
+        .mappings()
+        .one()
+    )
+    rows = result["items"]
+    return {
+        "items": rows[:limit],
+        "total": result["total"],
+        "next_cursor": rows[limit - 1]["id"] if len(rows) > limit else None,
+    }
+
+
+async def taxonomy(db, cursor, limit):
+    rows = (
+        (
+            await db.execute(
+                text("""select s.id,s.name,s.is_active,t.id as topic_id,
+      t.name as topic_name,t.is_active as topic_active from subtopics s join topics t on t.id=s.topic_id
+      where (cast(:cursor as uuid) is null or s.id>:cursor) order by s.id limit :take"""),
+                {"cursor": cursor, "take": limit + 1},
+            )
+        )
+        .mappings()
+        .all()
+    )
     return {
         "items": [dict(r) for r in rows[:limit]],
         "next_cursor": rows[limit - 1]["id"] if len(rows) > limit else None,
@@ -157,6 +220,13 @@ async def revision_detail(db, rid):
         "status": row["status"],
         "base_version": row["base_version"],
         "assigned_to": row["assigned_to"],
+        "review_due_at": row["review_due_at"],
+        "approved_by": await db.scalar(
+            text(
+                "select registered_name from editorial_revision_events where revision_id=:id and action='approved' limit 1"
+            ),
+            {"id": rid},
+        ),
         "token": workflow.revision_token(row),
         "body": body,
         "source_status": source["status"],

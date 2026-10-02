@@ -35,6 +35,7 @@ def revision_token(row):
                 "body",
                 "status",
                 "assigned_to",
+                "review_due_at",
                 "source_snapshot",
                 "concept_status",
                 "topic_active",
@@ -207,8 +208,16 @@ async def revision_action(db, actor, settings, rid, command):
             ):
                 raise ValueError("Choose an active, approved reviewer")
         await db.execute(
-            text("update concept_revisions set assigned_to=:uid where id=:id"),
-            {"uid": command.assignee_id, "id": rid},
+            text(
+                "update concept_revisions set assigned_to=:uid,review_due_at=:due where id=:id"
+            ),
+            {
+                "uid": command.assignee_id,
+                "id": rid,
+                "due": command.review_due_at
+                if "review_due_at" in command.model_fields_set
+                else row["review_due_at"],
+            },
         )
         await audit(
             db,
@@ -220,6 +229,10 @@ async def revision_action(db, actor, settings, rid, command):
             details={
                 "previous_assignee": row["assigned_to"],
                 "assignee": command.assignee_id,
+                "previous_due_at": row["review_due_at"],
+                "review_due_at": command.review_due_at
+                if "review_due_at" in command.model_fields_set
+                else row["review_due_at"],
             },
         )
     else:
@@ -356,7 +369,9 @@ async def request_generation(db, actor, settings, command):
 
     slots = await slots_available(db, command.topic_id, settings)
     if not slots:
-        raise ValueError("Review backlog is full; review or archive existing drafts first")
+        raise ValueError(
+            "Review backlog is full; review or archive existing drafts first"
+        )
     count = min(command.count, planned, settings.content_generation_batch, slots)
     # Repeated requests before generation coalesce instead of adding to the
     # outstanding target. Existing workers retain their quota/claim/kill checks.

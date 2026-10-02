@@ -320,7 +320,7 @@ Authenticated routes pass through `core/rate_limit.py` after JWT verification. I
 | `me.py`: `PUT /v1/me/topics`, `PATCH /v1/me` | Whole-set follows, profile name, PostgreSQL-validated timezone. |
 | `me.py`: `GET/PUT /v1/me/notifications`, `POST/DELETE /v1/me/push-token` | Reminder preferences and scoped device registration/removal. |
 | `concepts.py`: `GET /v1/concepts/{slug}`, `PUT/DELETE .../like`, `.../save` | Published lesson detail and independent interaction writes. |
-| `pages.py`: `GET /privacy`, `/confirmed`, `/reset-password` | Public privacy and auth landing pages; reset uses Supabase Auth in the browser. |
+| `pages.py`: `GET /privacy`, `/confirmed`, `/reset-password` | Public privacy and branded Auth landing pages; email redirects use the mobile API origin and reset uses Supabase Auth in the browser. See [auth redirects](AUTH_REDIRECTS.md). |
 
 `router.py` mounts authenticated feature routers under `/v1`. Response/input
 models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.

@@ -1,5 +1,6 @@
 """Bounded editorial commands. Identity is never accepted from request bodies."""
 
+from datetime import datetime
 from typing import Literal
 from uuid import UUID
 
@@ -45,6 +46,7 @@ class RevisionAction(VersionCommand):
     ]
     quality: QualityReview | None = None
     assignee_id: UUID | None = None
+    review_due_at: datetime | None = None
 
     @model_validator(mode="after")
     def action_fields(self):
@@ -56,6 +58,11 @@ class RevisionAction(VersionCommand):
             )
         if self.action != "assign" and self.assignee_id is not None:
             raise ValueError("Only assignment accepts an assignee")
+        if "review_due_at" in self.model_fields_set:
+            if self.action != "assign":
+                raise ValueError("Only assignment accepts a review deadline")
+            if self.review_due_at is not None and self.review_due_at.tzinfo is None:
+                raise ValueError("Review deadline requires a timezone")
         return self
 
 
@@ -64,7 +71,7 @@ class StageInput(VersionCommand):
 
 
 class ConceptAction(VersionCommand):
-    action: Literal["attest", "retire"]
+    action: Literal["attest", "retire", "comment"]
     quality: QualityReview | None = None
 
     @model_validator(mode="after")

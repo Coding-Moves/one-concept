@@ -7,6 +7,77 @@ claims as completed work.
 
 ## Current status
 
+### PR #311 follow-up review — fixes validated
+
+- Reviewed head `3541cca` across backend contracts, authentication, decisions,
+  corrections, shared reviewer concurrency, GUI/HCI and deployment boundaries.
+- `8a8d17d`: render the Supabase SDK's QR data URI directly; wait for existing
+  authenticators before permitting enrollment. `e5e4e05`: block approval/legacy
+  attestation during manual edits, freeze pending draft edits, and offer submit
+  only for drafts, matching the backend's immutable correction workflow.
+- `44d16ab`: success notices identify the actual action instead of inferring a
+  new publication from existing status. `697ed85`: reload correction jobs even
+  when their source revision token is unchanged; surface refresh errors.
+- `4a1788e`: preserve feedback through transient account-check outages and keep
+  keyboard focus during queue refreshes. Subsequent 403 revocation still clears
+  private content; expiry retains the sign-in explanation. `01826c1` updates
+  the owner-workflow assertion for its action-specific confirmation.
+- Seven regression scenarios reproduced failures before fixes and now pass.
+  Local browser suite: 20 passed initially; the remaining owner-flow assertion
+  expected obsolete wording and passed after correction. All 21 scenarios are
+  verified. Node 24 TypeScript/build and 8 unit tests passed. Full disposable
+  PostgreSQL 16 backend suite: **478 passed, no skips** (301 seconds); F/E9 lint
+  passed. Light desktop queue, dark desktop lesson and narrow dark layout were
+  visually inspected; responsive/keyboard checks passed.
+- README clarifies public source versus invitation-only, authenticated workspace
+  access. Documentation links and whitespace checked. No repository visibility,
+  production flags, live accounts, migration ledger, infrastructure or merge
+  changed. Hosting/real Auth emails/different-device acceptance remain #281.
+- All corrections remain in [PR #311](https://github.com/Coding-Moves/one-concept/pull/311).
+  Hosted final-head checks follow the push; no self-approval or merge performed.
+  Handoff log commit: `docs: record reviewer workspace review and privacy boundary`.
+
+### #278 One Concept Review website — PR #311
+
+- [PR #311](https://github.com/Coding-Moves/one-concept/pull/311), targeting
+  `develop`, closes only #278. `codex/278-review-workspace` starts at `411c9af`, after #310
+  merged; step 5/9 of #263. Deliver only #278, with #279 next.
+- `3246bd9`: shared queue totals, taxonomy/subtopic/deadline filters, exact-version
+  published view, owner-audited deadlines and forward migration 0037.
+  `68f6312`: independent static web/auth foundation. `1d15cb8`: reviewer comments
+  on existing lessons and concept-scoped correction-job queries.
+- `adbc898`: complete review/diff/history/checklist, approved/published/legacy
+  queues, safe manual and AI corrections, owner assignment/account/invitation
+  controls, profile/MFA gates, light/dark responsive UI. One reviewer approval
+  is shared; another reviewer cannot approve the same revision again.
+  `e5e7ffb`: fixture browser coverage and a separate website CI job.
+- Local validation: full disposable PostgreSQL 16 backend suite **478 passed,
+  no skips** (207 seconds), backend F/E9 lint; web TypeScript/build, **8 unit
+  tests**, **14 browser tests** passed. Browser cases include shared approval,
+  conflicts, lost-response identical retries, expiry/revocation, MFA/onboarding,
+  invitation password setup, topic filters, owner controls and safe text/links.
+- Visually inspected desktop light queue, dark complete lesson and narrow dark
+  review; no horizontal overflow. Build with a forbidden fixture secret key
+  failed before emission; sentinel absent from static output. Local documentation
+  links and whitespace checks passed. Node 24 used; no mobile code changed.
+- Initial browser attempt preceded browser installation; first installed-browser
+  run exposed exact-label lookup failures and a test expiry race. Explicit form
+  labels and synchronized assertions fixed them; all cases passed afterward; a final malformed-draft regression also passed.
+  Initial backend fixture failures were corrected before the full passing run.
+- `admin/README.md` documents staging migration 0037 after 0036, compatible API/
+  worker, public web config, HTTPS callback/CORS/headers, owner bootstrap and
+  different-account live acceptance. Real hosting/email/device verification is
+  deferred to #281; deadline email delivery #279 and owner analytics #297 remain
+  outside this chunk. Production migration ledger and infrastructure untouched.
+- Hosted [quality run 36999497828](https://github.com/Coding-Moves/one-concept/actions/runs/36999497828)
+  passed backend, mobile and review-website jobs at `9761422`. Final review added
+  a null/malformed draft heading guard and preserved the concept’s approved
+  taxonomy when repairing it; the expanded 14-case browser suite passed locally.
+  Latest-head CI is recorded in the PR checks. Ready for owner review after those
+  checks pass; live staging acceptance is still #281.
+- Final handoff documentation: `docs: record reviewer website PR and validation`.
+  No production flags, real invitations, paid requests, deployment or merge.
+
 ### PR #310 follow-up code review — fixed and validated
 
 - Reviewed `6402cf7`: asynchronous cancellation/concurrency, exact revision

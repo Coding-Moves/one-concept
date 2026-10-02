@@ -67,3 +67,28 @@ jobs:
             echo '::error::A backend test was skipped; the PostgreSQL integration fixture must run in PR CI.'
             exit 1
           fi
+
+  review-web:
+    name: Review website build and browser tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin
+    env:
+      VITE_API_URL: https://api.example.test
+      VITE_SUPABASE_URL: https://auth.example.test
+      VITE_SUPABASE_PUBLISHABLE_KEY: sb_publishable_build_fixture
+      VITE_ENVIRONMENT: CI fixture
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: admin/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - name: Install test browser
+        run: npx playwright install --with-deps chromium
+      - run: npm run test:browser

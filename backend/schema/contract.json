@@ -35,7 +35,8 @@
     "0033_editorial_provenance.sql": "766fba13569238cd61132bbe645f02f12737d379405757204697aae0e3f26076",
     "0034_editorial_workflow.sql": "8fb7506328b2e29c2d7550309587269897d83e4af9679b9350408e0728092e07",
     "0035_editorial_generation.sql": "596c08467bfd22bbaf13d9f4770618b716c8222848fe11775a2d5258b7d13d18",
-    "0036_editorial_cancelled_leases.sql": "99405898aa81f1e2f54481d7c3343576c8039c8b64a7b93f33498e76ebed6394"
+    "0036_editorial_cancelled_leases.sql": "99405898aa81f1e2f54481d7c3343576c8039c8b64a7b93f33498e76ebed6394",
+    "0037_editorial_review_deadlines.sql": "ab59eabee6d674c89836b394b53a514c114c577e2533081a19a0c16dc77831bb"
   },
   "schema": {
     "columns": {
@@ -260,6 +261,12 @@
         "identity": "",
         "not_null": false,
         "type": "jsonb"
+      },
+      "concept_revisions.review_due_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
       },
       "concept_revisions.review_note": {
         "default": null,
@@ -2703,6 +2710,11 @@
       },
       "editorial_request_receipts_pkey": {
         "definition": "CREATE UNIQUE INDEX editorial_request_receipts_pkey ON public.editorial_request_receipts USING btree (actor_id, request_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_review_due_idx": {
+        "definition": "CREATE INDEX editorial_review_due_idx ON public.concept_revisions USING btree (review_due_at) WHERE (status <> ALL (ARRAY['published'::text, 'retired'::text]))",
         "ready": true,
         "valid": true
       },

@@ -32,18 +32,41 @@ async def queue(
     user: User,
     db: DB,
     settings: Config,
-    kind: Literal["revisions", "legacy"] = "revisions",
+    kind: Literal["revisions", "legacy", "published"] = "revisions",
     status: RevisionStatus | None = None,
     topic_id: UUID | None = None,
     assignee_id: UUID | None = None,
+    subtopic_id: UUID | None = None,
+    urgency: Literal["overdue", "scheduled", "unscheduled"] | None = None,
     search: str = Query("", max_length=120),
     cursor: UUID | None = None,
     limit: int = Query(25, ge=1, le=100),
 ):
     await authorize(db, user, settings, "review")
     return await queries.queue(
-        db, kind, status, topic_id, assignee_id, search, cursor, limit
+        db,
+        kind,
+        status,
+        topic_id,
+        assignee_id,
+        search,
+        cursor,
+        limit,
+        subtopic_id,
+        urgency,
     )
+
+
+@router.get("/taxonomy")
+async def taxonomy(
+    user: User,
+    db: DB,
+    settings: Config,
+    cursor: UUID | None = None,
+    limit: int = Query(100, ge=1, le=100),
+):
+    await authorize(db, user, settings, "review")
+    return await queries.taxonomy(db, cursor, limit)
 
 
 @router.get("/revisions/{rid}")
@@ -169,6 +192,7 @@ async def generation_jobs_list(
     settings: Config,
     status: GenerationJobStatus | None = None,
     topic_id: UUID | None = None,
+    concept_id: UUID | None = None,
     cursor: UUID | None = None,
     limit: int = Query(25, ge=1, le=100),
 ):
@@ -179,11 +203,13 @@ async def generation_jobs_list(
                 text("""select * from editorial_generation_jobs
       where (cast(:status as text) is null or status=:status)
         and (cast(:tid as uuid) is null or topic_id=:tid)
+        and (cast(:cid as uuid) is null or concept_id=:cid)
         and (cast(:cursor as uuid) is null or id>:cursor)
       order by id limit :take"""),
                 {
                     "status": status,
                     "tid": topic_id,
+                    "cid": concept_id,
                     "cursor": cursor,
                     "take": limit + 1,
                 },

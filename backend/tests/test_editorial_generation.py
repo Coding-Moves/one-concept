@@ -27,6 +27,7 @@ async def queued(api, session, draft, monkeypatch):
     api.settings.gemini_api_key = "test-provider-key"
     rid = await content.rid_for(session, draft[1])
     await session.commit()
+    await content.act(api, rid, "assign", assignee_id=str(api.owner.id))
     await content.act(api, rid, "submit")
     await content.act(
         api,
@@ -102,6 +103,8 @@ async def test_request_replay_and_new_private_validated_revision(api, session, q
     assert finished["attempts"] == 1 and "claim_token" not in finished
     result = await content.detail(api, finished["result_revision_id"])
     assert result["status"] == "draft" and result["validation"]["valid"]
+    assert result["assigned_to"] == str(api.owner.id)
+    assert await session.scalar(text("select count(*) from editorial_notification_outbox where revision_id=:id"), {"id": UUID(finished["result_revision_id"])}) == 1
     assert result["body"]["summary"] != source["body"]["summary"]
     assert (await content.detail(api, rid))["body"] == source["body"]
     assert (await content.act(api, finished["result_revision_id"], "publish"))[

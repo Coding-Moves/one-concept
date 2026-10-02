@@ -36,7 +36,8 @@
     "0034_editorial_workflow.sql": "8fb7506328b2e29c2d7550309587269897d83e4af9679b9350408e0728092e07",
     "0035_editorial_generation.sql": "596c08467bfd22bbaf13d9f4770618b716c8222848fe11775a2d5258b7d13d18",
     "0036_editorial_cancelled_leases.sql": "99405898aa81f1e2f54481d7c3343576c8039c8b64a7b93f33498e76ebed6394",
-    "0037_editorial_review_deadlines.sql": "ab59eabee6d674c89836b394b53a514c114c577e2533081a19a0c16dc77831bb"
+    "0037_editorial_review_deadlines.sql": "ab59eabee6d674c89836b394b53a514c114c577e2533081a19a0c16dc77831bb",
+    "0038_editorial_notifications.sql": "7665a4b53d52b5707e6f0f8964bc5d9fc56e8980e7fc0b7e6ee6bba483caa717"
   },
   "schema": {
     "columns": {
@@ -256,11 +257,23 @@
         "not_null": true,
         "type": "uuid"
       },
+      "concept_revisions.notification_epoch": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
       "concept_revisions.quality_review": {
         "default": null,
         "identity": "",
         "not_null": false,
         "type": "jsonb"
+      },
+      "concept_revisions.review_assigned_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
       },
       "concept_revisions.review_due_at": {
         "default": null,
@@ -760,6 +773,102 @@
         "not_null": true,
         "type": "uuid"
       },
+      "editorial_email_attempts.attempt": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_email_attempts.batch_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_email_attempts.started_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_email_batches.available_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_email_batches.claim_token": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_email_batches.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.failure_code": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_email_batches.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_email_batches.lease_until": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.recipient_email": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_email_batches.recipient_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_email_batches.sent_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.status": {
+        "default": "'pending'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_email_batches.subject": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
       "editorial_generation_jobs.attempts": {
         "default": "0",
         "identity": "",
@@ -922,6 +1031,12 @@
         "not_null": true,
         "type": "text"
       },
+      "editorial_memberships.notification_timezone": {
+        "default": "'UTC'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
       "editorial_memberships.requested_name": {
         "default": null,
         "identity": "",
@@ -947,6 +1062,84 @@
         "type": "uuid"
       },
       "editorial_memberships.version": {
+        "default": "1",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_outbox.batch_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_notification_outbox.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_notification_outbox.epoch": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_outbox.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_notification_outbox.ordinal": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_outbox.recipient_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_notification_outbox.revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_notification_outbox.suppressed": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "editorial_notification_policy.deadline_hours": {
+        "default": "48",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_policy.max_reminders": {
+        "default": "2",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_policy.reminder_hours": {
+        "default": "24",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_policy.singleton": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "editorial_notification_policy.version": {
         "default": "1",
         "identity": "",
         "not_null": true,
@@ -1961,11 +2154,31 @@
         "validated": true
       },
       "editorial_account_events.editorial_account_events_action_check": {
-        "definition": "CHECK ((action = ANY (ARRAY['bootstrap'::text, 'invite'::text, 'profile_requested'::text, 'profile_approved'::text, 'access_changed'::text])))",
+        "definition": "CHECK ((action = ANY (ARRAY['bootstrap'::text, 'invite'::text, 'profile_requested'::text, 'profile_approved'::text, 'access_changed'::text, 'notification_policy'::text, 'notification_timezone'::text, 'notification_retry'::text])))",
         "validated": true
       },
       "editorial_account_events.editorial_account_events_pkey": {
         "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_email_attempts.editorial_email_attempts_batch_id_fkey": {
+        "definition": "FOREIGN KEY (batch_id) REFERENCES public.editorial_email_batches(id)",
+        "validated": true
+      },
+      "editorial_email_attempts.editorial_email_attempts_pkey": {
+        "definition": "PRIMARY KEY (batch_id, attempt)",
+        "validated": true
+      },
+      "editorial_email_batches.editorial_email_batches_attempts_check": {
+        "definition": "CHECK (((attempts >= 0) AND (attempts <= 5)))",
+        "validated": true
+      },
+      "editorial_email_batches.editorial_email_batches_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_email_batches.editorial_email_batches_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'sending'::text, 'sent'::text, 'failed'::text, 'suppressed'::text])))",
         "validated": true
       },
       "editorial_generation_jobs.editorial_generation_jobs_attempts_check": {
@@ -2058,6 +2271,46 @@
       },
       "editorial_memberships.editorial_memberships_version_check": {
         "definition": "CHECK ((version > 0))",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_batch_id_fkey": {
+        "definition": "FOREIGN KEY (batch_id) REFERENCES public.editorial_email_batches(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_ordinal_check": {
+        "definition": "CHECK (((ordinal >= 0) AND (ordinal <= 10)))",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_revision_id_epoch_ordinal_key": {
+        "definition": "UNIQUE (revision_id, epoch, ordinal)",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_revision_id_fkey": {
+        "definition": "FOREIGN KEY (revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_deadline_hours_check": {
+        "definition": "CHECK (((deadline_hours >= 1) AND (deadline_hours <= 720)))",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_max_reminders_check": {
+        "definition": "CHECK (((max_reminders >= 0) AND (max_reminders <= 10)))",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_pkey": {
+        "definition": "PRIMARY KEY (singleton)",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_reminder_hours_check": {
+        "definition": "CHECK (((reminder_hours >= 1) AND (reminder_hours <= 168)))",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_singleton_check": {
+        "definition": "CHECK (singleton)",
         "validated": true
       },
       "editorial_publications.editorial_publications_approval_id_fkey": {
@@ -2418,6 +2671,12 @@
       }
     },
     "functions": {
+      "capture_editorial_notification": {
+        "definition": "CREATE OR REPLACE FUNCTION public.capture_editorial_notification()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\ndeclare changed boolean; hours integer;\nbegin\n  changed := TG_OP='INSERT';\n  if TG_OP='UPDATE' then\n    changed := new.assigned_to is distinct from old.assigned_to\n      or new.review_due_at is distinct from old.review_due_at\n      or (new.status in ('draft','pending_review')) <> (old.status in ('draft','pending_review'));\n  end if;\n  if changed then\n    new.notification_epoch := coalesce(new.notification_epoch,0)+1;\n    if new.assigned_to is not null and new.status in ('draft','pending_review') then\n      new.review_assigned_at := statement_timestamp();\n      if new.review_due_at is null then\n        select deadline_hours into hours from public.editorial_notification_policy;\n        new.review_due_at := statement_timestamp() + make_interval(hours=>hours);\n      end if;\n    end if;\n  end if;\n  return new;\nend $function$\n"
+      },
+      "enqueue_editorial_notification": {
+        "definition": "CREATE OR REPLACE FUNCTION public.enqueue_editorial_notification()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  if new.assigned_to is not null and new.review_assigned_at is not null\n     and new.status in ('draft','pending_review') then\n    insert into public.editorial_notification_outbox(revision_id,recipient_id,epoch,ordinal)\n      values(new.id,new.assigned_to,new.notification_epoch,0) on conflict do nothing;\n  end if;\n  return new;\nend $function$\n"
+      },
       "handle_new_user": {
         "definition": "CREATE OR REPLACE FUNCTION public.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  insert into public.profiles (id, display_name)\n  values (\n    new.id,\n    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1))\n  )\n  on conflict (id) do nothing;\n\n  insert into public.notification_preferences (user_id)\n  values (new.id)\n  on conflict (user_id) do nothing;\n\n  -- Follow every active topic by default, matching the app's current behaviour.\n  insert into public.user_topics (user_id, topic_id)\n  select new.id, t.id from public.topics t where t.is_active\n  on conflict do nothing;\n\n  return new;\nend;\n$function$\n"
       },
@@ -2658,6 +2917,26 @@
         "ready": true,
         "valid": true
       },
+      "editorial_email_attempt_time": {
+        "definition": "CREATE INDEX editorial_email_attempt_time ON public.editorial_email_attempts USING btree (started_at)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_email_attempts_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_email_attempts_pkey ON public.editorial_email_attempts USING btree (batch_id, attempt)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_email_batches_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_email_batches_pkey ON public.editorial_email_batches USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_email_ready": {
+        "definition": "CREATE INDEX editorial_email_ready ON public.editorial_email_batches USING btree (status, available_at)",
+        "ready": true,
+        "valid": true
+      },
       "editorial_generation_active_concept_idx": {
         "definition": "CREATE UNIQUE INDEX editorial_generation_active_concept_idx ON public.editorial_generation_jobs USING btree (concept_id) WHERE (status = ANY (ARRAY['pending'::text, 'generating'::text]))",
         "ready": true,
@@ -2695,6 +2974,26 @@
       },
       "editorial_memberships_pkey": {
         "definition": "CREATE UNIQUE INDEX editorial_memberships_pkey ON public.editorial_memberships USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_notification_outbox_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_notification_outbox_pkey ON public.editorial_notification_outbox USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_notification_outbox_revision_id_epoch_ordinal_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_notification_outbox_revision_id_epoch_ordinal_key ON public.editorial_notification_outbox USING btree (revision_id, epoch, ordinal)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_notification_pending": {
+        "definition": "CREATE INDEX editorial_notification_pending ON public.editorial_notification_outbox USING btree (created_at) WHERE ((batch_id IS NULL) AND (NOT suppressed))",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_notification_policy_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_notification_policy_pkey ON public.editorial_notification_policy USING btree (singleton)",
         "ready": true,
         "valid": true
       },
@@ -3128,6 +3427,12 @@
       "editorial_account_events": {
         "rls": true
       },
+      "editorial_email_attempts": {
+        "rls": true
+      },
+      "editorial_email_batches": {
+        "rls": true
+      },
       "editorial_generation_jobs": {
         "rls": true
       },
@@ -3135,6 +3440,12 @@
         "rls": true
       },
       "editorial_memberships": {
+        "rls": true
+      },
+      "editorial_notification_outbox": {
+        "rls": true
+      },
+      "editorial_notification_policy": {
         "rls": true
       },
       "editorial_publications": {
@@ -3213,6 +3524,14 @@
       },
       "public.concept_interactions.concept_interactions_touch_updated_at": {
         "definition": "CREATE TRIGGER concept_interactions_touch_updated_at BEFORE UPDATE ON public.concept_interactions FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.concept_revisions.editorial_notification_cycle": {
+        "definition": "CREATE TRIGGER editorial_notification_cycle BEFORE INSERT OR UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.capture_editorial_notification()",
+        "enabled": "O"
+      },
+      "public.concept_revisions.editorial_notification_event": {
+        "definition": "CREATE TRIGGER editorial_notification_event AFTER INSERT OR UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.enqueue_editorial_notification()",
         "enabled": "O"
       },
       "public.concept_revisions.generated_revision_body_immutable": {

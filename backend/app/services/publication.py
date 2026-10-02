@@ -161,11 +161,16 @@ async def validate_candidate(session, slug, concept_id, body):
     for slug in body.curriculum.prerequisites:
         if not await session.scalar(
             text(
-                "select exists(select 1 from public.concepts where slug=:s and status='published')"
+                """select exists(select 1 from public.concepts c
+                join public.topics t on t.id=c.topic_id and t.is_active
+                join public.subtopics s on s.id=c.subtopic_id and s.is_active
+                where c.slug=:s and c.status='published')"""
             ),
             {"s": slug},
         ):
-            raise ValueError(f"Publish prerequisite {slug} first")
+            raise ValueError(
+                f"Publish prerequisite {slug} in an active topic and subtopic first"
+            )
     others = (
         await session.execute(
             text(

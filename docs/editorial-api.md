@@ -3,7 +3,7 @@
 This is step 3 of [#263](https://github.com/Coding-Moves/one-concept/issues/263),
 following identities (#274) and exact-revision evidence (#275). It provides the
 backend and an authenticated operator client for the future One Concept Review
-website. Dashboard screens are #278, generation/revision orchestration is #277,
+website. Dashboard screens are #278; [generation/revision orchestration](editorial-generation.md) is #277,
 and coordinated production activation is #281. This change does not activate
 production, invite accounts, send emails or publish lessons.
 
@@ -63,7 +63,7 @@ attestation. Retired taxonomy may still appear for inspection but cannot publish
 3. A pending candidate may receive `"changes_requested"` or `"rejected"` with
    a reason. Stage its correction as a **new revision** using the current concept
    token and complete `body`; do not edit an already reviewed revision. Automated
-   regeneration from feedback belongs to #277.
+   regeneration from feedback uses the [#277 job API](editorial-generation.md).
 4. For the designated reviewer holding both permissions, the default final
    action is **Approve and publish**. It validates and commits both decisions
    atomically. There is no additional developer publishing step.
@@ -152,7 +152,7 @@ reconnect. Mobile attribution rendering remains #280.
 POST `/generation-requests` with `request_id`, `note`, `topic_id` and integer
 `count` (1–10). The generation kill switch must be enabled, the topic active and
 planned pending curriculum available. Demand is bounded by pending work and the
-configured batch size, written to `content_supply_targets`, and audited. Inventory
+configured batch size and available review capacity, written to `content_supply_targets`, and audited. Inventory
 excludes retired subtopics, matching the worker. The response, receipt and audit
 record report the actual saved target, including larger pre-existing demand.
 Repeated requests before inventory changes coalesce rather than accumulating unlimited
@@ -160,8 +160,9 @@ work. The 202 result says `demand_recorded`, never Generated or Published.
 
 Existing scheduled workers consume the demand with their normal claims, retry
 limits, quota and kill-switch checks. This request does not invoke Gemini, promise
-a completion time, create curriculum or send reviewer email. #277 owns further
-revision generation integration, and later delivery work owns notifications.
+a completion time, create curriculum or send reviewer email.
+[Editorial generation](editorial-generation.md) documents the bounded revision-job
+API and worker integration; later delivery work owns notifications.
 Catalog rewrites stage valid `learning_package` drafts and do not reclaim a
 concept while an open review is in progress.
 

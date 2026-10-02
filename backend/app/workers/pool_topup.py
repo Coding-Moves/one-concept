@@ -12,6 +12,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.services.pool import top_up
+from app.services.editorial_generation import run_batch
 from app.services.supply import plan_active_readers
 
 
@@ -30,6 +31,8 @@ async def main() -> None:
             )
             await session.commit()
             try:
+                revisions = await run_batch(session, settings)
+                logging.info("revision jobs: %s", revisions)
                 await plan_active_readers(session)
                 result = await top_up(
                     session,
@@ -54,8 +57,11 @@ async def main() -> None:
               finished_at=now(),generated=:generated,failed=:failed where worker='pool_topup'"""),
                 {
                     "outcome": result.skipped_reason or "completed",
-                    "generated": result.generated,
-                    "failed": result.failed,
+                    "generated": result.generated
+                    + revisions.get("ready_for_review", 0),
+                    "failed": result.failed
+                    + revisions.get("failed", 0)
+                    + revisions.get("pending", 0),
                 },
             )
             await session.commit()

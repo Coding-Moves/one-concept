@@ -77,3 +77,8 @@ class ConceptAction(VersionCommand):
 class GenerationInput(Command):
     topic_id: UUID
     count: int = Field(ge=1, le=10, strict=True)
+
+
+GenerationJobStatus = Literal[
+    "pending", "generating", "failed", "ready_for_review", "cancelled", "superseded"
+]

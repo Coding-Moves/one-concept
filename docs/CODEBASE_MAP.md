@@ -48,6 +48,14 @@ operator client `python -m app.workers.editorial_review` uses those same HTTP
 gates. See [editorial-api.md](editorial-api.md) for permissions, retry semantics
 and rollout. Dashboard screens (#278), mobile attribution (#280) and owner
 reporting (#297) remain separate children of #263.
+`editorial_generation.py` owns #277 authenticated durable revision requests,
+claim fencing, provider orchestration and private draft completion. Migration
+0035 stores immutable source/feedback/result links and backlog claim tokens.
+`editorial_generation_status.py` exposes bounded private supply/planning status;
+`review_capacity.py` shares human-work limits across pool/prefetch/rewrite paths.
+The existing `workers/pool_topup.py` runs a bounded revision batch before refill;
+`content_health.py` adds aggregate job conditions. See
+[editorial-generation.md](editorial-generation.md) for API and staging contracts.
 
 ## Achievements (#209, #259)
 
@@ -318,7 +326,8 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   together before contacting the provider; quota denial rolls back the claim.
 - `services/generation_budget.py` atomically reserves from the shared
   `generation_daily_usage` ledger using PostgreSQL's Pacific calendar day. All
-  API prefetch, scheduled refill, and manual rewrite calls share this budget.
+  API prefetch, scheduled refill, manual rewrite and editorial revision jobs share
+  this budget and concurrency limit.
   Failed/uncertain calls retain their reservation; restarts do not reset it.
 - `services/prefetch.py` schedules bounded background top-ups, with a low unread
   watermark, durable per-topic targets, and per-process in-flight topic tracking.

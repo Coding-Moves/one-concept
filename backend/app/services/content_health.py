@@ -151,7 +151,29 @@ async def health_report(session: AsyncSession) -> dict:
         .mappings()
         .all()
     )
+    revision_jobs = (
+        (
+            await session.execute(
+                text("""select
+      count(*) filter(where status='pending')::int as pending,
+      count(*) filter(where status='generating')::int as generating,
+      count(*) filter(where status='failed')::int as failed,
+      count(*) filter(where status='ready_for_review' and exists(
+        select 1 from concept_revisions r where r.id=result_revision_id
+          and r.status in ('draft','pending_review','changes_requested','validation_failed','approved')))::int as ready_for_review,
+      count(*) filter(where status='generating' and claimed_at<now()-interval '30 minutes')::int as stale
+      from editorial_generation_jobs""")
+            )
+        )
+        .mappings()
+        .one()
+    )
+    if revision_jobs["failed"]:
+        conditions.add("failed_ai_revisions")
+    if revision_jobs["stale"]:
+        conditions.add("stale_ai_revision_claims")
     return {
+        "revision_jobs": dict(revision_jobs),
         "topics": topics,
         "conditions": sorted(conditions),
         "failure_categories": [dict(r) for r in failures],
@@ -168,6 +190,7 @@ async def health_report(session: AsyncSession) -> dict:
             "planned_reserve": settings.content_planned_reserve,
             "batch": settings.content_generation_batch,
             "max_concurrent": settings.generation_max_concurrent,
+            "review_backlog_limit": settings.content_review_backlog_limit,
         },
     }
 

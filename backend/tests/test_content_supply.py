@@ -29,7 +29,11 @@ async def full_topic(session, user):
         await session.execute(
             text("""insert into public.daily_assignments(user_id,concept_id,assigned_for,completed_at)
           values (:u,:c,:d,now())"""),
-            {"u": user, "c": cid, "d": datetime.now(UTC).date() - timedelta(days=i + 1)},
+            {
+                "u": user,
+                "c": cid,
+                "d": datetime.now(UTC).date() - timedelta(days=i + 1),
+            },
         )
     await session.execute(
         text("delete from public.user_topics where user_id=:u"), {"u": user}
@@ -164,3 +168,33 @@ async def test_retirement_disables_new_selection_and_generation(
     )
     result = await selection.get_or_create_daily(session, user)
     assert result.concept is None or not result.concept.topic_slug.startswith("supply-")
+
+
+async def test_retired_subtopic_does_not_inflate_unseen_demand(
+    session, user, full_topic
+):
+    from app.services.supply import signal_reader, plan_active_readers, target_for
+
+    # The 25 previously assigned lessons are all retired. They must no longer
+    # inflate the target, and an expired high target must be replaced.
+    await session.execute(
+        text("update subtopics set is_active=false where topic_id=:t"),
+        {"t": full_topic},
+    )
+    await session.execute(
+        text(
+            "insert into content_supply_targets(topic_id,target_count,expires_at) values (:t,999,now()-interval '1 day')"
+        ),
+        {"t": full_topic},
+    )
+    await session.commit()
+    await signal_reader(session, user, full_topic)
+    assert (
+        await target_for(session, full_topic)
+        == get_settings().content_reserve_per_topic
+    )
+    await plan_active_readers(session)
+    assert (
+        await target_for(session, full_topic)
+        == get_settings().content_reserve_per_topic
+    )

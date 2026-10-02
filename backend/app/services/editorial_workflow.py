@@ -188,10 +188,12 @@ async def revision_action(db, actor, settings, rid, command):
         )
         if command.action == "approve_and_publish":
             version = await revisions.publish_reviewed_revision(
-                db, rid, actor, settings
+                db, rid, actor, settings, note=command.note
             )
     elif command.action == "publish":
-        version = await revisions.publish_reviewed_revision(db, rid, actor, settings)
+        version = await revisions.publish_reviewed_revision(
+            db, rid, actor, settings, note=command.note
+        )
     elif command.action == "assign":
         revisions.current(row)
         if row["status"] in ("published", "retired"):

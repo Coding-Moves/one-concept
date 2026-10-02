@@ -105,6 +105,7 @@ async def test_queue_detail_comments_assignment_and_atomic_publication(
         "published",
     }
     assert {e["registered_name"] for e in events} == {"Initial Owner"}
+    assert next(e for e in events if e["action"] == "published")["note"] == NOTE
     forged = payload | {"note": "This is a different operation with a reused key."}
     assert (
         await api.client.post(
@@ -426,12 +427,19 @@ async def test_published_correction_is_invisible_until_approval(api, session, dr
     ).concept.id == daily.concept.id
 
 
+@pytest.mark.parametrize("duplicate", [False, True])
 async def test_legacy_attestation_and_retirement_preserve_learning_history(
-    api, session, draft
+    api, session, draft, duplicate
 ):
     cid = draft[1]
     rid = await rid_for(session, cid)
     body = (await detail(api, rid))["body"]
+    if duplicate:
+        await session.execute(
+            text("""update concepts set title=(select title from concepts
+            where status='published' and id<>:id limit 1) where id=:id"""),
+            {"id": cid},
+        )
     # Exact synthetic legacy record at cutover, without inventing approval.
     await session.execute(
         text("""update concepts set status='published',content_version=1,
@@ -456,7 +464,12 @@ async def test_legacy_attestation_and_retirement_preserve_learning_history(
     queue = await api.client.get(
         f"{ROOT}/queue",
         headers=api.headers(),
-        params={"kind": "legacy", "search": draft[0]},
+        params={
+            "kind": "legacy",
+            "topic_id": str(await session.scalar(
+                text("select topic_id from concepts where id=:id"), {"id": cid}
+            )),
+        },
     )
     assert len(queue.json()["items"]) == 1
     source = (
@@ -473,6 +486,13 @@ async def test_legacy_attestation_and_retirement_preserve_learning_history(
     response = await api.client.post(
         f"{ROOT}/concepts/{cid}/actions", headers=api.headers(), json=payload
     )
+    if duplicate:
+        assert response.status_code == 409, response.text
+        assert not await session.scalar(
+            text("select exists(select 1 from editorial_publications where concept_id=:id)"),
+            {"id": cid},
+        )
+        return
     assert response.status_code == 200, response.text
     again = await api.client.post(
         f"{ROOT}/concepts/{cid}/actions", headers=api.headers(), json=payload

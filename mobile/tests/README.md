@@ -205,3 +205,8 @@ recall, offline restart, invalid cached metadata and sign-out cleanup. Screensho
 are written to `/tmp/one-concept-280-screens` (override `UI_SCREENSHOT_DIR`). The
 Node suite also covers public-field mapping and exact-version cache pairing.
 Physical-device text scaling and screen-reader checks remain distinct manual QA.
+
+The attribution fixture also checks cached detail eviction after 403/404/410,
+manual refresh and reopening an unavailable bundled-catalog slug. Temporary 503
+and offline failures retain the downloaded body/evidence. Cache unit tests cover
+per-entry eviction and late removal across account changes.

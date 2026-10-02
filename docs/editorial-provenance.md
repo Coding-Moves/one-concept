@@ -179,7 +179,11 @@ a late download cannot return an old account's cached fallback after cleanup.
 Cached attribution describes the cached version's historical review, not current
 server availability or a live reviewer-account status. Offline devices cannot
 learn about retirement, newer versions or new legacy attestations until they
-reconnect and refresh. Refresh replaces body/evidence together, including when
+reconnect and refresh. A confirmed unavailable response (403/404/410) removes the
+cached detail body/evidence and shows an unavailable state, including on manual
+refresh; bundled demo content cannot override that response. Temporary server
+failures and offline requests still permit reading an existing downloaded pair.
+Refresh replaces body/evidence together, including when
 attestation adds evidence without incrementing the version. A pending correction
 leaves the published version and its own evidence intact; publishing the new
 version supplies its own review. Renaming or disabling a reviewer does not
@@ -201,7 +205,8 @@ attestation, unpublished corrections, name snapshots, private-field exclusion,
 same-version out-of-band edits and concurrent reads/writes. Mobile
 `reviewAttribution.test.mjs` covers mapping and cached version/account boundaries;
 `reviewAttribution.browser.cjs` checks the exported app in both themes, long names,
-History/Saved, recall, online refresh, offline restart, corrupt metadata and
+History/Saved, recall, online refresh, confirmed removal, transient failures,
+offline restart, corrupt metadata and
 sign-out. Browser tests use dummy Auth/API fixtures, not production accounts.
 Native TalkBack/VoiceOver and physical-device font scaling remain manual checks;
 browser evidence does not claim those were run.

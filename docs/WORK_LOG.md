@@ -7,6 +7,26 @@ claims as completed work.
 
 ## Current status
 
+### PR #314 — code review fixes complete
+
+- Reviewed head `0e762b6` against #280, including SQL snapshot/version matching,
+  public-field projection, mapping, caches and detail-only UI. Used an isolated
+  checkout because the main workspace belongs to another task.
+- `5f24e6a` fixes cached text/reviewer credit surviving authoritative 403/404/410
+  responses. Detail load/refresh now removes the entry and shows unavailable;
+  bundled demo fallback cannot hide removal. Offline/503 reading remains usable.
+- The exported-app regression failed on the old implementation, then passed in
+  both themes. Covers removal on refresh/reopen, bundled slug, cache eviction,
+  transient failures and existing attribution/offline/account cases. Inspected
+  the dark detail screenshot: long credit wraps below the card with no border.
+- Node 24: **88 passed, no skips**; TypeScript, web export and diff check passed.
+  Initial sandbox-only run blocked the validator subprocess; unsandboxed rerun
+  passed. Backend unchanged; previous full CI: **502 passed**, no skips. New
+  hosted CI follows this push. No production or merge action was performed.
+- This documentation commit records the reviewed behavior and test coverage.
+  No owner setup is required; native screen-reader/device font-scaling checks
+  remain unverified. Credit stays only in History/Saved detail screens.
+
 ### #280 — exact-version learner attribution implemented
 
 - [PR #314](https://github.com/Coding-Moves/one-concept/pull/314) targets

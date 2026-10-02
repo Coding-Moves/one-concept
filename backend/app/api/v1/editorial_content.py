@@ -9,12 +9,16 @@ from sqlalchemy import text
 from app.api.v1.editorial import Config, DB, User, PrivateRoute
 from app.schemas.editorial_content import (
     ConceptAction,
+    VersionCommand,
+    GenerationJobStatus,
     GenerationInput,
     RevisionAction,
     RevisionStatus,
     StageInput,
 )
 from app.services.editorial_accounts import authorize
+from app.services import editorial_generation as generation_jobs
+from app.services.editorial_generation_status import generation_status
 from app.services import editorial_queries as queries
 from app.services import editorial_workflow as workflow
 
@@ -147,3 +151,67 @@ async def concept_action(
 @router.post("/generation-requests", status_code=202)
 async def generation(body: GenerationInput, user: User, db: DB, settings: Config):
     return await execute(db, workflow.request_generation(db, user, settings, body))
+
+
+@router.post("/revisions/{rid}/generation-requests", status_code=202)
+async def request_ai_revision(
+    rid: UUID, body: VersionCommand, user: User, db: DB, settings: Config
+):
+    return await execute(
+        db, generation_jobs.request_revision(db, user, settings, rid, body)
+    )
+
+
+@router.get("/generation-jobs")
+async def generation_jobs_list(
+    user: User,
+    db: DB,
+    settings: Config,
+    status: GenerationJobStatus | None = None,
+    topic_id: UUID | None = None,
+    cursor: UUID | None = None,
+    limit: int = Query(25, ge=1, le=100),
+):
+    await authorize(db, user, settings, "review")
+    rows = (
+        (
+            await db.execute(
+                text("""select * from editorial_generation_jobs
+      where (cast(:status as text) is null or status=:status)
+        and (cast(:tid as uuid) is null or topic_id=:tid)
+        and (cast(:cursor as uuid) is null or id>:cursor)
+      order by id limit :take"""),
+                {
+                    "status": status,
+                    "tid": topic_id,
+                    "cursor": cursor,
+                    "take": limit + 1,
+                },
+            )
+        )
+        .mappings()
+        .all()
+    )
+    return {
+        "items": [generation_jobs.visible(r) for r in rows[:limit]],
+        "next_cursor": rows[limit - 1]["id"] if len(rows) > limit else None,
+    }
+
+
+@router.get("/generation-jobs/{jid}")
+async def generation_job(jid: UUID, user: User, db: DB, settings: Config):
+    await authorize(db, user, settings, "review")
+    return generation_jobs.visible(await generation_jobs.get_job(db, jid))
+
+
+@router.post("/generation-jobs/{jid}/cancel")
+async def cancel_generation(
+    jid: UUID, body: VersionCommand, user: User, db: DB, settings: Config
+):
+    return await execute(db, generation_jobs.cancel(db, user, settings, jid, body))
+
+
+@router.get("/generation-supply/{tid}")
+async def generation_supply(tid: UUID, user: User, db: DB, settings: Config):
+    await authorize(db, user, settings, "review")
+    return await generation_status(db, tid, settings)

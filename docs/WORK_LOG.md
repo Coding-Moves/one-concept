@@ -7,6 +7,17 @@ claims as completed work.
 
 ## Current status
 
+### PR #311 follow-up review — in progress
+
+- Review exact head `3541cca` across backend contracts, Auth/session boundaries,
+  review decisions, correction jobs, browser usability and staging instructions.
+- Confirmed candidate defects: SDK QR data URI encoded twice, unsupported submit
+  transitions, approval enabled during edits, stale correction status on reload,
+  misleading publication success after comments, and transient refreshes losing
+  feedback/focus. Reproduce before fixing, then commit focused corrections here.
+- No merge, production operation, new feature scope or migration-ledger change.
+
+
 ### #278 One Concept Review website — PR #311
 
 - [PR #311](https://github.com/Coding-Moves/one-concept/pull/311), targeting

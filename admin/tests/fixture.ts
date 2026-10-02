@@ -65,7 +65,12 @@ export const lesson = {
 };
 export async function fixture(
   context: BrowserContext,
-  options: { caps?: string[]; mfa?: boolean; onboarding?: boolean } = {},
+  options: {
+    caps?: string[];
+    mfa?: boolean;
+    enrollment?: boolean;
+    onboarding?: boolean;
+  } = {},
 ) {
   const member = {
     user_id: uid,
@@ -108,16 +113,17 @@ export async function fixture(
     created_at: new Date().toISOString(),
     app_metadata: {},
     user_metadata: {},
-    factors: options.mfa
-      ? [
-          {
-            id: sid,
-            factor_type: "totp",
-            status: "verified",
-            friendly_name: "My authenticator",
-          },
-        ]
-      : [],
+    factors:
+      options.mfa && !options.enrollment
+        ? [
+            {
+              id: sid,
+              factor_type: "totp",
+              status: "verified",
+              friendly_name: "My authenticator",
+            },
+          ]
+        : [],
   };
   function session() {
     const token =
@@ -158,6 +164,17 @@ export async function fixture(
     const path = new URL(route.request().url()).pathname;
     if (path.endsWith("/logout")) return fulfill(route, {});
     if (path.endsWith("/recover")) return fulfill(route, {});
+    if (path.endsWith("/factors") && route.request().method() === "POST")
+      return fulfill(route, {
+        id: sid,
+        type: "totp",
+        totp: {
+          secret: "fixture-only",
+          uri: "otpauth://totp/test",
+          qr_code:
+            '<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="black"/></svg>',
+        },
+      });
     if (path.includes("/challenge"))
       return fulfill(route, {
         id: "challenge",

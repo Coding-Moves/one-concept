@@ -152,9 +152,10 @@ export function Mfa({
   auth: SupabaseClient;
   onVerified: () => void;
 }) {
-  const [factors, setFactors] = useState<
-      { id: string; friendly_name?: string }[]
-    >([]),
+  const [factorsReady, setFactorsReady] = useState(false),
+    [factors, setFactors] = useState<{ id: string; friendly_name?: string }[]>(
+      [],
+    ),
     [factor, setFactor] = useState(""),
     [secret, setSecret] = useState(""),
     [qr, setQr] = useState(""),
@@ -167,6 +168,7 @@ export function Mfa({
       if (!active) return;
       if (error) setError("Unable to load authenticators.");
       else {
+        setFactorsReady(true);
         setFactors(data.totp);
         setFactor(data.totp[0]?.id || "");
       }
@@ -189,10 +191,7 @@ export function Mfa({
         );
       setFactor(data.id);
       setSecret(data.totp.secret);
-      setQr(
-        "data:image/svg+xml;charset=utf-8," +
-          encodeURIComponent(data.totp.qr_code),
-      );
+      setQr(data.totp.qr_code);
     } catch (e) {
       setError(message(e));
     } finally {
@@ -232,7 +231,11 @@ export function Mfa({
       </p>
       {error && <Notice error>{error}</Notice>}
       {!factor ? (
-        <button className="primary" disabled={busy} onClick={enroll}>
+        <button
+          className="primary"
+          disabled={busy || !factorsReady}
+          onClick={enroll}
+        >
           Set up authenticator
         </button>
       ) : (

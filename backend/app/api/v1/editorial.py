@@ -25,7 +25,12 @@ from app.services.editorial_accounts import authorize
 from app.services import editorial_management as management
 
 
-HEADERS = {"Cache-Control": "no-store", "Vary": "Authorization"}
+HEADERS = {
+    "Cache-Control": "no-store",
+    "Vary": "Authorization",
+    "X-Content-Type-Options": "nosniff",
+    "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+}
 
 
 class PrivateRoute(APIRoute):
@@ -34,6 +39,16 @@ class PrivateRoute(APIRoute):
 
         async def private_handler(request):
             try:
+                # Enforce the limit on actual streamed bytes, not a forgeable
+                # Content-Length header. Cache only a bounded JSON body.
+                if request.method in ("POST", "PUT", "PATCH"):
+                    chunks, size = [], 0
+                    async for chunk in request.stream():
+                        size += len(chunk)
+                        if size > 65536:
+                            raise HTTPException(413, "Editorial request exceeds 64 KiB")
+                        chunks.append(chunk)
+                    request._body = b"".join(chunks)
                 response = await handler(request)
             except HTTPException as exc:
                 exc.headers = {**(exc.headers or {}), **HEADERS}

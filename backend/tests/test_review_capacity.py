@@ -87,3 +87,20 @@ async def test_expired_pool_claim_cannot_write_or_finish_newer_attempt(
         )
         == 1
     )
+
+
+async def test_full_review_queue_is_not_a_provider_failure(
+    topic, generator, session, monkeypatch
+):
+    monkeypatch.setattr(get_settings(), "content_review_backlog_limit", 1)
+    assert await pool.generate_one(session, "fixture", "fixture", topic, call_cap=20)
+    result = await pool.top_up(
+        session,
+        api_key="fixture",
+        model="fixture",
+        enabled=True,
+        minimum_per_topic=25,
+        call_cap=20,
+    )
+    assert result.generated == result.failed == 0
+    assert generator.await_count == 1

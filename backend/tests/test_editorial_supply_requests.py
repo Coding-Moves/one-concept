@@ -176,3 +176,30 @@ async def test_empty_curriculum_surfaces_planning_without_inventing_work(
         )
     ).json()
     assert status["planning_required"] and status["pending"] == 0
+
+
+async def test_spent_pending_curriculum_is_not_eligible_manual_demand(
+    api, session, draft
+):
+    slug, cid = draft
+    tid = await session.scalar(
+        text("select topic_id from concepts where id=:id"), {"id": cid}
+    )
+    await session.execute(
+        text("""insert into concept_backlog(topic_id,subtopic_id,slug,title,attempts,status)
+      select topic_id,subtopic_id,:slug,'Spent curriculum',3,'pending' from concepts where id=:id"""),
+        {"id": cid, "slug": "spent-" + slug},
+    )
+    await session.commit()
+    api.settings.generation_enabled = True
+    response = await api.client.post(
+        f"{content.ROOT}/generation-requests",
+        headers=api.headers(),
+        json={
+            "request_id": str(uuid4()),
+            "topic_id": str(tid),
+            "count": 1,
+            "note": content.NOTE,
+        },
+    )
+    assert response.status_code == 409 and "plan lessons" in response.text

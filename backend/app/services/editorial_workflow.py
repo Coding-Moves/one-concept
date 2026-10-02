@@ -338,7 +338,8 @@ async def request_generation(db, actor, settings, command):
     planned = await db.scalar(
         text("""select count(*) from concept_backlog b
         join subtopics s on s.id=b.subtopic_id where b.topic_id=:id
-        and b.status='pending' and s.is_active"""),
+        and b.status='pending' and s.is_active
+        and b.attempts<3+(select count(*) from content_retry_log l where l.backlog_id=b.id)"""),
         {"id": command.topic_id},
     )
     if not planned:

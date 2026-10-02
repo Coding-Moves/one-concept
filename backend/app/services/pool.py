@@ -1,4 +1,4 @@
-"""Keeping each topic stocked with published concepts.
+"""Keeping each topic stocked with private drafts awaiting human review.
 
 The catalog is global: one generated lesson serves every user, which is the
 single biggest cost lever in the design. Topping up ahead of demand is what
@@ -23,7 +23,7 @@ from app.services.generation_budget import (
     reserve_generation_call,
 )
 from app.services.supply import target_for
-from app.services.review_capacity import review_load
+from app.services.review_capacity import review_load, slots_available
 from app.services.curriculum import catalog_lock
 
 log = logging.getLogger(__name__)
@@ -43,7 +43,8 @@ _POOL_COUNTS = text("""
              where c.topic_id = t.id and c.status in ('published','draft'))::int as published,
            (select count(*) from public.concept_backlog b
              join public.subtopics s on s.id=b.subtopic_id and s.is_active
-             where b.topic_id = t.id and b.status = 'pending')::int   as pending
+             where b.topic_id = t.id and b.status = 'pending'
+               and b.attempts<3+(select count(*) from content_retry_log l where l.backlog_id=b.id))::int   as pending
       from public.topics t
      where t.is_active
      order by published asc
@@ -310,7 +311,7 @@ async def top_up(
     call_cap: int,
     pace_seconds: float = 0.0,
 ) -> TopUpResult:
-    """Bring every topic up to `minimum_per_topic` published concepts."""
+    """Refill toward the inventory target without exceeding review capacity."""
     if not enabled:
         return TopUpResult(0, 0, "generation disabled")
     if not api_key:
@@ -333,7 +334,12 @@ async def top_up(
         deficit = target - topic.published
         if deficit <= 0:
             continue
-        remaining = min(deficit, topic.pending, get_settings().content_generation_batch)
+        remaining = min(
+            deficit,
+            topic.pending,
+            get_settings().content_generation_batch,
+            await slots_available(session, topic.id),
+        )
         while remaining > 0:
             try:
                 concept_id = await generate_one(

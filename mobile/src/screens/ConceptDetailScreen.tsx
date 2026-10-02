@@ -10,7 +10,7 @@ import { UnavailableState } from '../components/UnavailableState';
 import { useOnline } from '../context/ConnectivityContext';
 import { useTheme } from '../context/ThemeContext';
 import { CONCEPTS_BY_ID } from '../data/concepts';
-import { fetchConcept } from '../services/conceptApi';
+import { fetchConcept, isConceptUnavailable } from '../services/conceptApi';
 import { RootStackParamList } from '../navigation';
 import { scaleFont, scaleIcon, spacing, ThemeColors, typography } from '../theme';
 import { Concept } from '../types';
@@ -33,8 +33,17 @@ export function ConceptDetailScreen() {
   const request = useRef(0);
   const refreshUI = useRefreshControl('lesson', async () => {
     const current = ++request.current;
-    const next = await fetchConcept(conceptId, undefined, true);
-    if (request.current === current) { setConcept(next); setStatus('ready'); }
+    try {
+      const next = await fetchConcept(conceptId, undefined, true);
+      if (request.current === current) { setConcept(next); setFailure(null); setStatus('ready'); }
+    } catch (cause) {
+      if (request.current === current && isConceptUnavailable(cause)) {
+        setConcept(null);
+        setFailure(cause);
+        setStatus('error');
+      }
+      throw cause;
+    }
   });
 
   useEffect(() => {
@@ -55,15 +64,15 @@ export function ConceptDetailScreen() {
         }
       })
       .catch((cause: unknown) => {
-        // Offline or not found: the bundled catalog covers the signed-out demo
-        // set; anything else we can't show, so say so rather than hang.
-        const local = CONCEPTS_BY_ID.get(conceptId);
+        // Demo fallback may cover an offline miss, never a server-confirmed removal.
+        const local = isConceptUnavailable(cause) ? undefined : CONCEPTS_BY_ID.get(conceptId);
         if (!active || current !== request.current) return;
         setFailure(cause);
         if (local) {
           setConcept(local);
           setStatus('ready');
         } else {
+          setConcept(null);
           setStatus('error');
         }
       });

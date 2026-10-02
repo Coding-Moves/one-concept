@@ -4,7 +4,7 @@ const root=process.argv[2];
 if(!root || !fs.existsSync(path.join(root,'index.html'))) throw Error('Pass the exported web directory');
 const version=require('../app.config.js').expo.version;
 const today=new Date().toISOString().slice(0,10);
-const concept={id:'33333333-3333-4333-8333-333333333333',slug:'known-lesson',title:'Reviewing invariants',summary:'An invariant is a rule that stays true while a system changes. Use it to check whether each operation keeps your data consistent.',example:'A library book can have one active borrower. Returning and lending it should preserve that rule.',topic_slug:'computer-science',topic_name:'Computer Science',content_version:2,like_count:0};
+const concept={id:'33333333-3333-4333-8333-333333333333',slug:'idempotency',title:'Reviewing invariants',summary:'An invariant is a rule that stays true while a system changes. Use it to check whether each operation keeps your data consistent.',example:'A library book can have one active borrower. Returning and lending it should preserve that rule.',topic_slug:'computer-science',topic_name:'Computer Science',content_version:2,like_count:0};
 const session={access_token:'fixture',refresh_token:'fixture-refresh',token_type:'bearer',expires_in:864000,expires_at:Math.floor(Date.now()/1000)+864000,user:{id:'11111111-1111-1111-1111-111111111111',email:'fixture@example.invalid',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{},created_at:'2026-01-01T00:00:00Z'}};
 const server=http.createServer((req,res)=>{
  const relative=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
@@ -20,7 +20,7 @@ fs.mkdirSync(output,{recursive:true});
  const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_PATH,headless:true,args:['--no-sandbox']});
  try {
   for(const theme of ['light','dark']) {
-   let online=true;
+   let online=true, conceptStatus=200;
    const lesson={...concept,review:null};
    const state={display_name:'Reader',timezone:'UTC',today,followed_topics:['computer-science'],
     learned:[{concept_slug:lesson.slug,title:lesson.title,topic_name:'Computer Science',learned_on:today}],
@@ -42,7 +42,10 @@ fs.mkdirSync(output,{recursive:true});
     if(endpoint==='/v1/me/state')body=state;
     else if(endpoint==='/v1/topics')body=[{slug:'computer-science',name:'Computer Science',concept_count:3,following:true}];
     else if(endpoint==='/v1/me/notifications')body={enabled:false,reminder_times:['08:00']};
-    else if(endpoint.startsWith('/v1/concepts/'))body=lesson;
+    else if(endpoint.startsWith('/v1/concepts/')) {
+     if(conceptStatus!==200)return route.fulfill({status:conceptStatus,contentType:'application/json',body:JSON.stringify({detail:'Unavailable'})});
+     body=lesson;
+    }
     await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(body)});
    });
    await context.route('**/auth/v1/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(session)}));
@@ -100,6 +103,38 @@ fs.mkdirSync(output,{recursive:true});
    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
    await expect(credit()).toHaveText('Reviewed by Second Reviewer');
    await page.getByRole('button',{name:'Close',exact:true}).click();
+   // The fixture slug also exists in the bundled catalog: no demo resurrection.
+   // A confirmed removal must replace an already painted cache, including on refresh.
+   online=true;
+   for(const status of [403,404,410]) {
+    conceptStatus=200;
+    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
+    await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+    await expect(page.getByRole('button',{name:'Refresh lesson',exact:true})).toBeEnabled();
+    // A temporary service error still permits reading the downloaded pair.
+    conceptStatus=503;
+    await page.getByRole('button',{name:'Refresh lesson',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Refresh lesson',exact:true})).toBeEnabled();
+    await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+    conceptStatus=status;
+    await page.getByRole('button',{name:'Refresh lesson',exact:true}).click();
+    await expect(page.getByRole('button',{name:'Try again',exact:true})).toBeVisible();
+    await expect(credit()).toHaveCount(0);
+    await expect(page.getByText(lesson.summary,{exact:true}).filter({visible:true})).toHaveCount(0);
+    await expect.poll(()=>page.evaluate(slug=>localStorage.getItem('one-concept/concepts/v1/'+slug),lesson.slug)).toBe(null);
+    await page.getByRole('button',{name:'Close',exact:true}).click();
+    // The next detail visit must also respect the server's denial.
+    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
+    await expect(page.getByRole('button',{name:'Try again',exact:true})).toBeVisible();
+    await expect(credit()).toHaveCount(0);
+    await page.getByRole('button',{name:'Close',exact:true}).click();
+   }
+   // Refill before the existing offline/corrupt-cache checks.
+   conceptStatus=200;
+   await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
+   await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+   await page.getByRole('button',{name:'Close',exact:true}).click();
+   online=false;
    // A corrupted/stale cache pair must never show a mismatched version label.
    await page.evaluate(()=>{
     for(const key of Object.keys(localStorage).filter(k=>k.startsWith('one-concept/'))){
@@ -124,7 +159,7 @@ fs.mkdirSync(output,{recursive:true});
    await expect(page.getByText('Welcome back',{exact:true})).toBeVisible();
    await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('one-concept/concepts/')).length)).toBe(0);
    assert.deepEqual(errors,[]);
-   console.log(`${theme}: legacy/attested/corrected attribution, History/Saved, recall, offline restart, invalid cache, sign-out and detail-only wrapped borderless credit passed`);
+   console.log(`${theme}: legacy/attested/corrected attribution, History/Saved, recall, offline restart, confirmed removal, temporary server failure, invalid cache, sign-out and detail-only wrapped borderless credit passed`);
    await context.close();
   }
  } finally {await browser.close();server.close();}

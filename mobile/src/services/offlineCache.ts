@@ -38,6 +38,12 @@ export class OfflineCache<T> {
     });
   }
 
+  remove(id: string, epoch = this.epoch): Promise<void> {
+    return this.write(async () => {
+      if (epoch === this.epoch) await this.storage.multiRemove([this.prefix + id]);
+    });
+  }
+
   clear(): Promise<void> {
     this.generation += 1;
     return this.write(async () => {

@@ -19,6 +19,11 @@ async function downloadConcept(slug: string): Promise<Concept> {
   return mapConcept(c);
 }
 
+/** These responses are authoritative: a downloaded copy must not hide them. */
+export function isConceptUnavailable(error: unknown): boolean {
+  return error instanceof ApiError && [403, 404, 410].includes(error.status);
+}
+
 /** Paint cached text immediately, then refresh counts/content when reachable. */
 export async function fetchConcept(
   slug: string,
@@ -40,6 +45,11 @@ export async function fetchConcept(
     return concept;
   } catch (error) {
     if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
+    if (isConceptUnavailable(error)) {
+      await conceptCache.remove(slug, epoch).catch(() => {});
+      if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
+      throw error;
+    }
     if (cached) return cached;
     throw error;
   }

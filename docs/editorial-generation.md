@@ -80,7 +80,9 @@ stateDiagram-v2
 4. Commit the claim before contacting Gemini. No HTTP request waits for a model,
    and no database connection stays pinned during the provider call. Only the
    lesson package and feedback enter the revision context, not auth credentials,
-   member profiles or settings. Configured secrets in that context are redacted.
+   member profiles or settings. Configured secrets are redacted from raw lesson,
+   feedback, title and taxonomy strings before JSON encoding; audit evidence is
+   preserved unchanged.
 5. On completion, reacquire account → catalog → job locks and check the claim
    token, current requester access, source state/version/body and complete sibling
    revision inventory. Cancellation, retirement, revoked permissions, publication
@@ -103,6 +105,12 @@ Authorization is checked again at claim and completion against current membershi
 capabilities, approved name, confirmed account and ban status. An accepted job is
 durable work: logging out or a short-lived JWT expiring does not cancel it. Explicit
 cancellation or removal of the required permissions does. No JWT is stored in a job.
+
+Cancelling a running job immediately makes its output ineligible, but cannot stop
+an HTTP request in another worker process. Its provider slot remains reserved
+until that worker returns or its 30-minute lease expires. An abandoned cancelled
+job is never retried; cleanup only clears its lease. Cancelling a pending job
+makes no provider call.
 
 Each failed provider call consumes its shared daily reservation. Revision jobs
 allow three attempts total, including throttled and abandoned attempts. Retriable
@@ -163,9 +171,12 @@ python -m app.workers.editorial_review \
 No immediate manual production action is needed to review or merge this PR into
 `develop`. Before deploying the new backend image in **staging**:
 
-1. Apply `backend/migrations/0035_editorial_generation.sql` after 0034, using the
-   normal migration runbook. It adds private jobs, immutable inputs/results and
-   backlog claim tokens; it does not publish content or grant users access.
+1. Apply `backend/migrations/0035_editorial_generation.sql` after 0034, followed
+   by `backend/migrations/0036_editorial_cancelled_leases.sql`, using the normal
+   migration runbook. These add private jobs, immutable inputs/results, backlog
+   claim tokens and provider leases for cancelled in-flight jobs. They do not
+   publish content or grant users access. The forward migration leaves 0035
+   unchanged for environments that have already applied it.
 2. Use the schema verifier packaged in the new image. Update `applied.txt` only
    after actual production application and verification, never just for CI.
 3. Upgrade the API, pool-topup and any rewrite workers together. Pause old

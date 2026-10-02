@@ -7,6 +7,26 @@ claims as completed work.
 
 ## Current status
 
+### PR #310 follow-up code review — fixes under validation
+
+- Reviewed `6402cf7`: asynchronous cancellation/concurrency, exact revision
+  evidence, private prompt handling, status APIs and rollout.
+- `dfc885e`: reproduced P2 cancellation freeing a provider slot while the HTTP
+  request remained in flight. Retain the fenced lease until completion/expiry;
+  discard cancelled output and never retry abandoned cancelled work. Add forward
+  migration 0036 and reviewed schema contract without changing applied history.
+- `d28d1ac`: reproduced P2 configured secrets surviving JSON escaping in feedback
+  and nested lesson content. Redact raw prompt strings, including title/taxonomy,
+  before serialization while retaining immutable original evidence.
+- PostgreSQL 16 migration/job suite: **40 passed, no skips**. Four prompt tests
+  passed; quotes, backslashes and newlines failed before the correction. Full
+  backend regression and hosted exact-head checks are pending. F/E9 lint and
+  whitespace checks passed. Initial root-directory pytest attempts failed
+  collection; the reported tests ran from backend with test-only configuration.
+- Updated staging instructions: 0035 then 0036 after 0034, compatible worker/API
+  images; no immediate production action needed to merge into develop. No
+  production changes, live provider calls, release or merge performed.
+
 ### #277 bounded draft replenishment and AI revisions — PR #310
 
 - [PR #310](https://github.com/Coding-Moves/one-concept/pull/310) is step 4/9

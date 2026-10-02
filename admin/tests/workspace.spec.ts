@@ -283,7 +283,7 @@ test("owner assigns a deadline, invites a reviewer and requests bounded drafts",
     .getByLabel("Review note or comment")
     .fill("Please finish checking these references by the agreed deadline.");
   await page.getByRole("button", { name: "Save assignment" }).click();
-  await expect(page.getByText("Saved successfully.")).toBeVisible();
+  await expect(page.getByText("Assignment saved.")).toBeVisible();
   expect(state.commands[0].review_due_at).toMatch(/^2030-10-12T/);
   expect(state.commands[0].assignee_id).toBeTruthy();
   await page.getByRole("button", { name: "Reviewers", exact: true }).click();

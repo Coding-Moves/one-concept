@@ -23,6 +23,8 @@ from app.services.generation_budget import (
     reserve_generation_call,
 )
 from app.services.supply import target_for
+from app.services.review_capacity import review_load
+from app.services.curriculum import catalog_lock
 
 log = logging.getLogger(__name__)
 
@@ -70,7 +72,7 @@ STALE_CLAIM_MINUTES = 30
 # too rather than leaving them stuck forever.
 _REAP_STALE = text("""
     update public.concept_backlog
-       set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end, claimed_at = null
+       set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end, claimed_at = null, claim_token = null
      where status = 'generating'
        and (claimed_at is null
             or claimed_at < now() - make_interval(mins => :max_minutes))
@@ -79,7 +81,7 @@ _REAP_STALE = text("""
 
 _CLAIM = text("""
     update public.concept_backlog b
-       set status = 'generating', attempts = b.attempts + 1, claimed_at = now()
+       set status = 'generating', attempts = b.attempts + 1, claimed_at = now(), claim_token = gen_random_uuid()
       from public.topics t, public.subtopics s
      where b.id = (
          select b2.id from public.concept_backlog b2
@@ -97,7 +99,7 @@ _CLAIM = text("""
        and s.id = b.subtopic_id
        and s.topic_id = b.topic_id
        and s.is_active
-    returning b.id, b.slug, b.title, b.angle, b.difficulty, b.topic_id, b.subtopic_id,
+    returning b.id, b.claim_token, b.slug, b.title, b.angle, b.difficulty, b.topic_id, b.subtopic_id,
               b.curriculum, t.name as topic_name, s.slug as subtopic_slug,
               s.name as subtopic_name
 """)
@@ -126,24 +128,24 @@ _PUBLISH = text("""
        set status = case when exists (select 1 from inserted) then 'done' else 'failed' end,
            last_error = case when exists (select 1 from inserted) then null
                              else 'slug already exists; nothing published' end,
-           claimed_at = null
-     where id = :backlog_id
+           claimed_at = null, claim_token = null
+     where id = :backlog_id and status='generating' and claim_token=:claim_token
     returning (select id from inserted) as concept_id
 """)
 
 _FAIL = text("""
     update public.concept_backlog
        set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end,
-           last_error = :error, claimed_at = null
-     where id = :backlog_id
+           last_error = :error, claimed_at = null, claim_token = null
+     where id = :backlog_id and status='generating' and claim_token=:claim_token
 """)
 
 # A rate limit is our problem, not the title's: return it to the queue and
 # refund the attempt so throttling can never retire an item.
 _RELEASE = text("""
     update public.concept_backlog
-       set status = 'pending', attempts = greatest(attempts - 1, 0), claimed_at = null
-     where id = :backlog_id
+       set status = 'pending', attempts = greatest(attempts - 1, 0), claimed_at = null, claim_token = null
+     where id = :backlog_id and status='generating' and claim_token=:claim_token
 """)
 
 
@@ -189,6 +191,14 @@ async def generate_one(
         if claimed is not None:
             await reserve_generation_call(session, cap)
             await check_generation_capacity(session)
+            # The shared quota lock serializes all provider claimers. Include
+            # this claim in the load, then roll back it and quota if full.
+            if (
+                await review_load(session, claimed.topic_id)
+                > get_settings().content_review_backlog_limit
+            ):
+                await session.rollback()
+                return None
         await session.commit()
     except BaseException:
         # Quota denial/DB failure/cancellation must undo the claim and its attempt.
@@ -222,19 +232,43 @@ async def generate_one(
             model=model,
         )
     except RateLimitedError:
-        await session.execute(_RELEASE, {"backlog_id": claimed.id})
+        await session.execute(
+            _RELEASE, {"backlog_id": claimed.id, "claim_token": claimed.claim_token}
+        )
         await session.commit()
         raise
     except GenerationError as exc:
         # Leave it pending for another attempt; give up after three so one bad
         # title cannot block the queue forever.
-        log.warning("generation failed for %s (%s); inspect the protected backlog", claimed.slug, type(exc).__name__)
+        log.warning(
+            "generation failed for %s (%s); inspect the protected backlog",
+            claimed.slug,
+            type(exc).__name__,
+        )
         await session.execute(
-            _FAIL, {"backlog_id": claimed.id, "error": str(exc)[:500]}
+            _FAIL,
+            {
+                "backlog_id": claimed.id,
+                "claim_token": claimed.claim_token,
+                "error": "provider_error",
+            },
         )
         await session.commit()
         return None
 
+    # Lock and fence before inserting anything: an expired worker must not
+    # complete another worker's newer claim or create an obsolete draft.
+    await catalog_lock(session)
+    live = await session.scalar(
+        text("""select b.id from concept_backlog b
+      join topics t on t.id=b.topic_id join subtopics s on s.id=b.subtopic_id
+      where b.id=:id and b.status='generating' and b.claim_token=:token
+        and t.is_active and s.is_active for update of b"""),
+        {"id": claimed.id, "token": claimed.claim_token},
+    )
+    if live is None:
+        await session.rollback()
+        return None
     concept_id = (
         await session.execute(
             _PUBLISH,
@@ -250,6 +284,7 @@ async def generate_one(
                 "model": result.model,
                 "prompt_version": result.prompt_version,
                 "backlog_id": claimed.id,
+                "claim_token": claimed.claim_token,
                 "curriculum": json.dumps(claimed.curriculum),
                 "learning_package": result.learning_package.model_dump_json(),
             },

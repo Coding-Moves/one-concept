@@ -12,6 +12,7 @@ import logging
 from sqlalchemy import text
 
 from app.config import get_settings
+from app.services.review_capacity import review_load
 from app.db.session import SessionLocal, engine
 from app.services.generation import (
     PROMPT_VERSION,
@@ -77,6 +78,19 @@ async def _claim(session, row, cap):
     if revision:
         await reserve_generation_call(session, cap)
         await check_generation_capacity(session)
+        topic_id = await session.scalar(
+            text("select topic_id from concepts where id=:id"), {"id": row.id}
+        )
+        # Use the shared settings source; this is the same human-capacity bound
+        # as the pool worker, checked under the shared quota reservation lock.
+        from app.config import get_settings as shared_settings
+
+        if (
+            await review_load(session, topic_id)
+            > shared_settings().content_review_backlog_limit
+        ):
+            await session.rollback()
+            return None
     await session.commit()
     return revision
 
@@ -138,7 +152,9 @@ async def main() -> None:
                         )
                     except GenerationBusy:
                         await session.rollback()
-                        log.info("shared generation capacity busy; resume on a later run")
+                        log.info(
+                            "shared generation capacity busy; resume on a later run"
+                        )
                         return
                     except GenerationBudgetExhausted:
                         await session.rollback()

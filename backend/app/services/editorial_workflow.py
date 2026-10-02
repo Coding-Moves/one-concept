@@ -351,7 +351,12 @@ async def request_generation(db, actor, settings, command):
         where c.topic_id=:id and c.status in ('published','draft')"""),
         {"id": command.topic_id},
     )
-    count = min(command.count, planned, settings.content_generation_batch)
+    from app.services.review_capacity import slots_available
+
+    slots = await slots_available(db, command.topic_id, settings)
+    if not slots:
+        raise ValueError("Review backlog is full; review or archive existing drafts first")
+    count = min(command.count, planned, settings.content_generation_batch, slots)
     # Repeated requests before generation coalesce instead of adding to the
     # outstanding target. Existing workers retain their quota/claim/kill checks.
     target = inventory + count

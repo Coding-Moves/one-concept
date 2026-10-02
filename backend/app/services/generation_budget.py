@@ -57,7 +57,9 @@ async def check_generation_capacity(session: AsyncSession) -> None:
       (select count(*) from public.concept_backlog where status='generating'
         and claimed_at>=now()-interval '30 minutes') +
       (select count(*) from public.concept_revisions where status='generating'
-        and created_at>=now()-interval '30 minutes')""")
+        and created_at>=now()-interval '30 minutes') +
+      (select count(*) from public.editorial_generation_jobs where status='generating'
+        and claimed_at>=now()-interval '30 minutes')""")
     )
     if count > get_settings().generation_max_concurrent:
         raise GenerationBusy("shared generation concurrency limit reached")

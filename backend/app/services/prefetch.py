@@ -26,8 +26,8 @@ log = logging.getLogger(__name__)
 
 _PUBLISHED_IN_TOPIC = text("""
     select count(*)::int
-      from public.concepts
-     where topic_id = :topic_id and status = 'published'
+      from public.concepts c join public.subtopics s on s.id=c.subtopic_id and s.is_active
+     where c.topic_id = :topic_id and status = 'published'
 """)
 
 # Legacy callers without a durable reader signal retain this small bootstrap

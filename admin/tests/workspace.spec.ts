@@ -24,7 +24,7 @@ test("topic filtering, full package, comments and atomic publication", async ({
     .getByLabel("Review note or comment")
     .fill("Please check the rollout order with the linked documentation.");
   await page.getByRole("button", { name: "Add comment", exact: true }).click();
-  await expect(page.getByText("Saved successfully.")).toBeVisible();
+  await expect(page.getByText("Comment saved.")).toBeVisible();
   await page.getByRole("button", { name: "History", exact: true }).click();
   await expect(
     page.getByText(

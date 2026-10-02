@@ -4,7 +4,10 @@ import type { Api, PendingCommand } from "./api";
 import { message } from "./ui";
 export function useCommand(
   api: Api,
-  onSuccess: (result: Record<string, unknown>) => Promise<void> | void,
+  onSuccess: (
+    result: Record<string, unknown>,
+    command: PendingCommand,
+  ) => Promise<void> | void,
 ) {
   const [busy, setBusy] = useState(false),
     [pending, setPending] = useState<PendingCommand | null>(null),
@@ -21,7 +24,7 @@ export function useCommand(
       );
       setPending(null);
       setConflict(false);
-      await onSuccess(result);
+      await onSuccess(result, command);
     } catch (e) {
       if (e instanceof ApiError && e.status === 499) return;
       setError(message(e));

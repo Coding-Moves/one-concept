@@ -86,22 +86,30 @@ export function Review({
       if (seq === sequence.current) setError(message(e));
     }
   }
-  const op = useCommand(api, async (result) => {
+  const op = useCommand(api, async (result, submitted) => {
     setNote("");
     setChecks({});
     setSensitive("");
     setEdit(null);
     setDirty(false);
+    const action = (submitted.body as { action?: string }).action;
     setNotice(
-      result.status === "published"
-        ? `Published successfully${result.published_version ? " · version " + result.published_version : ""}. Eligible learners can receive this content through normal app requests.`
-        : result.status === "approved"
-          ? "Approved for the whole team. No additional reviewer approval is needed."
-          : result.status === "validation_failed"
-            ? "Submission needs corrections. Review the validation errors below."
-            : result.status === "pending"
-              ? "AI correction queued. It will return as a new draft for human review."
-              : "Saved successfully.",
+      action === "comment"
+        ? "Comment saved."
+        : action === "assign"
+          ? "Assignment saved."
+          : ["publish", "approve_and_publish", "attest"].includes(
+                action || "",
+              ) && result.status === "published"
+            ? `Published successfully${result.published_version ? " · version " + result.published_version : ""}. Eligible learners can receive this content through normal app requests.`
+            : action === "approved" && result.status === "approved"
+              ? "Approved for the whole team. No additional reviewer approval is needed."
+              : action === "submit" && result.status === "validation_failed"
+                ? "Submission needs corrections. Review the validation errors below."
+                : submitted.path.endsWith("/generation-requests") &&
+                    result.status === "pending"
+                  ? "AI correction queued. It will return as a new draft for human review."
+                  : "Saved successfully.",
     );
     await load();
     if (result.revision_id && result.revision_id !== id)

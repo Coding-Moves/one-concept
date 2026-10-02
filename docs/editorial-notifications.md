@@ -3,7 +3,8 @@
 Assigned reviewers receive batched links to lessons that need review. The queue
 remains the source of truth, including when email is disabled or unavailable.
 No email approves or publishes content. This is phase 6 of #263; deployment and
-production activation belong to #281. The Auth sender track (#171/#152, draft
+production activation belong to #281. The owner selected a direct production
+rollout; a separate staging environment is not required for this email feature. The Auth sender track (#171/#152, draft
 PR #187) remains separate and its HTML login/recovery templates are unchanged.
 
 ## No additional paid mail service
@@ -95,31 +96,48 @@ both versions; neither version contains an approval action or login token.
 No template needs to be pasted into Supabase: these notices are sent by the
 backend, separately from Supabase's existing Auth templates.
 
-## When to enable
+## Direct production rollout
 
-1. **Now:** prepare Google OAuth credentials and backend variables, leaving
-   `EDITORIAL_EMAIL_ENABLED=false` and `EDITORIAL_EMAIL_STAGING_VERIFIED=false`.
-   Merging this PR into `develop` does not activate production delivery.
-2. **Staging:** deploy matching API, worker and reviewer website with migration
-   0038 in the isolated staging database. Configure the test-recipient allowlist,
-   enable email there and complete the inbox/link checklist below.
-3. **Production:** release the backend changes through `develop` → `main`, with
-   ordered migrations applied and verified before the new code starts. Deploy
-   the reviewer website and confirm the existing reminders worker uses the
-   matching revision and OAuth settings. Only after staging acceptance and
-   durable sender authorization, set both email flags to `true` on the production
-   API and worker. Production activation remains tracked in #281.
+The owner explicitly chose to finish this PR without creating or testing in a
+staging environment. Automated PostgreSQL, mocked Gmail and browser tests remain
+part of the PR; live inbox delivery is an operational outcome and is not claimed
+by those tests. No staging attestation or staging-only runtime flag is required.
 
-A feature merge is safe with sending disabled; it is not evidence that Gmail
-credentials or inbox delivery work. No separate mobile APK update is needed for
-these reviewer emails.
+1. **Prepare now:** save Gmail OAuth credentials on the production API and
+   existing reminders worker. Keep `EDITORIAL_EMAIL_ENABLED=false` until the
+   matching software, schema and reviewer website are available. The previously
+   suggested `EDITORIAL_EMAIL_STAGING_VERIFIED` variable is obsolete and ignored;
+   an existing `false` value does not block sending after this PR is deployed.
+   It may be removed at your convenience; do not set it to claim testing occurred.
+2. **Release:** merge this feature PR into `develop`, then use the normal
+   `develop` → `main` release process. Apply all ordered migrations through
+   **0038** and verify the production schema before new backend code starts.
+   Deploy matching API/worker revisions and the reviewer website. No separate
+   mobile APK is needed for reviewer email.
+3. **Connect:** configure the exact HTTPS reviewer website origin in
+   `EDITORIAL_EMAIL_DASHBOARD_URL` and `ALLOWED_ORIGINS`. Follow the reviewer
+   website guide for Auth redirects, owner bootstrap, MFA and reviewer accounts.
+   Select each reviewer's timezone in Settings; it defaults to UTC.
+4. **Enable:** after Google authorization is durable (see below), set
+   `EDITORIAL_ENABLED=true` and `EDITORIAL_EMAIL_ENABLED=true` on the API and
+   reminders worker. Retain the existing 15-minute worker schedule. The owner
+   can now assign real review work; its outbox event waits five minutes before
+   the next worker run batches and sends it. No extra email service is needed.
+5. **Observe:** the owner Notifications page reports configuration and delivery
+   failures. `Accepted by Gmail` means provider acceptance, not proof of inbox
+   delivery; confirm receipt when the first real assignment is sent. Missing
+   configuration or a rejected token appears as a setup/failure status rather
+   than silently approving content. Disable `EDITORIAL_EMAIL_ENABLED` to stop.
+
+Merging into `develop` alone does not deploy production or switch on delivery.
+The email template is bundled with the backend and needs no Supabase setup.
 
 ## Owner setup — no payment, no shared passwords
 
 1. In Google Cloud Console, create/select a project **without linking billing**.
    Enable **Gmail API**. Stop if the console requires a purchase or card.
 2. Configure Google Auth Platform branding/audience for your own sender account.
-   For staging, add that account as a test user. Request only
+   While configuring in Testing, add that account as a test user. Request only
    `https://www.googleapis.com/auth/gmail.send`.
 3. Create a **Web application OAuth client**. For a one-time operator setup,
    add Google's official OAuth Playground redirect URI:
@@ -135,59 +153,59 @@ these reviewer emails.
    These OAuth values are different from the Supabase SMTP app password; leave
    Supabase Auth SMTP and existing templates unchanged.
 6. An external OAuth app left in **Testing** normally has refresh tokens that
-   expire after seven days for Gmail scopes. That is staging-only, not a durable
-   production setup. Before production, configure the appropriate production
-   publishing state and complete any verification Google requires. Do not bypass
+   expire after seven days for Gmail scopes. For durable production delivery,
+   configure the appropriate production publishing state and complete any
+   verification Google requires. Do not bypass
    Google's consent/verification rules. Reauthorize after moving out of testing;
    revoke unused setup tokens. If account policy blocks this, keep delivery off
    and the review queue available rather than purchasing a service.
 
-| Backend variable | Initial staging value |
+| Backend variable | Value / use |
 | --- | --- |
-| `EDITORIAL_EMAIL_ENABLED` | `false` until below setup is complete |
-| `EDITORIAL_EMAIL_STAGING_VERIFIED` | `false` |
+| `EDITORIAL_EMAIL_ENABLED` | `false` during setup; `true` after the rollout steps above |
 | `EDITORIAL_EMAIL_DASHBOARD_URL` | Exact HTTPS reviewer website origin; also listed in `ALLOWED_ORIGINS` |
 | `EDITORIAL_EMAIL_FROM` | The Gmail account that authorized OAuth |
 | `EDITORIAL_GMAIL_CLIENT_ID` | Your OAuth client's ID |
 | `EDITORIAL_GMAIL_CLIENT_SECRET` | Secret, backend only |
 | `EDITORIAL_GMAIL_REFRESH_TOKEN` | Secret, backend only |
-| `EDITORIAL_EMAIL_TEST_RECIPIENTS` | Comma-separated confirmed staging reviewer addresses |
+| `EDITORIAL_EMAIL_TEST_RECIPIENTS` | Required only outside production: comma-separated authorized test reviewer addresses |
 | `EDITORIAL_EMAIL_DAILY_CAP` | `40` (start smaller for testing); `0` prevents claims |
 
 Set the same delivery configuration on the API (status/retry checks) and existing
 `reminders` worker (delivery). Never prefix secrets with `VITE_` or `EXPO_PUBLIC_`.
-Non-production delivery requires the allowlist and never rewrites a real
-recipient to another mailbox. Use a separate staging database/Auth project as
-specified by #255; never point a staging worker at production. Only production
-uses all eligible assigned reviewers; production also requires the explicit
-staging-verification flag. Configuration-ready status is not delivery evidence.
+Production sends only to currently eligible assigned reviewers; it does not use
+`EDITORIAL_EMAIL_TEST_RECIPIENTS` as a recipient override. A receiver must have a
+confirmed, active editorial account, an approved name and review permission.
+Adding someone to Google's OAuth Test users does not create that reviewer account.
 
-## Staging acceptance / deployment handoff
+Optional future non-production environments require a test-recipient allowlist
+and a separate database/Auth project as specified by #255; never point a test
+worker at production. This isolation guidance is not a deployment prerequisite
+for the direct production path selected here. Configuration-ready status is not
+delivery evidence.
 
-These are real manual checks, not claimed completed by automated tests:
+## Deployment checklist
 
-- [ ] Apply **0038** to the isolated staging database using the normal migration
-  runbook, deploy API/worker from this PR and deploy the matching `admin/` build.
-  Keep sending disabled until sender/origin/recipient settings are complete.
-- [ ] Complete Gmail OAuth setup with billing unlinked; record provider/sender
-  verification evidence without credentials. Enable email only in staging.
-- [ ] Assign a staging lesson to an active, name-approved, confirmed reviewer.
-  After the five-minute collection window and a cron tick, verify an actual
-  inbox message, correct recipient, topic/count, timezone and deadline.
-- [ ] Open its link signed out: require login/MFA; then see the assigned revision.
-  Wrong/revoked accounts must not gain access. No approval occurs from the email.
-- [ ] In staging only, temporarily shorten the interval to one hour and verify
-  reminder behavior; restore 48/24/2. Approve/reassign while a batch is waiting
-  and verify suppression. Confirm overdue work remains in the owner queue.
-- [ ] Test an invalid/revoked OAuth token: sanitized failure appears; restore
-  credentials and queue a retry before attempt five. Confirm learner Expo
-  reminders still run normally.
-- [ ] Record acceptance in this PR/#279; production activation stays with #281.
+- [ ] Apply ordered production migrations through **0038**, then run read-only
+  schema verification before deploying the matching backend code. Update
+  `migrations/applied.txt` only after actual production application is verified.
+- [ ] Deploy the reviewer website over HTTPS, configure its API/Auth values,
+  exact origins and Auth redirect URL, and set up the owner/reviewer accounts.
+- [ ] Complete Gmail OAuth authorization with billing unlinked, using the sender
+  account and only `gmail.send`. Replace any credentials exposed in screenshots.
+- [ ] Move the Google OAuth application out of Testing as appropriate, complete
+  any required Google verification, then obtain a fresh refresh token. Tokens
+  issued while Testing are unsuitable for unattended long-term delivery.
+- [ ] Store the current client ID, secret, refresh token and sender address on
+  both API and reminders. Configure the exact dashboard origin and daily cap.
+- [ ] Enable the editorial and email switches after those prerequisites. Confirm
+  the deployed reminders worker runs every 15 minutes with the same revision.
+- [ ] Record first real delivery/failure evidence when available. No staging
+  environment or pre-merge staging mailbox test is required by this rollout.
 
-Production needs the ordered migration applied and read-only schema verification
-before deploying code expecting these tables. Do not edit `migrations/applied.txt`
-until actual production application is verified. No mobile/native change, APK,
-app reinstall or learner release is needed for this reviewer-only feature.
+The 48-hour deadline, 24-hour reminder interval and maximum two reminders remain
+unchanged. Owner retry never resets the five-attempt budget. Automated tests use
+fake providers; no real emails or production mutations are part of PR CI.
 
 Rollback: set `EDITORIAL_EMAIL_ENABLED=false` on API and worker. The queue and
 review actions remain usable; keep the additive migration/evidence. Do not

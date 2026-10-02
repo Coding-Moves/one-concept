@@ -56,7 +56,7 @@ in `app/templates/editorial_review.html` alongside a plain-text fallback.
 `api/v1/editorial_notifications.py` exposes owner delivery/policy
 controls and the reviewer timezone. `admin/src/Notifications.tsx` shows overdue
 work and safe retries. See [editorial-notifications.md](editorial-notifications.md)
-for migration 0038, free sender setup and staging acceptance.
+for migration 0038, free sender setup and the direct production email rollout.
 
 `editorial_generation.py` owns #277 authenticated durable revision requests,
 claim fencing, provider orchestration and private draft completion. Migration

@@ -7,6 +7,31 @@ claims as completed work.
 
 ## Current status
 
+### PR #312 — direct production email rollout
+
+- Owner explicitly declined staging creation/testing and requested the complete
+  email implementation in the same PR. No staging attestation is required.
+- `5632356` removes the staging-only production gate and obsolete settings/UI
+  status. Production still requires explicit editorial/email enable switches,
+  valid sender configuration, exact HTTPS dashboard origin and current reviewer
+  eligibility. Existing `EDITORIAL_EMAIL_STAGING_VERIFIED=false` is ignored.
+- The new production regression failed against the old gate, then passed after
+  the change. Final focused PostgreSQL/provider/API/template suite: **17 passed,
+  no skips**. Admin typecheck and **8 unit tests** passed; F/E9 lint and diff
+  checks passed. Final full CI follows this push; prior head had all three gates
+  green, including 496 backend tests and 23 browser scenarios.
+- This documentation commit replaces mandatory staging instructions with the
+  direct production runbook. HTML/text templates, caps, retries and 48/24/2
+  policy remain implemented. No schema or migration ledger changes were needed.
+- Owner reports fresh Gmail credentials stored on API and reminders with sending
+  disabled; live settings were not independently inspected. Remaining activation
+  inputs: durable Google OAuth authorization (Testing tokens expire in seven
+  days), deployed reviewer HTTPS origin/account setup, ordered migration 0038,
+  and matching production API/worker release before enabling email. Website URL
+  requested; no response yet. No actual email delivery is claimed.
+- No merge, live send, paid service, staging infrastructure or production setting
+  change was performed. Preserve unrelated local demo work-log edits unstaged.
+
 ### PR #312 — follow-up review fixes validated
 
 - Reviewed SQL/outbox lifecycle, provider delivery, authorization, owner controls,

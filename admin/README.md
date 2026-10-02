@@ -157,5 +157,5 @@ Owners can open **Notifications** to see overdue assignments, delivery failures,
 review policy and bounded retries. Reviewers choose their email deadline timezone
 in **Settings**. Delivery uses the existing backend worker and the sender's Gmail
 HTTPS API; no SMTP upgrade or new paid mail service is required. Follow the
-[notification setup and staging checklist](../docs/editorial-notifications.md)
+[notification setup and direct production rollout](../docs/editorial-notifications.md)
 before enabling email. Supabase Auth email templates remain separate.

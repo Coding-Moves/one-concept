@@ -7,6 +7,29 @@ claims as completed work.
 
 ## Current status
 
+### PR #312 — follow-up review fixes validated
+
+- Reviewed SQL/outbox lifecycle, provider delivery, authorization, owner controls,
+  tests and deployment documentation in the same PR. Initial head `8556ea7`
+  passed all three GitHub quality gates.
+- `e76a485` fixes a reproduced batching bug: an old initial notice could suppress
+  a newly created reminder before its collection window. Select the newest
+  pending ordinal first and suppress only older events in that same cycle.
+- `edbc139` adds a branded, responsive HTML email with a plain-text fallback.
+  Escape content and permit action buttons only for exact workspace revision
+  URLs; no external assets or tracking. Existing Supabase Auth templates remain
+  unchanged. The backend image already copies the template with `app/`.
+- Final focused PostgreSQL/provider/API/template suite: **17 passed, no skips**.
+  F/E9 lint and diff checks passed. Rendered and inspected the two-lesson email
+  at desktop and 390px phone widths; no horizontal overflow. Gmail client/inbox
+  rendering remains part of real staging acceptance, not claimed by local tests.
+- This documentation commit records the activation order and template paths.
+  Final-head hosted CI follows the push. Merge readiness is for disabled sending;
+  OAuth authorization, isolated staging inbox/login/MFA acceptance and production
+  activation after the release remain manual. No production migration, live email,
+  secret/configuration change, merge or issue closure performed. Prior unrelated
+  local demo work-log edits remain unstaged.
+
 ### #279 — reviewer notifications: PR #312 open for review
 
 - [PR #312](https://github.com/Coding-Moves/one-concept/pull/312) targets
@@ -36,7 +59,6 @@ claims as completed work.
   Production activation remains #281. GitHub CI is pending at handoff; local
   checks are the evidence above. Prior local-demo work-log edits remain unstaged
   and are not included in this PR.
-
 
 ### PR #311 follow-up review — fixes validated
 

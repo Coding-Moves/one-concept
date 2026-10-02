@@ -82,6 +82,38 @@ A successful API response means acceptance, not verified inbox delivery.
   no automatic redirects, send-only OAuth and backend-only credentials. Links
   contain revision IDs, never credentials, and require normal login plus MFA.
 
+## Email template
+
+Reviewer notices include both a branded HTML email and a plain-text fallback.
+The reusable template is
+[`backend/app/templates/editorial_review.html`](../backend/app/templates/editorial_review.html);
+[`editorial_email_template.py`](../backend/app/services/editorial_email_template.py)
+escapes every content value and creates buttons only for exact configured
+workspace revision links. It uses no remote images, tracking pixels or scripts.
+The frozen batch supplies identical topics and timezone-adjusted deadlines to
+both versions; neither version contains an approval action or login token.
+No template needs to be pasted into Supabase: these notices are sent by the
+backend, separately from Supabase's existing Auth templates.
+
+## When to enable
+
+1. **Now:** prepare Google OAuth credentials and backend variables, leaving
+   `EDITORIAL_EMAIL_ENABLED=false` and `EDITORIAL_EMAIL_STAGING_VERIFIED=false`.
+   Merging this PR into `develop` does not activate production delivery.
+2. **Staging:** deploy matching API, worker and reviewer website with migration
+   0038 in the isolated staging database. Configure the test-recipient allowlist,
+   enable email there and complete the inbox/link checklist below.
+3. **Production:** release the backend changes through `develop` → `main`, with
+   ordered migrations applied and verified before the new code starts. Deploy
+   the reviewer website and confirm the existing reminders worker uses the
+   matching revision and OAuth settings. Only after staging acceptance and
+   durable sender authorization, set both email flags to `true` on the production
+   API and worker. Production activation remains tracked in #281.
+
+A feature merge is safe with sending disabled; it is not evidence that Gmail
+credentials or inbox delivery work. No separate mobile APK update is needed for
+these reviewer emails.
+
 ## Owner setup — no payment, no shared passwords
 
 1. In Google Cloud Console, create/select a project **without linking billing**.

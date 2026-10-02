@@ -51,7 +51,9 @@ and rollout. The `admin/` website (#278) consumes these APIs; mobile attribution
 and owner reporting (#297) remain separate children of #263.
 `services/editorial_notifications.py` drains the private #279 outbox through the
 existing reminders worker; `editorial_mail.py` uses Gmail HTTPS/OAuth (no Railway
-SMTP upgrade). `api/v1/editorial_notifications.py` exposes owner delivery/policy
+SMTP upgrade). `editorial_email_template.py` renders the escaped HTML template
+in `app/templates/editorial_review.html` alongside a plain-text fallback.
+`api/v1/editorial_notifications.py` exposes owner delivery/policy
 controls and the reviewer timezone. `admin/src/Notifications.tsx` shows overdue
 work and safe retries. See [editorial-notifications.md](editorial-notifications.md)
 for migration 0038, free sender setup and staging acceptance.

@@ -56,7 +56,10 @@ export function App({
       setError("");
     } catch (e) {
       if (e instanceof ApiError && e.status === 499) return;
-      setMe(null);
+      // Keep unsent work mounted through temporary outages. Denials are
+      // handled by onDenied, which clears private state and fences requests.
+      if (!(e instanceof ApiError && (e.status === 0 || e.status >= 500)))
+        setMe(null);
       setError(message(e));
     }
   }, [api]);
@@ -77,7 +80,7 @@ export function App({
       setReady(true);
       if (changed) {
         setMe(null);
-        if (event !== "INITIAL_SESSION") setError("");
+        if (event !== "INITIAL_SESSION" && event !== "SIGNED_OUT") setError("");
         dirty.current = false;
         setEpoch((n) => n + 1);
       }
@@ -164,6 +167,7 @@ export function App({
   async function signOut() {
     if (dirty.current && !confirm("Sign out and discard unsent feedback?"))
       return;
+    setError("");
     api.setToken(null, true);
     sessionRef.current = null;
     setMe(null);
@@ -273,7 +277,16 @@ export function App({
           </div>
         </header>
         <main id="main" key={epoch}>
-          {error ? (
+          {error && me && (
+            <Notice error>
+              Account access could not be refreshed. Your unsent work is
+              preserved. {error}{" "}
+              <button onClick={() => void reloadMe()}>
+                Retry account check
+              </button>
+            </Notice>
+          )}
+          {error && !me ? (
             <div className="card narrow">
               <h1>Workspace unavailable</h1>
               <Notice error>{error}</Notice>

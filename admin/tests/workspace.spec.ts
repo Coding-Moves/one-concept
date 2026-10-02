@@ -168,6 +168,9 @@ test("review-only permissions, rejection and session expiry", async ({
     page.getByRole("button", { name: "Sign in", exact: true }),
   ).toBeVisible();
   await expect(
+    page.getByText("Your session expired. Sign in again."),
+  ).toBeVisible();
+  await expect(
     page.getByText("Database Migrations", { exact: true }),
   ).toHaveCount(0);
 });

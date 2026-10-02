@@ -57,27 +57,45 @@ export function Empty({
 }
 export const message = (e: unknown) =>
   e instanceof Error ? e.message : "Something went wrong. Please try again.";
-export function useResource<T>(api: Api, path: string, refresh = 0) {
-  const [state, set] = useState<{ data?: T; error?: string; loading: boolean }>(
-    { loading: true },
-  );
+export function useResource<T>(
+  api: Api,
+  path: string,
+  refresh = 0,
+): { data?: T; error?: string; loading: boolean } {
+  const [state, set] = useState<{
+    data?: T;
+    error?: string;
+    loading: boolean;
+    path: string;
+    api: Api;
+  }>({ loading: true, path, api });
   useEffect(() => {
     let active = true;
-    set({ loading: true });
+    set((previous) =>
+      previous.path === path &&
+      previous.api === api &&
+      previous.data !== undefined
+        ? { ...previous, error: undefined }
+        : { loading: true, path, api },
+    );
     api
       .request<T>(path)
       .then((data) => {
-        if (active) set({ data, loading: false });
+        if (active) set({ data, loading: false, path, api });
       })
       .catch((e) => {
         if (active && !(e instanceof ApiError && e.status === 499))
-          set({ error: message(e), loading: false });
+          set((previous) => ({
+            ...previous,
+            error: message(e),
+            loading: false,
+          }));
       });
     return () => {
       active = false;
     };
   }, [api, path, refresh]);
-  return state;
+  return state.path === path && state.api === api ? state : { loading: true };
 }
 export async function allPages<T>(api: Api, path: string): Promise<T[]> {
   const result: T[] = [];

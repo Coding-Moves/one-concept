@@ -7,6 +7,35 @@ claims as completed work.
 
 ## Current status
 
+### PR #309 follow-up code review — fixed and validated
+
+- Reviewed `e6440f0` in [PR #309](https://github.com/Coding-Moves/one-concept/pull/309)
+  against #276: request/permission boundaries, exact revision/state locks,
+  idempotency, private evidence, operator paths, inventory and learner eligibility.
+- `13ff516` fixes two P2 demand defects: retired subtopic inventory inflated the
+  worker target, and the response/receipt/audit could report a smaller target
+  than the upsert retained. Count active inventory and return the actual saved
+  target. Four regression combinations include pre-existing demand and replay.
+- `f0b5aca` fixes a P2 publication gap: published prerequisites under retired
+  topics/subtopics were treated as available. Shared preflight/final validation
+  now rejects both cases, with atomic rollback of approval/receipt verified.
+- Baseline regressions reproduced wrong targets (3 instead of 2; reported 2/3
+  when 10 was saved) and two HTTP 200 publications that should have been denied.
+  The initial parameterized supply fixture reused a title/objective and hit
+  import deduplication; unique fixtures now exercise the intended behavior.
+- `1a7ea86` cleans up the new prerequisite fixture's active topic so the shared
+  disposable catalog does not affect later generation/selection tests. Those
+  four prerequisite/isolation checks passed together after cleanup. The first
+  broad run exposed those two fixture interactions and ended before its summary;
+  it is not counted as a completed validation.
+- **32 focused PostgreSQL tests passed, no skips** after fixes. The final full
+  PostgreSQL 16 suite passed **438 tests, no skips**, in 167 seconds. Exact-head
+  hosted CI and the review handoff are recorded in PR #309. Backend F/E9 lint, changed
+  documentation links and diff whitespace checks passed.
+- No additional migration/manual production task, release, live provider call,
+  account invitation or PR merge. Existing staged activation remains #281.
+  Documentation commit: "Document PR 309 review findings and regression results".
+
 ### #276 editorial review and publication APIs — PR #309 implemented and validated
 
 - [PR #309](https://github.com/Coding-Moves/one-concept/pull/309) targets `develop`

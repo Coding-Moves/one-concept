@@ -103,8 +103,8 @@ routes work but does not grant permissions or give an exclusive publishing lock.
 A successful revision mutation returns its ID, state, new token and optional
 `published_version`. Inspect the state before reporting success. Publication
 rechecks the exact body, source version, active taxonomy, graph, published
-prerequisites, duplicates and approval. Failed atomic publication leaves no
-partial approval, publication or successful receipt.
+prerequisites in active topics/subtopics, duplicates and approval. Failed atomic
+publication leaves no partial approval, publication or successful receipt.
 
 ## Stale tabs, retries and errors
 
@@ -152,8 +152,10 @@ reconnect. Mobile attribution rendering remains #280.
 POST `/generation-requests` with `request_id`, `note`, `topic_id` and integer
 `count` (1–10). The generation kill switch must be enabled, the topic active and
 planned pending curriculum available. Demand is bounded by pending work and the
-configured batch size, written to `content_supply_targets`, and audited. Repeated
-requests before inventory changes coalesce rather than accumulating unlimited
+configured batch size, written to `content_supply_targets`, and audited. Inventory
+excludes retired subtopics, matching the worker. The response, receipt and audit
+record report the actual saved target, including larger pre-existing demand.
+Repeated requests before inventory changes coalesce rather than accumulating unlimited
 work. The 202 result says `demand_recorded`, never Generated or Published.
 
 Existing scheduled workers consume the demand with their normal claims, retry

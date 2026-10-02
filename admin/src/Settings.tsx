@@ -86,6 +86,7 @@ export function Settings({
             </button>
           </form>
         </section>
+        <Timezone key={me.member.version} api={api} me={me} reloadMe={reloadMe} />
         <section className="card">
           <h2>Workspace details</h2>
           <dl>
@@ -112,4 +113,23 @@ export function Settings({
       </div>
     </>
   );
+}
+
+function Timezone({ api, me, reloadMe }: { api: Api; me: Me; reloadMe: () => Promise<void> }) {
+  const [zone, setZone] = useState(me.member.notification_timezone || "UTC");
+  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  async function save(e: React.FormEvent) {
+    e.preventDefault(); setBusy(true); setError("");
+    try {
+      await api.request("/me/notification-timezone", "PATCH", { expected_version: me.member.version, timezone: zone });
+      await reloadMe();
+    } catch (e) { setError(message(e)); } finally { setBusy(false); }
+  }
+  return <section className="card"><h2>Email deadline timezone</h2><p>Email deadlines use this timezone. Previously queued emails keep their original times.</p>
+    {error && <Notice error>{error}</Notice>}
+    <form onSubmit={save}><Field title="IANA timezone"><input value={zone} maxLength={80} required placeholder="Asia/Karachi" onChange={e => setZone(e.target.value)} /></Field>
+      <button type="button" onClick={() => setZone(Intl.DateTimeFormat().resolvedOptions().timeZone)}>Use device timezone</button>
+      <button disabled={busy}>Save timezone</button>
+    </form>
+  </section>;
 }

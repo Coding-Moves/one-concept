@@ -651,6 +651,7 @@ export function Review({
                       ))}
                   </select>
                 </Field>
+                <p>Leave the date empty to use the default review deadline when assigning a reviewer.</p>
                 <Field title="Review due (your local time)">
                   <input
                     type="datetime-local"

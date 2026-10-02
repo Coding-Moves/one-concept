@@ -91,3 +91,88 @@ async def test_demand_ignores_retired_inventory_and_reports_saved_target(
         f"{content.ROOT}/generation-requests", headers=api.headers(), json=payload
     )
     assert again.json() == response.json()
+
+
+async def test_full_review_queue_blocks_demand_and_retirement_releases_capacity(
+    api, session, draft
+):
+    slug, cid = draft
+    topic = await session.scalar(
+        text("select topic_id from concepts where id=:id"), {"id": cid}
+    )
+    body = (await content.detail(api, await content.rid_for(session, cid)))["body"]
+    await import_lessons(
+        session,
+        [
+            PlannedLesson(
+                slug="next-" + slug,
+                topic_slug=slug,
+                subtopic_slug="foundations",
+                title="Next lesson " + slug,
+                curriculum=body["curriculum"]
+                | {"objective": "Explain the next planned lesson " + slug},
+            )
+        ],
+    )
+    await session.commit()
+    api.settings.generation_enabled = True
+    api.settings.content_review_backlog_limit = 1
+    payload = dict(
+        request_id=str(uuid4()), topic_id=str(topic), count=10, note=content.NOTE
+    )
+    response = await api.client.post(
+        f"{content.ROOT}/generation-requests", headers=api.headers(), json=payload
+    )
+    assert response.status_code == 409 and "backlog is full" in response.text
+    status = (
+        await api.client.get(
+            f"{content.ROOT}/generation-supply/{topic}", headers=api.headers()
+        )
+    ).json()
+    assert status["review_blocked"] and status["drafts"] == 1 and status["pending"] == 1
+    concept = (
+        await api.client.get(f"{content.ROOT}/concepts/{cid}", headers=api.headers())
+    ).json()
+    retired = await api.client.post(
+        f"{content.ROOT}/concepts/{cid}/actions",
+        headers=api.headers(),
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": concept["token"],
+            "action": "retire",
+            "note": content.NOTE,
+        },
+    )
+    assert retired.status_code == 200, retired.text
+    response = await api.client.post(
+        f"{content.ROOT}/generation-requests", headers=api.headers(), json=payload
+    )
+    assert response.status_code == 202 and response.json()["target"] == 1
+
+
+async def test_empty_curriculum_surfaces_planning_without_inventing_work(
+    api, session, draft
+):
+    cid = draft[1]
+    topic = await session.scalar(
+        text("select topic_id from concepts where id=:id"), {"id": cid}
+    )
+    await session.commit()
+    api.settings.generation_enabled = True
+    response = await api.client.post(
+        f"{content.ROOT}/generation-requests",
+        headers=api.headers(),
+        json={
+            "request_id": str(uuid4()),
+            "topic_id": str(topic),
+            "count": 5,
+            "note": content.NOTE,
+        },
+    )
+    assert response.status_code == 409 and "plan lessons" in response.text
+    status = (
+        await api.client.get(
+            f"{content.ROOT}/generation-supply/{topic}", headers=api.headers()
+        )
+    ).json()
+    assert status["planning_required"] and status["pending"] == 0

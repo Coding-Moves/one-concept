@@ -292,8 +292,8 @@ async def concept_action(db, actor, settings, cid, command):
             command.quality,
         )
     else:
-        if row["status"] != "published":
-            raise ValueError("Only published content can be retired here")
+        if row["status"] not in ("published", "draft"):
+            raise ValueError("Only published content or a draft can be retired here")
         await db.execute(
             text("update concepts set status='archived' where id=:id"), {"id": cid}
         )

@@ -41,7 +41,7 @@ _TODO = text("""
        and s.is_active
        and coalesce(c.prompt_version, '') <> :pv
        and not exists (select 1 from public.concept_revisions r where r.concept_id=c.id
-         and r.status in ('draft','generating'))
+         and r.status in ('draft','generating','validation_failed','pending_review','changes_requested','approved'))
      order by c.created_at
 """)
 
@@ -52,13 +52,12 @@ _CLAIM = text("""
       and exists(select 1 from public.topics t where t.id=c.topic_id and t.is_active)
       and exists(select 1 from public.subtopics s where s.id=c.subtopic_id and s.is_active)
       and not exists(select 1 from public.concept_revisions r where r.concept_id=c.id
-        and r.status in ('draft','generating')) returning id
+        and r.status in ('draft','generating','validation_failed','pending_review','changes_requested','approved')) returning id
 """)
 
 _UPDATE = text("""
     update public.concept_revisions r set body=jsonb_build_object('title',c.title,
       'summary',cast(:summary as text),'example',cast(:example as text),
-      'flashcard',cast(:flashcard as jsonb),
       'subtopic_slug',cast(:subtopic_slug as text),
       'curriculum',c.curriculum,'model',cast(:model as text),'prompt_version',cast(:pv as text),
       'learning_package',cast(:learning_package as jsonb)),
@@ -181,7 +180,6 @@ async def main() -> None:
                             "revision": revision,
                             "summary": result.summary,
                             "example": result.example,
-                            "flashcard": result.learning_package.flashcard.model_dump_json(),
                             "subtopic_slug": row.subtopic_slug,
                             "model": result.model,
                             "pv": result.prompt_version,

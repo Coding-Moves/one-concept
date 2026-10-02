@@ -33,7 +33,8 @@
     "0031_weekly_quiz_notifications.sql": "63f5323681092ee1790a16c4e6f7120172f7f9eb94bd125082424297cbc6125a",
     "0032_editorial_accounts.sql": "3cb659dcc3c67150dcfa857882d105bedc55ace7a1ba00aef41d169a63f6d400",
     "0033_editorial_provenance.sql": "766fba13569238cd61132bbe645f02f12737d379405757204697aae0e3f26076",
-    "0034_editorial_workflow.sql": "8fb7506328b2e29c2d7550309587269897d83e4af9679b9350408e0728092e07"
+    "0034_editorial_workflow.sql": "8fb7506328b2e29c2d7550309587269897d83e4af9679b9350408e0728092e07",
+    "0035_editorial_generation.sql": "596c08467bfd22bbaf13d9f4770618b716c8222848fe11775a2d5258b7d13d18"
   },
   "schema": {
     "columns": {
@@ -108,6 +109,12 @@
         "identity": "",
         "not_null": true,
         "type": "smallint"
+      },
+      "concept_backlog.claim_token": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
       },
       "concept_backlog.claimed_at": {
         "default": null,
@@ -744,6 +751,120 @@
         "identity": "",
         "not_null": true,
         "type": "uuid"
+      },
+      "editorial_generation_jobs.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_generation_jobs.available_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_generation_jobs.claim_token": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.claimed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_generation_jobs.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.created_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_generation_jobs.failure_code": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_generation_jobs.feedback": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_generation_jobs.feedback_event_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.request_event_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.requested_by": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.result_revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.source_body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_generation_jobs.source_revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.source_token": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_generation_jobs.status": {
+        "default": "'pending'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_generation_jobs.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.updated_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
       },
       "editorial_legacy_versions.concept_id": {
         "default": null,
@@ -1839,6 +1960,62 @@
         "definition": "PRIMARY KEY (id)",
         "validated": true
       },
+      "editorial_generation_jobs.editorial_generation_jobs_attempts_check": {
+        "definition": "CHECK (((attempts >= 0) AND (attempts <= 3)))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_check": {
+        "definition": "CHECK (((status = 'generating'::text) = ((claim_token IS NOT NULL) AND (claimed_at IS NOT NULL))))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_check1": {
+        "definition": "CHECK (((status = 'ready_for_review'::text) = (result_revision_id IS NOT NULL)))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_failure_code_check": {
+        "definition": "CHECK ((failure_code = ANY (ARRAY['provider_error'::text, 'rate_limited'::text, 'invalid_output'::text, 'stale_claim'::text, 'requester_inactive'::text])))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_feedback_event_id_fkey": {
+        "definition": "FOREIGN KEY (feedback_event_id) REFERENCES public.editorial_revision_events(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_request_event_id_fkey": {
+        "definition": "FOREIGN KEY (request_event_id) REFERENCES public.editorial_workflow_events(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_result_revision_id_fkey": {
+        "definition": "FOREIGN KEY (result_revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_result_revision_id_key": {
+        "definition": "UNIQUE (result_revision_id)",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_source_revision_id_fkey": {
+        "definition": "FOREIGN KEY (source_revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_source_revision_id_key": {
+        "definition": "UNIQUE (source_revision_id)",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'generating'::text, 'failed'::text, 'ready_for_review'::text, 'cancelled'::text, 'superseded'::text])))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
       "editorial_legacy_versions.editorial_legacy_versions_concept_id_fkey": {
         "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
         "validated": true
@@ -2239,6 +2416,12 @@
       "prevent_editorial_evidence_mutation": {
         "definition": "CREATE OR REPLACE FUNCTION public.prevent_editorial_evidence_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  raise exception 'Editorial evidence is append-only';\nend $function$\n"
       },
+      "protect_editorial_job_input": {
+        "definition": "CREATE OR REPLACE FUNCTION public.protect_editorial_job_input()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ begin\n  if TG_OP='DELETE' then raise exception 'Editorial generation evidence cannot be deleted'; end if;\n  if (to_jsonb(new)-array['status','attempts','claim_token','claimed_at','available_at','result_revision_id','failure_code','updated_at'])\n     is distinct from\n     (to_jsonb(old)-array['status','attempts','claim_token','claimed_at','available_at','result_revision_id','failure_code','updated_at'])\n     or (old.result_revision_id is not null and new.result_revision_id is distinct from old.result_revision_id) then\n    raise exception 'Editorial generation inputs and results are immutable';\n  end if;\n  return new;\nend $function$\n"
+      },
+      "protect_generated_revision_body": {
+        "definition": "CREATE OR REPLACE FUNCTION public.protect_generated_revision_body()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ begin\n  if (new.body,new.base_version,new.concept_id) is distinct from (old.body,old.base_version,old.concept_id)\n    and exists(select 1 from public.editorial_generation_jobs\n      where source_revision_id=old.id or result_revision_id=old.id) then\n    raise exception 'Generated revision evidence is immutable; stage a new revision';\n  end if;\n  return new;\nend $function$\n"
+      },
       "protect_reviewed_revision_body": {
         "definition": "CREATE OR REPLACE FUNCTION public.protect_reviewed_revision_body()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  if (new.body,new.concept_id,new.base_version) is distinct from\n     (old.body,old.concept_id,old.base_version)\n     and exists(select 1 from public.editorial_revision_events where revision_id=old.id) then\n    raise exception 'Reviewed revisions are immutable; create a new revision';\n  end if;\n  return new;\nend $function$\n"
       },
@@ -2464,6 +2647,31 @@
       },
       "editorial_account_events_subject": {
         "definition": "CREATE INDEX editorial_account_events_subject ON public.editorial_account_events USING btree (subject_id, id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_active_concept_idx": {
+        "definition": "CREATE UNIQUE INDEX editorial_generation_active_concept_idx ON public.editorial_generation_jobs USING btree (concept_id) WHERE (status = ANY (ARRAY['pending'::text, 'generating'::text]))",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_jobs_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_generation_jobs_pkey ON public.editorial_generation_jobs USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_jobs_result_revision_id_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_generation_jobs_result_revision_id_key ON public.editorial_generation_jobs USING btree (result_revision_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_jobs_source_revision_id_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_generation_jobs_source_revision_id_key ON public.editorial_generation_jobs USING btree (source_revision_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_pending_idx": {
+        "definition": "CREATE INDEX editorial_generation_pending_idx ON public.editorial_generation_jobs USING btree (available_at, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'generating'::text]))",
         "ready": true,
         "valid": true
       },
@@ -2902,6 +3110,9 @@
       "editorial_account_events": {
         "rls": true
       },
+      "editorial_generation_jobs": {
+        "rls": true
+      },
       "editorial_legacy_versions": {
         "rls": true
       },
@@ -2986,12 +3197,20 @@
         "definition": "CREATE TRIGGER concept_interactions_touch_updated_at BEFORE UPDATE ON public.concept_interactions FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
         "enabled": "O"
       },
+      "public.concept_revisions.generated_revision_body_immutable": {
+        "definition": "CREATE TRIGGER generated_revision_body_immutable BEFORE UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.protect_generated_revision_body()",
+        "enabled": "O"
+      },
       "public.concept_revisions.reviewed_revision_body_immutable": {
         "definition": "CREATE TRIGGER reviewed_revision_body_immutable BEFORE UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.protect_reviewed_revision_body()",
         "enabled": "O"
       },
       "public.concepts.test_assign_concept_subtopic": {
         "definition": "CREATE TRIGGER test_assign_concept_subtopic BEFORE INSERT ON public.concepts FOR EACH ROW EXECUTE FUNCTION public.test_assign_core_subtopic()",
+        "enabled": "O"
+      },
+      "public.editorial_generation_jobs.editorial_generation_inputs_immutable": {
+        "definition": "CREATE TRIGGER editorial_generation_inputs_immutable BEFORE DELETE OR UPDATE ON public.editorial_generation_jobs FOR EACH ROW EXECUTE FUNCTION public.protect_editorial_job_input()",
         "enabled": "O"
       },
       "public.editorial_legacy_versions.editorial_legacy_immutable": {

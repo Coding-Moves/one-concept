@@ -25,6 +25,7 @@ async def test_migrations_produce_reviewed_schema_contract(database):
 
 
 @pytest.mark.parametrize("damage, expected", [
+    ("alter table public.editorial_generation_jobs disable row level security", "tables: editorial_generation_jobs"),
     ("alter table public.editorial_memberships disable row level security", "tables: editorial_memberships"),
     ("create policy leaked_editorial_accounts on public.editorial_memberships for select using (true)", "Unexpected policy:"),
     ("alter table public.concept_backlog drop column claimed_at", "columns: concept_backlog.claimed_at"),

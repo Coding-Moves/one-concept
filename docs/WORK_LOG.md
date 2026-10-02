@@ -7,6 +7,18 @@ claims as completed work.
 
 ## Current status
 
+### #277 bounded draft replenishment and AI revisions — in progress
+
+- Step 4/9 of #263, based on merged #309 (`5de7acf`), on
+  `codex/277-editorial-generation`. Scope: bounded private draft capacity,
+  authenticated queued revisions, durable claims/cancellation, shared provider
+  limits, existing scheduled worker integration and operator documentation.
+- Intended focused commits: private job schema; replenishment/claim safeguards;
+  revision commands and worker with regressions; HTTP/status integration;
+  runbook and validation handoff. No automatic publication or new scheduler.
+- Validation will use disposable PostgreSQL and mocked providers. No production
+  migration, paid service, live Gemini request, release or merge is authorized.
+
 ### PR #309 follow-up code review — fixed and validated
 
 - Reviewed `e6440f0` in [PR #309](https://github.com/Coding-Moves/one-concept/pull/309)

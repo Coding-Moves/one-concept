@@ -7,17 +7,38 @@ claims as completed work.
 
 ## Current status
 
-### #277 bounded draft replenishment and AI revisions — in progress
+### #277 bounded draft replenishment and AI revisions — implemented and validated
 
 - Step 4/9 of #263, based on merged #309 (`5de7acf`), on
-  `codex/277-editorial-generation`. Scope: bounded private draft capacity,
-  authenticated queued revisions, durable claims/cancellation, shared provider
-  limits, existing scheduled worker integration and operator documentation.
-- Intended focused commits: private job schema; replenishment/claim safeguards;
-  revision commands and worker with regressions; HTTP/status integration;
-  runbook and validation handoff. No automatic publication or new scheduler.
-- Validation will use disposable PostgreSQL and mocked providers. No production
-  migration, paid service, live Gemini request, release or merge is authorized.
+  `codex/277-editorial-generation`, targeting `develop`; closes only #277.
+- `f66b991`: private durable job schema/immutable evidence and fenced backlog
+  claims. `ff86bfd`: shared human review capacity, active supply and concurrency.
+  `cefe332`: authenticated exact-source revision requests, safe status/cancel APIs,
+  three-attempt retry handling, current-authority checks and immutable new drafts.
+  `8178bda`: explicit draft retirement frees capacity without removing evidence.
+  `a9a1dd8`: existing scheduled worker integration and aggregate job monitoring.
+  Follow-up "Exclude spent curriculum and full review queues from refill work"
+  fixes eligibility/reporting found in the final code review.
+- Original bodies, feedback and decisions remain linked; no approval is inherited.
+  New/manual revisions, cancellation, retirement, revocation and reclaimed tokens
+  fence late provider results. Quota and disabled generation never auto-publish.
+  No new scheduler/provider; dashboard/email/production activation remain later
+  #263 steps. See [editorial-generation.md](editorial-generation.md).
+- Local PostgreSQL 16: **16 schema checks**, **34 focused tests**, then the full
+  backend suite **466 passed, no skips** (360 seconds). After the final two small
+  eligibility/reporting fixes, **39 focused regressions passed, no skips** (40
+  seconds). All provider calls were mocked. Backend F/E9 lint, documentation
+  local links and diff whitespace checks passed. Hosted exact-head results will
+  be recorded in the PR handoff.
+- Initial schema invocation used the wrong directory and failed collection; it
+  was rerun correctly. Early focused runs exposed one stale-claim fixture that
+  selected a different title and whitespace normalization of the saved AI source.
+  The fixture now reclaims the intended title and jobs preserve the exact body;
+  final tests above pass. No hidden/skipped database validation.
+- No immediate manual production work. Staging needs migration 0035 after 0034,
+  compatible API/worker images, shared capacity settings and identity/MFA setup.
+  Production activation remains #281; the applied ledger was not changed. No
+  production SQL, paid purchase, live Gemini call, release or merge performed.
 
 ### PR #309 follow-up code review — fixed and validated
 

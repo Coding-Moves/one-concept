@@ -7,16 +7,35 @@ claims as completed work.
 
 ## Current status
 
-### PR #311 follow-up review — in progress
+### PR #311 follow-up review — fixes validated
 
-- Review exact head `3541cca` across backend contracts, Auth/session boundaries,
-  review decisions, correction jobs, browser usability and staging instructions.
-- Confirmed candidate defects: SDK QR data URI encoded twice, unsupported submit
-  transitions, approval enabled during edits, stale correction status on reload,
-  misleading publication success after comments, and transient refreshes losing
-  feedback/focus. Reproduce before fixing, then commit focused corrections here.
-- No merge, production operation, new feature scope or migration-ledger change.
-
+- Reviewed head `3541cca` across backend contracts, authentication, decisions,
+  corrections, shared reviewer concurrency, GUI/HCI and deployment boundaries.
+- `8a8d17d`: render the Supabase SDK's QR data URI directly; wait for existing
+  authenticators before permitting enrollment. `e5e4e05`: block approval/legacy
+  attestation during manual edits, freeze pending draft edits, and offer submit
+  only for drafts, matching the backend's immutable correction workflow.
+- `44d16ab`: success notices identify the actual action instead of inferring a
+  new publication from existing status. `697ed85`: reload correction jobs even
+  when their source revision token is unchanged; surface refresh errors.
+- `4a1788e`: preserve feedback through transient account-check outages and keep
+  keyboard focus during queue refreshes. Subsequent 403 revocation still clears
+  private content; expiry retains the sign-in explanation. `01826c1` updates
+  the owner-workflow assertion for its action-specific confirmation.
+- Seven regression scenarios reproduced failures before fixes and now pass.
+  Local browser suite: 20 passed initially; the remaining owner-flow assertion
+  expected obsolete wording and passed after correction. All 21 scenarios are
+  verified. Node 24 TypeScript/build and 8 unit tests passed. Full disposable
+  PostgreSQL 16 backend suite: **478 passed, no skips** (301 seconds); F/E9 lint
+  passed. Light desktop queue, dark desktop lesson and narrow dark layout were
+  visually inspected; responsive/keyboard checks passed.
+- README clarifies public source versus invitation-only, authenticated workspace
+  access. Documentation links and whitespace checked. No repository visibility,
+  production flags, live accounts, migration ledger, infrastructure or merge
+  changed. Hosting/real Auth emails/different-device acceptance remain #281.
+- All corrections remain in [PR #311](https://github.com/Coding-Moves/one-concept/pull/311).
+  Hosted final-head checks follow the push; no self-approval or merge performed.
+  Handoff log commit: `docs: record reviewer workspace review and privacy boundary`.
 
 ### #278 One Concept Review website — PR #311
 

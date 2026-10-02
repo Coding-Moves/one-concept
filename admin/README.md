@@ -5,6 +5,13 @@ React + TypeScript + Vite produce static files; Supabase Auth signs reviewers in
 and the existing FastAPI backend authorizes every editorial read and write.
 The browser has no database, Gemini or service-role credentials.
 
+Public source code and private workspace access are separate concerns. The
+repository can remain public under its existing MIT license; the deployed
+workspace requires invited individual accounts and backend authorization. Its
+URL is not a secret or an access credential. A separate private repository is
+not required to protect editorial data. Keep credentials out of source control
+and browser builds, regardless of repository visibility.
+
 ## Run locally
 
 Use Node 24. From `admin/`:

@@ -7,18 +7,20 @@ claims as completed work.
 
 ## Current status
 
-### #277 bounded draft replenishment and AI revisions — implemented and validated
+### #277 bounded draft replenishment and AI revisions — PR #310
 
-- Step 4/9 of #263, based on merged #309 (`5de7acf`), on
-  `codex/277-editorial-generation`, targeting `develop`; closes only #277.
+- [PR #310](https://github.com/Coding-Moves/one-concept/pull/310) is step 4/9
+  of #263, based on merged #309 (`5de7acf`), from
+  `codex/277-editorial-generation` into `develop`; closes only #277.
+  Open and ready for review; no merge performed.
 - `f66b991`: private durable job schema/immutable evidence and fenced backlog
   claims. `ff86bfd`: shared human review capacity, active supply and concurrency.
   `cefe332`: authenticated exact-source revision requests, safe status/cancel APIs,
   three-attempt retry handling, current-authority checks and immutable new drafts.
   `8178bda`: explicit draft retirement frees capacity without removing evidence.
   `a9a1dd8`: existing scheduled worker integration and aggregate job monitoring.
-  Follow-up "Exclude spent curriculum and full review queues from refill work"
-  fixes eligibility/reporting found in the final code review.
+  `e810951` fixes eligibility/reporting found in the final code review.
+  `077c3be` documents API/worker contracts and staged activation.
 - Original bodies, feedback and decisions remain linked; no approval is inherited.
   New/manual revisions, cancellation, retirement, revocation and reclaimed tokens
   fence late provider results. Quota and disabled generation never auto-publish.

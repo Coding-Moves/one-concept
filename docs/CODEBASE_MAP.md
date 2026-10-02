@@ -35,8 +35,13 @@ is the server-only Auth invitation adapter. Migration `0032_editorial_accounts.s
 keeps memberships and account events inaccessible to browser roles. The one-time
 owner CLI is `python -m app.workers.editorial_accounts`; see
 [editorial-accounts.md](editorial-accounts.md) for activation and frontend handoff.
-Dashboard screens (#278), content provenance (#275), publication enforcement
-(#276) and owner reporting (#297) remain separate children of #263.
+`services/editorial_revisions.py` adds authenticated, immutable exact-revision
+review decisions and legacy attestation (#275); migration 0033 stores the one-time
+published inventory, review events and exact-version provenance. `publication.py`
+requires that approval through the authenticated service; the old free-text CLI
+publish/reject commands fail closed. See [editorial-provenance.md](editorial-provenance.md).
+HTTP review/publication entry points (#276), dashboard screens (#278), mobile
+attribution (#280) and owner reporting (#297) remain separate children of #263.
 
 ## Achievements (#209, #259)
 

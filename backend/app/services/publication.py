@@ -59,7 +59,14 @@ async def stage_revision(
     )
 
 
-async def publish_revision(
+async def publish_revision(session, revision_id, actor, settings) -> int:
+    """Publish only server-authenticated approval; never trust a supplied name."""
+    from app.services.editorial_revisions import publish_reviewed_revision
+
+    return await publish_reviewed_revision(session, revision_id, actor, settings)
+
+
+async def _apply_revision(
     session: AsyncSession,
     revision_id: uuid.UUID,
     reviewer: str,
@@ -86,7 +93,7 @@ async def publish_revision(
         raise ValueError("Unknown revision")
     if row.status == "published":
         return row.base_version + 1  # idempotent retries never publish twice
-    if row.status != "draft" or row.base_version != row.content_version:
+    if row.status != "approved" or row.base_version != row.content_version:
         raise ValueError(
             "Revision is rejected or stale; prepare a new draft from the current version"
         )

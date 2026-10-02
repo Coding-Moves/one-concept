@@ -14,7 +14,6 @@ from pydantic import TypeAdapter
 from sqlalchemy import text
 
 from app.db.session import SessionLocal, engine
-from app.services.content_quality import QualityReview
 from app.services.curriculum import (
     PlannedLesson,
     Subject,
@@ -24,7 +23,6 @@ from app.services.curriculum import (
 )
 from app.services.publication import (
     LessonBody,
-    publish_revision,
     retry_failed,
     stage_revision,
 )
@@ -114,28 +112,11 @@ async def run(args):
                             )
                         )
                     }
-                elif args.command == "publish":
-                    result = {
-                        "version": await publish_revision(
-                            session, args.revision, args.reviewed_by, args.note,
-                            QualityReview.model_validate_json(args.quality_review.read_text())
-                        )
-                    }
-                elif args.command == "reject":
-                    if not args.reviewed_by.strip() or len(args.note.strip()) < 10:
-                        raise ValueError("Record reviewer and rejection reason")
-                    count = await session.scalar(
-                        text("""with changed as (
-                      update public.concept_revisions set status='rejected',reviewed_at=now(),
-                        reviewed_by=:who,review_note=:note where id=:id and status='draft' returning id
-                      ) select count(*) from changed"""),
-                        {
-                            "id": args.revision,
-                            "who": args.reviewed_by,
-                            "note": args.note,
-                        },
+                elif args.command in ("publish", "reject"):
+                    raise ValueError(
+                        "Free-text reviewer decisions are disabled. Use authenticated "
+                        "editorial review services; HTTP/CLI integration follows in #276."
                     )
-                    result = {"rejected": count}
                 elif args.command == "retry":
                     await retry_failed(session, args.slug, args.operator, args.reason)
                     result = {"retry_granted": args.slug}

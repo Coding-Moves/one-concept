@@ -38,7 +38,8 @@ def parse_saved_cursor(cursor: str | None) -> tuple[datetime | None, uuid.UUID |
 _HISTORY_PAGE = text("""
     with page as materialized (
         select concept_id, assigned_for
-          from public.daily_assignments
+          from public.daily_assignments a
+          join public.concepts c on c.id=a.concept_id and c.status='published'
          where user_id = :uid and completed_at is not null
            and (cast(:before as date) is null or assigned_for < :before)
          order by assigned_for desc limit :take
@@ -56,7 +57,8 @@ _HISTORY_PAGE = text("""
 _SAVED_PAGE = text("""
     with page as materialized (
         select concept_id, saved_at
-          from public.concept_interactions
+          from public.concept_interactions i
+          join public.concepts c on c.id=i.concept_id and c.status='published'
          where user_id = :uid and saved_at is not null
            and (cast(:before as timestamptz) is null
                 or (saved_at, concept_id) < (:before, cast(:id as uuid)))

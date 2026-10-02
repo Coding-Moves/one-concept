@@ -65,12 +65,15 @@ _STATE = text("""
           join public.topics t on t.id = ut.topic_id
          where ut.user_id = :uid and t.is_active
     ),
+    completions as (
+        select concept_id, assigned_for from public.daily_assignments
+         where user_id=:uid and completed_at is not null
+    ),
     learned_rows as (
         select c.id as concept_id, c.slug, c.title, t.name as topic_name, a.assigned_for
-          from public.daily_assignments a
-          join public.concepts c on c.id = a.concept_id
+          from completions a
+          join public.concepts c on c.id = a.concept_id and c.status='published'
           join public.topics t on t.id = c.topic_id
-         where a.user_id = :uid and a.completed_at is not null
     ),
     recent_learned_rows as materialized (
         select * from learned_rows order by assigned_for desc limit :window_limit
@@ -94,11 +97,12 @@ _STATE = text("""
           coalesce(json_agg(c.slug) filter (where i.liked_at is not null), '[]'::json) as likes,
           coalesce(json_agg(c.slug) filter (where i.saved_at is not null), '[]'::json) as saves
           from public.concept_interactions i
-          join public.concepts c on c.id = i.concept_id
+          join public.concepts c on c.id = i.concept_id and c.status='published'
          where i.user_id = :uid
     ),
     saved_rows as materialized (
-        select concept_id, saved_at from public.concept_interactions
+        select concept_id, saved_at from public.concept_interactions i
+          join public.concepts c on c.id=i.concept_id and c.status='published'
          where user_id = :uid and saved_at is not null
          order by saved_at desc, concept_id desc limit :window_limit
     ),
@@ -111,17 +115,17 @@ _STATE = text("""
                                 and ci.liked_at is not null and ci.user_id <> :uid)::int)
                    order by i.saved_at desc, i.concept_id desc), '[]'::json) as v
           from saved_rows i
-          join public.concepts c on c.id = i.concept_id
+          join public.concepts c on c.id = i.concept_id and c.status='published'
           join public.topics t on t.id = c.topic_id
     ),
     assignment as (
         select c.slug
           from public.daily_assignments a
-          join public.concepts c on c.id = a.concept_id
+          join public.concepts c on c.id = a.concept_id and c.status='published'
          where a.user_id = :uid and a.assigned_for = (select today from prof)
     ),
     -- Gaps and islands: consecutive dates share (date - row_number()).
-    days as (select assigned_for as d from learned_rows
+    days as (select assigned_for as d from completions
       union select assigned_for from public.daily_reviews where user_id=:uid and completed_at is not null),
     grouped as (select d, d - (row_number() over (order by d))::int as grp from days),
     runs as (select grp, count(*)::int as len, max(d) as ends_on from grouped group by grp)
@@ -141,7 +145,8 @@ _STATE = text("""
                  where ends_on in (prof.today, prof.today - 1)
                  order by ends_on desc limit 1), 0) as current_streak,
       coalesce((select max(len) from runs), 0)      as longest_streak,
-      (select count(*)::int from learned_rows) as total_learned,
+      (select count(*)::int from completions) as total_learned,
+      (select count(*)::int from learned_rows) as visible_learned,
       (select count(*)::int from public.daily_reviews where user_id=:uid and completed_at is not null) as total_reviews
       from prof, followed, learned, interactions, saved
 """)
@@ -190,7 +195,7 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID, *, compact: bool
         ),
         learned_before_window=dict(row.learned_before_window) if compact else None,
         history_next_cursor=(row.learned[-1]["on"]
-                             if compact and row.total_learned > len(row.learned) else None),
+                             if compact and row.visible_learned > len(row.learned) else None),
         saved_next_cursor=(saved_cursor(row.saved[-1]["at"], row.saved[-1]["id"])
                            if compact and len(row.saves) > len(row.saved) else None),
         assignment_slug=row.assignment_slug,

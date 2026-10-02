@@ -14,6 +14,7 @@ from sqlalchemy import text
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATH = ROOT / "schema" / "contract.json"
 TABLES = (
+    "editorial_legacy_versions", "editorial_revision_events", "editorial_publications",
     "editorial_memberships", "editorial_account_events",
     "connection_preferences", "connections", "connection_blocks", "connection_request_events",
     "profiles", "profile_sharing", "topics", "subtopics", "concepts", "user_topics", "daily_assignments",
@@ -70,7 +71,8 @@ async def snapshot(connection) -> dict:
              (n.nspname='auth' and c.relname='users' and t.tgname='on_auth_user_created'))""",
         "functions": """select p.proname as name, pg_get_functiondef(p.oid) as definition
           from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-          where n.nspname='public' and p.proname in ('handle_new_user','touch_updated_at')""",
+          where n.nspname='public' and p.proname in ('handle_new_user','touch_updated_at',
+            'prevent_editorial_evidence_mutation','protect_reviewed_revision_body')""",
     }
     result = {}
     for kind, query in queries.items():

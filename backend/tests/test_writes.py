@@ -28,16 +28,20 @@ async def _make_user(session) -> uuid.UUID:
 
 async def test_get_concept_returns_body_and_only_others_likes(session, user):
     other = await _make_user(session)
+    # Earlier API tests can randomly select and like this shared seed lesson.
+    # Assert the exact increment without assuming the shared catalog is unused.
+    before = (await get_concept_out(session, user, "hash-tables")).like_count
     # Another user likes it, and so does the viewer — the returned count must
     # exclude the viewer's own like (the client adds it back).
     await set_interaction(session, other, "hash-tables", "liked_at", True)
+    assert (await get_concept_out(session, user, "hash-tables")).like_count == before + 1
     await set_interaction(session, user, "hash-tables", "liked_at", True)
 
     concept = await get_concept_out(session, user, "hash-tables")
     assert concept is not None
     assert concept.slug == "hash-tables"
     assert concept.title and concept.summary and concept.topic_name
-    assert concept.like_count == 1, "only other users' likes, not the viewer's own"
+    assert concept.like_count == before + 1, "only other users' likes, not the viewer's own"
 
 
 async def test_get_concept_unknown_slug_returns_none(session, user):

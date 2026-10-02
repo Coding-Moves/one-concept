@@ -7,6 +7,57 @@ claims as completed work.
 
 ## Current status
 
+### PR #299 follow-up code review — fixed and validated
+
+- Reviewed `82c80b1` against #275, including authenticated decisions, immutable
+  evidence, cutover, CLI bypass prevention and learner visibility. Three failing
+  PostgreSQL cases reproduced two P2 regressions before fixes.
+- `29ec677` preserves today's assignment/review slot when its lesson is hidden,
+  prevents a second activity and safely handles retirement before the payload
+  read. `f9eb91a` keeps earned counts/streaks independent of visible history and
+  uses visible counts for pagination (including an entirely hidden history).
+- **31 focused tests passed.** The first full review run had **403 passes and
+  one failure**: an old like-count test assumed no earlier likes on a shared seed
+  that API tests select randomly. `4765b57` checks the exact increment and own-like
+  exclusion without that assumption. The final full PostgreSQL 16 rerun passed
+  **404 tests, no skips**, including all four new regression cases.
+- Backend F/E9 lint, changed documentation links and whitespace checks passed.
+  Final exact-head hosted checks and review summary are recorded in PR #299.
+  The documentation commit is "Document PR 299 review fixes and validation".
+- No additional migration, environment setting or manual task for these fixes;
+  the staged editorial activation prerequisites remain unchanged. No merge or
+  production change. Preserve all original and follow-up commits.
+
+### #275 exact-revision approval and provenance — implemented and validated
+
+- [PR #299](https://github.com/Coding-Moves/one-concept/pull/299) targets `develop`
+  from `codex/275-editorial-provenance` at base `db34afc`, after #298 merged. Closes
+  only #275, step 2 of #263; HTTP entry points and the website remain #276/#278.
+- `690f699` adds immutable evidence, explicit legacy-version cutover inventory
+  and the schema contract. `c4c66b1` adds authenticated transitions, exact approval,
+  version-safe publication and unchanged legacy attestation; free-text CLI
+  publish/reject now fail closed. `4c76ecc` adds published-only collection/state
+  and existing-assignment/review guards, with pagination filtering before limits.
+- Follow-up "Verify editorial cutover and retain immutable regression evidence"
+  tests real pre-0033 catalog/progress preservation and CLI bypass denial, and
+  retires the yearly simulation's catalog instead of deleting its audit evidence.
+- Validation: final full PostgreSQL 16 backend suite **400 passed, no skips**;
+  backend F/E9 lint, local documentation links and whitespace checks passed.
+  Earlier 23 focused cases passed. The first broad run had 396 passes and one
+  obsolete simulation-cleanup failure; the final run includes its corrected
+  cleanup plus the real cutover and CLI tests. No live provider calls occurred.
+- Review checked lock order/session recheck, immutable source/body/name snapshots,
+  checklist validation, stale/retired states, simultaneous approvals, idempotent
+  publication, unchanged legacy attestation, private storage and learner reads.
+- [editorial-provenance.md](editorial-provenance.md) documents the service contract,
+  state machine, transaction requirements and staging/rollout procedure. No
+  production SQL, ledger update, mobile/native release or content publication.
+- Handoff: final exact-head CI is recorded in PR #299; preserve the focused
+  commits and merge only with owner approval. No immediate manual action:
+  0033 application and authenticated entry-point activation belong to the later
+  coordinated rollout. The old publication CLI is intentionally unavailable;
+  do not treat this intermediate backend as a complete production review UI.
+
 ### PR #298 review fixes — implemented and validated
 
 - Owner requested both reproduced findings fixed in the same PR. The original

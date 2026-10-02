@@ -7,6 +7,28 @@ claims as completed work.
 
 ## Current status
 
+### #280 — exact-version learner attribution implemented
+
+- Owner requested the complete dedicated PR into `develop`. Branch
+  `codex/280-reviewed-attribution` starts at merged #312 (`3d361d8`).
+- `fca5754`: nullable public reviewer name/date/version on full detail, daily,
+  folded state and review responses; content/evidence selected in one SQL
+  snapshot. Full PostgreSQL suite: **502 passed, no skips**; F/E9 lint passed.
+- `5b89a4d`: shared mobile mapping, strict version checks, full cache pair
+  replacement and account-change rejection. Node 24 suite: **87 passed**;
+  TypeScript passed. Old payloads/caches show no invented attribution.
+- `9b33935`: borderless accessible credit outside card flip faces. Both-theme
+  exported-app browser checks passed for legacy/attested/new versions, long
+  names, Today, History/Saved, recall, offline reload, corrupt cache and sign-out.
+  Inspected light Today and dark recall screenshots after animation settled.
+- This documentation commit records contract, tests, offline limits and rollout.
+  Exact Expo SDK 57 docs were read. No native dependency, schema migration,
+  app/runtime version bump, production action or issue closure. Deploy compatible
+  backend first, then mobile JavaScript through the normal release procedure.
+- Native screen-reader/font-scaling QA is not claimed by browser checks. #313
+  hosting/email activation is independent. PR link and hosted CI follow the push.
+- Existing unrelated demo and previous email handoff log edits remain unstaged.
+
 ### PR #312 — direct production email rollout
 
 - Owner explicitly declined staging creation/testing and requested the complete

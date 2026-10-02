@@ -188,3 +188,19 @@ Saved's long labels, full touch targets and bottom navigation. Also smoke-check
 History, Profile, Achievements and native modal dismissal; check iOS safe areas
 when a device is available. DOM text enlargement is not native Dynamic Type or
 TalkBack/VoiceOver validation.
+
+
+## Exact-version reviewer attribution
+
+Using the fixture export above, run:
+
+```sh
+node tests/reviewAttribution.browser.cjs /tmp/one-concept-offline
+```
+
+This checks light/dark Today, History/Saved detail, long reviewer names, legacy
+attestation without a version change, removal/replacement after corrections,
+recall, offline restart, invalid cached metadata and sign-out cleanup. Screenshots
+are written to `/tmp/one-concept-280-screens` (override `UI_SCREENSHOT_DIR`). The
+Node suite also covers public-field mapping and exact-version cache pairing.
+Physical-device text scaling and screen-reader checks remain distinct manual QA.

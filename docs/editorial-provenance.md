@@ -144,3 +144,63 @@ If rollout fails, disable editorial operations and retain existing published
 content/evidence. Do not downgrade to a free-text publication writer or delete
 the audit tables to make old code work. Restore the known-good compatible
 backend or complete the additive fix before restarting publication.
+
+## Learner attribution (#280)
+
+Full learner responses (`GET /v1/concepts/{slug}`, `/v1/daily`, and the `daily`
+/ `review` fields of `/v1/me/state`) include an additive nullable `concept.review`:
+
+```json
+{
+  "name": "Registered Reviewer",
+  "reviewed_at": "2026-10-02T12:00:00Z",
+  "content_version": 2
+}
+```
+
+The name and timestamp come from the authenticated approval/attestation event,
+not the current account profile or historical free-text `reviewed_by`. Only
+these public fields are returned; no actor/event IDs, emails, private notes or
+checklists are exposed. `review_attribution.py` checks the publication version
+and complete stored snapshot against the published concept **within the same SQL
+statement that reads the body**. This avoids combining two database snapshots
+across a concurrent publication. No extra endpoint, client table permission or
+new migration is introduced.
+
+The shared mobile mapper keeps this evidence with the entire lesson body. Today,
+daily review and History/Saved details show a modest, borderless **Reviewed by**
+line, including below the recall side. A missing/malformed field or mismatched
+version shows no label; old responses, old caches and demo lessons remain usable.
+Review dates are retained in the payload/cache but are not an additional visual
+badge. Normal account cleanup still removes the cached lesson and its evidence;
+a late download cannot return an old account's cached fallback after cleanup.
+
+Cached attribution describes the cached version's historical review, not current
+server availability or a live reviewer-account status. Offline devices cannot
+learn about retirement, newer versions or new legacy attestations until they
+reconnect and refresh. Refresh replaces body/evidence together, including when
+attestation adds evidence without incrementing the version. A pending correction
+leaves the published version and its own evidence intact; publishing the new
+version supplies its own review. Renaming or disabling a reviewer does not
+rewrite the immutable historical name. Quiz snapshots and list-row badges are
+outside this feature.
+
+### Rollout and validation
+
+Deploy the additive backend contract first, with existing editorial migrations
+(in particular 0033) already applied, then publish the mobile JavaScript update
+through the normal release runbook. This feature adds no native dependency,
+version bump or runtime change; the current native runtime remains `1.10.0`.
+Old clients ignore the new field, and the new UI tolerates old APIs without it.
+No manual reviewer-name backfill is allowed. Website/email activation (#313)
+is independent; only real authenticated approval creates attribution.
+
+`tests/test_review_attribution.py` covers every learner response surface, legacy
+attestation, unpublished corrections, name snapshots, private-field exclusion,
+same-version out-of-band edits and concurrent reads/writes. Mobile
+`reviewAttribution.test.mjs` covers mapping and cached version/account boundaries;
+`reviewAttribution.browser.cjs` checks the exported app in both themes, long names,
+History/Saved, recall, online refresh, offline restart, corrupt metadata and
+sign-out. Browser tests use dummy Auth/API fixtures, not production accounts.
+Native TalkBack/VoiceOver and physical-device font scaling remain manual checks;
+browser evidence does not claim those were run.

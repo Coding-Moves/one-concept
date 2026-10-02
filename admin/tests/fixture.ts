@@ -92,6 +92,7 @@ export async function fixture(
     denied: false,
     uncertain: false,
     conflict: false,
+    invalid: false,
     mfa: options.mfa || false,
     commands: [] as any[],
     jobs: [] as any[],
@@ -184,7 +185,7 @@ export async function fixture(
       status: state.status,
       base_version: 0,
       token: state.token,
-      body: state.body,
+      body: state.invalid ? null : state.body,
       source_body: { ...lesson, summary: "Previous explanation." },
       assigned_to: null,
       review_due_at: null,
@@ -196,7 +197,12 @@ export async function fixture(
           after: state.body.summary,
         },
       ],
-      validation: { valid: true, errors: [] },
+      validation: {
+        valid: !state.invalid,
+        errors: state.invalid
+          ? [{ field: "body", message: "A complete lesson object is required" }]
+          : [],
+      },
       source_links: state.body.curriculum.references,
     };
     if (path === "/me")
@@ -358,6 +364,7 @@ export async function fixture(
       return fulfill(route, {
         ...detail,
         id: cid,
+        body: state.body,
         concept_id: undefined,
         content_version: 1,
         unchanged_legacy: true,

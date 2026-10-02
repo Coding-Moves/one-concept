@@ -188,7 +188,10 @@ export function Review({
     try {
       const concept = await api.request<Detail>(`/concepts/${cid}`);
       setStageToken(concept.token);
-      setEdit(editableLesson(detail!.body));
+      setEdit({
+        ...editableLesson(detail!.body),
+        subtopic_slug: concept.body.subtopic_slug,
+      });
       setTab("edit");
     } catch (e) {
       setError(message(e));
@@ -243,7 +246,11 @@ export function Review({
             {revision ? "BASE" : "CONTENT"} VERSION{" "}
             {detail.base_version ?? detail.content_version}
           </p>
-          <h1>{detail.body.title}</h1>
+          <h1>
+            {typeof detail.body?.title === "string"
+              ? detail.body.title
+              : "Lesson needing correction"}
+          </h1>
           <p>
             {approvedBy
               ? `Approved by ${approvedBy}. This decision is shared with every reviewer.`

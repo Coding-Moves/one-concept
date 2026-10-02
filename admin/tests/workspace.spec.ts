@@ -372,3 +372,27 @@ test("lesson HTML stays text, unsafe references are not clickable, edits block u
     page.getByRole("button", { name: "Add comment", exact: true }),
   ).toBeEnabled();
 });
+
+test("a malformed draft opens safely and can be completed without losing its taxonomy", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  state.invalid = true;
+  await login(page);
+  await openLesson(page);
+  await expect(
+    page.getByRole("heading", { name: "Lesson needing correction" }),
+  ).toBeVisible();
+  await expect(
+    page.getByText("A complete lesson object is required", { exact: false }),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await expect(page.getByLabel("Title", { exact: true })).toHaveValue("");
+  await page
+    .getByLabel("Review note or comment")
+    .fill("Rebuild this incomplete draft as a complete lesson.");
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect.poll(() => state.commands.length).toBe(1);
+  expect(state.commands[0].body.subtopic_slug).toBe("databases");
+});

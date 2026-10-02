@@ -7,6 +7,38 @@ claims as completed work.
 
 ## Current status
 
+### #276 editorial review and publication APIs — implemented; PR checks pending
+
+- Dedicated branch `codex/276-editorial-review-api`, step 3/9 of #263; closes only
+  #276. Based on merged #299, then updated to `develop` at `77d175d` via `b71f865`
+  to preserve the newly merged dependency updates and all focused commits.
+- `c603396`: migration 0034/private workflow audit and receipts/schema contract.
+  `352670a`: versioned commands and private queues/package/diff/history/validation.
+  `1364e9a`: protected HTTP routes and integration tests. `8f51b8a`: authenticated
+  operator CLI. `56ca4c6`: rewrite-worker compatibility with open reviews and the
+  complete package. `9c95adc`: retain publisher notes and validate legacy attestation.
+- Covers comments, assignments, exact-version decisions, atomic approval/publication,
+  stale/concurrent/replayed commands, legacy attestation, retirement preserving
+  progress, and bounded audited generation demand. No provider call in review HTTP.
+  Website remains #278 and generation/revision orchestration remains #277.
+- Local full PostgreSQL 16 suite: **432 passed, no skips** (169 seconds). Earlier
+  44 HTTP/publication checks and eight CLI/worker checks passed. The first full
+  database run had 431 passes and one new fixture search failure after changing
+  its title; the final run uses its stable topic filter. A sandbox-only attempt
+  could not start Podman and was stopped rather than reporting skipped DB tests
+  as validation. All successful DB runs used disposable local data, no providers.
+- This local run used the existing virtual environment (SQLAlchemy 2.0.52,
+  Uvicorn 0.52.4, PyJWT 2.13.0); exact-head hosted CI must validate the freshly
+  merged dependency pins. Backend F/E9 lint, documentation links and whitespace
+  checks passed. Hosted CI/handoff will be recorded in the PR.
+- [editorial-api.md](editorial-api.md) describes permissions, endpoints, retry
+  contracts, private text handling, publication entry-point audit and rollout.
+  Documentation commit: "Document editorial API contract and rollout handoff".
+- No immediate manual production task. Staging needs migration 0034 after 0033;
+  production activation remains #281 with identity/MFA, compatible workers and
+  device rehearsal. No production SQL, applied-ledger edit, account invitation,
+  content publication, paid service, mobile/native build or PR merge performed.
+
 ### PR #299 follow-up code review — fixed and validated
 
 - Reviewed `82c80b1` against #275, including authenticated decisions, immutable

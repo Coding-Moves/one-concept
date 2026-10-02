@@ -7,6 +7,37 @@ claims as completed work.
 
 ## Current status
 
+### #279 — reviewer notifications: PR #312 open for review
+
+- [PR #312](https://github.com/Coding-Moves/one-concept/pull/312) targets
+  `develop` from `codex/279-reviewer-notifications`, based on `bf95496`.
+  Scope: durable assigned-review emails, 48-hour deadlines, 24-hour reminders
+  (maximum two), reviewer timezone and owner delivery controls. References #279;
+  no automatic closure while real staging acceptance is pending. #263 remains open.
+- `05f4035`: private migration 0038/outbox and corrected-draft assignment.
+  `7c09a16`: Gmail HTTPS worker, bounded retries/caps and delivery tests.
+  `b5624b3`: authenticated owner controls/timezone APIs. `ae72ba4`: correct the
+  browser fixture's concept-action response. `47b7a74`: dashboard and browser
+  coverage. `d0ff557`: free sender/OAuth setup, rollout guide and codebase map.
+  This entry's commit is `docs: record reviewer notification PR handoff`.
+- Verification: full disposable PostgreSQL 16 suite **491 passed, no skips**;
+  final notification/API suite **14 passed** after additional batching/crash
+  cases and final changes. F/E9 lint and diff checks passed. Node 24.19 TypeScript,
+  **8 unit tests**, **23 browser scenarios**, fixture production build passed;
+  both notification browser cases passed again after final display changes.
+  Light desktop/dark narrow layouts inspected; no horizontal overflow.
+- Provider decision: existing Gmail via HTTPS OAuth; Railway Free/Trial/Hobby
+  block SMTP. No paid sender/domain/hosting upgrade. Owner reports Gmail API
+  enabled; consent/client authorization and staging mailbox/link acceptance are
+  still manual. Supabase Auth templates stay unchanged. Use
+  [editorial-notifications.md](editorial-notifications.md) for exact steps.
+- Sending defaults off. No live email, secrets changes, production migration,
+  deployment, mobile release or merge performed. `applied.txt` remains unchanged.
+  Production activation remains #281. GitHub CI is pending at handoff; local
+  checks are the evidence above. Prior local-demo work-log edits remain unstaged
+  and are not included in this PR.
+
+
 ### PR #311 follow-up review — fixes validated
 
 - Reviewed head `3541cca` across backend contracts, authentication, decisions,

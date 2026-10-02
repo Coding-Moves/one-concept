@@ -1,23 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiRequest, getConnectivity } from '../api/client';
-import { Category, Concept } from '../types';
+import { ApiError, apiRequest, getConnectivity } from '../api/client';
+import { Concept, DailyPayload } from '../types';
 import { OfflineCache } from './offlineCache';
+import { mapConcept, normalizeCachedConcept } from './conceptMapping';
 
 export const conceptCache = new OfflineCache<Concept>(AsyncStorage, 'one-concept/concepts/v1/');
 
 /** Server shape from GET /v1/concepts/{slug} (matches the daily ConceptOut). */
-interface ConceptResponse {
-  id: string;
-  slug: string;
-  title: string;
-  summary: string;
-  example: string | null;
-  flashcard?: { front: string; back: string } | null;
-  topic_slug: string;
-  topic_name: string;
-  like_count?: number;
-  content_version?: number;
-}
+type ConceptResponse = DailyPayload['concept'];
 
 /**
  * Fetch a full concept by slug for the detail view. The app uses the slug as a
@@ -26,16 +16,7 @@ interface ConceptResponse {
  */
 async function downloadConcept(slug: string): Promise<Concept> {
   const c = await apiRequest<ConceptResponse>(`/v1/concepts/${encodeURIComponent(slug)}`);
-  return {
-    id: c.slug,
-    title: c.title,
-    category: c.topic_name as Category,
-    summary: c.summary,
-    example: c.example ?? undefined,
-    flashcard: c.flashcard ?? undefined,
-    likeCount: c.like_count ?? 0,
-    contentVersion: c.content_version ?? 1,
-  };
+  return mapConcept(c);
 }
 
 /** Paint cached text immediately, then refresh counts/content when reachable. */
@@ -45,7 +26,9 @@ export async function fetchConcept(
   forceRefresh = false,
 ): Promise<Concept> {
   const epoch = conceptCache.epoch;
-  const cached = await conceptCache.get(slug, epoch);
+  const stored = await conceptCache.get(slug, epoch);
+  if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
+  const cached = stored ? normalizeCachedConcept(stored) : null;
   if (cached) {
     onCached?.(cached);
     if (!getConnectivity() && !forceRefresh) return cached;
@@ -53,8 +36,10 @@ export async function fetchConcept(
   try {
     const concept = await downloadConcept(slug);
     await conceptCache.set(slug, concept, epoch).catch(() => {});
+    if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
     return concept;
   } catch (error) {
+    if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
     if (cached) return cached;
     throw error;
   }

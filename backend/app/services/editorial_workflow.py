@@ -346,20 +346,22 @@ async def request_generation(db, actor, settings, command):
             "No pending curriculum is available; plan lessons before requesting generation"
         )
     inventory = await db.scalar(
-        text("""select count(*) from concepts
-        where topic_id=:id and status in ('published','draft')"""),
+        text("""select count(*) from concepts c
+        join subtopics s on s.id=c.subtopic_id and s.is_active
+        where c.topic_id=:id and c.status in ('published','draft')"""),
         {"id": command.topic_id},
     )
     count = min(command.count, planned, settings.content_generation_batch)
     # Repeated requests before generation coalesce instead of adding to the
     # outstanding target. Existing workers retain their quota/claim/kill checks.
     target = inventory + count
-    await db.execute(
+    target = await db.scalar(
         text("""insert into content_supply_targets(topic_id,target_count,expires_at)
         values (:id,:target,now()+make_interval(days=>:days)) on conflict(topic_id) do update set
         target_count=greatest(excluded.target_count,case when content_supply_targets.expires_at>now()
           then content_supply_targets.target_count else 0 end),
-        requested_at=now(),expires_at=excluded.expires_at"""),
+        requested_at=now(),expires_at=excluded.expires_at
+        returning target_count"""),
         {
             "id": command.topic_id,
             "target": target,

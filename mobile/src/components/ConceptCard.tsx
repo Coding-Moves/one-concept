@@ -7,6 +7,7 @@ import { scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 import { CategoryChip } from './CategoryChip';
 import { Surface } from './Surface';
+import { ReviewAttribution } from './ReviewAttribution';
 
 const FLIP_DURATION_MS = 280;
 
@@ -50,7 +51,7 @@ export function ConceptCard({ concept }: { concept: Concept }) {
   useEffect(() => {
     flip.setValue(0);
     setShowingAnswer(false);
-  }, [concept.id, flip]);
+  }, [concept.id, concept.contentVersion, flip]);
 
   const toggleFlashcard = () => {
     const next = !showingAnswer;
@@ -66,7 +67,7 @@ export function ConceptCard({ concept }: { concept: Concept }) {
     }).start();
   };
 
-  if (!hasFlashcard) return <Surface style={styles.card}><Front concept={concept} /></Surface>;
+  if (!hasFlashcard) return <Surface style={styles.card}><Front concept={concept} /><ReviewAttribution concept={concept} /></Surface>;
 
   const frontRotate = flip.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
   const backRotate = flip.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] });
@@ -80,24 +81,34 @@ export function ConceptCard({ concept }: { concept: Concept }) {
     >
       <Ionicons name="sync-outline" size={20} color={colors.primary} />
     </Pressable>
+    <View style={styles.faces}>
     <Animated.View
       style={[styles.face, { transform: [{ perspective: 900 }, { rotateY: frontRotate }] }]}
-      accessible={!showingAnswer}
+      accessibilityElementsHidden={showingAnswer}
+      importantForAccessibility={showingAnswer ? 'no-hide-descendants' : 'auto'}
+      aria-hidden={showingAnswer}
+      accessible={false}
       accessibilityLabel="Showing daily lesson"
     ><Front concept={concept} /></Animated.View>
     <Animated.View
       style={[styles.face, styles.backFace, { transform: [{ perspective: 900 }, { rotateY: backRotate }] }]}
-      accessible={showingAnswer}
+      accessibilityElementsHidden={!showingAnswer}
+      importantForAccessibility={!showingAnswer ? 'no-hide-descendants' : 'auto'}
+      aria-hidden={!showingAnswer}
+      accessible={false}
       accessibilityLabel="Showing recall answer"
     ><ScrollView style={styles.backScroll} nestedScrollEnabled><Recall concept={concept} /></ScrollView></Animated.View>
+    </View>
+    <ReviewAttribution concept={concept} />
   </Surface>;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
   card: { borderRadius: radius.xl, gap: spacing.md },
   flashcard: { minHeight: 340, position: 'relative' },
+  faces: { minHeight: 292, position: 'relative' },
   face: { gap: spacing.md, backfaceVisibility: 'hidden' },
-  backFace: { position: 'absolute', left: spacing.lg, right: spacing.lg, top: spacing.lg, bottom: spacing.lg },
+  backFace: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 },
   backScroll: { flex: 1 },
   flipControl: { position: 'absolute', zIndex: 2, right: spacing.md, top: spacing.md, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surfaceSubtle, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: scaleFont(24), lineHeight: scaleFont(30), fontFamily: 'SpaceGrotesk_700Bold', color: colors.text, paddingRight: 48 },

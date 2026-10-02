@@ -7,9 +7,10 @@ claims as completed work.
 
 ## Current status
 
-### #276 editorial review and publication APIs — implemented; PR checks pending
+### #276 editorial review and publication APIs — PR #309 implemented and validated
 
-- Dedicated branch `codex/276-editorial-review-api`, step 3/9 of #263; closes only
+- [PR #309](https://github.com/Coding-Moves/one-concept/pull/309) targets `develop`
+  from `codex/276-editorial-review-api`, step 3/9 of #263; closes only
   #276. Based on merged #299, then updated to `develop` at `77d175d` via `b71f865`
   to preserve the newly merged dependency updates and all focused commits.
 - `c603396`: migration 0034/private workflow audit and receipts/schema contract.
@@ -27,13 +28,13 @@ claims as completed work.
   its title; the final run uses its stable topic filter. A sandbox-only attempt
   could not start Podman and was stopped rather than reporting skipped DB tests
   as validation. All successful DB runs used disposable local data, no providers.
-- This local run used the existing virtual environment (SQLAlchemy 2.0.52,
-  Uvicorn 0.52.4, PyJWT 2.13.0); exact-head hosted CI must validate the freshly
-  merged dependency pins. Backend F/E9 lint, documentation links and whitespace
-  checks passed. Hosted CI/handoff will be recorded in the PR.
+- After installing the current repository pins (SQLAlchemy 2.1.1, Uvicorn 0.54.0,
+  PyJWT 2.15.1), a second full local PostgreSQL run passed **432 tests, no skips**
+  in 167 seconds. Backend F/E9 lint, documentation links and whitespace checks
+  passed. Exact-head hosted CI/handoff is recorded in PR #309.
 - [editorial-api.md](editorial-api.md) describes permissions, endpoints, retry
   contracts, private text handling, publication entry-point audit and rollout.
-  Documentation commit: "Document editorial API contract and rollout handoff".
+  Documentation commits: `631ae7d` and "Record PR 309 validation and handoff".
 - No immediate manual production task. Staging needs migration 0034 after 0033;
   production activation remains #281 with identity/MFA, compatible workers and
   device rehearsal. No production SQL, applied-ledger edit, account invitation,

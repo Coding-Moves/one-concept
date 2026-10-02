@@ -71,7 +71,7 @@ class StageInput(VersionCommand):
 
 
 class ConceptAction(VersionCommand):
-    action: Literal["attest", "retire"]
+    action: Literal["attest", "retire", "comment"]
     quality: QualityReview | None = None
 
     @model_validator(mode="after")

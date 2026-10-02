@@ -141,3 +141,22 @@ async def test_taxonomy_requires_review_authority_and_deadlines_require_owner(
             f"{content.ROOT}/taxonomy", headers=api.headers(aal="aal1")
         )
     ).status_code == 403
+
+
+async def test_reviewer_can_comment_on_existing_content_without_publishing(api, session, draft):
+    uid, sid, _ = await enroll(api, session, ["review"])
+    await profile_and_approve(api, uid, sid)
+    cid = draft[1]
+    detail = (await api.client.get(f"{content.ROOT}/concepts/{cid}", headers=api.headers())).json()
+    payload = {
+        "request_id": str(uuid4()), "expected_token": detail["token"],
+        "action": "comment", "note": "Please check the existing example against its reference.",
+    }
+    headers = api.headers(uid, sid)
+    response = await api.client.post(f"{content.ROOT}/concepts/{cid}/actions", headers=headers, json=payload)
+    assert response.status_code == 200, response.text
+    replay = await api.client.post(f"{content.ROOT}/concepts/{cid}/actions", headers=headers, json=payload)
+    assert replay.json() == response.json()
+    assert response.json()["status"] == detail["status"]
+    assert await session.scalar(text("select count(*) from editorial_workflow_events where concept_id=:id and action='comment'"), {"id": cid}) == 1
+    assert (await api.client.get(f"{content.ROOT}/generation-jobs?concept_id={uuid4()}", headers=headers)).json()["items"] == []

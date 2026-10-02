@@ -192,6 +192,7 @@ async def generation_jobs_list(
     settings: Config,
     status: GenerationJobStatus | None = None,
     topic_id: UUID | None = None,
+    concept_id: UUID | None = None,
     cursor: UUID | None = None,
     limit: int = Query(25, ge=1, le=100),
 ):
@@ -202,11 +203,13 @@ async def generation_jobs_list(
                 text("""select * from editorial_generation_jobs
       where (cast(:status as text) is null or status=:status)
         and (cast(:tid as uuid) is null or topic_id=:tid)
+        and (cast(:cid as uuid) is null or concept_id=:cid)
         and (cast(:cursor as uuid) is null or id>:cursor)
       order by id limit :take"""),
                 {
                     "status": status,
                     "tid": topic_id,
+                    "cid": concept_id,
                     "cursor": cursor,
                     "take": limit + 1,
                 },

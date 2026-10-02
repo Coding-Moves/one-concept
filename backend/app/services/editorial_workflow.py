@@ -286,7 +286,9 @@ async def stage(db, actor, settings, cid, command):
 
 
 async def concept_action(db, actor, settings, cid, command):
-    member = await revisions.lock_reviewer(db, actor, settings, "publish")
+    member = await revisions.lock_reviewer(
+        db, actor, settings, "review" if command.action == "comment" else "publish"
+    )
     if command.action == "attest":
         await authorize(db, actor, settings, "approve")
     fingerprint, old = await receipt(db, actor, command, f"concept:{cid}")
@@ -304,6 +306,8 @@ async def concept_action(db, actor, settings, cid, command):
             command.note,
             command.quality,
         )
+    elif command.action == "comment":
+        await audit(db, member, "comment", command.note, cid=cid)
     else:
         if row["status"] not in ("published", "draft"):
             raise ValueError("Only published content or a draft can be retired here")

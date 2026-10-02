@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.services.prefetch import request_prefetch
 from app.services.supply import signal_reader
+from app.services.review_attribution import REVIEW_ATTRIBUTION_SQL
 
 
 @dataclass
@@ -44,6 +45,7 @@ class ConceptPayload:
     # like/unlike is an instant +/-1 with no server round trip to see it.
     like_count: int = 0
     content_version: int = 1
+    review: dict | None = None
 
 
 @dataclass
@@ -63,9 +65,10 @@ _TODAY = text("""
       from public.profiles where id = :uid for update
 """)
 
-_EXISTING = text("""
+_EXISTING = text(f"""
     select a.assigned_for, a.assigned_at, a.completed_at,
            c.id, c.slug, c.title, c.summary, c.example, c.flashcard, c.content_version,
+           {REVIEW_ATTRIBUTION_SQL} as review,
            t.slug as topic_slug, t.name as topic_name,
            s.slug as subtopic_slug, s.name as subtopic_name,
            (select count(*) from public.concept_interactions ci
@@ -173,6 +176,7 @@ def _row_to_result(row, outside: bool) -> DailyResult:
             subtopic_name=row.subtopic_name,
             like_count=row.like_count,
             content_version=row.content_version,
+            review=row.review,
         ),
         outside_followed_topics=outside,
     )

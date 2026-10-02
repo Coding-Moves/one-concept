@@ -104,31 +104,7 @@ async def _apply_revision(
     body = LessonBody.model_validate(row.body)
     if body.subtopic_slug != row.subtopic_slug:
         raise ValueError("Revision subtopic does not match the concept")
-    await validate_graph(session, {row.slug: body.curriculum.model_dump(mode="json")})
-    # A prerequisite must be available before a dependent lesson can be published.
-    for slug in body.curriculum.prerequisites:
-        if not await session.scalar(
-            text(
-                "select exists(select 1 from public.concepts where slug=:s and status='published')"
-            ),
-            {"s": slug},
-        ):
-            raise ValueError(f"Publish prerequisite {slug} first")
-    others = (
-        await session.execute(
-            text(
-                "select slug,title,curriculum from public.concepts where id<>:id and status='published'"
-            ),
-            {"id": row.concept_id},
-        )
-    ).all()
-    for other in others:
-        if normalized(other.title) == normalized(body.title) or normalized(
-            other.curriculum.get("objective", "")
-        ) == normalized(body.curriculum.objective):
-            raise ValueError(
-                f"Exact duplicate of {other.slug}; resolve overlap before publication"
-            )
+    await validate_candidate(session, row.slug, row.concept_id, body)
     # Preserve the pre-correction version, including migrated seed lessons that
     # predate editorial records. Do not invent an original reviewer or date.
     await session.execute(
@@ -176,6 +152,35 @@ async def _apply_revision(
         },
     )
     return row.content_version + 1
+
+
+async def validate_candidate(session, slug, concept_id, body):
+    """Read-only publication checks shared by preview and the final transaction."""
+    await validate_graph(session, {slug: body.curriculum.model_dump(mode="json")})
+    # A prerequisite must be available before a dependent lesson can be published.
+    for slug in body.curriculum.prerequisites:
+        if not await session.scalar(
+            text(
+                "select exists(select 1 from public.concepts where slug=:s and status='published')"
+            ),
+            {"s": slug},
+        ):
+            raise ValueError(f"Publish prerequisite {slug} first")
+    others = (
+        await session.execute(
+            text(
+                "select slug,title,curriculum from public.concepts where id<>:id and status='published'"
+            ),
+            {"id": concept_id},
+        )
+    ).all()
+    for other in others:
+        if normalized(other.title) == normalized(body.title) or normalized(
+            other.curriculum.get("objective", "")
+        ) == normalized(body.curriculum.objective):
+            raise ValueError(
+                f"Exact duplicate of {other.slug}; resolve overlap before publication"
+            )
 
 
 async def retry_failed(

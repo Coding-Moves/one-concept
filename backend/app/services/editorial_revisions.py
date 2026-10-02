@@ -25,7 +25,7 @@ async def lock_reviewer(db, actor, settings, capability):
     return await authorize(db, actor, settings, capability)
 
 
-async def revision(db, revision_id):
+async def revision(db, revision_id, *, lock=True):
     row = (
         (
             await db.execute(
@@ -35,7 +35,7 @@ async def revision(db, revision_id):
           s.slug as subtopic_slug, {SNAPSHOT} as source_snapshot
         from concept_revisions r join concepts c on c.id=r.concept_id
         join topics t on t.id=c.topic_id join subtopics s on s.id=c.subtopic_id
-        where r.id=:id for update of r,c,t,s
+        where r.id=:id {"for update of r,c,t,s" if lock else ""}
     """),
                 {"id": revision_id},
             )

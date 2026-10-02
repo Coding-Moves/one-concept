@@ -115,7 +115,7 @@ async def run(args):
                 elif args.command in ("publish", "reject"):
                     raise ValueError(
                         "Free-text reviewer decisions are disabled. Use authenticated "
-                        "editorial review services; HTTP/CLI integration follows in #276."
+                        "editorial HTTP actions with a current reviewer token. See docs/editorial-api.md."
                     )
                 elif args.command == "retry":
                     await retry_failed(session, args.slug, args.operator, args.reason)

@@ -268,6 +268,7 @@ async def test_gmail_https_stable_message_id_and_sanitized_errors(monkeypatch):
 
     settings = SimpleNamespace(
         editorial_email_from="sender@test.invalid",
+        editorial_email_dashboard_url="https://review.test.invalid",
         editorial_gmail_client_id="client",
         editorial_gmail_client_secret="private-secret",
         editorial_gmail_refresh_token="private-refresh",

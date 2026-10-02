@@ -7,6 +7,8 @@ import httpx
 from email.message import EmailMessage
 from urllib.parse import urlsplit
 
+from app.services.editorial_email_template import render
+
 
 class DeliveryError(Exception):
     def __init__(self, code, retryable=True):
@@ -65,6 +67,9 @@ def message(settings, batch):
     # Gmail has no documented send idempotency key. This is correlation only.
     msg["Message-ID"] = f"<{batch['id']}@{settings.editorial_email_from.split('@')[1]}>"
     msg.set_content(batch["body"])
+    msg.add_alternative(
+        render(batch["body"], settings.editorial_email_dashboard_url), subtype="html"
+    )
     return msg
 
 

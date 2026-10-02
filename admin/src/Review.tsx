@@ -336,6 +336,7 @@ export function Review({
               <>
                 <h2>Prepare a new revision</h2>
                 <button
+                  disabled={op.busy || !!op.pending}
                   onClick={() => {
                     if (confirm("Discard the unsaved lesson edits?")) {
                       setEdit(null);
@@ -349,7 +350,10 @@ export function Review({
                   Your edits create a new draft. They never overwrite the live
                   lesson or another reviewer’s decision.
                 </p>
-                <LessonEditor body={edit} onChange={setEdit} />
+                <fieldset disabled={op.busy || !!op.pending}>
+                  <legend>Lesson correction</legend>
+                  <LessonEditor body={edit} onChange={setEdit} />
+                </fieldset>
                 <button
                   className="primary"
                   disabled={blocked || !noted}
@@ -481,6 +485,15 @@ export function Review({
                 onChange={(e) => setNote(e.target.value)}
               />
             </Field>
+            {revision &&
+              ["changes_requested", "validation_failed", "rejected"].includes(
+                detail.status,
+              ) && (
+                <p>
+                  Prepare a new correction draft before submitting this lesson
+                  for review again.
+                </p>
+              )}
             <div className="decision-buttons">
               {revision &&
                 detail.status === "pending_review" &&
@@ -488,7 +501,10 @@ export function Review({
                   <button
                     className="primary"
                     disabled={
-                      blocked || !noted || !complete || !detail.validation.valid
+                      decisionBlocked ||
+                      !noted ||
+                      !complete ||
+                      !detail.validation.valid
                     }
                     onClick={() =>
                       act(can("publish") ? "approve_and_publish" : "approved", {
@@ -512,21 +528,15 @@ export function Review({
                   Publish approved revision
                 </button>
               )}
-              {revision &&
-                [
-                  "draft",
-                  "changes_requested",
-                  "validation_failed",
-                  "rejected",
-                ].includes(detail.status) && (
-                  <button
-                    className="primary"
-                    disabled={decisionBlocked || !noted}
-                    onClick={() => act("submit")}
-                  >
-                    Submit for review
-                  </button>
-                )}
+              {revision && detail.status === "draft" && (
+                <button
+                  className="primary"
+                  disabled={decisionBlocked || !noted}
+                  onClick={() => act("submit")}
+                >
+                  Submit for review
+                </button>
+              )}
               {revision && detail.status === "pending_review" && (
                 <>
                   <button
@@ -560,7 +570,10 @@ export function Review({
                   <button
                     className="primary"
                     disabled={
-                      blocked || !noted || !complete || !detail.validation.valid
+                      decisionBlocked ||
+                      !noted ||
+                      !complete ||
+                      !detail.validation.valid
                     }
                     onClick={() => act("attest", { quality })}
                   >

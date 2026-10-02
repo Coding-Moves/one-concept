@@ -161,7 +161,7 @@ test("review-only permissions, rejection and session expiry", async ({
   expect(state.status).toBe("rejected");
   await expect(
     page.getByRole("button", { name: "Submit for review" }),
-  ).toBeVisible();
+  ).toHaveCount(0);
   state.expired = true;
   await page.getByRole("button", { name: "Reload", exact: true }).click();
   await expect(

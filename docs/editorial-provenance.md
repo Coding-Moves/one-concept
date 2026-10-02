@@ -167,9 +167,10 @@ statement that reads the body**. This avoids combining two database snapshots
 across a concurrent publication. No extra endpoint, client table permission or
 new migration is introduced.
 
-The shared mobile mapper keeps this evidence with the entire lesson body. Today,
-daily review and History/Saved details show a modest, borderless **Reviewed by**
-line, including below the recall side. A missing/malformed field or mismatched
+The shared mobile mapper keeps this evidence with the entire lesson body.
+History/Saved concept details show a modest, borderless **Reviewed by** line
+below the lesson card. Today and daily review cards show no reviewer line,
+keeping the first page focused on the concept. A missing/malformed field or mismatched
 version shows no label; old responses, old caches and demo lessons remain usable.
 Review dates are retained in the payload/cache but are not an additional visual
 badge. Normal account cleanup still removes the cached lesson and its evidence;

@@ -55,15 +55,17 @@ fs.mkdirSync(output,{recursive:true});
    const longName='Alexandra Maria Elizabeth Catherine Williams Thompson';
    lesson.review={name:longName,reviewed_at:'2026-10-01T12:00:00Z',content_version:2};
    await page.getByRole('button',{name:'Refresh today',exact:true}).click();
-   await expect(credit()).toHaveText('Reviewed by '+longName);
-   await credit().scrollIntoViewIfNeeded();
-   const metrics=await credit().evaluate(el=>({width:el.getBoundingClientRect().width,scroll:el.scrollWidth,client:el.clientWidth,border:getComputedStyle(el).borderTopWidth}));
-   assert.ok(metrics.width<=360 && metrics.scroll<=metrics.client+1,JSON.stringify(metrics));
-   assert.equal(parseFloat(metrics.border),0);
+   // Today stays focused on learning even when valid evidence is present.
+   await expect(credit()).toHaveCount(0);
    await page.screenshot({path:path.join(output,`today-${theme}.png`)});
    await page.getByRole('tab',{name:'History'}).click();
    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
    await expect(credit().last()).toHaveText('Reviewed by '+longName);
+   await credit().scrollIntoViewIfNeeded();
+   const metrics=await credit().evaluate(el=>({width:el.getBoundingClientRect().width,scroll:el.scrollWidth,client:el.clientWidth,border:getComputedStyle(el).borderTopWidth}));
+   assert.ok(metrics.width<=360 && metrics.scroll<=metrics.client+1,JSON.stringify(metrics));
+   assert.equal(parseFloat(metrics.border),0);
+   await page.screenshot({path:path.join(output,`detail-${theme}.png`)});
    await page.getByRole('button',{name:'Close',exact:true}).click();
    await page.getByRole('tab',{name:'Profile'}).click();
    await page.getByText('Saved concepts',{exact:true}).click();
@@ -72,7 +74,7 @@ fs.mkdirSync(output,{recursive:true});
    // Fresh version without evidence must remove the cached label entirely.
    lesson.content_version=3;lesson.summary='A newly published lesson body with no matching attribution.';lesson.review=null;
    await page.getByRole('button',{name:'Refresh lesson',exact:true}).click();
-   await expect(page.getByText(lesson.summary,{exact:true})).toBeVisible();
+   await expect(page.getByText(lesson.summary,{exact:true}).last()).toBeVisible();
    await expect(credit()).toHaveCount(0);
    // New version receives its own name, including while the recall side is open.
    lesson.review={name:'Second Reviewer',reviewed_at:'2026-10-02T12:00:00Z',content_version:3};
@@ -89,11 +91,15 @@ fs.mkdirSync(output,{recursive:true});
    await page.getByRole('button',{name:'Back',exact:true}).click();
    await page.getByRole('tab',{name:'Today'}).click();
    await page.getByRole('button',{name:'Refresh today',exact:true}).click();
-   await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+   await expect(credit()).toHaveCount(0);
    // Restart offline from a full cached state; no live metadata request needed.
    online=false;await page.reload();
-   await expect(page.getByText(lesson.summary,{exact:true})).toBeVisible();
+   await expect(page.getByText(lesson.summary,{exact:true}).last()).toBeVisible();
+   await expect(credit()).toHaveCount(0);
+   await page.getByRole('tab',{name:'History'}).click();
+   await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
    await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+   await page.getByRole('button',{name:'Close',exact:true}).click();
    // A corrupted/stale cache pair must never show a mismatched version label.
    await page.evaluate(()=>{
     for(const key of Object.keys(localStorage).filter(k=>k.startsWith('one-concept/'))){
@@ -106,14 +112,19 @@ fs.mkdirSync(output,{recursive:true});
     }
    });
    await page.reload();
-   await expect(page.getByText(lesson.summary,{exact:true})).toBeVisible();
+   await expect(page.getByText(lesson.summary,{exact:true}).last()).toBeVisible();
    await expect(credit()).toHaveCount(0);
+   await page.getByRole('tab',{name:'History'}).click();
+   await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
+   await expect(page.getByText(lesson.summary,{exact:true}).last()).toBeVisible();
+   await expect(credit()).toHaveCount(0);
+   await page.getByRole('button',{name:'Close',exact:true}).click();
    await page.getByRole('tab',{name:'Profile'}).click();
    await page.getByText('Sign out',{exact:true}).click();
    await expect(page.getByText('Welcome back',{exact:true})).toBeVisible();
    await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('one-concept/concepts/')).length)).toBe(0);
    assert.deepEqual(errors,[]);
-   console.log(`${theme}: legacy/attested/corrected attribution, History/Saved, recall, offline restart, invalid cache, sign-out and wrapped borderless credit passed`);
+   console.log(`${theme}: legacy/attested/corrected attribution, History/Saved, recall, offline restart, invalid cache, sign-out and detail-only wrapped borderless credit passed`);
    await context.close();
   }
  } finally {await browser.close();server.close();}

@@ -73,8 +73,9 @@ The existing `workers/pool_topup.py` runs a bounded revision batch before refill
 same SQL statement as a published lesson. `schemas/daily.py` adds nullable
 `ConceptOut.review`; detail, daily selection and folded state/review paths use it.
 `mobile/src/services/conceptMapping.ts` shares version validation across detail,
-daily and cached reads. `components/ReviewAttribution.tsx` renders borderless credit
-in `ConceptCard`, outside the flip faces. Legacy/mismatched metadata has no label.
+daily and cached reads. `components/ReviewAttribution.tsx` renders borderless credit only in
+`ConceptDetailScreen`, below the card opened from History/Saved. Today/review
+cards and legacy/mismatched metadata have no label.
 See [editorial-provenance.md](editorial-provenance.md#learner-attribution-280)
 for compatibility, historical offline semantics and rollout.
 

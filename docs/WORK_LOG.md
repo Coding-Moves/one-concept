@@ -9,7 +9,8 @@ claims as completed work.
 
 ### #280 — exact-version learner attribution implemented
 
-- Owner requested the complete dedicated PR into `develop`. Branch
+- [PR #314](https://github.com/Coding-Moves/one-concept/pull/314) targets
+  `develop`. Owner requested the complete dedicated PR. Branch
   `codex/280-reviewed-attribution` starts at merged #312 (`3d361d8`).
 - `fca5754`: nullable public reviewer name/date/version on full detail, daily,
   folded state and review responses; content/evidence selected in one SQL
@@ -25,8 +26,13 @@ claims as completed work.
   Exact Expo SDK 57 docs were read. No native dependency, schema migration,
   app/runtime version bump, production action or issue closure. Deploy compatible
   backend first, then mobile JavaScript through the normal release procedure.
+- Owner then requested detail-only credit. This follow-up restores the shared
+  card to its base presentation and renders credit below the card only in
+  History/Saved details. Updated both-theme browser scenarios and TypeScript
+  pass; inspected the final light detail screenshot. Initial PR CI was all green;
+  final-placement CI follows this push.
 - Native screen-reader/font-scaling QA is not claimed by browser checks. #313
-  hosting/email activation is independent. PR link and hosted CI follow the push.
+  hosting/email activation is independent. No manual configuration is required to merge.
 - Existing unrelated demo and previous email handoff log edits remain unstaged.
 
 ### PR #312 — direct production email rollout

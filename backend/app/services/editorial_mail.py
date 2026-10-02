@@ -19,8 +19,6 @@ class DeliveryError(Exception):
 def setup_status(settings):
     if not settings.editorial_enabled or not settings.editorial_email_enabled:
         return "disabled"
-    if settings.is_production and not settings.editorial_email_staging_verified:
-        return "staging_verification_required"
     try:
         url = urlsplit(settings.editorial_email_dashboard_url)
     except ValueError:

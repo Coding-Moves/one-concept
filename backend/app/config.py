@@ -64,7 +64,6 @@ class Settings(BaseSettings):
     editorial_invite_redirect_url: str = ""
     # Dedicated backend delivery; Supabase Auth templates are not a mail API.
     editorial_email_enabled: bool = False
-    editorial_email_staging_verified: bool = False
     editorial_email_dashboard_url: str = ""
     editorial_email_test_recipients: str = ""
     editorial_email_daily_cap: int = Field(default=40, ge=0, le=500)

@@ -7,10 +7,9 @@ type Delivery = { recipient_name?: string | null; id: string; status: string; at
 type Overview = { policy: Policy; setup_status: string; daily_cap: number; attempts_last_24h: number; overdue: number; counts: Record<string, number>; items: Delivery[]; next_cursor: string | null };
 const statuses: Record<string, string> = {
   ready: "Gmail delivery configured", disabled: "Email sending is disabled",
-  staging_verification_required: "Staging delivery must be verified before production sending",
   dashboard_setup_required: "The operator needs to configure the reviewer website address",
   sender_setup_required: "The operator needs to configure the existing Gmail sender",
-  test_recipients_required: "Staging needs an explicit list of test recipients",
+  test_recipients_required: "Non-production delivery needs an explicit list of test recipients",
 };
 export function Notifications({ api }: { api: Api }) {
   const [cursor, setCursor] = useState(""), [refresh, setRefresh] = useState(0);

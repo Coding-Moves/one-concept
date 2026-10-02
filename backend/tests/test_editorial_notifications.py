@@ -249,14 +249,38 @@ async def test_approval_between_claim_and_send_suppresses(api, session, draft):
     sender.assert_not_awaited()
 
 
-async def test_setup_blocks_production_until_staging_verified(api, session, draft):
+async def test_production_delivery_requires_flags_sender_and_dashboard(
+    api, session, draft
+):
     _, settings = await ready(api, session, draft)
     settings.environment = "production"
-    assert mail.setup_status(settings) == "staging_verification_required"
-    settings.editorial_email_staging_verified = True
+    settings.editorial_email_test_recipients = ""
+    sender = AsyncMock()
+    # Production rollout does not require a separate staging environment.
     assert mail.setup_status(settings) == "ready"
+    settings.editorial_email_enabled = False
+    assert (await notices.run(session, settings, sender=sender))["status"] == "disabled"
+    settings.editorial_email_enabled = True
+    settings.editorial_enabled = False
+    assert mail.setup_status(settings) == "disabled"
+    settings.editorial_enabled = True
+    refresh_token = settings.editorial_gmail_refresh_token
+    settings.editorial_gmail_refresh_token = ""
+    assert (await notices.run(session, settings, sender=sender))[
+        "status"
+    ] == "sender_setup_required"
+    settings.editorial_gmail_refresh_token = refresh_token
     settings.editorial_email_dashboard_url = "https://other.invalid"
-    assert mail.setup_status(settings) == "dashboard_setup_required"
+    assert (await notices.run(session, settings, sender=sender))[
+        "status"
+    ] == "dashboard_setup_required"
+    sender.assert_not_awaited()
+    settings.editorial_email_dashboard_url = "https://review.test.invalid"
+    assert (await notices.run(session, settings, sender=sender))["processed"] == 1
+    sender.assert_awaited_once()
+    assert (
+        sender.call_args.args[1]["recipient_email"] == f"{api.owner.id}@example.invalid"
+    )
 
 
 async def test_gmail_https_stable_message_id_and_sanitized_errors(monkeypatch):

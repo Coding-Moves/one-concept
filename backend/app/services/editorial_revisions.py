@@ -25,7 +25,7 @@ async def lock_reviewer(db, actor, settings, capability):
     return await authorize(db, actor, settings, capability)
 
 
-async def revision(db, revision_id):
+async def revision(db, revision_id, *, lock=True):
     row = (
         (
             await db.execute(
@@ -35,7 +35,7 @@ async def revision(db, revision_id):
           s.slug as subtopic_slug, {SNAPSHOT} as source_snapshot
         from concept_revisions r join concepts c on c.id=r.concept_id
         join topics t on t.id=c.topic_id join subtopics s on s.id=c.subtopic_id
-        where r.id=:id for update of r,c,t,s
+        where r.id=:id {"for update of r,c,t,s" if lock else ""}
     """),
                 {"id": revision_id},
             )
@@ -159,7 +159,9 @@ async def decide_revision(db, revision_id, actor, settings, action, note, qualit
     return eid
 
 
-async def publish_reviewed_revision(db, revision_id, actor, settings):
+async def publish_reviewed_revision(
+    db, revision_id, actor, settings, *, note="Published the exact authenticated approval."
+):
     member = await lock_reviewer(db, actor, settings, "publish")
     row = await revision(db, revision_id)
     approval = (
@@ -211,9 +213,7 @@ async def publish_reviewed_revision(db, revision_id, actor, settings):
         select c.id,c.content_version,:approval,{SNAPSHOT} from concepts c where c.id=:id"""),
         {"approval": approval["id"], "id": row["concept_id"]},
     )
-    await event(
-        db, row, member, "published", "Published the exact authenticated approval."
-    )
+    await event(db, row, member, "published", note)
     return version
 
 
@@ -273,6 +273,9 @@ async def attest_legacy_version(
             "prompt_version": row["prompt_version"],
         }
     )
+    from app.services.publication import validate_candidate
+
+    await validate_candidate(db, row["slug"], concept_id, body)
     eid = await event(
         db,
         {

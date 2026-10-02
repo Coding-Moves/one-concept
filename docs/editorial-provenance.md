@@ -65,8 +65,9 @@ retrieves the stored approval and checks current body/version/taxonomy and
 retirement. It reuses existing graph, duplicate and prerequisite validation.
 The actor and settings come from verified backend dependencies, never submitted
 reviewer IDs/names. No approval name or quality checklist is accepted by the
-publication call. Approval and publication are separate permissions; #276 can
-compose them into one **Approve and publish** transaction for a dual-role user.
+publication call. Approval and publication are separate permissions; the
+[editorial API](editorial-api.md) composes them into one **Approve and publish**
+transaction for a dual-role user.
 
 Every operation runs within a caller-owned READ COMMITTED transaction. Acquire
 the account lock before the catalog lock, then recheck authorization after both.
@@ -96,7 +97,8 @@ completion, save or streak. Existing content remains available without a badge.
 
 `attest_legacy_version` requires both `approve` and `publish`, an exact match to
 the inventoried current version, the complete current package and checklist,
-and a substantive note. It records attribution without changing the lesson or
+and a substantive note. Current graph, prerequisite and duplicate checks also
+apply. It records attribution without changing the lesson or
 incrementing its version. Incomplete legacy packages require a reviewed
 correction; do not fabricate missing references, flashcards or quiz answers to
 make attestation pass. A version can receive only one publication/attestation
@@ -128,7 +130,8 @@ instead of assigning a second activity; the following day selects normally.
    The old `content publish/reject --reviewed-by ...` commands now fail closed:
    a typed name cannot satisfy authenticated review. Reports, imports, draft
    staging and generation remain available. Authenticated HTTP/CLI entry points
-   are #276; do not deploy this intermediate workflow as a complete review UI.
+   are documented in [editorial-api.md](editorial-api.md); the website and
+   coordinated activation remain later work.
 5. Rehearse submit, feedback/new revision, approval, publication, stale retry,
    unchanged legacy attestation, revocation and learner visibility before #281.
 

@@ -167,11 +167,12 @@ a test account, and verify next-day selection. Today's activity stays fixed.
 7. If a draft needs changes, save its lesson body as JSON and run
    `python -m app.workers.content stage SLUG BODY.json`. The body contains
    `title`, `summary`, `example`, `subtopic_slug`, `curriculum`, optional `model` and
-   `prompt_version`. The CLI prints a revision UUID.
+   `prompt_version`, and a complete `learning_package` (flashcard and three MCQs).
+   The CLI prints a revision UUID.
 8. Use authenticated exact-revision approval/publication as described in
-   [editorial provenance](editorial-provenance.md). The old free-text
-   `publish --reviewed-by` command is disabled; authenticated entry points are
-   delivered in #276. Keep publication paused until that coordinated rollout.
+   [editorial API](editorial-api.md). The old free-text
+   `publish --reviewed-by` command is disabled. Keep production editorial
+   activation disabled until the coordinated #281 rollout.
 
 Publication requires complete metadata, valid prerequisites already published,
 an active subject, and a current base version. It rejects exact duplicates and
@@ -280,3 +281,7 @@ Approval records this checklist through the authenticated review service with
 the exact revision and the account's approved registered name. Publication reads
 that stored evidence; a checklist file and a typed reviewer name cannot authorize
 publication. See [the provenance contract and rollout](editorial-provenance.md).
+
+For authenticated queues, comments, assignments, exact-version decisions and the
+operator HTTP client, use [editorial-api.md](editorial-api.md). Its atomic approval
+and publication replaces the retired free-text publication CLI.

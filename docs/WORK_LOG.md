@@ -7,6 +7,68 @@ claims as completed work.
 
 ## Current status
 
+### PR #309 follow-up code review — fixed and validated
+
+- Reviewed `e6440f0` in [PR #309](https://github.com/Coding-Moves/one-concept/pull/309)
+  against #276: request/permission boundaries, exact revision/state locks,
+  idempotency, private evidence, operator paths, inventory and learner eligibility.
+- `13ff516` fixes two P2 demand defects: retired subtopic inventory inflated the
+  worker target, and the response/receipt/audit could report a smaller target
+  than the upsert retained. Count active inventory and return the actual saved
+  target. Four regression combinations include pre-existing demand and replay.
+- `f0b5aca` fixes a P2 publication gap: published prerequisites under retired
+  topics/subtopics were treated as available. Shared preflight/final validation
+  now rejects both cases, with atomic rollback of approval/receipt verified.
+- Baseline regressions reproduced wrong targets (3 instead of 2; reported 2/3
+  when 10 was saved) and two HTTP 200 publications that should have been denied.
+  The initial parameterized supply fixture reused a title/objective and hit
+  import deduplication; unique fixtures now exercise the intended behavior.
+- `1a7ea86` cleans up the new prerequisite fixture's active topic so the shared
+  disposable catalog does not affect later generation/selection tests. Those
+  four prerequisite/isolation checks passed together after cleanup. The first
+  broad run exposed those two fixture interactions and ended before its summary;
+  it is not counted as a completed validation.
+- **32 focused PostgreSQL tests passed, no skips** after fixes. The final full
+  PostgreSQL 16 suite passed **438 tests, no skips**, in 167 seconds. Exact-head
+  hosted CI and the review handoff are recorded in PR #309. Backend F/E9 lint, changed
+  documentation links and diff whitespace checks passed.
+- No additional migration/manual production task, release, live provider call,
+  account invitation or PR merge. Existing staged activation remains #281.
+  Documentation commit: "Document PR 309 review findings and regression results".
+
+### #276 editorial review and publication APIs — PR #309 implemented and validated
+
+- [PR #309](https://github.com/Coding-Moves/one-concept/pull/309) targets `develop`
+  from `codex/276-editorial-review-api`, step 3/9 of #263; closes only
+  #276. Based on merged #299, then updated to `develop` at `77d175d` via `b71f865`
+  to preserve the newly merged dependency updates and all focused commits.
+- `c603396`: migration 0034/private workflow audit and receipts/schema contract.
+  `352670a`: versioned commands and private queues/package/diff/history/validation.
+  `1364e9a`: protected HTTP routes and integration tests. `8f51b8a`: authenticated
+  operator CLI. `56ca4c6`: rewrite-worker compatibility with open reviews and the
+  complete package. `9c95adc`: retain publisher notes and validate legacy attestation.
+- Covers comments, assignments, exact-version decisions, atomic approval/publication,
+  stale/concurrent/replayed commands, legacy attestation, retirement preserving
+  progress, and bounded audited generation demand. No provider call in review HTTP.
+  Website remains #278 and generation/revision orchestration remains #277.
+- Local full PostgreSQL 16 suite: **432 passed, no skips** (169 seconds). Earlier
+  44 HTTP/publication checks and eight CLI/worker checks passed. The first full
+  database run had 431 passes and one new fixture search failure after changing
+  its title; the final run uses its stable topic filter. A sandbox-only attempt
+  could not start Podman and was stopped rather than reporting skipped DB tests
+  as validation. All successful DB runs used disposable local data, no providers.
+- After installing the current repository pins (SQLAlchemy 2.1.1, Uvicorn 0.54.0,
+  PyJWT 2.15.1), a second full local PostgreSQL run passed **432 tests, no skips**
+  in 167 seconds. Backend F/E9 lint, documentation links and whitespace checks
+  passed. Exact-head hosted CI/handoff is recorded in PR #309.
+- [editorial-api.md](editorial-api.md) describes permissions, endpoints, retry
+  contracts, private text handling, publication entry-point audit and rollout.
+  Documentation commits: `631ae7d` and "Record PR 309 validation and handoff".
+- No immediate manual production task. Staging needs migration 0034 after 0033;
+  production activation remains #281 with identity/MFA, compatible workers and
+  device rehearsal. No production SQL, applied-ledger edit, account invitation,
+  content publication, paid service, mobile/native build or PR merge performed.
+
 ### PR #299 follow-up code review — fixed and validated
 
 - Reviewed `82c80b1` against #275, including authenticated decisions, immutable

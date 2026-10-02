@@ -40,8 +40,14 @@ review decisions and legacy attestation (#275); migration 0033 stores the one-ti
 published inventory, review events and exact-version provenance. `publication.py`
 requires that approval through the authenticated service; the old free-text CLI
 publish/reject commands fail closed. See [editorial-provenance.md](editorial-provenance.md).
-HTTP review/publication entry points (#276), dashboard screens (#278), mobile
-attribution (#280) and owner reporting (#297) remain separate children of #263.
+`api/v1/editorial_content.py` exposes #276 queues, details, history/timeline and
+versioned actions. `editorial_queries.py` builds private read models;
+`editorial_workflow.py` owns authenticated commands, request receipts and workflow
+audit. Migration 0034 adds private workflow evidence/assignment metadata. The
+operator client `python -m app.workers.editorial_review` uses those same HTTP
+gates. See [editorial-api.md](editorial-api.md) for permissions, retry semantics
+and rollout. Dashboard screens (#278), mobile attribution (#280) and owner
+reporting (#297) remain separate children of #263.
 
 ## Achievements (#209, #259)
 

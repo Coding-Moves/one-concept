@@ -41,37 +41,47 @@ async def test_unavailable_prerequisite_blocks_preview_and_atomic_publication(
         '{curriculum,prerequisites}',cast(:p as jsonb)) where id=:id"""),
         {"id": rid, "p": json.dumps([prereq_slug])},
     )
-    await session.commit()
-    assert (await content.act(api, rid, "submit"))[0].status_code == 200
-    state = await content.detail(api, rid)
-    response, payload = await content.act(
-        api, rid, "approve_and_publish", state["token"]
-    )
-    # Check the mutation before the preview, so the regression proves no bad publication.
-    assert response.status_code == 409, response.text
-    assert not state["validation"]["valid"]
-    assert any(
-        "prerequisite" in e["message"].lower() for e in state["validation"]["errors"]
-    )
-    assert (
-        await session.scalar(
-            text("select status from concept_revisions where id=:id"), {"id": rid}
+    try:
+        await session.commit()
+        assert (await content.act(api, rid, "submit"))[0].status_code == 200
+        state = await content.detail(api, rid)
+        response, payload = await content.act(
+            api, rid, "approve_and_publish", state["token"]
         )
-        == "pending_review"
-    )
-    assert (
-        await session.scalar(
-            text("select status from concepts where id=:id"), {"id": cid}
+        # Check the mutation before the preview, so the regression proves no bad publication.
+        assert response.status_code == 409, response.text
+        assert not state["validation"]["valid"]
+        assert any(
+            "prerequisite" in e["message"].lower()
+            for e in state["validation"]["errors"]
         )
-        == "draft"
-    )
-    assert not await session.scalar(
-        text("""select exists(select 1 from editorial_revision_events
-        where revision_id=:id and action='approved')"""),
-        {"id": rid},
-    )
-    assert not await session.scalar(
-        text("""select exists(select 1 from editorial_request_receipts
-        where request_id=:id)"""),
-        {"id": payload["request_id"]},
-    )
+        assert (
+            await session.scalar(
+                text("select status from concept_revisions where id=:id"), {"id": rid}
+            )
+            == "pending_review"
+        )
+        assert (
+            await session.scalar(
+                text("select status from concepts where id=:id"), {"id": cid}
+            )
+            == "draft"
+        )
+        assert not await session.scalar(
+            text("""select exists(select 1 from editorial_revision_events
+            where revision_id=:id and action='approved')"""),
+            {"id": rid},
+        )
+        assert not await session.scalar(
+            text("""select exists(select 1 from editorial_request_receipts
+            where request_id=:id)"""),
+            {"id": payload["request_id"]},
+        )
+    finally:
+        # The suite shares its disposable catalog. This fixture's unavailable
+        # prerequisite must not remain an active topic for later supply tests.
+        await session.rollback()
+        await session.execute(
+            text("update topics set is_active=false where id=:id"), {"id": tid}
+        )
+        await session.commit()

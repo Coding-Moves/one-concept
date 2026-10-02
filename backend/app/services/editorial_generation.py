@@ -420,6 +420,11 @@ async def finish(db, settings, job, result=None, failure=None):
                 await transition(db, job["id"], state, "invalid_output")
             else:
                 rid = await stage_revision(db, source["slug"], body)
+                # Preserve the current assignment for the replacement draft. The
+                # database trigger queues its notification with this transaction.
+                await db.execute(text("""update concept_revisions set assigned_to=(
+                    select assigned_to from concept_revisions where id=:source)
+                    where id=:result"""), {"source": job["source_revision_id"], "result": rid})
                 await transition(db, job["id"], "ready_for_review", result=rid)
                 state = "ready_for_review"
         await db.commit()

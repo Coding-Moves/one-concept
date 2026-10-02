@@ -150,3 +150,12 @@ Once the compatible backend is deployed, newly approved-and-published cards ente
 normal server selection automatically; each content approval needs no mobile
 release. Mobile attribution UI remains #280. The existing rules for a software
 release still apply when shipping new application code.
+
+## Reviewer notifications
+
+Owners can open **Notifications** to see overdue assignments, delivery failures,
+review policy and bounded retries. Reviewers choose their email deadline timezone
+in **Settings**. Delivery uses the existing backend worker and the sender's Gmail
+HTTPS API; no SMTP upgrade or new paid mail service is required. Follow the
+[notification setup and direct production rollout](../docs/editorial-notifications.md)
+before enabling email. Supabase Auth email templates remain separate.

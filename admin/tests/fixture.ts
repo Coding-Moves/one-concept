@@ -349,7 +349,9 @@ export async function fixture(
         details: {},
       });
       const result = {
-        revision_id: rid,
+        ...(path.startsWith("/concepts/") && path.endsWith("/actions")
+          ? { concept_id: cid }
+          : { revision_id: rid }),
         status: path.endsWith("/generation-requests")
           ? "pending"
           : state.status,

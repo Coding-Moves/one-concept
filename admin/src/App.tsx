@@ -8,6 +8,7 @@ import { Settings } from "./Settings";
 import { Queue } from "./Queue";
 import { Review } from "./Review";
 import { Team } from "./Team";
+import { Notifications } from "./Notifications";
 import { Generation } from "./Generation";
 export interface Route {
   view: string;
@@ -211,7 +212,7 @@ export function App({
     ...(can("request_generation") && can("review")
       ? [["generation", "AI requests", "✧"]]
       : []),
-    ...(can("manage_reviewers") ? [["team", "Reviewers", "♧"]] : []),
+    ...(can("manage_reviewers") ? [["team", "Reviewers", "♧"], ["notifications", "Notifications", "✉"]] : []),
     ["settings", "Settings", "⚙"],
   ];
   const active = !!me?.member.approved_name && !me?.mfa_required;
@@ -312,7 +313,9 @@ export function App({
             <Mfa auth={auth} onVerified={() => void reloadMe()} />
           ) : active ? (
             <>
-              {current.view === "team" && can("manage_reviewers") ? (
+              {current.view === "notifications" && can("manage_reviewers") ? (
+                <Notifications api={api} />
+              ) : current.view === "team" && can("manage_reviewers") ? (
                 <Team api={api} me={me} />
               ) : current.view === "generation" &&
                 can("request_generation") &&

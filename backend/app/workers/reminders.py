@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.services.weekly_quiz_notifications import send_weekly_quiz_notifications
 from app.db.session import SessionLocal, engine
 from app.services.reminders import send_due_reminders
+from app.services.editorial_notifications import run as notify_reviewers
 
 
 async def main() -> None:
@@ -24,6 +25,10 @@ async def main() -> None:
         async with SessionLocal() as session:
             weekly = await send_weekly_quiz_notifications(session)
         logging.info("weekly quiz: accepted %s, dropped %s stale tokens", weekly.sent, weekly.dropped_tokens)
+    # Same scheduled process; no additional paid scheduler or service.
+    async with SessionLocal() as session:
+        result = await notify_reviewers(session, get_settings())
+    logging.info("editorial email: status=%s processed=%s", result["status"], result["processed"])
     await engine.dispose()
 
 

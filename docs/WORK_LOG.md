@@ -7,6 +7,84 @@ claims as completed work.
 
 ## Current status
 
+### PR #312 — direct production email rollout
+
+- Owner explicitly declined staging creation/testing and requested the complete
+  email implementation in the same PR. No staging attestation is required.
+- `5632356` removes the staging-only production gate and obsolete settings/UI
+  status. Production still requires explicit editorial/email enable switches,
+  valid sender configuration, exact HTTPS dashboard origin and current reviewer
+  eligibility. Existing `EDITORIAL_EMAIL_STAGING_VERIFIED=false` is ignored.
+- The new production regression failed against the old gate, then passed after
+  the change. Final focused PostgreSQL/provider/API/template suite: **17 passed,
+  no skips**. Admin typecheck and **8 unit tests** passed; F/E9 lint and diff
+  checks passed. Final full CI follows this push; prior head had all three gates
+  green, including 496 backend tests and 23 browser scenarios.
+- This documentation commit replaces mandatory staging instructions with the
+  direct production runbook. HTML/text templates, caps, retries and 48/24/2
+  policy remain implemented. No schema or migration ledger changes were needed.
+- Owner reports fresh Gmail credentials stored on API and reminders with sending
+  disabled; live settings were not independently inspected. Remaining activation
+  inputs: durable Google OAuth authorization (Testing tokens expire in seven
+  days), deployed reviewer HTTPS origin/account setup, ordered migration 0038,
+  and matching production API/worker release before enabling email. Website URL
+  requested; no response yet. No actual email delivery is claimed.
+- No merge, live send, paid service, staging infrastructure or production setting
+  change was performed. Preserve unrelated local demo work-log edits unstaged.
+
+### PR #312 — follow-up review fixes validated
+
+- Reviewed SQL/outbox lifecycle, provider delivery, authorization, owner controls,
+  tests and deployment documentation in the same PR. Initial head `8556ea7`
+  passed all three GitHub quality gates.
+- `e76a485` fixes a reproduced batching bug: an old initial notice could suppress
+  a newly created reminder before its collection window. Select the newest
+  pending ordinal first and suppress only older events in that same cycle.
+- `edbc139` adds a branded, responsive HTML email with a plain-text fallback.
+  Escape content and permit action buttons only for exact workspace revision
+  URLs; no external assets or tracking. Existing Supabase Auth templates remain
+  unchanged. The backend image already copies the template with `app/`.
+- Final focused PostgreSQL/provider/API/template suite: **17 passed, no skips**.
+  F/E9 lint and diff checks passed. Rendered and inspected the two-lesson email
+  at desktop and 390px phone widths; no horizontal overflow. Gmail client/inbox
+  rendering remains part of real staging acceptance, not claimed by local tests.
+- This documentation commit records the activation order and template paths.
+  Final-head hosted CI follows the push. Merge readiness is for disabled sending;
+  OAuth authorization, isolated staging inbox/login/MFA acceptance and production
+  activation after the release remain manual. No production migration, live email,
+  secret/configuration change, merge or issue closure performed. Prior unrelated
+  local demo work-log edits remain unstaged.
+
+### #279 — reviewer notifications: PR #312 open for review
+
+- [PR #312](https://github.com/Coding-Moves/one-concept/pull/312) targets
+  `develop` from `codex/279-reviewer-notifications`, based on `bf95496`.
+  Scope: durable assigned-review emails, 48-hour deadlines, 24-hour reminders
+  (maximum two), reviewer timezone and owner delivery controls. References #279;
+  no automatic closure while real staging acceptance is pending. #263 remains open.
+- `05f4035`: private migration 0038/outbox and corrected-draft assignment.
+  `7c09a16`: Gmail HTTPS worker, bounded retries/caps and delivery tests.
+  `b5624b3`: authenticated owner controls/timezone APIs. `ae72ba4`: correct the
+  browser fixture's concept-action response. `47b7a74`: dashboard and browser
+  coverage. `d0ff557`: free sender/OAuth setup, rollout guide and codebase map.
+  This entry's commit is `docs: record reviewer notification PR handoff`.
+- Verification: full disposable PostgreSQL 16 suite **491 passed, no skips**;
+  final notification/API suite **14 passed** after additional batching/crash
+  cases and final changes. F/E9 lint and diff checks passed. Node 24.19 TypeScript,
+  **8 unit tests**, **23 browser scenarios**, fixture production build passed;
+  both notification browser cases passed again after final display changes.
+  Light desktop/dark narrow layouts inspected; no horizontal overflow.
+- Provider decision: existing Gmail via HTTPS OAuth; Railway Free/Trial/Hobby
+  block SMTP. No paid sender/domain/hosting upgrade. Owner reports Gmail API
+  enabled; consent/client authorization and staging mailbox/link acceptance are
+  still manual. Supabase Auth templates stay unchanged. Use
+  [editorial-notifications.md](editorial-notifications.md) for exact steps.
+- Sending defaults off. No live email, secrets changes, production migration,
+  deployment, mobile release or merge performed. `applied.txt` remains unchanged.
+  Production activation remains #281. GitHub CI is pending at handoff; local
+  checks are the evidence above. Prior local-demo work-log edits remain unstaged
+  and are not included in this PR.
+
 ### PR #311 follow-up review — fixes validated
 
 - Reviewed head `3541cca` across backend contracts, authentication, decisions,

@@ -71,6 +71,7 @@ class InviteInput(StrictInput):
 class Member(BaseModel):
     user_id: UUID
     invited_email: str
+    notification_timezone: str = "UTC"
     status: Literal["active", "revoked"]
     capabilities: list[Capability]
     requested_name: str | None

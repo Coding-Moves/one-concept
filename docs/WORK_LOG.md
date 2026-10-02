@@ -7,6 +7,26 @@ claims as completed work.
 
 ## Current status
 
+
+### #287 — production email confirmation redirect prepared
+
+- `codex/287-confirmation-redirect`, based on current `develop` (`3d361d8`),
+  fixes the sign-up redirect without a schema or native change. The mobile app
+  passes the configured API landing page to Supabase for confirmation and
+  recovery, refusing malformed public URL values. The existing public
+  `/confirmed` page now has a regression test.
+- The required owner configuration is documented in
+  [AUTH_REDIRECTS.md](AUTH_REDIRECTS.md): prove the active Railway API domain
+  serves `/confirmed`, set the Supabase Site URL/fallback and exact allowlist,
+  then verify the EAS production public API value. Dashboard configuration can
+  occur before merge; preview test follows the `develop` merge; production OTA
+  waits for a normal release PR and manual Release workflow.
+- No Railway, Supabase, EAS, email template, production account, migration,
+  deployment, merge, or issue closure has been performed by this PR. A fresh
+  controlled-account confirmation and recovery test remains mandatory before a
+  production release is claimed complete.
+
+
 ### PR #312 — direct production email rollout
 
 - Owner explicitly declined staging creation/testing and requested the complete

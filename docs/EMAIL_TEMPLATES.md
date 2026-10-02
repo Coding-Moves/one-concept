@@ -29,11 +29,12 @@ must both pass through that verification. Password changed reports a completed
 change and intentionally has no token or reset-link placeholder. It directs
 unrecognized changes to Forgot password in the app and the existing support email.
 
-Preserve the project's existing working redirect configuration. Signup uses the
-configured Site URL for `/confirmed`; recovery requests `/reset-password` on the
-app's API base URL. The corresponding HTTPS destinations must be allowed in
-Supabase's URL Configuration. Do not replace verification links with those
-landing-page URLs. See [Supabase email templates](https://supabase.com/docs/guides/auth/auth-email-templates).
+Signup and recovery both request a landing page on the mobile build's configured
+API origin. The Site URL remains the fallback for earlier app versions, and the
+corresponding HTTPS destinations must be allowed in Supabase's URL Configuration.
+Do not replace verification links with those landing-page URLs. Follow the
+[authentication redirect runbook](AUTH_REDIRECTS.md) before testing the emails.
+See [Supabase email templates](https://supabase.com/docs/guides/auth/auth-email-templates).
 
 ## Sending and activation
 

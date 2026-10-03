@@ -7,6 +7,95 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.5 reviewer-site release preparation
+
+- Owner merged Netlify preparation PR #331 into `develop`; profile-control PR
+  #332 also merged. `main` remains v1.10.4 and lacks the static-host files.
+  Netlify project `coding-moves-one-concept-review` exists but its initial
+  preview said Page not found; keep it private while checking the `admin`
+  build settings. A preview for this preparation PR was created; disable
+  preview/branch deploys until an isolated test backend exists.
+- `cbdfe0d` prepares the required v1.10.5 app version and matching one-time
+  What's New card, describing the profile/share/connection improvements from
+  #332. Runtime 1.10.1 stays unchanged: these are JavaScript/site changes.
+- Node 24 `npm run typecheck` and all 90 mobile unit tests passed. The fixture
+  Expo web export and `--whats-new` browser check passed across small/standard
+  phone and landscape layouts in both themes, including offline-restart
+  dismissal. `git diff --check` passed. Native device checks and the live
+  Netlify site remain unverified.
+- [Preparation PR #334](https://github.com/Coding-Moves/one-concept/pull/334)
+  targets `develop`; hosted checks follow this push. Once merged by the owner,
+  prepare the `develop` → `main` release PR. No production deployment, email
+  flag, mobile OTA or PR merge occurred in this chunk.
+
+### #330 empty-topic daily policy — PR #333 open
+
+- [PR #333](https://github.com/Coding-Moves/one-concept/pull/333) targets `develop` and closes #330. It contains focused commits for selection, API/state, reminders, documentation, handoff, and concurrent-device coverage.
+- Scope: make an intentional empty followed-topic list a stable daily-learning
+  state. A new daily assignment must not silently widen to unrelated catalog
+  content; an existing same-day assignment remains readable and completable.
+- `428c061` adds the selection contract and PostgreSQL coverage for empty follows,
+  existing assignments, and resuming after a follow. `1aa4653` exposes typed
+  `personalization_required` and additive `daily_availability` API/state values.
+  `645cf54` pauses topic-dependent daily push claims while retaining reminder
+  preferences and registered handsets. `eb3c8ac` documents the contract and
+  staged mobile rollout.
+- No migration is needed: active membership already lives in `user_topics`.
+  No Gemini generation is requested on this path. The weekly-quiz policy and
+  existing quizzes are unchanged.
+- Passed locally: PostgreSQL-backed selection, daily API and reminder regression
+  suites; backend Ruff F/E9 lint; documentation/diff whitespace checks. The
+  next chunk (#329) will consume this contract in Today UI after this backend PR
+  is reviewed and merged.
+
+### #328 — profile controls and connection clarity prepared
+
+- `codex/328-profile-controls`, based on `3731fd9`, groups the requested
+  learner-facing profile and connection improvements into one dedicated PR.
+  Commits keep name-save confirmation, sharing-state clarity, immediate switch
+  feedback, connection copy, browser regressions, and stale-read fencing
+  independently reviewable.
+- Server-backed notification and connection-preference switches now change
+  immediately, remain explicitly busy while persisting, roll back on failure,
+  and reject stale initial/reload reads. Sharing makes saved versus unsaved
+  choices explicit and will not reload over an unsaved draft.
+- Validation: Node 24 mobile suite **90 passed**, TypeScript passed, and the
+  mocked exported-app Profile/Connections browser scenarios passed after a clean
+  web export in both themes, including delayed saves, failure rollback, large
+  text, sharing and connection actions. Native screen-reader and physical-device
+  touch feedback remain manual acceptance checks.
+
+
+### #281 / #313 reviewer website rollout — PR #331
+
+- Owner chose the next #263 child and confirmed existing Netlify and Render accounts.
+  Netlify Free is the selected static host: its `_headers` and `_redirects`
+  support the review site without a paid plan, separate server or domain. The
+  free plan has a hard 300-credit monthly cap; keep previews off until #255.
+  Owner asked about a combined Render/Vercel service; their free worker/cron
+  limits and the production Railway Docker-context change favor keeping the
+  healthy API/workers there and hosting only static assets on Netlify.
+- This chunk prepares production static-host configuration and a direct
+  production runbook. `main` already contains the compatible v1.10.4 API/site;
+  the owner reported migrations through 0039 and protected schema verification.
+  It does not claim live hosting, owner bootstrap or inbox delivery.
+- `6f9067e` adds Node 24 pin, Netlify SPA rewrite and build-time exact-origin
+  security headers with a regression check. The separate operator-runbook and
+  codebase-map commit is `680a6bb`. [PR #331](https://github.com/Coding-Moves/one-concept/pull/331)
+  targets `develop` and is open for review. No PR merge,
+  production flag change, paid service or real email is part of these commits.
+- Admin TypeScript/build and all 11 unit tests passed with fixture public
+  origins. The generated `dist/_headers` and `_redirects` were inspected;
+  all 31 existing browser tests passed. An initial header-test assertion
+  matched a valid `https://` URL and was corrected. Live Netlify headers,
+  owner sign-in, permission denial and inbox delivery still need deployment
+  acceptance; fixtures do not prove them.
+- Hosted PR checks were queued/running at opening. The owner has an existing
+  Netlify account but the in-app browser required GitHub two-factor sign-in;
+  deployment must wait for that login and for the reviewed site config to reach
+  `main`. Keep #313 and #281 open until real acceptance, and do not enable email
+  with a placeholder link.
+
 ### v1.10.4 release gate repair — PR #325
 
 - [Release PR #324](https://github.com/Coding-Moves/one-concept/pull/324)

@@ -69,13 +69,17 @@ export function ProfileSharingScreen() {
     finally { pending.current = false; if (active.current) setBusy(false); }
   };
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
+  const discardDraft = () => { if (saved) { setDraft(saved); setMessage('Unsaved choices discarded.'); } };
   const button = (label: string, action: () => void, disabled = busy) => <Pressable key={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={action} style={({ pressed }) => ({ minHeight: 48, padding: 14, borderRadius: 14, backgroundColor: colors.surface, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 })}><Text style={{ color: colors.primary, fontWeight: '700' }}>{label}</Text></Pressable>;
   const toggle = (label: string, checked: boolean, onChange: (value: boolean) => void) => <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 48 }}><Text style={{ flex: 1, color: colors.text }}>{label}</Text><Switch accessibilityLabel={label} disabled={busy} value={checked} onValueChange={value => { setPreview(null); onChange(value); }} /></View>;
   return <><ShareProfileSheet value={preview} busy={busy} onClose={() => { presentation.current += 1; setPreview(null); }} onShare={() => void share(false)} /><ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24, gap: 18 }}>
     {button('← Back', () => navigation.goBack(), false)}
-    <ScreenHeader title="Public profile" subtitle="Private by default. Anyone with your link can see the fields you choose below, and may copy them." />
-    <Text style={{ color: colors.text }}>Sharing: {saved ? saved.enabled ? 'On' : 'Off' : 'Loading…'}</Text>
-    <Text style={{ color: colors.textMuted }}>Your email, saved concepts and private activity are never included. Disabling sharing stops future access; it cannot remove copies someone already made.</Text>
+    <ScreenHeader title="Public profile" subtitle="Private by default. Choose exactly what a link can show." />
+    <View accessibilityRole="summary" style={{ gap: 4, padding: 14, borderRadius: 14, backgroundColor: colors.surface }}>
+      <Text style={{ color: colors.text, fontWeight: '700' }}>Sharing is {saved ? saved.enabled ? 'on' : 'off' : 'loading'}</Text>
+      <Text style={{ color: colors.textMuted }}>{saved?.enabled ? 'Only the fields selected below are visible from your link.' : 'Nothing is public until you enable sharing.'}</Text>
+    </View>
+    <Text style={{ color: colors.textMuted }}>Your email, saved concepts and private activity are never shared. Turning sharing off stops new link visits; it cannot remove copies someone already made.</Text>
     {!online && <Text style={{ color: colors.text }}>Connect to save settings or prepare a share link.</Text>}
     {draft && <>
       {toggle(`Display name: ${progress.displayName || 'Learner'}`, draft.show_name, show_name => setDraft({ ...draft, show_name }))}
@@ -84,15 +88,15 @@ export function ProfileSharingScreen() {
       <Text accessibilityRole="header" style={{ color: colors.text, fontWeight: '700' }}>Choose achievements to share</Text>
       {awards.length === 0 && <Text style={{ color: colors.textMuted }}>No earned achievements to share yet.</Text>}
       {awards.map(a => toggle(a.name, draft.achievement_codes.includes(a.code), checked => setDraft({ ...draft, achievement_codes: checked ? [...draft.achievement_codes, a.code] : draft.achievement_codes.filter(code => code !== a.code) })))}
+      {dirty && <View accessibilityLiveRegion="polite" style={{ padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSubtle }}><Text style={{ color: colors.text, fontWeight: '700' }}>Unsaved choices</Text><Text style={{ color: colors.textMuted }}>Save to update your link, or discard to return to the last saved settings.</Text></View>}
       {button(saved?.enabled ? 'Save public choices' : 'Enable sharing with these choices', () => void persist(true))}
-      {saved?.enabled && button('Turn off sharing now', () => void persist(false))}
-      {dirty && <Text style={{ color: colors.text }}>Save your choices to apply them.</Text>}
-      {saved?.enabled && !dirty && <>
-        {button('Preview & share profile', () => void share(true))}
-      </>}
+      {dirty && saved && button('Discard unsaved choices', discardDraft, busy)}
+      {saved?.enabled && button('Turn off sharing', () => void persist(false))}
+      {saved?.enabled && !dirty && button('Preview & share profile', () => void share(true))}
     </>}
-    {busy && <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>Please wait…</Text>}
+    {busy && <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>Saving or loading settings…</Text>}
     {message ? <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{message}</Text> : null}
-    {button('Reload settings', () => void load())}
+    {dirty && <Text style={{ color: colors.textMuted }}>Save or discard your choices before reloading.</Text>}
+    {button('Reload saved settings', () => void load(), busy || dirty)}
   </ScrollView></>;
 }

@@ -50,6 +50,7 @@ export function ProfileScreen() {
   // the two counts never disagree.
   const savedCount = progress.bookmarks.length;
   const reminderPending = useRef(false);
+  const notificationMutation = useRef(0);
   const mounted = useRef(true);
   const [reminderBusy, setReminderBusy] = useState(false);
   const [reminderMessage, setReminderMessage] = useState('');
@@ -63,11 +64,12 @@ export function ProfileScreen() {
     let active = true;
     // Cached copy first so the row is there instantly (and offline); the
     // server answer replaces it when it arrives.
+    const observedMutation = notificationMutation.current;
     getCachedNotificationPrefs(session!.user.id).then((p) => {
-      if (active && p) setPrefs((current) => current ?? p);
+      if (active && p && observedMutation === notificationMutation.current) setPrefs((current) => current ?? p);
     });
     getNotificationPrefs(session!.user.id)
-      .then((p) => active && setPrefs(p))
+      .then((p) => active && observedMutation === notificationMutation.current && setPrefs(p))
       .catch(() => { if (active) setReminderMessage('Could not refresh reminder settings. Check your connection and reload.'); });
     return () => {
       active = false;
@@ -87,11 +89,15 @@ export function ProfileScreen() {
 
   const toggleReminders = useCallback(async (weekly = false) => {
     if (!prefs || !session?.user.id || reminderPending.current) return;
-    reminderPending.current = true; setReminderBusy(true); setReminderMessage('');
+    const previous = prefs;
+    const mutation = ++notificationMutation.current;
     const next = weekly ? { ...prefs, weekly_quiz_enabled: !prefs.weekly_quiz_enabled } : { ...prefs, enabled: !prefs.enabled };
+    // Move the switch immediately. The request remains serialized, and a failed
+    // save restores the last server-confirmed value instead of pretending it worked.
+    reminderPending.current = true; setReminderBusy(true); setReminderMessage(''); setPrefs(next);
     try {
       const confirmed = await putNotificationPrefs(next, session.user.id);
-      if (!mounted.current) return;
+      if (!mounted.current || mutation !== notificationMutation.current) return;
       setPrefs(confirmed);
       if (next.enabled && (!weekly || next.weekly_quiz_enabled)) {
         try {
@@ -104,7 +110,7 @@ export function ProfileScreen() {
         }
       }
     } catch {
-      if (mounted.current) setReminderMessage('Could not save reminder settings. Check your connection and try again.');
+      if (mounted.current && mutation === notificationMutation.current) { setPrefs(previous); setReminderMessage('Could not save reminder settings. The previous choice was restored; check your connection and try again.'); }
     } finally {
       reminderPending.current = false;
       if (mounted.current) setReminderBusy(false);
@@ -277,6 +283,7 @@ export function ProfileScreen() {
           <Switch
             accessibilityLabel="Notifications"
             disabled={reminderBusy}
+            accessibilityState={{ disabled: reminderBusy, busy: reminderBusy, checked: prefs.enabled }}
             value={prefs.enabled}
             onValueChange={() => void toggleReminders()}
             trackColor={{ true: colors.primary, false: colors.border }}
@@ -293,6 +300,7 @@ export function ProfileScreen() {
             : 'Turn on Notifications above to receive weekly quiz alerts.'}</Text>
         </View></View>
         <Switch accessibilityLabel="Weekly quiz notifications" disabled={reminderBusy || !prefs.enabled}
+          accessibilityState={{ disabled: reminderBusy || !prefs.enabled, busy: reminderBusy, checked: prefs.weekly_quiz_enabled ?? false }}
           value={prefs.weekly_quiz_enabled ?? false} onValueChange={() => void toggleReminders(true)}
           trackColor={{ true: colors.primary, false: colors.border }} thumbColor={colors.onPrimary} />
       </View>}

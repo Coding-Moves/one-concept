@@ -7,7 +7,7 @@ claims as completed work.
 
 ## Current status
 
-### v1.10.4 release gate repair — pending PR
+### v1.10.4 release gate repair — PR #325
 
 - [Release PR #324](https://github.com/Coding-Moves/one-concept/pull/324)
   merged to `main` at `7f4e18e`, but v1.10.3 has not been published. The
@@ -20,12 +20,16 @@ claims as completed work.
   verification remains. `61494fb` prepares app version 1.10.4 and its matching
   feature-focused What's New card. Native runtime remains 1.10.1, so a new APK
   is still needed for users on runtime 1.10.0.
+- [PR #325](https://github.com/Coding-Moves/one-concept/pull/325) targets
+  `develop`; all four hosted checks passed on `a9bbea9`. Its merge into
+  `develop` and the subsequent `develop` → `main` release PR remain pending.
 - Node 24 mobile typecheck and all **90 unit tests** passed. YAML structure,
   protected secret reference, and diff checks passed. A sandboxed first test run
   had one subprocess `EPERM` failure; an unsandboxed rerun passed all tests.
   The public API `/health` returned HTTP 200, but Railway marked the `7f4e18e`
-  deployment failed. Its exact failed service/log and the API/worker SHAs remain
-  unverified; do not publish OTA/APK until the matching healthy rollout is proven.
+  deployment failed. The available Railway CLI login has access only to the old
+  project, so its exact failed service/log and the API/worker SHAs remain
+  unverified. Do not publish OTA/APK until the matching healthy rollout is proven.
   No release workflow, OTA, APK, tag, flag change, or Railway retry occurred.
 
 ### v1.10.3 release preparation — PR #323

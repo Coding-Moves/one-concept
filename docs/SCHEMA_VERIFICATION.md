@@ -77,12 +77,15 @@ secret the schema check fails and Release cannot publish OTA or a GitHub release
 - Ordinary PR quality CI runs the contract and drift regressions on disposable
   PostgreSQL 16. It never receives the production connection.
 - `migrations.yml` retains the filename ledger check on release PRs. On trusted
-  pushes/manual runs of `main`, it also calls `production-schema.yml`.
-- `production-schema.yml` is reusable and manually dispatchable on `main` only.
-  It checks out the calling commit, rejects a stale main revision, and reads the
+  pushes/manual runs of `main`, a direct job enters `production-schema` and
+  checks the actual database before reporting the protected result.
+- `production-schema.yml` is independently dispatchable on `main` only. It
+  checks out the current commit, rejects a stale main revision, and reads the
   environment secret only in the verification step. No checkout-ref input or
   `pull_request_target` workflow permits PR code to run with production access.
-- `release.yml` requires this verification before its OTA job. The existing
+- `release.yml` uses its own direct protected job before OTA publication. A
+  reusable workflow call did not receive the environment secret during the
+  v1.10.3 main push, although direct dispatch succeeded. The existing
   backend-revision attestation still verifies operator intent; the schema gate
   does not independently identify the Git SHA deployed on Railway.
 

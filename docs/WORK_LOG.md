@@ -7,6 +7,27 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.4 release gate repair — pending PR
+
+- [Release PR #324](https://github.com/Coding-Moves/one-concept/pull/324)
+  merged to `main` at `7f4e18e`, but v1.10.3 has not been published. The
+  post-merge Migrations workflow failed because its reusable protected schema
+  job received an empty `DIRECT_URL`. An independently dispatched
+  [main schema check](https://github.com/Coding-Moves/one-concept/actions/runs/37104525667)
+  used the protected secret and printed `{"schema_ready": true, "errors": []}`.
+- `80d2986` makes the Migrations and Release schema checks direct
+  `production-schema` jobs, matching the successful path; standalone manual
+  verification remains. `61494fb` prepares app version 1.10.4 and its matching
+  feature-focused What's New card. Native runtime remains 1.10.1, so a new APK
+  is still needed for users on runtime 1.10.0.
+- Node 24 mobile typecheck and all **90 unit tests** passed. YAML structure,
+  protected secret reference, and diff checks passed. A sandboxed first test run
+  had one subprocess `EPERM` failure; an unsandboxed rerun passed all tests.
+  The public API `/health` returned HTTP 200, but Railway marked the `7f4e18e`
+  deployment failed. Its exact failed service/log and the API/worker SHAs remain
+  unverified; do not publish OTA/APK until the matching healthy rollout is proven.
+  No release workflow, OTA, APK, tag, flag change, or Railway retry occurred.
+
 ### v1.10.3 release preparation — PR #323
 
 - [PR #322](https://github.com/Coding-Moves/one-concept/pull/322) merged to `develop` at `e529a57`, correcting only test-fixture trigger expectations. The production check is still red on `main` until that fix ships.

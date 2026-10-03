@@ -7,8 +7,9 @@ claims as completed work.
 
 ## Current status
 
-### #330 empty-topic daily policy — implementation ready for review
+### #330 empty-topic daily policy — PR #333 open
 
+- [PR #333](https://github.com/Coding-Moves/one-concept/pull/333) targets `develop` and closes #330. It contains six focused commits for selection, API/state, reminders, documentation, the required handoff, and concurrent-device coverage.
 - Scope: make an intentional empty followed-topic list a stable daily-learning
   state. A new daily assignment must not silently widen to unrelated catalog
   content; an existing same-day assignment remains readable and completable.

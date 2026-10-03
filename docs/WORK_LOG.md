@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #329 empty-topic learner experience — ready for PR
+
+- This mobile chunk consumes the additive `daily_availability` contract from #330 only when the server explicitly returns `personalization_required`; older API deployments keep their current exhausted behavior.
+- Today now explains that the learner should follow topics, offers one direct `Choose topics` action, preserves existing daily assignments, and labels cached guidance while offline. Profile makes daily and weekly reminder prerequisites clear without changing saved preferences.
+- Commits: `adc03ed` maps the typed state, `f0a2503` adds the Today recovery path, and `562b123` clarifies notification settings. Browser coverage and documentation follow in separate focused commits.
+- Validation: Node 24 TypeScript and all 90 mobile tests passed. Exported-app browser checks passed in light and dark themes for the no-topic prompt, topic navigation, offline cached guidance, reminder prerequisites, and large text. Native-device acceptance remains manual.
+
 ### v1.10.5 reviewer-site release preparation
 
 - Owner merged Netlify preparation PR #331 into `develop`; profile-control PR

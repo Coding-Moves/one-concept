@@ -204,13 +204,13 @@ inside a root stack, with a concept-detail modal above them.
 
 | Screen | Responsibility |
 | --- | --- |
-| `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states. |
+| `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states, and a server-confirmed topic-selection prompt when no topics are followed. |
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
 | `AnalyticsScreen.tsx` | Profile-linked, server-confirmed concepts, reviews, activity, quizzes, topics, learning paths and achievements with empty/recovery states. |
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, result feedback and reattempts. |
 | `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, retries, and prior-score history. |
-| `ProfileScreen.tsx` | Account, learning-path progress, reminder preferences, theme, sign-out, and links to profile subpages. |
+| `ProfileScreen.tsx` | Account, learning-path progress, clear reminder prerequisites, theme, sign-out, and links to profile subpages. |
 | `EditProfileScreen.tsx` | Preferred-name editing; confirmed, account-fenced Progress state update. |
 | `ProfileSharingScreen.tsx` / `PublicProfileLink.tsx` | Opt-in field choices, native share/local QR and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |

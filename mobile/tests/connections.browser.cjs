@@ -20,7 +20,7 @@ const server=http.createServer((req,res)=>{
    const errors=[],token='b'.repeat(43), pair='22222222-2222-4222-8222-222222222222',blockedId='44444444-4444-4444-8444-444444444444';
    const peer={id:pair,display_name:'Bea',public_path:`/p/${token}`};
    let offline=false;
-   let relationship='available',blocked=false,prefs={accepting_requests:false,version:0},failSettings=true,requestCalls=0,releaseRequest;
+   let relationship='available',blocked=false,prefs={accepting_requests:false,version:0},failSettings=true,holdSettings=false,releaseSettings,requestCalls=0,releaseRequest;
    const state={display_name:'Reader',timezone:'UTC',today,followed_topics:['computer-science'],learned:[],likes:[],bookmarks:[],saved:[],stats:{current:0,longest:0,total_learned:0,total_reviews:0},assignment_slug:concept.slug,daily:{assigned_for:today,assigned_at:today+'T08:00:00Z',learned:false,completed_at:null,outside_followed_topics:false,concept}};
    const context=await browser.newContext({viewport:{width:320,height:740}});
    await context.addInitScript(({session,version,theme})=>{
@@ -36,7 +36,7 @@ const server=http.createServer((req,res)=>{
     else if(endpoint.startsWith('/v1/concepts/'))body=concept;
     else if(endpoint.startsWith('/v1/public-profiles/'))body={display_name:'Bea',concepts_learned:12,achievements:[]};
     else if(endpoint==='/v1/me/connections/settings'){
-     if(request.method()==='PUT'){if(failSettings)status=503;else prefs={...request.postDataJSON(),version:prefs.version+1};}body=prefs;
+     if(request.method()==='PUT'){if(holdSettings)await new Promise(r=>releaseSettings=r);if(failSettings)status=503;else prefs={...request.postDataJSON(),version:prefs.version+1};}body=prefs;
     }
     else if(endpoint===`/v1/me/connections/with/${token}`){
      if(request.method()==='POST'){requestCalls++;await new Promise(r=>releaseRequest=r);relationship='outgoing';}
@@ -60,8 +60,8 @@ const server=http.createServer((req,res)=>{
    await page.getByRole('tab',{name:'Profile'}).click();await page.getByText('Connections',{exact:true}).click();
    await expect(page.getByText(/No connections yet/)).toBeVisible();
    const preference=page.getByRole('switch',{name:'Accept new connection requests'});
-   await preference.click();await expect(page.getByText(/Could not confirm/)).toBeVisible();await expect(preference).not.toBeChecked();
-   failSettings=false;await preference.click();await expect(preference).toBeChecked();
+   await preference.click();await expect(preference).toBeChecked();await expect(page.getByText(/Could not confirm/)).toBeVisible();await expect(preference).not.toBeChecked();
+   failSettings=false;holdSettings=true;await preference.click();await expect(preference).toBeChecked();await expect.poll(()=>!!releaseSettings).toBe(true);releaseSettings();holdSettings=false;await expect(preference).toBeChecked();
    const input=page.getByRole('textbox',{name:'Shared profile link'});
    await input.fill('invalid');await page.getByRole('button',{name:'Open shared profile',exact:true}).click();await expect(page.getByText(/Enter a valid One Concept/)).toBeVisible();
    await input.fill(`http://127.0.0.1:4781/api/p/${token}`);await page.getByRole('button',{name:'Open shared profile',exact:true}).click();
@@ -76,15 +76,15 @@ const server=http.createServer((req,res)=>{
    await expect(page.getByText('Request pending',{exact:true})).toBeVisible();assert.equal(requestCalls,1);
    await page.getByRole('button',{name:'Cancel request',exact:true}).click();await expect(page.getByText(/A previous request ended/)).toBeVisible();
    await page.getByRole('button',{name:'Close profile',exact:true}).click();
-   relationship='incoming';await page.getByRole('button',{name:'Incoming requests',exact:true}).click();
+   relationship='incoming';await page.getByRole('button',{name:'Requests',exact:true}).click();
    await expect(page.getByText('Bea',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Decline request',exact:true}).click();
    await expect(page.getByText('Bea',{exact:true})).toHaveCount(0);
    relationship='incoming';await page.getByRole('button',{name:'Reload connections',exact:true}).click();await page.getByRole('button',{name:'Accept request',exact:true}).click();
    await page.getByRole('button',{name:'My connections',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toBeVisible();
    await page.screenshot({path:`/tmp/connections-${theme}.png`,fullPage:true});
    await page.getByRole('button',{name:'Remove connection',exact:true}).click();await page.getByRole('button',{name:'Confirm remove',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toHaveCount(0);
-   relationship='accepted';await page.getByRole('button',{name:'Reload connections',exact:true}).click();await page.getByRole('button',{name:'Block learner',exact:true}).click();await page.getByRole('button',{name:'Confirm block',exact:true}).click();
-   await page.getByRole('button',{name:'Blocked learners',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Unblock learner',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toHaveCount(0);
+   relationship='accepted';await page.getByRole('button',{name:'Reload connections',exact:true}).click();await page.getByRole('button',{name:'Block person',exact:true}).click();await page.getByRole('button',{name:'Confirm block',exact:true}).click();
+   await page.getByRole('button',{name:'Blocked',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Unblock person',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toHaveCount(0);
    await page.evaluate(()=>document.querySelectorAll('div,span').forEach(el=>{if(el.childNodes.length===1&&el.firstChild?.nodeType===Node.TEXT_NODE){const style=getComputedStyle(el);el.style.fontSize=(parseFloat(style.fontSize)*1.8)+'px';}}));
    await page.getByRole('button',{name:'My connections',exact:true}).click();await expect(page.getByText(/No connections yet/)).toBeVisible();
    assert.deepEqual(errors,[]);console.log(`${theme}: request consent, failed settings, duplicate guard, cancel, decline, accept, private list, remove, block/unblock and large text passed`);await context.close();

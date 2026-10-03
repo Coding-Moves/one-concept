@@ -86,6 +86,12 @@ for (const theme of ["light", "dark"]) {
       page.getByRole("heading", { name: "Last worker observations" }),
     ).toBeVisible();
     await expect(page.getByText("Stale", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Generation (API configuration)", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/worker settings can differ and are not read here/),
+    ).toBeVisible();
     await page
       .getByRole("navigation", { name: "Owner reports" })
       .getByRole("button", { name: "Events" })

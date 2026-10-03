@@ -301,3 +301,21 @@ async def test_deleted_reviewer_remains_visible_when_publication_follows_approva
     row = next(x for x in response.json()["items"] if x["id"] == str(uid))
     assert row["name"] == "Departed Reviewer" and row["status"] == "deleted"
     assert row["approval_events"] == 0 and row["published_concepts"] == 1
+
+
+async def test_worker_observations_do_not_depend_on_api_telemetry_switch(api, session):
+    await session.execute(text("delete from owner_operation_events"))
+    await session.execute(
+        text("""insert into owner_operation_events(service,code,severity,correlation_id)
+          values('reminders','completed','info',:id)"""),
+        {"id": uuid4()},
+    )
+    await session.commit()
+    # Workers and the API have independent environment variables on Railway.
+    api.settings.owner_telemetry_enabled = False
+    response = await api.client.get("/v1/editorial/owner/operations", headers=api.headers())
+    assert response.status_code == 200, response.text
+    report = response.json()
+    assert report["telemetry_enabled"] is False
+    assert report["workers"][0]["status"] == "completed"
+    assert report["workers"][1]["status"] == "unavailable"

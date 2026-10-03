@@ -497,21 +497,22 @@ function OperationsPanel({
                   <dd>{words(data.database)}</dd>
                 </div>
                 <div>
-                  <dt>Generation</dt>
+                  <dt>Generation (API configuration)</dt>
                   <dd>{data.generation_enabled ? "Enabled" : "Disabled"}</dd>
                 </div>
                 <div>
-                  <dt>Reviewer email</dt>
+                  <dt>Reviewer email (API configuration)</dt>
                   <dd>{data.email_enabled ? "Enabled" : "Disabled"}</dd>
                 </div>
                 <div>
-                  <dt>Structured telemetry</dt>
+                  <dt>Telemetry (API configuration)</dt>
                   <dd>{data.telemetry_enabled ? "Enabled" : "Disabled"}</dd>
                 </div>
               </dl>
               <p>
                 This confirms reachability for this report, not historical
-                uptime or successful email delivery.
+                uptime or successful email delivery. Switches describe this API
+                process; worker settings can differ and are not read here.
               </p>
             </section>
             <section className="card owner-section">
@@ -528,8 +529,10 @@ function OperationsPanel({
                 value={data.budget.reserved_calls}
               />
               <p>
-                Budget day: {data.budget.timezone}. Reservations can include
-                failed attempts; this is not a billing total.
+                Budget day: {data.budget.timezone}. The cap is this API’s
+                configured value; confirm the worker’s cap in its service
+                settings. Reservations can include failed attempts; this is not
+                a billing total.
               </p>
               <div className="owner-mini-metrics">
                 <div>

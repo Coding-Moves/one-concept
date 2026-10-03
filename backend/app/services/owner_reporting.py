@@ -158,7 +158,9 @@ async def operations(db, settings):
         )
         event = event[0] if event else None
         status = "unavailable"
-        if event and settings.owner_telemetry_enabled:
+        # API and worker processes can have different environment switches.
+        # A recorded observation remains evidence until its freshness expires.
+        if event:
             age = (now - event["observed_at"]).total_seconds() / 60
             status = (
                 "stale"

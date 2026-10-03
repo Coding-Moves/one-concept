@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.5',
+    highlights: [
+      'See a clear confirmation when your preferred name has been saved.',
+      'Know when profile sharing choices are saved, with clearer guidance before leaving unsaved changes.',
+      'Manage connections and notification preferences with controls that respond as soon as you use them.',
+    ],
+  },
+  {
     version: '1.10.4',
     highlights: [
       'Explore learning paths by topic and subtopic, then revisit lessons with flashcards and quizzes.',

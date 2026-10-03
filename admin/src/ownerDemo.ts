@@ -134,7 +134,8 @@ export const ownerDemoApi: ReportingApi = {
           (!p.get("source") || e.source === p.get("source")) &&
           (!p.get("severity") || e.severity === p.get("severity")) &&
           (!p.get("correlation") ||
-            e.correlation_id === p.get("correlation")) &&
+            e.correlation_id?.replaceAll("-", "").toLowerCase() ===
+              p.get("correlation")!.replaceAll("-", "").toLowerCase()) &&
           (!p.get("search") ||
             (e.source + " " + e.action).includes(
               p.get("search")!.toLowerCase(),

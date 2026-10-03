@@ -32,6 +32,13 @@ describe("isolated owner demo", () => {
     expect(a.items.length).toBe(25);
     expect(b.items.length).toBe(11);
     expect(new Set([...a.items, ...b.items].map((x) => x.key)).size).toBe(36);
+    const correlation = a.items[0].correlation_id!;
+    for (const value of [correlation, correlation.replaceAll("-", "")]) {
+      const matching = await ownerDemoApi.request<ReportPage<OperationalEvent>>(
+        "/owner/events?correlation=" + value,
+      );
+      expect(matching.items).toEqual([a.items[0]]);
+    }
     const errors = await ownerDemoApi.request<ReportPage<OperationalEvent>>(
       "/owner/events?severity=error&source=pool_topup",
     );

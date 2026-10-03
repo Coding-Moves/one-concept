@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -59,9 +60,12 @@ class StateOut(BaseModel):
     saved_next_cursor: str | None = None
     assignment_slug: str | None = None
     # Today's concept, folded in so the app needs a single round trip at startup
-    # (issue #102). Null when the catalog is exhausted for this user. This GET
-    # creates the day's assignment on first call, exactly like GET /v1/daily.
+    # (issue #102). `daily` is null when it cannot be created; the explicit
+    # availability value distinguishes topic setup from a spent catalog.
     daily: DailyOut | None = None
+    daily_availability: Literal[
+        "available", "personalization_required", "catalog_exhausted", "review_available"
+    ] = "available"
     review: ReviewOut | None = None
 
 

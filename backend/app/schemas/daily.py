@@ -53,5 +53,13 @@ class DailyExhaustedOut(BaseModel):
     detail: str = "You have already been assigned every available concept."
 
 
+class DailyUnavailableOut(BaseModel):
+    """Typed 409 payload for a daily lesson that cannot be created yet."""
+
+    assigned_for: date
+    reason: Literal["personalization_required", "catalog_exhausted"]
+    detail: str
+
+
 class ReviewOut(DailyOut):
     review_id: uuid.UUID

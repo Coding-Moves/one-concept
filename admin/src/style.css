@@ -1217,11 +1217,12 @@ dd {
   margin: 10px 0 18px;
 }
 .owner-status-list {
+  display: block;
   margin: 20px 0;
 }
 .owner-status-list > div {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 20px;
   padding: 10px 0;
   border-bottom: 1px solid var(--line);

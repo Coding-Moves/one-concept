@@ -89,6 +89,20 @@ for (const theme of ["light", "dark"]) {
       page.getByRole("heading", { name: "Last worker observations" }),
     ).toBeVisible();
     await expect(page.getByText("Stale", { exact: true })).toBeVisible();
+    await page.setViewportSize({ width: 390, height: 844 });
+    const reachable = page
+      .locator(".owner-status-list dd")
+      .filter({ hasText: /^reachable$/ })
+      .first();
+    const layout = await reachable.evaluate((el) => ({
+      height: el.getBoundingClientRect().height,
+      lineHeight: parseFloat(getComputedStyle(el).lineHeight),
+    }));
+    expect(layout.height).toBeLessThanOrEqual(layout.lineHeight + 1);
+    await page.screenshot({
+      path: `/tmp/owner-operations-${theme}.png`,
+      fullPage: true,
+    });
     await expect(
       page.getByText("Generation (API configuration)", { exact: true }),
     ).toBeVisible();

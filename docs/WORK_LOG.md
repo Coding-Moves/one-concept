@@ -7,6 +7,24 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.5 reviewer-site release preparation
+
+- Owner merged Netlify preparation PR #331 into `develop`; profile-control PR
+  #332 also merged. `main` remains v1.10.4 and lacks the static-host files.
+  Netlify project `splendid-cocada-f8c846` exists but its current preview says
+  Page not found; keep it private while checking the `admin` build settings.
+- `cbdfe0d` prepares the required v1.10.5 app version and matching one-time
+  What's New card, describing the profile/share/connection improvements from
+  #332. Runtime 1.10.1 stays unchanged: these are JavaScript/site changes.
+- Node 24 `npm run typecheck` and all 90 mobile unit tests passed. The fixture
+  Expo web export and `--whats-new` browser check passed across small/standard
+  phone and landscape layouts in both themes, including offline-restart
+  dismissal. `git diff --check` passed. Native device checks and the live
+  Netlify site remain unverified.
+- Next: open this preparation PR into `develop`, then the `develop` → `main`
+  release PR. No production deployment, email flag, mobile OTA or PR merge
+  occurred in this chunk.
+
 
 ### #328 — profile controls and connection clarity prepared
 

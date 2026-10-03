@@ -7,6 +7,29 @@ claims as completed work.
 
 ## Current status
 
+### Release #317 version correction — PR #320
+
+- Current production `main` is `67bdd68` from release #253, with the
+  published `v1.10.1` tag and `expo.version=1.10.1`. Release PR #317
+  still carried that marketing version, so its Release workflow would reject
+  the existing tag. [PR #320](https://github.com/Coding-Moves/one-concept/pull/320)
+  targets `develop` with `2b1d448`: bump to app v1.10.2, add the new
+  feature-focused card, and restore the published 1.10.1 card. The native
+  runtime stays at 1.10.1 for the new APK; production APKs use runtime 1.10.0.
+- Validation: mobile TypeScript passed; 90 mobile unit tests passed; synthetic
+  Expo web export and six-layout light/dark What's New browser checks passed,
+  including offline-restart dismissal; diff checks passed. PR CI follows.
+- Owner-pasted Railway pool-topup deployment `21364d82` uses `main` commit
+  `67bdd68` and logs `generation disabled`. That source has no
+  `schema_check.py`, and the pasted deployment has no `schema_ready` output.
+  The owner earlier reported all three Railway pre-deploy checks passed, but
+  their exact source revisions and outputs remain unverified. Do not treat
+  deployment success as schema verification.
+- #317 has not merged; no production OTA/APK, backend deployment, generation
+  activation or email send was performed. Continue checking actual production
+  schema, effective flags, release compatibility and owner approval before
+  release.
+
 ### Release #317 native/card preparation — PR #319
 
 - [PR #318](https://github.com/Coding-Moves/one-concept/pull/318) merged into

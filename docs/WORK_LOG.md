@@ -7,6 +7,29 @@ claims as completed work.
 
 ## Current status
 
+### Release #317 native/card preparation — PR #319
+
+- [PR #318](https://github.com/Coding-Moves/one-concept/pull/318) merged into
+  `develop` as `7467151`; release PR #317 now passes the migration-ledger check.
+  The protected actual-schema check is main-only and was skipped on the PR.
+- [PR #319](https://github.com/Coding-Moves/one-concept/pull/319) targets
+  `develop` with three focused commits: `83d5c5b` removes duplicate dependency
+  keys without changing resolved versions; `4cf0654` replaces 1.10.1 recovery-only
+  card copy with delivered learning/profile benefits; `c389385` raises the native
+  runtime to 1.10.1 for the updated Expo modules. The owner chose a new APK over
+  reverting the native packages. Existing 1.10.0 installs need that APK to get
+  this release's mobile features; no OTA will target their old runtime.
+- Verification: `npm ci` succeeded, TypeScript passed, **90 mobile unit tests**
+  passed, and the synthetic web export passed the six-layout light/dark What's New
+  browser check with offline-restart dismissal. Manifest and lockfile root match,
+  neither JSON file has duplicate keys, and diff checks passed. An initial
+  sandboxed test run had one subprocess assertion fail because stderr was empty;
+  the isolated test and full suite passed outside that restriction. Screenshots
+  were inspected at narrow dark and landscape light sizes.
+- No release merge, production OTA/APK publication, backend deploy or native
+  device acceptance has occurred. Release #317 remains subject to final CI,
+  actual-schema/deployment checks and explicit owner merge approval.
+
 ### Production migration ledger for release #317 — PR #318
 
 - The owner reports successful production SQL Editor execution through

@@ -24,18 +24,21 @@ function AccountConnections({ userId }: { userId: string }) {
   const [cursor, setCursor] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<ConnectionPreferences | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preferenceSaving, setPreferenceSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [link, setLink] = useState('');
   const [confirm, setConfirm] = useState<{id:string; action:'remove'|'block'} | null>(null);
-  const active = useRef(true), pending = useRef(false), revision = useRef(0);
+  const active = useRef(true), pending = useRef(false), revision = useRef(0), preferenceRevision = useRef(0);
   const reload = async (more = false) => {
     const run = ++revision.current;
+    const observedPreference = preferenceRevision.current;
     setBusy(true); setMessage(''); setConfirm(null);
     if (!more) { setItems([]); setCursor(null); }
     try {
       const [settings, page] = await Promise.all([connectionSettings(userId), connectionList(userId, kind, more ? cursor ?? undefined : undefined)]);
       if (!active.current || run !== revision.current) return false;
-      setPrefs(settings); setItems(old => more ? [...old, ...page.items.filter(item => !old.some(o => o.id === item.id))] : page.items); setCursor(page.next_cursor);
+      if (observedPreference === preferenceRevision.current) setPrefs(settings);
+      setItems(old => more ? [...old, ...page.items.filter(item => !old.some(o => o.id === item.id))] : page.items); setCursor(page.next_cursor);
       return true;
     } catch (error) { if (active.current && run === revision.current) setMessage(connectionError(error)); return false; }
     finally { if (active.current && run === revision.current) setBusy(false); }
@@ -52,14 +55,29 @@ function AccountConnections({ userId }: { userId: string }) {
     } catch (error) { if (active.current) setMessage(connectionError(error)); }
     finally { pending.current = false; if (active.current) setBusy(false); }
   };
+  const saveAcceptingRequests = async (acceptingRequests: boolean) => {
+    if (!prefs || preferenceSaving) return;
+    const previous = prefs;
+    const mutation = ++preferenceRevision.current;
+    const next = { ...prefs, accepting_requests: acceptingRequests };
+    // The switch should acknowledge the tap immediately. Roll back only when
+    // the server rejects the preference, without blocking connection actions.
+    setPrefs(next); setPreferenceSaving(true); setMessage('');
+    try {
+      const confirmed = await saveConnectionSettings(userId, next);
+      if (active.current && mutation === preferenceRevision.current) { setPrefs(confirmed); setMessage('Request preference saved.'); }
+    } catch (error) {
+      if (active.current && mutation === preferenceRevision.current) { setPrefs(previous); setMessage(connectionError(error)); }
+    } finally { if (active.current) setPreferenceSaving(false); }
+  };
   const button = (label: string, action: () => void, disabled = busy) => <Pressable key={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={action} style={({ pressed }) => ({ minHeight: 48, padding: 14, borderRadius: 14, backgroundColor: colors.surfaceSubtle, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 })}><Text style={{ color: colors.primary, fontWeight: '700' }}>{label}</Text></Pressable>;
   const act = (id: string, verb: 'accept'|'decline'|'cancel'|'remove'|'block') => void mutate(() => actOnConnection(userId, id, verb), 'Connection updated.');
   return <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24, gap: 20 }}>
     {button('← Back', () => navigation.goBack(), false)}
-    <ScreenHeader title="Connections" subtitle="Learn alongside people you choose. Your list is private." />
+    <ScreenHeader title="Connections" subtitle="Your connections are private and always under your control." />
     <View style={{ padding: 18, borderRadius: 22, backgroundColor: colors.surface, gap: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ flex: 1, color: colors.text, fontWeight: '700' }}>Accept new requests</Text><Switch accessibilityLabel="Accept new connection requests" value={prefs?.accepting_requests ?? false} disabled={busy || !prefs} onValueChange={accepting_requests => { if (prefs) void mutate(() => saveConnectionSettings(userId, { ...prefs, accepting_requests }), 'Request preference saved.'); }} /></View>
-      <Text style={{ color: colors.textSecondary }}>People with your shared profile can ask to connect when this is on. You decide whether to accept. Public profile sharing must also be enabled.</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ flex: 1, color: colors.text, fontWeight: '700' }}>Accept new requests</Text><Switch accessibilityLabel="Accept new connection requests" value={prefs?.accepting_requests ?? false} disabled={preferenceSaving || !prefs} accessibilityState={{ disabled: preferenceSaving || !prefs, busy: preferenceSaving, checked: prefs?.accepting_requests ?? false }} onValueChange={acceptingRequests => void saveAcceptingRequests(acceptingRequests)} /></View>
+      <Text style={{ color: colors.textSecondary }}>When this is on, people who have your public profile link can send a request. You choose whether to accept.</Text>
     </View>
     <View style={{ gap: 12 }}>
       <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>Add a connection</Text>
@@ -67,19 +85,19 @@ function AccountConnections({ userId }: { userId: string }) {
       {button('Open shared profile', () => { if (!openPublicProfile(link.trim())) setMessage('Enter a valid One Concept profile link or scan its QR with your phone camera.'); }, false)}
     </View>
     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-      {([['accepted','My connections'],['incoming','Incoming requests'],['outgoing','Sent requests'],['blocked','Blocked learners']] as [ConnectionKind,string][]).map(([value,label]) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: kind===value, disabled: busy }} disabled={busy} onPress={() => setKind(value)} style={({ pressed }) => ({ padding: 12, minHeight: 48, borderRadius: 14, backgroundColor: kind===value ? colors.primary : colors.surface, opacity: pressed ? 0.7 : 1 })}><Text style={{ color: kind===value ? colors.onPrimary : colors.text }}>{label}</Text></Pressable>)}
+      {([['accepted','My connections'],['incoming','Requests'],['outgoing','Sent'],['blocked','Blocked']] as [ConnectionKind,string][]).map(([value,label]) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: kind===value, disabled: busy }} disabled={busy} onPress={() => setKind(value)} style={({ pressed }) => ({ padding: 12, minHeight: 48, borderRadius: 14, backgroundColor: kind===value ? colors.primary : colors.surface, opacity: pressed ? 0.7 : 1 })}><Text style={{ color: kind===value ? colors.onPrimary : colors.text }}>{label}</Text></Pressable>)}
     </View>
     {busy && <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>Loading connections…</Text>}
-    {!busy && !message && !items.length && <Text style={{ color: colors.textSecondary }}>{kind==='accepted' ? 'No connections yet. Open a shared profile to send your first request.' : kind==='incoming' ? 'No incoming requests.' : kind==='outgoing' ? 'No pending sent requests.' : 'No blocked learners.'}</Text>}
+    {!busy && !message && !items.length && <Text style={{ color: colors.textSecondary }}>{kind==='accepted' ? 'No connections yet. Open a shared profile to send your first request.' : kind==='incoming' ? 'No incoming requests.' : kind==='outgoing' ? 'No sent requests.' : 'No blocked people.'}</Text>}
     {items.map(item => <View key={item.id} style={{ backgroundColor: colors.surface, borderRadius: 22, padding: 18, gap: 12 }}>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><View style={{ width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.categoryChip }}><Ionicons name="person-outline" size={24} color={colors.primary} /></View><Text style={{ flex: 1, color: colors.text, fontWeight: '700', fontSize: 18 }}>{item.display_name}</Text></View>
       {item.public_path && button('View shared profile', () => openPublicProfile(publicProfileUrl(item.public_path!)))}
       {kind==='incoming' && <>{button('Accept request', () => act(item.id,'accept'))}{button('Decline request', () => act(item.id,'decline'))}</>}
       {kind==='outgoing' && button('Cancel request', () => act(item.id,'cancel'))}
       {kind==='accepted' && button('Remove connection', () => setConfirm({id:item.id,action:'remove'}))}
-      {kind!=='blocked' && button('Block learner', () => setConfirm({id:item.id,action:'block'}))}
-      {kind==='blocked' && <><Text style={{ color: colors.textSecondary }}>Unblocking allows future requests. It does not restore a connection.</Text>{button('Unblock learner', () => void mutate(() => unblockConnection(userId,item.id), 'Learner unblocked.'))}</>}
-      {confirm?.id === item.id && <><Text style={{ color: colors.text }}>Confirm {confirm.action}? This removes the current connection or request. New requests wait seven days; public links remain public.</Text>{button(`Confirm ${confirm.action}`, () => act(item.id,confirm.action))}{button('Keep current connection', () => setConfirm(null))}</>}
+      {kind!=='blocked' && button('Block person', () => setConfirm({id:item.id,action:'block'}))}
+      {kind==='blocked' && <><Text style={{ color: colors.textSecondary }}>Unblocking allows future requests. It does not restore this connection.</Text>{button('Unblock person', () => void mutate(() => unblockConnection(userId,item.id), 'Person unblocked.'))}</>}
+      {confirm?.id === item.id && <><Text style={{ color: colors.text }}>Confirm {confirm.action}? This changes only this connection. You can manage future requests from this screen.</Text>{button(`Confirm ${confirm.action}`, () => act(item.id,confirm.action))}{button('Keep current connection', () => setConfirm(null))}</>}
     </View>)}
     {message ? <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{message}</Text> : null}
     {cursor && button('Load more', () => void reload(true))}

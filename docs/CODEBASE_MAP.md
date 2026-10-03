@@ -490,12 +490,13 @@ and the session pooler. Applied migrations must not be rewritten.
   The backend job installs Podman and fails if its disposable PostgreSQL 16
   fixture skips, so a green backend result includes database coverage.
   `migrations.yml` separately checks the applied ledger on `main` and PRs into
-  `main`; trusted main runs also call protected `production-schema.yml`. The
-  Release OTA job requires that same actual-schema check. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
+  `main`; trusted main runs use a direct `production-schema` environment job.
+  `release.yml` uses its own direct protected actual-schema job before OTA;
+  `production-schema.yml` remains independently dispatchable. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
   files findings as issues. `cleanup.yml` manages stale issues; Dependabot
   schedules dependency updates with Expo-managed version restrictions.
-- `mobile/app.config.js` currently has app version `1.8.0` and native runtime
-  `1.3.0`; `package.json`'s `1.0.0` is not the release-version authority.
+- `mobile/app.config.js` currently has app version `1.10.4` and native runtime
+  `1.10.1`; `package.json`'s `1.0.0` is not the release-version authority.
 
 ## Documentation drift to remember
 

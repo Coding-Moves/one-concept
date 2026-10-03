@@ -84,6 +84,8 @@ export interface ReviewPayload extends DailyPayload { review_id: string }
 export type DailyOutcome =
   | { status: 'ok'; payload: DailyPayload; stale: boolean }
   | { status: 'review'; payload: ReviewPayload; stale: boolean }
+  /** Server-confirmed state: choose an active topic before a new daily lesson. */
+  | { status: 'personalization_required'; stale: boolean }
   | { status: 'exhausted' }
   | { status: 'unavailable' };
 

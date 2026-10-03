@@ -7,6 +7,23 @@ claims as completed work.
 
 ## Current status
 
+### Production migration ledger for release #317 — PR #318
+
+- The owner reports successful production SQL Editor execution through
+  migration `0039`. For the uncertain `0023`/`0024` pair, both `0023`
+  tables existed, the completed-assignment backfill gap query returned zero,
+  and `0024` reported Success before `0025` onward was run.
+- `e1d35a5` records all 23 filenames in `backend/migrations/applied.txt` without
+  editing or rerunning SQL. [PR #318](https://github.com/Coding-Moves/one-concept/pull/318)
+  targets `develop`; after its owner-approved merge, release PR #317 will
+  inherit the ledger. This entry's commit is identified by its subject.
+- Local verification: all 39 SQL filenames exactly match the 39 ledger entries;
+  no missing or extra names; `git diff --check` passed. The production database
+  was not independently queried by this branch. The protected actual-schema
+  check, release-head CI, native-runtime decision, and remaining PR #317 release
+  gates still require verification. Neither PR was merged and no deployment or
+  mobile publication occurred.
+
 ### PR #316 — second code review complete
 
 - Reviewed reporting authority, aggregation, privacy, telemetry, filters, demo

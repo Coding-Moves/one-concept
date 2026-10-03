@@ -58,8 +58,11 @@ export function TodayScreen() {
   const done = review ? outcome.payload.learned : learnedToday || (!!serverConcept && hasLearned(serverConcept.id));
   const loading = localLoading;
   const exhausted = outcome?.status === 'exhausted';
+  const personalizationRequired = outcome?.status === 'personalization_required';
   const greeting = greetingFor(new Date(), progress.timezone, progress.displayName);
-  const offline = (outcome?.status === 'ok' || outcome?.status === 'review') && outcome.stale;
+  const offline = (outcome?.status === 'ok'
+    || outcome?.status === 'review'
+    || outcome?.status === 'personalization_required') && outcome.stale;
   const outsideTopics =
     outcome?.status === 'ok' && outcome.payload.outside_followed_topics;
 
@@ -98,12 +101,16 @@ export function TodayScreen() {
         <>
           <StreakBadge streaks={streaks} />
 
-          <Text style={styles.sectionLabel}>{review ? "Today’s review" : "Today’s concept"}</Text>
+          <Text style={styles.sectionLabel}>
+            {personalizationRequired ? 'Your learning plan' : review ? "Today’s review" : "Today’s concept"}
+          </Text>
 
           {offline ? (
             <View style={styles.offlineRow}>
               <Ionicons name="cloud-offline-outline" size={scaleIcon(13)} color={colors.textMuted} />
-              <Text style={styles.offlineText}>Offline — showing your saved copy</Text>
+              <Text style={styles.offlineText}>
+                {personalizationRequired ? 'Offline — showing your last saved plan' : 'Offline — showing your saved copy'}
+              </Text>
             </View>
           ) : null}
 
@@ -134,7 +141,21 @@ export function TodayScreen() {
             </View>
           ) : null}
 
-          {concept ? (
+          {personalizationRequired ? (
+            <View
+              style={styles.personalizationBox}
+              accessibilityLabel="Choose one or more topics to receive your next daily concept."
+            >
+              <View style={styles.personalizationIcon}>
+                <Ionicons name="compass-outline" size={scaleIcon(24)} color={colors.primary} />
+              </View>
+              <Text style={styles.personalizationTitle}>Choose what you want to learn</Text>
+              <Text style={styles.personalizationText}>
+                Follow one or more topics to shape your next daily concept. Your previous lessons and streak stay safe.
+              </Text>
+              <PrimaryButton label="Choose topics" onPress={explore} />
+            </View>
+          ) : concept ? (
             <>
               <ConceptCard concept={concept} />
               <ConceptActions concept={concept} />
@@ -155,7 +176,7 @@ export function TodayScreen() {
               </View>
               {!review && progress.recentSubtopicCompletion ? <SubtopicCompletionCard completion={progress.recentSubtopicCompletion} /> : null}
             </>
-          ) : (
+          ) : personalizationRequired ? null : (
             <PrimaryButton
               label={review ? "Complete review" : "Mark as learned"}
               onPress={() => review ? completeReview(outcome.payload.review_id) : markLearned(concept ?? undefined)}
@@ -229,6 +250,34 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: scaleFont(13),
       color: colors.textMuted,
       lineHeight: scaleFont(18),
+    },
+    personalizationBox: {
+      alignItems: 'center',
+      gap: spacing.md,
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      padding: spacing.lg,
+      ...shadows.card,
+    },
+    personalizationIcon: {
+      width: 48,
+      height: 48,
+      borderRadius: radius.pill,
+      backgroundColor: colors.categoryChip,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    personalizationTitle: {
+      fontSize: scaleFont(20),
+      fontWeight: '700',
+      color: colors.text,
+      textAlign: 'center',
+    },
+    personalizationText: {
+      fontSize: scaleFont(14),
+      lineHeight: scaleFont(20),
+      color: colors.textMuted,
+      textAlign: 'center',
     },
     doneBox: {
       flexDirection: 'row',

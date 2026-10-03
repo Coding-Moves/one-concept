@@ -36,8 +36,8 @@ module.exports = {
       },
       predictiveBackGestureEnabled: false,
     },
-    // SDK 57 native dependency updates ship in the 1.10.0 binary.
-    runtimeVersion: '1.10.0',
+    // SDK 57 native dependency updates in this release require a new 1.10.1 binary.
+    runtimeVersion: '1.10.1',
     updates: {
       checkAutomatically: 'ON_LOAD',
       fallbackToCacheTimeout: 0,

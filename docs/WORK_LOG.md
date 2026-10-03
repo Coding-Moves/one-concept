@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Release v1.10.2 — production schema contract follow-up
+
+- [Release PR #317](https://github.com/Coding-Moves/one-concept/pull/317) merged at `634b6d5`. A fresh protected [schema check](https://github.com/Coding-Moves/one-concept/actions/runs/37102754269) reached production but reported only two missing `test_assign_*` triggers. Both are created by the disposable PostgreSQL fixture after migrations; production must not install them.
+- [Fix PR #322](https://github.com/Coding-Moves/one-concept/pull/322) targets `develop`. Commit `007d644` removes only those fixture triggers from the reviewed contract and makes its generation test compare the exact migration-derived snapshot without test helpers. No production SQL, migration, ledger, feature flag, or mobile code changed.
+- Focused schema contract/check suite: **28 passed** against disposable PostgreSQL 16; diff check passed. Release remains unpublished. After this correction reaches `main`, rerun the protected schema check, verify the matching Railway API/worker revision and health, then run the Release workflow and obtain the new runtime 1.10.1 APK.
+
+
 ### Release #317 version correction — PR #320
 
 - Current production `main` is `67bdd68` from release #253, with the

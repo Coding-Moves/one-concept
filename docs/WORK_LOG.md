@@ -7,6 +7,20 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.3 release preparation — PR #323
+
+- [PR #322](https://github.com/Coding-Moves/one-concept/pull/322) merged to `develop` at `e529a57`, correcting only test-fixture trigger expectations. The production check is still red on `main` until that fix ships.
+- [PR #323](https://github.com/Coding-Moves/one-concept/pull/323) prepares `expo.version` 1.10.3 and a matching nonempty one-time What's New entry; native runtime stays 1.10.1. Commit `fb4c5f4` contains the version/card pair. The prior v1.10.2 release was merged but never published.
+- Node 24 mobile typecheck and **90 unit tests** passed; diff check passed. No production OTA/APK, database change, feature enablement, or merge performed here. Once #323 merges, open the `develop` → `main` release PR, verify its final diff includes both version and card, and follow the protected schema/Railway gates before publication.
+
+
+### Release v1.10.2 — production schema contract follow-up
+
+- [Release PR #317](https://github.com/Coding-Moves/one-concept/pull/317) merged at `634b6d5`. A fresh protected [schema check](https://github.com/Coding-Moves/one-concept/actions/runs/37102754269) reached production but reported only two missing `test_assign_*` triggers. Both are created by the disposable PostgreSQL fixture after migrations; production must not install them.
+- [Fix PR #322](https://github.com/Coding-Moves/one-concept/pull/322) targets `develop`. Commit `007d644` removes only those fixture triggers from the reviewed contract and makes its generation test compare the exact migration-derived snapshot without test helpers. No production SQL, migration, ledger, feature flag, or mobile code changed.
+- Focused schema contract/check suite: **28 passed** against disposable PostgreSQL 16; diff check passed. Release remains unpublished. After this correction reaches `main`, rerun the protected schema check, verify the matching Railway API/worker revision and health, then run the Release workflow and obtain the new runtime 1.10.1 APK.
+
+
 ### Release #317 version correction — PR #320
 
 - Current production `main` is `67bdd68` from release #253, with the

@@ -22,6 +22,15 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.3',
+    highlights: [
+      'Explore learning paths by topic and subtopic, then revisit lessons with flashcards and quizzes.',
+      'See expanded achievements and a clearer view of your learning progress.',
+      'Share your profile by QR code and build mutual connections with friends.',
+      'Keep saved lessons and progress moving through weak connections with clearer retry guidance.',
+    ],
+  },
+  {
     version: '1.10.2',
     highlights: [
       'Explore topic and subtopic learning paths, with interactive flashcards and quizzes to revisit what you learned.',

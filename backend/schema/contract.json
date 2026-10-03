@@ -3629,10 +3629,6 @@
         "definition": "CREATE TRIGGER concept_backlog_touch_updated_at BEFORE UPDATE ON public.concept_backlog FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
         "enabled": "O"
       },
-      "public.concept_backlog.test_assign_backlog_subtopic": {
-        "definition": "CREATE TRIGGER test_assign_backlog_subtopic BEFORE INSERT ON public.concept_backlog FOR EACH ROW EXECUTE FUNCTION public.test_assign_core_subtopic()",
-        "enabled": "O"
-      },
       "public.concept_interactions.concept_interactions_touch_updated_at": {
         "definition": "CREATE TRIGGER concept_interactions_touch_updated_at BEFORE UPDATE ON public.concept_interactions FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
         "enabled": "O"
@@ -3651,10 +3647,6 @@
       },
       "public.concept_revisions.reviewed_revision_body_immutable": {
         "definition": "CREATE TRIGGER reviewed_revision_body_immutable BEFORE UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.protect_reviewed_revision_body()",
-        "enabled": "O"
-      },
-      "public.concepts.test_assign_concept_subtopic": {
-        "definition": "CREATE TRIGGER test_assign_concept_subtopic BEFORE INSERT ON public.concepts FOR EACH ROW EXECUTE FUNCTION public.test_assign_core_subtopic()",
         "enabled": "O"
       },
       "public.editorial_generation_jobs.editorial_generation_inputs_immutable": {

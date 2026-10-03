@@ -18,7 +18,7 @@ module.exports = {
     name: 'One Concept',
     slug: 'one-concept',
     owner: 'coding-moves',
-    version: '1.10.1',
+    version: '1.10.2',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -36,7 +36,7 @@ module.exports = {
       },
       predictiveBackGestureEnabled: false,
     },
-    // SDK 57 native dependency updates in this release require a new 1.10.1 binary.
+    // SDK 57 native dependency updates require the new runtime 1.10.1 APK.
     runtimeVersion: '1.10.1',
     updates: {
       checkAutomatically: 'ON_LOAD',

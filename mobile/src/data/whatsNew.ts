@@ -22,12 +22,21 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
-    version: '1.10.1',
+    version: '1.10.2',
     highlights: [
       'Explore topic and subtopic learning paths, with interactive flashcards and quizzes to revisit what you learned.',
       'Track your progress with expanded achievements and personal learning analytics.',
       'Edit and share your profile with a QR code, and connect with friends through mutual requests.',
       'Keep learning through weak connections with clearer sync, retry, and recovery messages.',
+    ],
+  },
+  {
+    version: '1.10.1',
+    highlights: [
+      'Recover gracefully when the service is unavailable, with clear next steps instead of technical error messages.',
+      'Keep your saved learning changes visible and retry them when a connection or server problem pauses syncing.',
+      'Switch accounts with stronger protection for your saved lessons and pending learning activity.',
+      'Get clearer guidance when your app setup needs attention, so connection problems are easier to understand.',
     ],
   },
   {

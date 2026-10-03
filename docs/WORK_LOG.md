@@ -7,6 +7,30 @@ claims as completed work.
 
 ## Current status
 
+### PR #316 — second code review complete
+
+- Reviewed reporting authority, aggregation, privacy, telemetry, filters, demo
+  and responsive browser flows against #297; fixes remain in the same PR.
+- `59771e1`: accept compact public incident IDs as well as hyphenated UUIDs.
+  The browser regression failed on the original validation, then passed; the
+  real API regression also verifies compact IDs locate the correct event.
+- `999d54c`: retain worker observations independently of the API telemetry flag.
+  The PostgreSQL regression reproduced the incorrect unavailable status before
+  the fix. Switches/cap are now explicitly labeled as API configuration because
+  separately deployed workers can have different values.
+- `beeea58`: hide the dashboard queue shortcut without review permission while
+  retaining reporting/account management. `e0fe2dd` aligns synthetic UUID filters
+  with the real API. `78e57e1` prevents narrow status values wrapping into broken
+  words; inspected the corrected phone-width dark operations view.
+- Passed: **522 backend tests, no skips**, on disposable PostgreSQL 16; **31
+  browser tests**, plus both-theme reruns after the final scoped CSS fix; **10
+  admin unit tests**, TypeScript/production build, F/E9 lint, documentation links
+  and diff checks. An initial build lacked public configuration; reran with
+  explicit synthetic settings successfully. Existing ~519 kB bundle warning remains.
+- No remaining actionable blocker found in this review. Hosted checks follow
+  this push. No merge, production SQL, deployment or flag change; no manual setup
+  is required before merge into develop. Activation remains under #281.
+
 ### #297 — owner dashboard implementation complete
 
 - Scope is implementation only in the existing `admin/` application. Both

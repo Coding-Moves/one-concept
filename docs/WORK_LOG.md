@@ -11,8 +11,10 @@ claims as completed work.
 
 - Owner merged Netlify preparation PR #331 into `develop`; profile-control PR
   #332 also merged. `main` remains v1.10.4 and lacks the static-host files.
-  Netlify project `splendid-cocada-f8c846` exists but its current preview says
-  Page not found; keep it private while checking the `admin` build settings.
+  Netlify project `coding-moves-one-concept-review` exists but its initial
+  preview said Page not found; keep it private while checking the `admin`
+  build settings. A preview for this preparation PR was created; disable
+  preview/branch deploys until an isolated test backend exists.
 - `cbdfe0d` prepares the required v1.10.5 app version and matching one-time
   What's New card, describing the profile/share/connection improvements from
   #332. Runtime 1.10.1 stays unchanged: these are JavaScript/site changes.
@@ -21,9 +23,10 @@ claims as completed work.
   phone and landscape layouts in both themes, including offline-restart
   dismissal. `git diff --check` passed. Native device checks and the live
   Netlify site remain unverified.
-- Next: open this preparation PR into `develop`, then the `develop` → `main`
-  release PR. No production deployment, email flag, mobile OTA or PR merge
-  occurred in this chunk.
+- [Preparation PR #334](https://github.com/Coding-Moves/one-concept/pull/334)
+  targets `develop`; hosted checks follow this push. Once merged by the owner,
+  prepare the `develop` → `main` release PR. No production deployment, email
+  flag, mobile OTA or PR merge occurred in this chunk.
 
 
 ### #328 — profile controls and connection clarity prepared

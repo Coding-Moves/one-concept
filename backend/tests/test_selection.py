@@ -77,6 +77,87 @@ async def test_never_repeats_and_reports_exhaustion(session, user):
     assert beyond.concept is None
 
 
+async def test_empty_follow_set_requires_personalization_without_assignment(session, user):
+    """An intentional empty topic list must not be widened to the catalog."""
+    await session.execute(
+        text("delete from public.user_topics where user_id = :u"), {"u": user}
+    )
+    await session.commit()
+
+    first = await get_or_create_daily(session, user, today=DAY)
+    second = await get_or_create_daily(session, user, today=DAY)
+
+    assert first.status == second.status == "personalization_required"
+    assert first.assigned_for == second.assigned_for == DAY
+    assert first.concept is None and second.concept is None
+    assert await session.scalar(
+        text("select count(*) from public.daily_assignments where user_id = :u"),
+        {"u": user},
+    ) == 0
+
+
+async def test_concurrent_empty_follow_requests_create_no_assignment(
+    session, sessionmaker_for_test, user
+):
+    """Two devices must see the same setup state without creating a race slot."""
+    await session.execute(
+        text("delete from public.user_topics where user_id = :u"), {"u": user}
+    )
+    await session.commit()
+
+    async def request_daily():
+        async with sessionmaker_for_test() as concurrent_session:
+            return await get_or_create_daily(concurrent_session, user, today=DAY)
+
+    first, second = await asyncio.gather(request_daily(), request_daily())
+
+    assert first.status == second.status == "personalization_required"
+    async with sessionmaker_for_test() as check:
+        assert await check.scalar(
+            text("select count(*) from public.daily_assignments where user_id = :u"),
+            {"u": user},
+        ) == 0
+
+
+async def test_existing_assignment_survives_unfollowing_every_topic(session, user):
+    """Changing preferences cannot hide or replace today's durable assignment."""
+    assigned = await get_or_create_daily(session, user, today=DAY)
+    await session.execute(
+        text("delete from public.user_topics where user_id = :u"), {"u": user}
+    )
+    await session.commit()
+
+    again = await get_or_create_daily(session, user, today=DAY)
+
+    assert again.status == "ok"
+    assert again.concept.id == assigned.concept.id
+    assert again.assigned_for == DAY
+
+
+async def test_following_a_topic_resumes_daily_assignment(session, user):
+    """The policy is reversible: the next request works after a learner follows."""
+    topic_id = await session.scalar(
+        text("select id from public.topics where slug = 'mathematics'")
+    )
+    await session.execute(
+        text("delete from public.user_topics where user_id = :u"), {"u": user}
+    )
+    await session.commit()
+
+    blocked = await get_or_create_daily(session, user, today=DAY)
+    assert blocked.status == "personalization_required"
+
+    await session.execute(
+        text("insert into public.user_topics(user_id, topic_id) values (:u, :t)"),
+        {"u": user, "t": topic_id},
+    )
+    await session.commit()
+
+    resumed = await get_or_create_daily(session, user, today=DAY)
+    assert resumed.status == "ok"
+    assert resumed.concept.topic_slug == "mathematics"
+
+
 async def test_only_draws_from_followed_topics(session, user):
     keep = (
         await session.execute(

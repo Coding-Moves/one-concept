@@ -79,9 +79,17 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
 | GET | `/v1/me/achievements` | yes | Permanent achievement collection and acknowledgement state. |
 | POST | `/v1/me/achievements/seen` | yes | Acknowledge achievement cards without creating awards. |
 
-`GET /v1/daily` returns `409` with `reason: "catalog_exhausted"` once a user has
-been assigned every published concept — it never repeats one. Phase 6 hooks
-Gemini generation in at that point.
+`GET /v1/daily` returns a typed `409` when it cannot create a new lesson:
+`reason: "personalization_required"` means the learner follows no active topic;
+`reason: "catalog_exhausted"` means every available concept has already been
+assigned. Neither response creates a generic assignment or repeats a concept.
+An assignment already created for the local day remains readable and completable
+if the learner later unfollows every topic. `GET /v1/me/state` stays `200` and
+sets `daily_availability` to the same condition when `daily` is null, so startup
+clients can distinguish the two cases without treating state as an error. This
+is additive for existing state clients; mobile copy for this state lands after
+the backend contract. Weekly-quiz eligibility and already-created quizzes do
+not depend on follows and are unchanged.
 
 ## Startup and collection pagination
 
@@ -217,10 +225,14 @@ limit 7;
 
 ### Fallback ladder in `/v1/daily`
 
-1. An unseen concept in a followed topic.
-2. If that pool is dry, schedule a background refill and immediately widen to
-   the whole catalog, flagging `outside_followed_topics`.
-3. If nothing unseen remains, return `409 catalog_exhausted`. A concept is never
+1. Return an existing assignment for the user's local day, regardless of later
+   follow changes.
+2. If no active topic is followed, return `409 personalization_required`; do not
+   create an unrelated catalog assignment or request generation.
+3. Otherwise choose an unseen concept in a followed topic.
+4. If that non-empty pool is dry, schedule a background refill and immediately
+   widen to the whole catalog, flagging `outside_followed_topics`.
+5. If nothing unseen remains, return `409 catalog_exhausted`. A concept is never
    repeated. A low unread watermark can also schedule refill before exhaustion.
 
 ## Latency and database region

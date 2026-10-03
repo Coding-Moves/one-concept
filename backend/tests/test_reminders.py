@@ -95,6 +95,40 @@ async def test_completion_silences_later_slots(session, user, capture_push):
     assert result.sent == 0, "a finished day must stay quiet"
 
 
+async def test_empty_follow_set_suppresses_daily_reminders_but_keeps_preferences(
+    session, user, capture_push
+):
+    """Unfollowing pauses daily nudges without destroying a device or opt-in."""
+    sent = capture_push()
+    await _register_token(session, user, token="ExponentPushToken[no-topics]")
+    topic_id = await session.scalar(
+        text("select id from public.topics where slug = 'mathematics'")
+    )
+    await session.execute(
+        text("delete from public.user_topics where user_id = :u"), {"u": user}
+    )
+    await session.commit()
+
+    paused = await send_due_reminders(session, window_minutes=15, at=AT_0805)
+    assert paused.sent == 0
+    assert sent == []
+    assert await session.scalar(
+        text("select count(*) from public.reminder_log where user_id = :u"), {"u": user}
+    ) == 0
+
+    # The same saved preference and handset become eligible again once the user
+    # chooses a topic; no token registration or settings rewrite is required.
+    await session.execute(
+        text("insert into public.user_topics(user_id, topic_id) values (:u, :t)"),
+        {"u": user, "t": topic_id},
+    )
+    await session.commit()
+
+    resumed = await send_due_reminders(session, window_minutes=15, at=AT_0805)
+    assert resumed.sent == 1
+    assert sent[0]["to"] == "ExponentPushToken[no-topics]"
+
+
 async def test_disabled_preferences_are_respected(session, user, capture_push):
     capture_push()
     await _register_token(session, user)

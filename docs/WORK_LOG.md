@@ -7,6 +7,25 @@ claims as completed work.
 
 ## Current status
 
+
+### #328 — profile controls and connection clarity prepared
+
+- `codex/328-profile-controls`, based on `3731fd9`, groups the requested
+  learner-facing profile and connection improvements into one dedicated PR.
+  Commits keep name-save confirmation, sharing-state clarity, immediate switch
+  feedback, connection copy, browser regressions, and stale-read fencing
+  independently reviewable.
+- Server-backed notification and connection-preference switches now change
+  immediately, remain explicitly busy while persisting, roll back on failure,
+  and reject stale initial/reload reads. Sharing makes saved versus unsaved
+  choices explicit and will not reload over an unsaved draft.
+- Validation: Node 24 mobile suite **90 passed**, TypeScript passed, and the
+  mocked exported-app Profile/Connections browser scenarios passed after a clean
+  web export in both themes, including delayed saves, failure rollback, large
+  text, sharing and connection actions. Native screen-reader and physical-device
+  touch feedback remain manual acceptance checks.
+
+
 ### #281 / #313 reviewer website rollout — PR #331
 
 - Owner chose the next #263 child and confirmed existing Netlify and Render accounts.

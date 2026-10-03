@@ -7,13 +7,14 @@ claims as completed work.
 
 ## Current status
 
-### #297 — owner dashboard implemented; final validation
+### #297 — owner dashboard implementation complete
 
 - Scope is implementation only in the existing `admin/` application. Both
   reviewer and owner sections deploy under #281 after the normal production
   release. No staging creation, production migration, live flag change, version
   bump, deployment or merge was performed.
-- Base `31300ce`; branch `codex/297-owner-dashboard`. `8b1460b` adds private
+- [PR #316](https://github.com/Coding-Moves/one-concept/pull/316) targets
+  `develop`; base `31300ce`, branch `codex/297-owner-dashboard`. `8b1460b` adds private
   reporting endpoints, migration 0039 and schema contract. `768c5b4` adds opt-in
   bounded worker/API observations. `ffaf68d` adds the four report pages, isolated
   demo, responsive themes and browser coverage. `adec7e9` isolates report fixtures
@@ -26,10 +27,11 @@ claims as completed work.
   a focused two-test rerun for OAuth-fragment demo isolation and real invitation
   callbacks. Visually inspected light desktop and dark narrow screenshots.
   Vite reports a non-blocking bundle-size warning (about 518 kB before gzip).
-- Schema contract tests passed on disposable PostgreSQL. The initial full
-  backend run exposed fixture-only issues (short evidence note and active test
-  topics affecting later bootstrap tests); corrected and rerunning all backend
-  tests. No passing full-suite result is claimed until that rerun finishes.
+- Final full backend suite: **521 passed, no skips**, including the schema
+  contract on disposable PostgreSQL 16. Initial fixture-only failures (short
+  evidence note and active test topics affecting bootstrap tests) were corrected.
+  Backend F/E9 lint, documentation links and diff checks passed. Hosted checks
+  follow the final documentation push; the PR remains unmerged for owner action.
 - [owner-dashboard.md](owner-dashboard.md) defines metrics, exclusions,
   permissions, retention, missing infrastructure signals and manual activation
   deferred to #281. No owner action is required before merging into develop.

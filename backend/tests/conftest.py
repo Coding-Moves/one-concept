@@ -20,6 +20,7 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 # insulates the suite from whatever the developer has configured locally.
 # With a real key and GENERATION_ENABLED=true in .env, selection would call
 # the actual Gemini API instead of reporting exhaustion.
+os.environ["OWNER_TELEMETRY_ENABLED"] = "false"
 os.environ["EDITORIAL_EMAIL_ENABLED"] = "false"
 os.environ["EDITORIAL_GMAIL_REFRESH_TOKEN"] = ""
 os.environ["GENERATION_ENABLED"] = "false"

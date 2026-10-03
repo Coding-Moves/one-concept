@@ -6,11 +6,14 @@ from app.api.v1.connections import router as connections_router
 from app.api.v1.profile_sharing import router as profile_sharing_router
 from app.api.v1.editorial import router as editorial_router
 
+from app.api.v1.owner import router as owner_router
+
 api_router = APIRouter(prefix="/v1")
 from app.api.v1.editorial_content import router as editorial_content_router
 
 from app.api.v1.editorial_notifications import router as editorial_notifications_router
 
+api_router.include_router(owner_router)
 api_router.include_router(editorial_notifications_router)
 api_router.include_router(editorial_router)
 api_router.include_router(editorial_content_router)

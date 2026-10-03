@@ -14,6 +14,7 @@ from sqlalchemy import text
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATH = ROOT / "schema" / "contract.json"
 TABLES = (
+    "owner_operation_events",
     "editorial_notification_policy", "editorial_notification_outbox",
     "editorial_email_batches", "editorial_email_attempts",
     "editorial_generation_jobs", "editorial_workflow_events", "editorial_request_receipts",

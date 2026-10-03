@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import { createClient } from "@supabase/supabase-js";
+import { OwnerDemo } from "./OwnerDemo";
 import { App } from "./App";
 import { Api } from "./api";
 import { readConfig } from "./config";
@@ -8,10 +9,16 @@ const root = createRoot(document.getElementById("root")!);
 // Consume credentials before rendering anything or loading third-party content.
 const fragment = new URLSearchParams(location.hash.slice(1));
 const code = new URLSearchParams(location.search).get("code");
+const ownerDemo = new URLSearchParams(location.search).get("demo") === "owner";
 const callback = location.pathname === "/auth/callback";
 if (location.hash || code)
   history.replaceState(null, "", callback ? "/auth/callback" : "/");
 async function start() {
+  // The demo is selected before constructing Auth or any production API client.
+  if (ownerDemo) {
+    root.render(<OwnerDemo />);
+    return;
+  }
   try {
     const config = readConfig(import.meta.env);
     const auth = createClient(config.supabaseUrl, config.key, {

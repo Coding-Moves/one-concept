@@ -93,6 +93,18 @@ with page results in one statement; published rows require matching exact-versio
 provenance. Build/browser CI uses public fixture values only. See
 [the review website guide](../admin/README.md) for staging and hosting boundaries.
 
+## Owner dashboard (#297)
+
+`admin/src/OwnerDashboard.tsx` contains read-only activity, reviewer, operations
+and event views. `OwnerDemo.tsx` / `ownerDemo.ts` provide a deterministic adapter
+selected before Auth/API initialization. `api/v1/owner.py` enforces the existing
+`manage_reviewers` administrator capability; `services/owner_reporting.py`
+aggregates canonical completions and immutable editorial evidence.
+`services/owner_telemetry.py` records opt-in bounded observations from the API and
+existing workers. Migration 0039 adds the private telemetry table and report
+indexes; the schema contract includes them. See [owner-dashboard.md](owner-dashboard.md)
+for metrics, privacy, retention and activation deferred to #281.
+
 ## Achievements (#209, #259)
 
 `services/achievements.py` awards permanent, data-driven milestones under the

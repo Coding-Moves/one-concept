@@ -7,6 +7,59 @@ claims as completed work.
 
 ## Current status
 
+### PR #316 — second code review complete
+
+- Reviewed reporting authority, aggregation, privacy, telemetry, filters, demo
+  and responsive browser flows against #297; fixes remain in the same PR.
+- `59771e1`: accept compact public incident IDs as well as hyphenated UUIDs.
+  The browser regression failed on the original validation, then passed; the
+  real API regression also verifies compact IDs locate the correct event.
+- `999d54c`: retain worker observations independently of the API telemetry flag.
+  The PostgreSQL regression reproduced the incorrect unavailable status before
+  the fix. Switches/cap are now explicitly labeled as API configuration because
+  separately deployed workers can have different values.
+- `beeea58`: hide the dashboard queue shortcut without review permission while
+  retaining reporting/account management. `e0fe2dd` aligns synthetic UUID filters
+  with the real API. `78e57e1` prevents narrow status values wrapping into broken
+  words; inspected the corrected phone-width dark operations view.
+- Passed: **522 backend tests, no skips**, on disposable PostgreSQL 16; **31
+  browser tests**, plus both-theme reruns after the final scoped CSS fix; **10
+  admin unit tests**, TypeScript/production build, F/E9 lint, documentation links
+  and diff checks. An initial build lacked public configuration; reran with
+  explicit synthetic settings successfully. Existing ~519 kB bundle warning remains.
+- No remaining actionable blocker found in this review. Hosted checks follow
+  this push. No merge, production SQL, deployment or flag change; no manual setup
+  is required before merge into develop. Activation remains under #281.
+
+### #297 — owner dashboard implementation complete
+
+- Scope is implementation only in the existing `admin/` application. Both
+  reviewer and owner sections deploy under #281 after the normal production
+  release. No staging creation, production migration, live flag change, version
+  bump, deployment or merge was performed.
+- [PR #316](https://github.com/Coding-Moves/one-concept/pull/316) targets
+  `develop`; base `31300ce`, branch `codex/297-owner-dashboard`. `8b1460b` adds private
+  reporting endpoints, migration 0039 and schema contract. `768c5b4` adds opt-in
+  bounded worker/API observations. `ffaf68d` adds the four report pages, isolated
+  demo, responsive themes and browser coverage. `adec7e9` isolates report fixtures
+  from the default topic list used by later learner tests.
+- Access reuses explicit `manage_reviewers`, approved identity, live session and
+  MFA. Report data is memory-only; date windows, paging and SQL timeouts are
+  bounded. Names come from immutable review evidence; delayed publications keep
+  attribution even after account deletion. Missing/stale signals are explicit.
+- Passed: admin TypeScript/build and 10 unit tests; all 29 browser tests, plus
+  a focused two-test rerun for OAuth-fragment demo isolation and real invitation
+  callbacks. Visually inspected light desktop and dark narrow screenshots.
+  Vite reports a non-blocking bundle-size warning (about 518 kB before gzip).
+- Final full backend suite: **521 passed, no skips**, including the schema
+  contract on disposable PostgreSQL 16. Initial fixture-only failures (short
+  evidence note and active test topics affecting bootstrap tests) were corrected.
+  Backend F/E9 lint, documentation links and diff checks passed. Hosted checks
+  follow the final documentation push; the PR remains unmerged for owner action.
+- [owner-dashboard.md](owner-dashboard.md) defines metrics, exclusions,
+  permissions, retention, missing infrastructure signals and manual activation
+  deferred to #281. No owner action is required before merging into develop.
+
 ### PR #314 — code review fixes complete
 
 - Reviewed head `0e762b6` against #280, including SQL snapshot/version matching,

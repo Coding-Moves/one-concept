@@ -7,6 +7,25 @@ claims as completed work.
 
 ## Current status
 
+### #330 empty-topic daily policy — implementation ready for review
+
+- Scope: make an intentional empty followed-topic list a stable daily-learning
+  state. A new daily assignment must not silently widen to unrelated catalog
+  content; an existing same-day assignment remains readable and completable.
+- `428c061` adds the selection contract and PostgreSQL coverage for empty follows,
+  existing assignments, and resuming after a follow. `1aa4653` exposes typed
+  `personalization_required` and additive `daily_availability` API/state values.
+  `645cf54` pauses topic-dependent daily push claims while retaining reminder
+  preferences and registered handsets. `eb3c8ac` documents the contract and
+  staged mobile rollout.
+- No migration is needed: active membership already lives in `user_topics`.
+  No Gemini generation is requested on this path. The weekly-quiz policy and
+  existing quizzes are unchanged.
+- Passed locally: PostgreSQL-backed selection, daily API and reminder regression
+  suites; backend Ruff F/E9 lint; documentation/diff whitespace checks. The
+  next chunk (#329) will consume this contract in Today UI after this backend PR
+  is reviewed and merged.
+
 ### #281 / #313 reviewer website rollout — PR #331
 
 - Owner chose the next #263 child and confirmed existing Netlify and Render accounts.

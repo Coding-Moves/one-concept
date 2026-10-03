@@ -183,7 +183,7 @@ async def test_event_projection_pagination_and_filters_never_return_payloads(
     response = await api.client.get(
         "/v1/editorial/owner/events",
         params={
-            "correlation": str(correlation),
+            "correlation": correlation.hex,
             "source": "api",
             "severity": "error",
             "search": "unexpected",

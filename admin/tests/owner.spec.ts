@@ -228,3 +228,41 @@ test("first load failure does not invent zero metrics and sign-out fences late r
     ),
   ).toBe(false);
 });
+
+test("event filters accept public incident IDs and canonical UUIDs", async ({
+  context,
+  page,
+}) => {
+  await fixture(context);
+  await reports(context);
+  await login(page);
+  await page.getByRole("button", { name: "Owner dashboard" }).click();
+  await page
+    .getByRole("navigation", { name: "Owner reports" })
+    .getByRole("button", { name: "Events" })
+    .click();
+  for (const incident of [
+    "123456781234423482341234567890ab",
+    "12345678-1234-4234-8234-1234567890ab",
+  ]) {
+    await page.getByLabel("Correlation ID", { exact: true }).fill(incident);
+    const request = page.waitForRequest(
+      (r) =>
+        r.method() === "GET" &&
+        new URL(r.url()).searchParams.get("correlation") === incident,
+    );
+    await page.getByRole("button", { name: "Apply event filters" }).click();
+    await request;
+    await expect(
+      page.getByText("No events match these filters."),
+    ).toBeVisible();
+  }
+  await page
+    .getByLabel("Correlation ID", { exact: true })
+    .fill("not-an-incident");
+  expect(
+    await page
+      .getByLabel("Correlation ID", { exact: true })
+      .evaluate((el: HTMLInputElement) => el.checkValidity()),
+  ).toBe(false);
+});

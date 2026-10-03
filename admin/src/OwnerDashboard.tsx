@@ -695,8 +695,8 @@ function EventsPanel({
           <Field title="Correlation ID">
             <input
               maxLength={36}
-              pattern="[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
-              placeholder="Optional UUID"
+              pattern="[0-9a-fA-F]{32}|[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+              placeholder="Incident ID or UUID"
               value={draft.correlation}
               onChange={(e) =>
                 setDraft({ ...draft, correlation: e.target.value })

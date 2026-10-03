@@ -60,7 +60,7 @@ const server=http.createServer((req,res)=>{
    await page.getByRole('tab',{name:'Profile'}).click();await page.getByText('Connections',{exact:true}).click();
    await expect(page.getByText(/No connections yet/)).toBeVisible();
    const preference=page.getByRole('switch',{name:'Accept new connection requests'});
-   await preference.click();await expect(page.getByText(/Could not confirm/)).toBeVisible();await expect(preference).not.toBeChecked();
+   await preference.click();await expect(preference).toBeChecked();await expect(page.getByText(/Could not confirm/)).toBeVisible();await expect(preference).not.toBeChecked();
    failSettings=false;await preference.click();await expect(preference).toBeChecked();
    const input=page.getByRole('textbox',{name:'Shared profile link'});
    await input.fill('invalid');await page.getByRole('button',{name:'Open shared profile',exact:true}).click();await expect(page.getByText(/Enter a valid One Concept/)).toBeVisible();
@@ -76,15 +76,15 @@ const server=http.createServer((req,res)=>{
    await expect(page.getByText('Request pending',{exact:true})).toBeVisible();assert.equal(requestCalls,1);
    await page.getByRole('button',{name:'Cancel request',exact:true}).click();await expect(page.getByText(/A previous request ended/)).toBeVisible();
    await page.getByRole('button',{name:'Close profile',exact:true}).click();
-   relationship='incoming';await page.getByRole('button',{name:'Incoming requests',exact:true}).click();
+   relationship='incoming';await page.getByRole('button',{name:'Requests',exact:true}).click();
    await expect(page.getByText('Bea',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Decline request',exact:true}).click();
    await expect(page.getByText('Bea',{exact:true})).toHaveCount(0);
    relationship='incoming';await page.getByRole('button',{name:'Reload connections',exact:true}).click();await page.getByRole('button',{name:'Accept request',exact:true}).click();
    await page.getByRole('button',{name:'My connections',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toBeVisible();
    await page.screenshot({path:`/tmp/connections-${theme}.png`,fullPage:true});
    await page.getByRole('button',{name:'Remove connection',exact:true}).click();await page.getByRole('button',{name:'Confirm remove',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toHaveCount(0);
-   relationship='accepted';await page.getByRole('button',{name:'Reload connections',exact:true}).click();await page.getByRole('button',{name:'Block learner',exact:true}).click();await page.getByRole('button',{name:'Confirm block',exact:true}).click();
-   await page.getByRole('button',{name:'Blocked learners',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Unblock learner',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toHaveCount(0);
+   relationship='accepted';await page.getByRole('button',{name:'Reload connections',exact:true}).click();await page.getByRole('button',{name:'Block person',exact:true}).click();await page.getByRole('button',{name:'Confirm block',exact:true}).click();
+   await page.getByRole('button',{name:'Blocked',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toBeVisible();await page.getByRole('button',{name:'Unblock person',exact:true}).click();await expect(page.getByText('Bea',{exact:true})).toHaveCount(0);
    await page.evaluate(()=>document.querySelectorAll('div,span').forEach(el=>{if(el.childNodes.length===1&&el.firstChild?.nodeType===Node.TEXT_NODE){const style=getComputedStyle(el);el.style.fontSize=(parseFloat(style.fontSize)*1.8)+'px';}}));
    await page.getByRole('button',{name:'My connections',exact:true}).click();await expect(page.getByText(/No connections yet/)).toBeVisible();
    assert.deepEqual(errors,[]);console.log(`${theme}: request consent, failed settings, duplicate guard, cancel, decline, accept, private list, remove, block/unblock and large text passed`);await context.close();

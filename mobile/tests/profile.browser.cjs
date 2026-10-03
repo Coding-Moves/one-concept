@@ -66,12 +66,13 @@ const server=http.createServer((req,res)=>{
    await expect.poll(()=>!!releaseName).toBe(true);
    await expect(page.getByRole('button',{name:'Saving…',exact:true})).toBeDisabled();
    releaseName();holdName=false;
-   await expect(page.getByText('Your name is saved.',{exact:true})).toBeVisible();assert.equal(nameSaves,2);
+   await expect(page.getByText('Name saved. Your profile now uses this name.',{exact:true})).toBeVisible();assert.equal(nameSaves,2);
    await expect(input).toHaveValue('Amina');
    await page.getByRole('button',{name:'Back',exact:true}).click();
    await expect(page.getByText('Amina',{exact:true})).toBeVisible();
    await expect(page.getByText('Learning timezone',{exact:true})).toHaveCount(1);
    await page.getByRole('switch',{name:'Notifications',exact:true}).click();
+   await expect(page.getByRole('switch',{name:'Notifications',exact:true})).toBeChecked();
    await expect(page.getByText(/Could not save reminder settings/)).toBeVisible();
    await expect(page.getByRole('switch',{name:'Notifications',exact:true})).not.toBeChecked();
    failReminders=false;
@@ -80,6 +81,7 @@ const server=http.createServer((req,res)=>{
    const weeklySwitch=page.getByRole('switch',{name:'Weekly quiz notifications',exact:true});
    await expect(weeklySwitch).not.toBeChecked();
    failReminders=true;await weeklySwitch.click();
+   await expect(weeklySwitch).toBeChecked();
    await expect(page.getByText(/Could not save reminder settings/)).toBeVisible();
    await expect(weeklySwitch).not.toBeChecked();
    failReminders=false;await weeklySwitch.click();await expect(weeklySwitch).toBeChecked();
@@ -93,10 +95,10 @@ const server=http.createServer((req,res)=>{
    await page.getByRole('switch',{name:'Notifications',exact:true}).click();
    await expect(weeklySwitch).toBeEnabled();await expect(weeklySwitch).toBeChecked();
    await page.getByText('Public profile & sharing',{exact:true}).click();
-   await expect(page.getByText('Sharing: Off',{exact:true})).toBeVisible();
+   await expect(page.getByText('Sharing is off',{exact:true})).toBeVisible();
    await page.getByRole('switch',{name:'Display name: Amina',exact:true}).check();
    await page.getByRole('button',{name:'Enable sharing with these choices'}).click();
-   await expect(page.getByText('Sharing: On',{exact:true})).toBeVisible();
+   await expect(page.getByText('Sharing is on',{exact:true})).toBeVisible();
    assert.equal(sharing.show_name,true);assert.equal(sharing.show_streak,false);assert.deepEqual(sharing.achievement_codes,[]);
    await page.getByRole('button',{name:'Preview & share profile'}).click();
    await expect.poll(async()=> (await page.getByText('Share your progress',{exact:true}).boundingBox())?.y ?? 999).toBeLessThan(80);
@@ -113,10 +115,11 @@ const server=http.createServer((req,res)=>{
    await expect(page.getByRole('switch',{name:'Total concepts learned'})).toBeChecked();
    await expect(page.getByRole('button',{name:'Preview & share profile'})).toHaveCount(0);
    conflict=false;
-   await page.getByRole('button',{name:'Reload settings'}).click();
+   await expect(page.getByRole('button',{name:'Reload saved settings'})).toBeDisabled();
+   await page.getByRole('button',{name:'Discard unsaved choices'}).click();
    await expect(page.getByRole('switch',{name:'Total concepts learned'})).not.toBeChecked();
-   await page.getByRole('button',{name:'Turn off sharing now'}).click();
-   await expect(page.getByText('Sharing: Off',{exact:true})).toBeVisible();
+   await page.getByRole('button',{name:'Turn off sharing'}).click();
+   await expect(page.getByText('Sharing is off',{exact:true})).toBeVisible();
    await expect(qr).toHaveCount(0);assert.equal(sharing.public_path,null);
    await page.evaluate(()=>document.querySelectorAll('div,span').forEach(el=>{
     if(el.childNodes.length===1&&el.firstChild?.nodeType===Node.TEXT_NODE){const style=getComputedStyle(el);el.style.fontSize=(parseFloat(style.fontSize)*1.8)+'px';}

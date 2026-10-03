@@ -10,6 +10,7 @@ import { Review } from "./Review";
 import { Team } from "./Team";
 import { Notifications } from "./Notifications";
 import { Generation } from "./Generation";
+import { OwnerDashboard } from "./OwnerDashboard";
 export interface Route {
   view: string;
   id?: string;
@@ -205,6 +206,7 @@ export function App({
     );
   const can = (cap: string) => !!me?.member.capabilities.includes(cap as never);
   const nav = [
+    ...(can("manage_reviewers") ? [["owner", "Owner dashboard", "◈"]] : []),
     ["queue", "Review queue", "▤"],
     ["legacy", "Existing lessons", "▧"],
     ["approved", "Approved", "✓"],
@@ -313,7 +315,9 @@ export function App({
             <Mfa auth={auth} onVerified={() => void reloadMe()} />
           ) : active ? (
             <>
-              {current.view === "notifications" && can("manage_reviewers") ? (
+              {current.view === "owner" && can("manage_reviewers") ? (
+                <OwnerDashboard api={api} environment={environment} navigate={navigate} />
+              ) : current.view === "notifications" && can("manage_reviewers") ? (
                 <Notifications api={api} />
               ) : current.view === "team" && can("manage_reviewers") ? (
                 <Team api={api} me={me} />

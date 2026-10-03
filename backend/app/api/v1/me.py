@@ -54,6 +54,17 @@ def _daily_out_or_none(result: DailyResult) -> DailyOut | None:
     )
 
 
+def _daily_availability(result: DailyResult) -> str:
+    """Expose why state.daily is null without making startup a 409 response."""
+    if result.status == "ok":
+        return "available"
+    if result.status == "personalization_required":
+        return "personalization_required"
+    if result.status == "review":
+        return "review_available"
+    return "catalog_exhausted"
+
+
 def _to_state_out(state) -> StateOut:
     return StateOut(
         display_name=state.display_name,
@@ -108,6 +119,7 @@ async def get_state(
     # Same create-on-first-call behaviour as GET /v1/daily.
     result = await get_or_create_daily(db, user.id, allow_review=reviews)
     out.daily = _daily_out_or_none(result)
+    out.daily_availability = _daily_availability(result)
     if result.status == "review":
         out.review = ReviewOut(
             review_id=result.review_id,assigned_for=result.assigned_for,

@@ -337,7 +337,7 @@ Authenticated routes pass through `core/rate_limit.py` after JWT verification. I
 | --- | --- |
 | `health.py`: `GET /health` | Liveness plus a database query. |
 | `topics.py`: `GET /v1/topics` | Active topics, published counts, follow state. |
-| `daily.py`: `GET /v1/daily`, `POST /v1/daily/complete` | Selection, completion, server-derived date and streaks. Exhaustion returns 409 with `catalog_exhausted`. |
+| `daily.py`: `GET /v1/daily`, `POST /v1/daily/complete` | Selection, completion, server-derived date and streaks. Typed 409 reasons distinguish `personalization_required` (no active follows) from `catalog_exhausted`. |
 | `me.py`: `GET /v1/me/state`, `/stats` | Optional compact state, exact totals, today's lesson. |
 | `me.py`: `GET /v1/me/history`, `/saved` | Cursor pages through `services/collections.py`; default 50, maximum 100 items. |
 | `analytics.py`: `GET /v1/me/analytics` | Bounded account-owned learning totals, timezone-grouped activity, quizzes, topic/subtopic progress and achievement collection. |
@@ -349,10 +349,14 @@ Authenticated routes pass through `core/rate_limit.py` after JWT verification. I
 `router.py` mounts authenticated feature routers under `/v1`. Response/input
 models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 
-- `services/selection.py` returns an existing assignment first. Otherwise it
-  excludes every previously assigned concept, prefers the least recently seen
-  followed topic, widens to the global published catalog if needed, and handles
-  concurrent inserts. Selection schedules background prefetch, never waits on Gemini.
+- `services/selection.py` returns an existing assignment first. With no active
+  followed topic it returns the stable `personalization_required` state without
+  creating an assignment or signaling generation. Otherwise it excludes every
+  previously assigned concept, prefers the least recently seen followed topic,
+  and widens to the global published catalog only when that non-empty followed
+  pool is dry. It handles concurrent inserts and schedules background prefetch,
+  never waits on Gemini. `GET /me/state` projects the same condition through
+  `daily_availability`; old clients can safely ignore that additive field.
 - `services/state.py` aggregates profile, follows, learned/saved metadata, likes,
   assignment slug, and derived streaks in one SQL statement. The `/me/state`
   handler then calls selection separately to add `daily`; one HTTP request does

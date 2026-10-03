@@ -66,6 +66,14 @@ _CLAIM_DUE = text("""
           from occurrences o
          where o.slot_at <= o.local_now
            and o.slot_at > o.local_now - make_interval(mins => :window)
+           -- A learner who follows no active topic has intentionally paused
+           -- topic-dependent daily lessons. Keep their preferences and tokens
+           -- intact; simply do not claim a daily nudge until they follow again.
+           and exists (
+               select 1
+                 from public.user_topics ut
+                 join public.topics t on t.id = ut.topic_id and t.is_active
+                where ut.user_id = o.user_id)
            -- Only bother claiming for users with a handset to push to.
            and exists (
                select 1 from public.device_tokens dt where dt.user_id = o.user_id)

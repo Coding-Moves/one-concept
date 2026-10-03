@@ -5,7 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.deps import CurrentUser, get_current_user
-from app.schemas.daily import ConceptOut, DailyExhaustedOut, DailyOut
+from app.schemas.daily import (
+    ConceptOut,
+    DailyExhaustedOut,
+    DailyOut,
+    DailyPersonalizationRequiredOut,
+    DailyUnavailableOut,
+)
 from app.schemas.me import CompletedOut, StreakOut
 from app.schemas.subtopics import SubtopicCompletionOut
 from app.services.interactions import complete_today
@@ -19,7 +25,7 @@ router = APIRouter(prefix="/daily", tags=["daily"])
 @router.get(
     "",
     response_model=DailyOut,
-    responses={200: {"model": DailyOut}, 409: {"model": DailyExhaustedOut}},
+    responses={200: {"model": DailyOut}, 409: {"model": DailyUnavailableOut}},
 )
 async def get_daily(
     user: CurrentUser = Depends(get_current_user),
@@ -35,14 +41,19 @@ async def get_daily(
 
     result = await get_or_create_daily(db, user.id)
 
-    if result.status == "exhausted":
-        # The exhausted body has a different shape than DailyOut, so it must
-        # go out as a Response object: a plain return here would be validated
-        # against response_model regardless of the status code and turn this
-        # into a 500 (issue #30). `responses` above documents it in OpenAPI.
+    if result.status in {"personalization_required", "exhausted"}:
+        # An unavailable daily payload has a different shape than DailyOut, so
+        # it must go out as a Response object. A plain return would be checked
+        # against response_model and become a 500 (issue #30). The stable
+        # `reason` lets clients distinguish topic setup from catalog exhaustion.
+        unavailable = (
+            DailyPersonalizationRequiredOut(assigned_for=result.assigned_for)
+            if result.status == "personalization_required"
+            else DailyExhaustedOut(assigned_for=result.assigned_for)
+        )
         return JSONResponse(
             status_code=status.HTTP_409_CONFLICT,
-            content=jsonable_encoder(DailyExhaustedOut(assigned_for=result.assigned_for)),
+            content=jsonable_encoder(unavailable),
         )
 
     concept = result.concept

@@ -50,13 +50,13 @@ class ConceptPayload:
 
 @dataclass
 class DailyResult:
-    status: str  # "ok" | "review" | "exhausted"
+    status: str  # "ok" | "review" | "personalization_required" | "exhausted"
     review_id: uuid.UUID | None = None
     assigned_for: date | None = None
     assigned_at: datetime | None = None
     completed_at: datetime | None = None
     concept: ConceptPayload | None = None
-    # True when the pool of followed topics was empty and we widened the search.
+    # True when a non-empty followed-topic pool was dry and we widened search.
     outside_followed_topics: bool = False
 
 
@@ -120,6 +120,20 @@ _INSERT = text("""
     values (gen_random_uuid(), :uid, :cid, :today)
     on conflict (user_id, assigned_for) do nothing
     returning id
+""")
+
+
+# A learner may deliberately follow no topics. That is a personalization state,
+# not permission to silently choose an unrelated lesson from the full catalog.
+# Join active topics so a stale membership for a retired topic behaves exactly
+# like no available personalization until the learner chooses an active topic.
+_HAS_ACTIVE_FOLLOWED_TOPIC = text("""
+    select exists (
+        select 1
+          from public.user_topics ut
+          join public.topics t on t.id = ut.topic_id and t.is_active
+         where ut.user_id = :uid
+    )
 """)
 
 
@@ -203,7 +217,16 @@ async def _select_new(
     if existing:
         return _row_to_result(existing, outside=False)
 
-    # Followed topics first; widen to the whole catalog only if that pool is dry.
+    # Never turn an empty personalization into a generic daily lesson. Existing
+    # assignments returned above remain readable and completable; this only
+    # prevents *new* assignments until the learner follows an active topic.
+    has_active_follow = await session.scalar(
+        _HAS_ACTIVE_FOLLOWED_TOPIC, {"uid": user_id}
+    )
+    if not has_active_follow:
+        return DailyResult(status="personalization_required", assigned_for=today)
+
+    # Followed topics first; widen only when a non-empty followed pool is dry.
     outside = False
     concept_id = (
         await session.execute(_CANDIDATE, {"uid": user_id, "ignore_follows": False})

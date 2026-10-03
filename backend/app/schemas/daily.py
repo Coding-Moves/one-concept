@@ -1,5 +1,6 @@
 import uuid
 from datetime import date, datetime
+from typing import Literal
 
 from pydantic import BaseModel
 
@@ -38,10 +39,26 @@ class DailyOut(BaseModel):
     outside_followed_topics: bool = False
 
 
+class DailyPersonalizationRequiredOut(BaseModel):
+    """No assignment is created until the learner follows an active topic."""
+
+    assigned_for: date
+    reason: Literal["personalization_required"] = "personalization_required"
+    detail: str = "Follow at least one topic to receive a daily concept."
+
+
 class DailyExhaustedOut(BaseModel):
     assigned_for: date
-    reason: str = "catalog_exhausted"
+    reason: Literal["catalog_exhausted"] = "catalog_exhausted"
     detail: str = "You have already been assigned every available concept."
+
+
+class DailyUnavailableOut(BaseModel):
+    """Typed 409 payload for a daily lesson that cannot be created yet."""
+
+    assigned_for: date
+    reason: Literal["personalization_required", "catalog_exhausted"]
+    detail: str
 
 
 class ReviewOut(DailyOut):

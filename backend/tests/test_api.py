@@ -112,6 +112,35 @@ async def test_no_endpoint_accepts_a_user_id(client, user):
     assert mine["concept"]["id"] == spoofed["concept"]["id"]
 
 
+async def test_daily_requires_personalization_when_no_topics_are_followed(
+    client, sessionmaker_for_test, user
+):
+    """The public contract distinguishes topic setup from catalog exhaustion."""
+    async with sessionmaker_for_test() as s:
+        await s.execute(
+            text("delete from public.user_topics where user_id = :u"), {"u": user}
+        )
+        await s.commit()
+
+    response = await client.get("/v1/daily")
+
+    assert response.status_code == 409, response.text
+    body = response.json()
+    assert body["reason"] == "personalization_required"
+    date.fromisoformat(body["assigned_for"])
+
+    state = await client.get("/v1/me/state")
+    assert state.status_code == 200
+    assert state.json()["daily"] is None
+    assert state.json()["daily_availability"] == "personalization_required"
+
+    async with sessionmaker_for_test() as s:
+        assert await s.scalar(
+            text("select count(*) from public.daily_assignments where user_id = :u"),
+            {"u": user},
+        ) == 0
+
+
 async def test_daily_exhaustion_is_a_409_not_a_500(client, sessionmaker_for_test, user):
     """Issue #30: the exhausted body must actually reach the client.
 

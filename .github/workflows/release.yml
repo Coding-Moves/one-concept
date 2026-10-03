@@ -21,9 +21,30 @@ permissions:
 
 jobs:
   schema:
-    uses: ./.github/workflows/production-schema.yml
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    name: Verify production schema
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: production-schema
     permissions:
       contents: read
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Require current main revision
+        run: |
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Install verifier dependencies without production credentials
+        run: python -m pip install --requirement backend/requirements.txt
+      - name: Check actual target schema without writing to the database
+        working-directory: backend
+        env:
+          DIRECT_URL: ${{ secrets.PRODUCTION_SCHEMA_DIRECT_URL }}
+        run: python -m app.workers.schema_check
 
   ota:
     needs: schema

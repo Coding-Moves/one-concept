@@ -1,6 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState } from 'react';
 import { ActivityIndicator, FlatList, Pressable, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { AchievementBadge } from '../components/AchievementBadge';
@@ -9,12 +8,11 @@ import { useAchievements } from '../context/AchievementsContext';
 import { useOnline } from '../context/ConnectivityContext';
 import { useTheme } from '../context/ThemeContext';
 import { useRefreshControl } from '../hooks/useRefreshControl';
-import { nextMilestone } from '../services/achievementStore';
+import { achievementProgress, achievementRequirement, nextMilestone } from '../services/achievementStore';
 import { radius, scaleFont, spacing, typography } from '../theme';
 
 export function AchievementsScreen() {
   const navigation = useNavigation();
-  const insets = useSafeAreaInsets();
   const { snapshot, loading, failed, fresh, refresh } = useAchievements();
   const { colors } = useTheme();
   const online = useOnline();
@@ -27,7 +25,7 @@ export function AchievementsScreen() {
   const earned = collection?.items.filter(a => a.earned_on).length ?? 0;
   const award = collection?.items.find(a => a.code === selected && a.earned_on);
   return <View style={[styles.screen, { backgroundColor: colors.background }]}>
-    <View style={[styles.top, { paddingTop: insets.top + spacing.sm }]}>
+    <View style={styles.top}>
       <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.goBack()} style={styles.back}>
         <Ionicons name="arrow-back" size={24} color={colors.text} />
       </Pressable>
@@ -40,18 +38,18 @@ export function AchievementsScreen() {
         <Text style={[styles.lead, { color: colors.text }]}>Small steps. Lasting achievements.</Text>
         <Text style={[styles.copy, { color: colors.textSecondary }]}>Keep learning one day at a time. Every badge you earn stays in your collection.</Text>
         {collection && <>
-          <View style={[styles.summary, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <View style={[styles.summary, { backgroundColor: colors.surface }]}>
             <Text style={[styles.number, { color: colors.text }]}>{earned} / {collection.items.length} earned</Text>
             <Text style={[styles.copy, { color: colors.textSecondary }]}>Current streak {collection.current_streak} days · Best {collection.longest_streak} days</Text>
             {next ? <>
-              <Text style={[styles.copy, { color: colors.textSecondary }]}>Next milestone · {next.threshold.toLocaleString()} days</Text>
-              <View accessibilityRole="progressbar" accessibilityLabel="Next streak milestone"
-                accessibilityValue={{ min: 0, max: next.threshold, now: Math.min(collection.current_streak, next.threshold) }}
+              <Text style={[styles.copy, { color: colors.textSecondary }]}>Next milestone · {achievementRequirement(next)}</Text>
+              <View accessibilityRole="progressbar" accessibilityLabel="Next achievement milestone"
+                accessibilityValue={{ min: 0, max: next.threshold, now: achievementProgress(next) }}
                 style={[styles.track, { backgroundColor: colors.border }]}>
-                <View style={[styles.fill, { backgroundColor: colors.primary, width: `${Math.min(100, 100 * collection.current_streak / next.threshold)}%` }]} />
+                <View style={[styles.fill, { backgroundColor: colors.primary, width: `${Math.min(100, 100 * achievementProgress(next) / next.threshold)}%` }]} />
               </View>
-              <Text style={[styles.copy, { color: colors.textSecondary }]}>{Math.max(0, next.threshold - collection.current_streak).toLocaleString()} more consecutive days</Text>
-            </> : <Text style={[styles.copy, { color: colors.textSecondary }]}>All streak milestones earned.</Text>}
+              <Text style={[styles.copy, { color: colors.textSecondary }]}>{Math.max(0, next.threshold - achievementProgress(next)).toLocaleString()} more to unlock</Text>
+            </> : <Text style={[styles.copy, { color: colors.textSecondary }]}>All available milestones earned.</Text>}
           </View>
           {(!online || !fresh) && <Text accessibilityLiveRegion="polite" style={[styles.copy, { color: colors.textSecondary }]}>Saved achievements. Connect and sync to confirm new milestones.</Text>}
         </>}
@@ -62,15 +60,16 @@ export function AchievementsScreen() {
         <Text style={[styles.copy, { color: colors.textSecondary }]}>Your collection will appear here after a successful sync.</Text>}
       renderItem={({ item }) => {
         const unlocked = Boolean(item.earned_on);
+        const accessibilityRequirement = item.metric === 'consecutive_days' ? `${item.threshold} day` : achievementRequirement(item);
         const body = <>
           <AchievementBadge artwork={item.artwork_key} locked={!unlocked} />
-          <Text style={[styles.badgeTitle, { color: colors.text }]}>{unlocked ? item.name : `${item.threshold.toLocaleString()} days`}</Text>
-          <Text style={[styles.caption, { color: colors.textSecondary }]}>{unlocked ? `${item.threshold.toLocaleString()} days · Earned` : 'Keep learning to reveal'}</Text>
+          <Text style={[styles.badgeTitle, { color: colors.text }]}>{unlocked ? item.name : achievementRequirement(item)}</Text>
+          <Text style={[styles.caption, { color: colors.textSecondary }]}>{unlocked ? `${achievementRequirement(item)} · Earned` : item.show_progress === false ? 'Keep learning to reveal' : `${achievementProgress(item)} of ${achievementRequirement(item)}`}</Text>
         </>;
-        const cardStyle = [styles.tile, { backgroundColor: colors.surface, borderColor: unlocked ? colors.primary + '60' : colors.border }];
-        return unlocked ? <Pressable accessibilityRole="button" accessibilityLabel={`${item.name}, ${item.threshold} day achievement, earned`}
+        const cardStyle = [styles.tile, { backgroundColor: colors.surface }];
+        return unlocked ? <Pressable accessibilityRole="button" accessibilityLabel={`${item.name}, ${accessibilityRequirement} achievement, earned`}
           onPress={() => setSelected(item.code)} style={({ pressed }) => [...cardStyle, { opacity: pressed ? 0.8 : 1 }]}>{body}</Pressable> :
-          <View accessible accessibilityLabel={`${item.threshold} day achievement, locked`} style={cardStyle}>{body}</View>;
+          <View accessible accessibilityLabel={`${accessibilityRequirement} achievement, locked`} style={cardStyle}>{body}</View>;
       }}
     />
     {award && <AchievementDetail award={award} onClose={() => setSelected(null)} />}
@@ -85,11 +84,11 @@ const styles = StyleSheet.create({
   header: { gap: spacing.md, marginBottom: spacing.md },
   lead: { ...typography.title, fontSize: scaleFont(24) },
   copy: { fontSize: scaleFont(14), lineHeight: scaleFont(21) },
-  summary: { borderWidth: 1, borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
+  summary: { borderRadius: radius.lg, padding: spacing.md, gap: spacing.sm },
   number: { fontSize: scaleFont(20), fontWeight: '700' },
   track: { height: 6, borderRadius: 3, overflow: 'hidden' },
   fill: { height: '100%', borderRadius: 3 },
-  tile: { flex: 1, padding: spacing.md, borderWidth: 1, borderRadius: radius.lg, alignItems: 'center', gap: spacing.sm, maxWidth: '100%' },
+  tile: { flex: 1, padding: spacing.md, borderRadius: radius.lg, alignItems: 'center', gap: spacing.sm, maxWidth: '100%' },
   badgeTitle: { fontSize: scaleFont(17), fontWeight: '700', textAlign: 'center' },
   caption: { fontSize: scaleFont(12), textAlign: 'center', lineHeight: scaleFont(18) },
 });

@@ -136,34 +136,43 @@ a test account, and verify next-day selection. Today's activity stays fixed.
 
 ## Extend, draft and approve a curriculum
 
-1. Prepare a JSON array using
+1. Add or review the parent topic first, then prepare a subtopic registry entry
+   with a stable slug that is unique within that topic. Import it before plans:
+
+   ```bash
+   .venv/bin/python -m app.workers.content import-subtopics subtopic-changes.json
+   ```
+
+   Retire a subtopic with `is_active: false`; do not delete it or reuse its
+   slug under another topic. Retirement stops new selection, generation and
+   publication but keeps previously assigned and saved material accessible.
+2. Prepare a JSON array using
    [the five-subject example](../backend/content/curriculum.example.json).
    It demonstrates extension, not a production seed or a complete reserve.
-2. Give every concept a stable unique slug, one learning objective, difficulty
+3. Give every concept a stable unique slug, its parent `topic_slug`, an active
+   `subtopic_slug`, one learning objective, difficulty
    **1 foundations / 2 intermediate / 3 advanced applications**, prerequisite
    slugs where useful, and relevant source references. Separate distinct ideas;
    a renamed duplicate is not library growth.
-3. Import with `python -m app.workers.content import-curriculum FILE.json`.
+4. Import with `python -m app.workers.content import-curriculum FILE.json`.
    Exact re-import is safe. Unknown subjects/prerequisites, cycles, duplicate
    slugs and exact title/objective matches are rejected. Similar title warnings
    require editorial inspection; this inexpensive heuristic is not semantic
    proof. Check objectives and source material for conceptual duplication too.
-4. Allow the background worker to draft within the shared quota. Daily HTTP
+5. Allow the background worker to draft within the shared quota. Daily HTTP
    requests never wait for this work. Use `drafts` and `show` to inspect results.
-5. Verify factual correctness, scope, example usefulness, reading length,
+6. Verify factual correctness, scope, example usefulness, reading length,
    prerequisite availability and references. Import warnings are not approval.
    A reference URL is not evidence that the generated text actually follows it.
-6. If a draft needs changes, save its lesson body as JSON and run
+7. If a draft needs changes, save its lesson body as JSON and run
    `python -m app.workers.content stage SLUG BODY.json`. The body contains
-   `title`, `summary`, `example`, `curriculum`, optional `model` and
-   `prompt_version`. The CLI prints a revision UUID.
-7. Publish the exact reviewed revision:
-
-   ```bash
-   .venv/bin/python -m app.workers.content publish REVISION_UUID \
-     --reviewed-by 'Muawiya Amir' \
-     --note 'Explain which source, factual claims and example were verified'
-   ```
+   `title`, `summary`, `example`, `subtopic_slug`, `curriculum`, optional `model` and
+   `prompt_version`, and a complete `learning_package` (flashcard and three MCQs).
+   The CLI prints a revision UUID.
+8. Use authenticated exact-revision approval/publication as described in
+   [editorial API](editorial-api.md). The old free-text
+   `publish --reviewed-by` command is disabled. Keep production editorial
+   activation disabled until the coordinated #281 rollout.
 
 Publication requires complete metadata, valid prerequisites already published,
 an active subject, and a current base version. It rejects exact duplicates and
@@ -178,8 +187,9 @@ new publication gate: complete it through `stage` before approval. The example
 extension and existing plans must continue to grow through maintainer work;
 there is no automatic source of infinite high-quality titles.
 
-Reject an unsuitable revision with `reject REVISION_UUID --reviewed-by NAME
---note REASON`. Rejection preserves the audit trail. A new draft concept remains
+Reject an unsuitable revision through the authenticated review service (#276
+entry points). Free-text CLI rejection is disabled. Rejection preserves the audit
+trail. A new draft concept remains
 in inventory so it can be corrected with `stage`; do not repeatedly generate
 new copies to evade review. Resolve rejected inventory during the weekly review.
 
@@ -232,3 +242,46 @@ from the retained version rather than rewriting history or dropping tables.
 An application rollback must retain the new tables and data. Rolling back to
 an old generator would bypass editorial gates; keep generation disabled until
 compatible workers are restored. Never delete review records to roll back a UI.
+
+## Content-quality gate
+
+Every new or corrected revision must include a learning package: one useful
+flashcard and exactly three multiple-choice questions. Each question has four
+distinct answers and one explicit correct index. The automated gate catches
+missing or malformed package fields, repeated flashcards/questions/options,
+invalid answer indexes, invalid Topic → Subtopic references, incomplete
+curriculum data, exact duplicates, and unsupported publication states. It does
+not certify facts, usefulness, or the plausibility of distractors.
+
+Before approval, a named human reviewer must inspect the exact revision and
+submit a JSON checklist. All checks must be `true`; `sensitive_topic_handling`
+must be explicitly `not_applicable` or `reviewed`. This immutable checklist and
+the substantive review note are stored only in the backend-only revision audit
+record. A reviewer must check factual accuracy against the listed references,
+usefulness, plain-language clarity, Topic → Subtopic fit, example relevance,
+flashcard recall value, all three MCQs, and sensitive-topic handling. Health,
+finance, legal, safety, or other consequential content requires the `reviewed`
+value and appropriate source scrutiny.
+
+```json
+{
+  "factual_accuracy": true,
+  "usefulness": true,
+  "clarity": true,
+  "topic_subtopic_accuracy": true,
+  "example_quality": true,
+  "flashcard_quality": true,
+  "mcq_quality": true,
+  "references_checked": true,
+  "sensitive_topic_handling": "not_applicable"
+}
+```
+
+Approval records this checklist through the authenticated review service with
+the exact revision and the account's approved registered name. Publication reads
+that stored evidence; a checklist file and a typed reviewer name cannot authorize
+publication. See [the provenance contract and rollout](editorial-provenance.md).
+
+For authenticated queues, comments, assignments, exact-version decisions and the
+operator HTTP client, use [editorial-api.md](editorial-api.md). Its atomic approval
+and publication replaces the retired free-text publication CLI.

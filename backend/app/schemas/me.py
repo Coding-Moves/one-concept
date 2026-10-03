@@ -1,8 +1,11 @@
 from datetime import date
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
+
+from app.services.profile import normalize_display_name
 
 from app.schemas.daily import DailyOut, ReviewOut
+from app.schemas.subtopics import SubtopicCompletionOut
 
 
 class StreakOut(BaseModel):
@@ -68,12 +71,20 @@ class TopicsIn(BaseModel):
 
 
 class ProfileIn(BaseModel):
-    display_name: str | None = Field(default=None, max_length=100)
+    display_name: str | None = Field(default=None, max_length=60)
+
+    @field_validator("display_name")
+    @classmethod
+    def valid_display_name(cls, value: str | None) -> str | None:
+        return normalize_display_name(value) if value is not None else None
+
     # IANA zone name; owns every day boundary for this user.
     timezone: str | None = Field(default=None, max_length=64)
+    initialize_timezone: bool = False
 
 
 class CompletedOut(BaseModel):
     completed: bool
     assigned_for: date
     stats: StreakOut
+    subtopic_completion: SubtopicCompletionOut | None = None

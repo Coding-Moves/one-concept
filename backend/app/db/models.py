@@ -12,6 +12,7 @@ from sqlalchemy import (
     Date,
     DateTime,
     ForeignKey,
+    ForeignKeyConstraint,
     Integer,
     SmallInteger,
     Text,
@@ -34,6 +35,7 @@ class Profile(Base):
     display_name: Mapped[str | None] = mapped_column(Text)
     avatar_url: Mapped[str | None] = mapped_column(Text)
     timezone: Mapped[str] = mapped_column(Text, nullable=False, default="UTC")
+    timezone_initialized: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
 
@@ -49,17 +51,48 @@ class Topic(Base):
     sort_order: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
 
 
+class Subtopic(Base):
+    """A curated grouping within one topic (migration 0017)."""
+
+    __tablename__ = "subtopics"
+    __table_args__ = (UniqueConstraint("topic_id", "slug"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    topic_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("topics.id", ondelete="CASCADE"),
+        nullable=False,
+    )
+    slug: Mapped[str] = mapped_column(Text, nullable=False)
+    name: Mapped[str] = mapped_column(Text, nullable=False)
+    description: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(SmallInteger, nullable=False, default=0)
+    is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+
+
 class Concept(Base):
     __tablename__ = "concepts"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ("subtopic_id", "topic_id"), ("subtopics.id", "subtopics.topic_id")
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     topic_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("topics.id"), nullable=False
     )
+    subtopic_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), nullable=False)
     slug: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     summary: Mapped[str] = mapped_column(Text, nullable=False)
     example: Mapped[str | None] = mapped_column(Text)
+    # Optional for legacy lessons. New approved revisions carry a reviewed
+    # front/back recall pair (migration 0021).
+    flashcard: Mapped[dict | None] = mapped_column(JSONB)
+    # Reviewed MCQs are published with the same immutable lesson version.
+    mcqs: Mapped[list[dict] | None] = mapped_column(JSONB)
     difficulty: Mapped[int | None] = mapped_column(SmallInteger)
     status: Mapped[str] = mapped_column(Text, nullable=False, default="published")
     source: Mapped[str] = mapped_column(Text, nullable=False, default="seed")
@@ -86,7 +119,9 @@ class UserTopic(Base):
 class DailyAssignment(Base):
     __tablename__ = "daily_assignments"
     __table_args__ = (
-        UniqueConstraint("user_id", "assigned_for", name="daily_assignments_one_per_day"),
+        UniqueConstraint(
+            "user_id", "assigned_for", name="daily_assignments_one_per_day"
+        ),
         UniqueConstraint("user_id", "concept_id", name="daily_assignments_no_repeat"),
     )
 
@@ -100,6 +135,89 @@ class DailyAssignment(Base):
     assigned_for: Mapped[date] = mapped_column(Date, nullable=False)
     assigned_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class UserConceptCompletion(Base):
+    """A concept the learner completed, independent of daily streak activity."""
+
+    __tablename__ = "user_concept_completions"
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
+    )
+    concept_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("concepts.id"), primary_key=True
+    )
+    source_assignment_id: Mapped[uuid.UUID | None] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("daily_assignments.id")
+    )
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class UserSubtopicCompletion(Base):
+    """An immutable completion against one exact published subtopic catalog."""
+
+    __tablename__ = "user_subtopic_completions"
+    __table_args__ = (UniqueConstraint("user_id", "subtopic_id", "catalog_signature"),)
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False
+    )
+    subtopic_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("subtopics.id"), nullable=False
+    )
+    catalog_signature: Mapped[str] = mapped_column(Text, nullable=False)
+    catalog_concept_ids: Mapped[list[uuid.UUID]] = mapped_column(
+        ARRAY(PgUUID(as_uuid=True)), nullable=False
+    )
+    completed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SubtopicQuiz(Base):
+    """A frozen reviewed quiz for one completed subtopic catalog."""
+
+    __tablename__ = "subtopic_quizzes"
+    __table_args__ = (
+        UniqueConstraint("user_id", "subtopic_completion_id"),
+        UniqueConstraint("id", "user_id"),
+        ForeignKeyConstraint(
+            ("subtopic_completion_id", "user_id"),
+            ("user_subtopic_completions.id", "user_subtopic_completions.user_id"),
+        ),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    subtopic_completion_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("user_subtopic_completions.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    questions: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class SubtopicQuizAttempt(Base):
+    """An append-only submission against a frozen subtopic quiz."""
+
+    __tablename__ = "subtopic_quiz_attempts"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ("quiz_id", "user_id"),
+            ("subtopic_quizzes.id", "subtopic_quizzes.user_id"),
+        ),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    quiz_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("subtopic_quizzes.id", ondelete="RESTRICT"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), nullable=False
+    )
+    answers: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    correct_count: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    attempted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class ConceptInteraction(Base):
@@ -122,6 +240,7 @@ class NotificationPreference(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
     )
+    weekly_quiz_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     reminder_times: Mapped[list[time]] = mapped_column(ARRAY(Time), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -149,11 +268,17 @@ class ConceptBacklog(Base):
     """
 
     __tablename__ = "concept_backlog"
+    __table_args__ = (
+        ForeignKeyConstraint(
+            ("subtopic_id", "topic_id"), ("subtopics.id", "subtopics.topic_id")
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     topic_id: Mapped[uuid.UUID] = mapped_column(
         PgUUID(as_uuid=True), ForeignKey("topics.id"), nullable=False
     )
+    subtopic_id: Mapped[uuid.UUID | None] = mapped_column(PgUUID(as_uuid=True))
     slug: Mapped[str] = mapped_column(Text, nullable=False, unique=True)
     title: Mapped[str] = mapped_column(Text, nullable=False)
     angle: Mapped[str | None] = mapped_column(Text)
@@ -201,14 +326,69 @@ class AchievementDefinition(Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     artwork_key: Mapped[str] = mapped_column(Text, nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False)
+    category: Mapped[str] = mapped_column(Text, nullable=False, default="consistency")
+    requirement: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    show_progress: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     __table_args__ = (UniqueConstraint("metric", "threshold"),)
 
 
 class UserAchievement(Base):
     __tablename__ = "user_achievements"
-    user_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True)
-    achievement_code: Mapped[str] = mapped_column(Text, ForeignKey("achievement_definitions.code"), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), primary_key=True
+    )
+    achievement_code: Mapped[str] = mapped_column(
+        Text, ForeignKey("achievement_definitions.code"), primary_key=True
+    )
     earned_on: Mapped[date] = mapped_column(Date, nullable=False)
-    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    recorded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
     source: Mapped[str] = mapped_column(Text, nullable=False)
     seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class WeeklyQuiz(Base):
+    __tablename__ = "weekly_quizzes"
+    __table_args__ = (UniqueConstraint("user_id", "week_start"),)
+
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False
+    )
+    week_start: Mapped[date] = mapped_column(Date, nullable=False)
+    questions: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class WeeklyQuizAttempt(Base):
+    __tablename__ = "weekly_quiz_attempts"
+
+    id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
+    quiz_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True),
+        ForeignKey("weekly_quizzes.id", ondelete="RESTRICT"),
+        nullable=False,
+    )
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("profiles.id"), nullable=False
+    )
+    answers: Mapped[list[dict]] = mapped_column(JSONB, nullable=False)
+    correct_count: Mapped[int] = mapped_column(SmallInteger, nullable=False)
+    attempted_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False
+    )
+
+
+class ProfileSharing(Base):
+    __tablename__ = "profile_sharing"
+    user_id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), ForeignKey("profiles.id", ondelete="CASCADE"), primary_key=True)
+    public_token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_name: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_streak: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_learning: Mapped[bool] = mapped_column(Boolean, default=False)
+    achievement_codes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)
+    version: Mapped[int] = mapped_column(Integer, default=0)

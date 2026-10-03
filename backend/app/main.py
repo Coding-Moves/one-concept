@@ -6,6 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.exc import SQLAlchemyError
 
+from app.api.v1.profile_sharing import pages_router as public_profile_pages
 from app.api.v1.health import router as health_router
 from app.api.v1.pages import router as pages_router
 from app.api.v1.router import api_router
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(pages_router)
+    app.include_router(public_profile_pages)
     app.include_router(api_router)
     return app
 

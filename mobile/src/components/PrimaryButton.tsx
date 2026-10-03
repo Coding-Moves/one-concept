@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
+import { scaleFont, radius, shadows, spacing, ThemeColors, touchTarget } from '../theme';
 
 interface Props {
   label: string;
@@ -23,6 +23,7 @@ export function PrimaryButton({ label, onPress, disabled }: Props) {
         disabled && styles.disabled,
       ]}
       accessibilityRole="button"
+      accessibilityLabel={label}
       accessibilityState={{ disabled: !!disabled }}
     >
       <Text style={styles.label}>{label}</Text>
@@ -35,6 +36,7 @@ const createStyles = (colors: ThemeColors) =>
     button: {
       backgroundColor: colors.primary,
       borderRadius: radius.pill,
+      minHeight: touchTarget,
       paddingVertical: spacing.md + 2,
       alignItems: 'center',
       ...shadows.card,

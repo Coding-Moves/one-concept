@@ -26,6 +26,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.config import get_settings
 from app.services.prefetch import request_prefetch
 from app.services.supply import signal_reader
+from app.services.review_attribution import REVIEW_ATTRIBUTION_SQL
 
 
 @dataclass
@@ -35,12 +36,16 @@ class ConceptPayload:
     title: str
     summary: str
     example: str | None
+    flashcard: dict[str, str] | None
     topic_slug: str
     topic_name: str
+    subtopic_slug: str
+    subtopic_name: str
     # Likes from OTHER users; the client adds the viewer's own like on top, so a
     # like/unlike is an instant +/-1 with no server round trip to see it.
     like_count: int = 0
     content_version: int = 1
+    review: dict | None = None
 
 
 @dataclass
@@ -60,16 +65,19 @@ _TODAY = text("""
       from public.profiles where id = :uid for update
 """)
 
-_EXISTING = text("""
+_EXISTING = text(f"""
     select a.assigned_for, a.assigned_at, a.completed_at,
-           c.id, c.slug, c.title, c.summary, c.example, c.content_version,
+           c.id, c.slug, c.title, c.summary, c.example, c.flashcard, c.content_version,
+           {REVIEW_ATTRIBUTION_SQL} as review,
            t.slug as topic_slug, t.name as topic_name,
+           s.slug as subtopic_slug, s.name as subtopic_name,
            (select count(*) from public.concept_interactions ci
              where ci.concept_id = c.id and ci.liked_at is not null
                and ci.user_id <> :uid)::int as like_count
       from public.daily_assignments a
-      join public.concepts c on c.id = a.concept_id
+      join public.concepts c on c.id = a.concept_id and c.status='published'
       join public.topics  t on t.id = c.topic_id
+      join public.subtopics s on s.id = c.subtopic_id
      where a.user_id = :uid and a.assigned_for = :today
 """)
 
@@ -85,6 +93,7 @@ _CANDIDATE = text("""
                     and prior.slug=required.slug)) as unmet
           from public.concepts c
           join public.topics t on t.id=c.topic_id and t.is_active
+          join public.subtopics s on s.id=c.subtopic_id and s.is_active
          where c.status = 'published'
            and (:ignore_follows or c.topic_id in (
                  select topic_id from public.user_topics where user_id = :uid))
@@ -95,7 +104,7 @@ _CANDIDATE = text("""
     last_seen as (
         select c.topic_id, max(a.assigned_for) as seen_on
           from public.daily_assignments a
-          join public.concepts c on c.id = a.concept_id
+          join public.concepts c on c.id = a.concept_id and c.status='published'
          where a.user_id = :uid
          group by c.topic_id
     )
@@ -121,7 +130,7 @@ _FOLLOWED_TOPIC_BY_STALENESS = text("""
       left join (
           select c.topic_id, max(a.assigned_for) as seen_on
             from public.daily_assignments a
-            join public.concepts c on c.id = a.concept_id
+            join public.concepts c on c.id = a.concept_id and c.status='published'
            where a.user_id = :uid
            group by c.topic_id
       ) ls on ls.topic_id = ut.topic_id
@@ -139,6 +148,7 @@ _TOPIC_UNREAD = text("""
     select (select topic_id from target) as topic_id,
            (select count(*)
               from public.concepts c
+              join public.subtopics s on s.id=c.subtopic_id and s.is_active
              where c.status = 'published'
                and c.topic_id = (select topic_id from target)
                and not exists (
@@ -159,10 +169,14 @@ def _row_to_result(row, outside: bool) -> DailyResult:
             title=row.title,
             summary=row.summary,
             example=row.example,
+            flashcard=row.flashcard,
             topic_slug=row.topic_slug,
             topic_name=row.topic_name,
+            subtopic_slug=row.subtopic_slug,
+            subtopic_name=row.subtopic_name,
             like_count=row.like_count,
             content_version=row.content_version,
+            review=row.review,
         ),
         outside_followed_topics=outside,
     )
@@ -250,7 +264,10 @@ async def _select_new(
             await signal_reader(session, user_id, watermark.topic_id, commit=False)
             prefetch_topics.add(watermark.topic_id)
 
-    row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).one()
+    row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).first()
+    if row is None:
+        # A catalog writer can retire the selected lesson between statements.
+        return DailyResult(status="exhausted", assigned_for=today)
     return _row_to_result(row, outside=outside)
 
 
@@ -266,19 +283,49 @@ async def get_or_create_daily(
 
     clock = (await session.execute(_TODAY, {"uid": user_id})).one()
     today = today or clock.today
-    review = await existing_review(session, user_id, today)
-    if review:
+    slots = (
+        await session.execute(
+            text("""select
+        exists(select 1 from public.daily_reviews
+          where user_id=:uid and assigned_for=:today) as has_review,
+        exists(select 1 from public.daily_assignments
+          where user_id=:uid and assigned_for=:today) as has_assignment"""),
+            {"uid": user_id, "today": today},
+        )
+    ).one()
+    # Visibility and ownership of today's slot are separate. Retiring content
+    # must not allocate a second activity or rewrite an existing assignment.
+    if slots.has_review:
+        review = await existing_review(session, user_id, today)
         await session.commit()
         return (
             review
-            if allow_review
+            if review is not None and allow_review
+            else DailyResult(status="exhausted", assigned_for=today)
+        )
+    if slots.has_assignment:
+        row = (
+            await session.execute(_EXISTING, {"uid": user_id, "today": today})
+        ).first()
+        await session.commit()
+        return (
+            _row_to_result(row, outside=False)
+            if row is not None
             else DailyResult(status="exhausted", assigned_for=today)
         )
     prefetch_topics: set[uuid.UUID] = set()
     result = await _select_new(
         session, user_id, today=today, prefetch_topics=prefetch_topics
     )
-    if result.status == "exhausted" and allow_review:
+    if (
+        result.status == "exhausted"
+        and allow_review
+        and not await session.scalar(
+            text("""select exists(select 1 from public.daily_assignments
+        where user_id=:uid and assigned_for=:today)"""),
+            {"uid": user_id, "today": today},
+        )
+    ):
         result = await choose_review(session, user_id, today) or result
     await session.commit()
     # Publish the durable target before waking another session. Starting the

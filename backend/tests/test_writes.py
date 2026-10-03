@@ -28,16 +28,20 @@ async def _make_user(session) -> uuid.UUID:
 
 async def test_get_concept_returns_body_and_only_others_likes(session, user):
     other = await _make_user(session)
+    # Earlier API tests can randomly select and like this shared seed lesson.
+    # Assert the exact increment without assuming the shared catalog is unused.
+    before = (await get_concept_out(session, user, "hash-tables")).like_count
     # Another user likes it, and so does the viewer — the returned count must
     # exclude the viewer's own like (the client adds it back).
     await set_interaction(session, other, "hash-tables", "liked_at", True)
+    assert (await get_concept_out(session, user, "hash-tables")).like_count == before + 1
     await set_interaction(session, user, "hash-tables", "liked_at", True)
 
     concept = await get_concept_out(session, user, "hash-tables")
     assert concept is not None
     assert concept.slug == "hash-tables"
     assert concept.title and concept.summary and concept.topic_name
-    assert concept.like_count == 1, "only other users' likes, not the viewer's own"
+    assert concept.like_count == before + 1, "only other users' likes, not the viewer's own"
 
 
 async def test_get_concept_unknown_slug_returns_none(session, user):
@@ -93,7 +97,9 @@ async def test_streaks_never_come_from_the_client(session, user):
     assert stats.current == 1
     columns = await session.scalar(
         text("""select count(*) from information_schema.columns
-                 where table_schema = 'public' and column_name ilike '%streak%'""")
+                 where table_schema = 'public' and column_name ilike '%streak%'
+                 and not (table_name = 'profile_sharing' and column_name = 'show_streak'
+                          and data_type = 'boolean')""")
     )
     assert columns == 0, "a stored streak column would be a source of drift"
 

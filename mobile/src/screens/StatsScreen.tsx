@@ -3,6 +3,8 @@ import { useRefreshControl } from '../hooks/useRefreshControl';
 import { useMemo } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SkeletonBlock } from '../components/Skeleton';
+import { ScreenHeader } from '../components/ScreenHeader';
+import { Surface } from '../components/Surface';
 import { StreakBadge } from '../components/StreakBadge';
 import { UnavailableState } from '../components/UnavailableState';
 import { useAuth } from '../context/AuthContext';
@@ -19,7 +21,6 @@ import { learnedTopicCounts } from '../services/progressTotals';
 interface CategoryProgress {
   label: string;
   learned: number;
-  total: number;
 }
 
 /** Signed-out demo: totals come from the bundled 20-concept catalog. */
@@ -29,18 +30,14 @@ function demoCategoryProgress(learnedIds: Set<string>): CategoryProgress[] {
     const entry = byCategory.get(concept.category) ?? {
       label: concept.category,
       learned: 0,
-      total: 0,
     };
-    entry.total++;
     if (learnedIds.has(concept.id)) entry.learned++;
     byCategory.set(concept.category, entry);
   }
   return [...byCategory.values()];
 }
 
-/** Signed-in: totals come from the server catalog (topics.conceptCount), and
- *  learned counts are matched to a topic by its server-supplied name — so the
- *  bars reflect the 125+ real catalog, not the demo's 20 (issue #35). */
+/** Keep completed counts independent of the growing server catalog. */
 function serverCategoryProgress(
   topics: ServerTopic[],
   learned: LearnedRecord[],
@@ -49,21 +46,8 @@ function serverCategoryProgress(
   const learnedByTopic = learnedTopicCounts(learned, beforeWindow);
   return topics.map((t) => ({
     label: t.name,
-    total: t.conceptCount,
     learned: learnedByTopic.get(t.name) ?? 0,
   }));
-}
-
-function ProgressBar({ fraction, styles }: { fraction: number; styles: Styles }) {
-  // Clamp: a learned concept whose topic was later deactivated counts in the
-  // learned total but not in any topic's conceptCount, which could otherwise
-  // push a bar past its track.
-  const pct = Math.round(Math.min(1, Math.max(0, fraction)) * 100);
-  return (
-    <View style={styles.barTrack}>
-      <View style={[styles.barFill, { width: `${pct}%` }]} />
-    </View>
-  );
 }
 
 export function StatsScreen() {
@@ -84,23 +68,19 @@ export function StatsScreen() {
         : demoCategoryProgress(new Set(progress.learned.map((r) => r.conceptId))),
     [serverMode, topics, progress.learned, progress.learnedBeforeWindow]
   );
-  const overall = serverMode
-    ? {
-        learned: progress.stats?.totalLearned ?? progress.learned.length,
-        total: topics.reduce((sum, t) => sum + t.conceptCount, 0),
-      }
-    : {
-        learned: new Set(progress.learned.map((r) => r.conceptId)).size,
-        total: CONCEPTS.length,
-      };
+  const totalLearned = serverMode
+    ? progress.stats?.totalLearned ?? progress.learned.length
+    : new Set(progress.learned.map((r) => r.conceptId)).size;
+  const totalReviews = progress.stats?.totalReviews;
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
       {refreshUI.action}
-      <View style={styles.header}>
-        <Text style={styles.title}>Stats</Text>
-        <Text style={styles.subtitle}>Your learning progress over time.</Text>
-      </View>
+      <ScreenHeader
+        eyebrow="Your progress"
+        title="Stats"
+        subtitle="The concepts and reviews you have completed."
+      />
 
       {loading || topicsLoading ? (
         <>
@@ -110,10 +90,6 @@ export function StatsScreen() {
       ) : (
         <>
           <StreakBadge streaks={streaks} />
-          <View style={styles.card}>
-            <Text style={styles.cardTitle}>Reviews completed: {progress.stats?.totalReviews ?? 0}</Text>
-            <Text style={styles.subtitle}>New lessons and completed reviews count toward your learning streak. Reviews do not increase concepts learned.</Text>
-          </View>
 
           {error && topics.length === 0 ? (
             <UnavailableState
@@ -124,43 +100,44 @@ export function StatsScreen() {
             />
           ) : (
             <>
-              <View style={styles.card}>
+              <Surface style={styles.card}>
                 <View style={styles.overallRow}>
-                  <Text style={styles.cardTitle}>All concepts</Text>
+                  <Text style={styles.cardTitle}>Concepts learned</Text>
                   <Text style={styles.overallCount}>
-                    {overall.learned} / {overall.total}
+                    {totalLearned}
                   </Text>
                 </View>
-                <ProgressBar
-                  fraction={overall.total ? overall.learned / overall.total : 0}
-                  styles={styles}
-                />
-              </View>
+              </Surface>
 
               <Text style={styles.sectionLabel}>By category</Text>
 
-              <View style={styles.card}>
+              <Surface style={styles.card}>
                 {categories.map((c) => (
                   <View key={c.label} style={styles.categoryBlock}>
                     <View style={styles.overallRow}>
                       <Text style={styles.categoryName}>{c.label}</Text>
                       <Text style={styles.categoryCount}>
-                        {c.learned} / {c.total}
+                        {c.learned} learned
                       </Text>
                     </View>
-                    <ProgressBar fraction={c.total ? c.learned / c.total : 0} styles={styles} />
                   </View>
                 ))}
-              </View>
+              </Surface>
             </>
           )}
+          <Surface tone="subtle" style={styles.reviewSummary}>
+            <Text style={styles.reviewCount}>
+              {totalReviews == null ? 'Review activity unavailable' : totalReviews === 0
+                ? 'No reviews completed yet'
+                : `${totalReviews} ${totalReviews === 1 ? 'review' : 'reviews'} completed`}
+            </Text>
+            <Text style={styles.subtitle}>Reviews revisit a learned concept and count toward your streak.</Text>
+          </Surface>
         </>
       )}
     </ScrollView>
   );
 }
-
-type Styles = ReturnType<typeof createStyles>;
 
 const createStyles = (colors: ThemeColors) =>
   StyleSheet.create({
@@ -172,13 +149,6 @@ const createStyles = (colors: ThemeColors) =>
       padding: spacing.lg,
       paddingBottom: spacing.xl,
       gap: spacing.lg,
-    },
-    header: {
-      gap: spacing.xs,
-    },
-    title: {
-      ...typography.title,
-      color: colors.text,
     },
     subtitle: {
       fontSize: scaleFont(14),
@@ -193,11 +163,6 @@ const createStyles = (colors: ThemeColors) =>
       marginBottom: -spacing.sm,
     },
     card: {
-      backgroundColor: colors.surface,
-      borderRadius: radius.lg,
-      borderWidth: 1,
-      borderColor: colors.border,
-      padding: spacing.lg,
       gap: spacing.md,
     },
     cardTitle: {
@@ -209,6 +174,9 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      columnGap: spacing.md,
+      rowGap: spacing.xs,
     },
     overallCount: {
       fontSize: scaleFont(15),
@@ -229,15 +197,13 @@ const createStyles = (colors: ThemeColors) =>
       fontWeight: '600',
       color: colors.textMuted,
     },
-    barTrack: {
-      height: 8,
-      borderRadius: radius.pill,
-      backgroundColor: colors.background,
-      overflow: 'hidden',
+    reviewSummary: {
+      gap: spacing.xs,
+      padding: spacing.md,
     },
-    barFill: {
-      height: '100%',
-      borderRadius: radius.pill,
-      backgroundColor: colors.primary,
+    reviewCount: {
+      fontSize: scaleFont(14),
+      fontWeight: '600',
+      color: colors.textSecondary,
     },
   });

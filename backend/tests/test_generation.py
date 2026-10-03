@@ -13,7 +13,13 @@ import pytest
 from sqlalchemy import text
 
 from app.services import generation, pool, selection
-from app.services.generation import GenerationError, RateLimitedError, build_prompt, generate_concept, validate
+from app.services.generation import (
+    GenerationError,
+    RateLimitedError,
+    build_prompt,
+    generate_concept,
+    validate,
+)
 from app.services.interactions import set_followed_topics
 from app.services.pool import generate_one, top_up
 from app.services.selection import get_or_create_daily
@@ -40,10 +46,21 @@ def _stub_transport(payload=None, status=200, body_text=None):
     return httpx.MockTransport(handler)
 
 
+def _learning_package():
+    return {
+        "flashcard": {"front": "What durable record makes crash recovery possible?", "back": "A write-ahead log records intended durable changes before applying them."},
+        "mcqs": [
+            {"question": "What does a write-ahead log record first?", "options": ["An intended change", "A random file", "A user password", "A network address"], "correct_index": 0},
+            {"question": "Why is a write-ahead log useful after a crash?", "options": ["It supports recovery", "It hides errors", "It removes backups", "It disables commits"], "correct_index": 0},
+            {"question": "Which system property does a write-ahead log support?", "options": ["Durability", "Screen brightness", "Keyboard layout", "Email delivery"], "correct_index": 0},
+        ],
+    }
+
+
 def _gemini_response(summary, example):
     return {
         "candidates": [
-            {"content": {"parts": [{"text": json.dumps({"summary": summary, "example": example})}]}}
+            {"content": {"parts": [{"text": json.dumps({"summary": summary, "example": example, "learning_package": _learning_package()})}]}}
         ]
     }
 
@@ -76,7 +93,7 @@ def test_prompt_carries_title_topic_and_angle():
 # ---------------------------------------------------------------- validation
 
 def test_validation_accepts_good_output():
-    summary, example = validate({"summary": GOOD_SUMMARY, "example": GOOD_EXAMPLE}, "x")
+    summary, _example = validate({"summary": GOOD_SUMMARY, "example": GOOD_EXAMPLE}, "x")
     assert summary == GOOD_SUMMARY
 
 

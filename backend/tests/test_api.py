@@ -48,7 +48,7 @@ async def test_health_touches_the_database(anon_client):
     assert response.json() == {"status": "ok", "database": "reachable"}
 
 
-@pytest.mark.parametrize("path", ["/v1/daily", "/v1/topics"])
+@pytest.mark.parametrize("path", ["/v1/daily", "/v1/topics", "/v1/me/subtopics/progress"])
 async def test_endpoints_require_a_token(anon_client, path):
     response = await anon_client.get(path)
     assert response.status_code == 401
@@ -90,6 +90,18 @@ async def test_topics_lists_the_catalog_with_follow_state(client):
     assert all(t["concept_count"] == 4 for t in topics)
     # The trigger follows every active topic by default.
     assert all(t["following"] is True for t in topics)
+
+
+async def test_subtopic_progress_is_server_authoritative(client):
+    response = await client.get("/v1/me/subtopics/progress")
+    assert response.status_code == 200
+    items = response.json()["items"]
+    assert items
+    assert all(item["available_concepts"] > 0 for item in items)
+    assert all(item["completed_concepts"] == 0 and item["completed"] is False for item in items)
+
+    invalid = await client.post("/v1/me/subtopics/completions/seen", json={"ids": []})
+    assert invalid.status_code == 422
 
 
 async def test_no_endpoint_accepts_a_user_id(client, user):
@@ -375,6 +387,12 @@ async def test_state_folds_in_todays_concept(client, sessionmaker_for_test, user
 
 
 async def test_review_opt_in_and_completion_contract(client, session, user):
+    await session.execute(
+        text("""update public.concepts set flashcard =
+          '{"front":"What should a learner recall from this lesson?",
+            "back":"Recall the concise, reviewed answer for the lesson."}'::jsonb
+          where status='published'""")
+    )
     await session.execute(text("""insert into public.daily_assignments(user_id,concept_id,assigned_for,completed_at)
       select :u,id,date '2000-01-01'+(row_number() over(order by id))::int,now()
       from public.concepts where status='published'"""), {'u':user})
@@ -383,6 +401,7 @@ async def test_review_opt_in_and_completion_contract(client, session, user):
     assert legacy['daily'] is None and legacy['review'] is None
     body = (await client.get('/v1/me/state?compact=true&reviews=true')).json()
     assert body['daily'] is None and body['review']['learned'] is False
+    assert body['review']['concept']['flashcard']['front'].startswith('What should')
     review_id = body['review']['review_id']
     response = await client.post(f'/v1/reviews/{review_id}/complete',json={'user_id':str(uuid.uuid4()),'assigned_for':'2000-01-01'})
     assert response.status_code == 200, response.text

@@ -27,6 +27,17 @@ class Subject(StrictModel):
     is_active: bool = True
 
 
+class Subtopic(StrictModel):
+    """A curated category within a single subject, never client-provided data."""
+
+    topic_slug: Slug
+    slug: Slug
+    name: str = Field(min_length=2, max_length=80)
+    description: str = Field(default="", max_length=500)
+    sort_order: int = Field(default=0, ge=0, le=32767)
+    is_active: bool = True
+
+
 class Reference(StrictModel):
     title: str = Field(min_length=3, max_length=200)
     url: HttpUrl
@@ -50,6 +61,7 @@ class Curriculum(StrictModel):
 class PlannedLesson(StrictModel):
     slug: Slug
     topic_slug: Slug
+    subtopic_slug: Slug
     title: str = Field(min_length=3, max_length=160)
     angle: str = Field(default="", max_length=1000)
     curriculum: Curriculum
@@ -76,6 +88,30 @@ async def import_subjects(session: AsyncSession, items: list[Subject]) -> int:
             description=excluded.description,sort_order=excluded.sort_order,
             is_active=excluded.is_active"""),
             item.model_dump(),
+        )
+    return len(items)
+
+
+async def import_subtopics(session: AsyncSession, items: list[Subtopic]) -> int:
+    """Upsert the reviewed taxonomy without allowing a subtopic to change parent."""
+    if len({(item.topic_slug, item.slug) for item in items}) != len(items):
+        raise ValueError("Duplicate subtopic slug in import")
+    await catalog_lock(session)
+    for item in items:
+        topic_id = await session.scalar(
+            text("select id from public.topics where slug=:slug"),
+            {"slug": item.topic_slug},
+        )
+        if topic_id is None:
+            raise ValueError(f"Unknown subject {item.topic_slug}")
+        await session.execute(
+            text("""insert into public.subtopics
+              (topic_id,slug,name,description,sort_order,is_active)
+              values (:topic_id,:slug,:name,:description,:sort_order,:is_active)
+              on conflict(topic_id,slug) do update set name=excluded.name,
+                description=excluded.description,sort_order=excluded.sort_order,
+                is_active=excluded.is_active"""),
+            {"topic_id": topic_id, **item.model_dump(exclude={"topic_slug"})},
         )
     return len(items)
 
@@ -156,6 +192,15 @@ async def import_lessons(
         )
         if topic is None:
             raise ValueError(f"Unknown or retired subject {item.topic_slug}")
+        subtopic = await session.scalar(
+            text("""select id from public.subtopics
+              where topic_id=:topic_id and slug=:slug and is_active"""),
+            {"topic_id": topic, "slug": item.subtopic_slug},
+        )
+        if subtopic is None:
+            raise ValueError(
+                f"Unknown or retired subtopic {item.topic_slug}/{item.subtopic_slug}"
+            )
         previous = (
             await session.execute(
                 text("select * from public.concept_backlog where slug=:s for update"),
@@ -168,19 +213,22 @@ async def import_lessons(
                 raise ValueError("A plan cannot move between subject identities")
             if (
                 previous.topic_id,
+                previous.subtopic_id,
                 previous.title,
                 previous.angle or "",
                 previous.curriculum,
-            ) != (topic, item.title, item.angle, data):
+            ) != (topic, subtopic, item.title, item.angle, data):
                 if not revise or previous.status not in ("pending", "failed"):
                     raise ValueError(
                         f"{item.slug} already exists with a different plan; only pending/failed plans can be revised explicitly"
                     )
                 await session.execute(
                     text("""update public.concept_backlog set title=:title,angle=:angle,
-                  difficulty=:difficulty,curriculum=cast(:data as jsonb) where id=:id"""),
+                  difficulty=:difficulty,subtopic_id=:subtopic_id,
+                  curriculum=cast(:data as jsonb) where id=:id"""),
                     {
                         "id": previous.id,
+                        "subtopic_id": subtopic,
                         "title": item.title,
                         "angle": item.angle,
                         "difficulty": item.curriculum.difficulty,
@@ -194,10 +242,11 @@ async def import_lessons(
             raise ValueError(f"{item.slug} already exists in the catalog")
         await session.execute(
             text("""insert into public.concept_backlog
-          (topic_id,slug,title,angle,difficulty,curriculum) values
-          (:t,:s,:title,:angle,:difficulty,cast(:data as jsonb))"""),
+          (topic_id,subtopic_id,slug,title,angle,difficulty,curriculum) values
+          (:t,:subtopic_id,:s,:title,:angle,:difficulty,cast(:data as jsonb))"""),
             {
                 "t": topic,
+                "subtopic_id": subtopic,
                 "s": item.slug,
                 "title": item.title,
                 "angle": item.angle,

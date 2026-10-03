@@ -78,7 +78,7 @@ const server=http.createServer((req,res)=>{
   online=true;holdPage=true;await page.reload();await page.getByRole('tab',{name:'History'}).click();
   await older('Load older lessons');await expect.poll(()=>!!releasePage).toBe(true);
   await page.getByRole('tab',{name:'Profile'}).click();await page.getByText('Sign out',{exact:true}).click();
-  await expect(page.getByText('Welcome back — sign in to pick up your streak.',{exact:true})).toBeVisible();releasePage();
+  await expect(page.getByText('Welcome back',{exact:true})).toBeVisible();releasePage();
   await expect.poll(()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('one-concept/history-pages/')).length)).toBe(0);
   assert.deepEqual(errors,[]);console.log('PASS: sign-out clears History pages and fences a late page response');await context.close();
  } finally {await browser.close();server.close();}

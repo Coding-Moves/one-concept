@@ -61,6 +61,20 @@ async def test_expired_token_is_rejected():
     assert exc.value.status_code == 401
 
 
+async def test_editorial_claims_only_come_from_signed_top_level_fields():
+    private, public = _keypair()
+    cache = _jwks_cache_with(public)
+    claims = await verify_token(_token(private, user_metadata={"aal": "aal2", "session_id": "forged"}), cache, ISSUER)
+    assert claims.aal == "aal1"
+    assert claims.session_id is None
+    claims = await verify_token(_token(private, aal="aal2", session_id="real-session"), cache, ISSUER)
+    assert claims.aal == "aal2"
+    assert claims.session_id == "real-session"
+    claims = await verify_token(_token(private, aal=["aal2"], session_id=123), cache, ISSUER)
+    assert claims.aal == "aal1"
+    assert claims.session_id is None
+
+
 async def test_wrong_audience_is_rejected():
     private, public = _keypair()
     with pytest.raises(HTTPException):

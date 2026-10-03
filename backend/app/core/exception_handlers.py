@@ -1,7 +1,9 @@
 """Public failure responses that never expose infrastructure details."""
 
 import logging
-from uuid import uuid4
+from uuid import UUID, uuid4
+
+from app.services.owner_telemetry import record
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
@@ -27,6 +29,7 @@ async def database_unavailable(_: Request, error: SQLAlchemyError) -> JSONRespon
     # Driver messages can include endpoint/user information. Keep only the
     # exception class and opaque incident id in logs and responses.
     logger.warning("database request failed type=%s incident=%s", type(error).__name__, incident)
+    await record("api", "database_unavailable", UUID(incident))
     return _response(503, "service_unavailable", incident, retry_after="30")
 
 
@@ -35,4 +38,5 @@ async def unexpected_failure(_: Request, error: Exception) -> JSONResponse:
     # #161 owns production reporting. Do not log exception text here: generic
     # exceptions can carry request data, credentials, or provider payloads.
     logger.error("unhandled request failure type=%s incident=%s", type(error).__name__, incident)
+    await record("api", "unexpected_failure", UUID(incident))
     return _response(500, "internal_error", incident)

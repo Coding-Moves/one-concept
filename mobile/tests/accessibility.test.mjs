@@ -12,3 +12,27 @@ for (const [name, colors] of Object.entries({light:lightColors,dark:darkColors})
     assert.ok((Math.max(a,b)+0.05)/(Math.min(a,b)+0.05)>=4.5);
   });
 }
+
+const contrast = (a, b) => {
+  const x = luminance(a), y = luminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+};
+for (const [name, colors] of Object.entries({light:lightColors,dark:darkColors})) {
+  test(`${name} reading, feedback and selected-control colors remain readable`, () => {
+    for (const foreground of ['text', 'textSecondary', 'textMuted', 'primary']) {
+      for (const background of ['background', 'surface']) {
+        assert.ok(contrast(colors[foreground], colors[background]) >= 4.5,
+          `${foreground} on ${background}`);
+      }
+    }
+    assert.ok(contrast(colors.success, colors.successSurface) >= 4.5);
+    assert.ok(contrast(colors.danger, colors.dangerSurface) >= 4.5);
+    assert.ok(contrast(colors.textSecondary, colors.surfaceSubtle) >= 4.5);
+    for (const background of ['primary', 'primaryPressed']) {
+      assert.ok(contrast(colors.onPrimary, colors[background]) >= 4.5, background);
+    }
+    assert.ok(contrast(colors.categoryChipText, colors.categoryChip) >= 4.5);
+    assert.ok(contrast(colors.successBorder, colors.successSurface) >= 3);
+    assert.ok(contrast(colors.successBorder, colors.background) >= 3);
+  });
+}

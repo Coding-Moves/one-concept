@@ -17,6 +17,8 @@ _bearer = HTTPBearer(auto_error=False)
 class CurrentUser:
     id: uuid.UUID
     email: str | None
+    session_id: str | None = None
+    aal: str = "aal1"
 
 
 async def get_current_user(
@@ -48,7 +50,7 @@ async def get_current_user(
             detail={"code": "rate_limited", "retry_after_seconds": retry},
             headers={"Retry-After": str(retry), "Cache-Control": "no-store"},
         )
-    return CurrentUser(id=user_id, email=claims.email)
+    return CurrentUser(id=user_id, email=claims.email, session_id=claims.session_id, aal=claims.aal)
 
 
 __all__ = ["CurrentUser", "get_current_user", "get_db", "AsyncSession"]

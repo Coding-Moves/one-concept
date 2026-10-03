@@ -45,8 +45,11 @@ def _daily_out_or_none(result: DailyResult) -> DailyOut | None:
         outside_followed_topics=result.outside_followed_topics,
         concept=ConceptOut(
             id=c.id, slug=c.slug, title=c.title, summary=c.summary, example=c.example,
+            flashcard=c.flashcard,
             topic_slug=c.topic_slug, topic_name=c.topic_name, like_count=c.like_count,
+            subtopic_slug=c.subtopic_slug, subtopic_name=c.subtopic_name,
             content_version=c.content_version,
+            review=c.review,
         ),
     )
 
@@ -219,13 +222,14 @@ async def deregister_push_token(
 
 async def _load_prefs(db: AsyncSession, user_id) -> NotificationPrefs:
     row = (await db.execute(
-        text("select enabled, reminder_times from public.notification_preferences where user_id = :uid"),
+        text("select enabled, reminder_times, weekly_quiz_enabled from public.notification_preferences where user_id = :uid"),
         {"uid": user_id},
     )).first()
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="No preferences yet")
     return NotificationPrefs(
         enabled=row.enabled,
+        weekly_quiz_enabled=row.weekly_quiz_enabled,
         reminder_times=[t.strftime("%H:%M") for t in row.reminder_times],
     )
 
@@ -242,10 +246,11 @@ async def save_notification_prefs(
         text("""
             update public.notification_preferences
                set enabled = :enabled,
-                   reminder_times = :times
+                   reminder_times = :times,
+                   weekly_quiz_enabled = coalesce(:weekly, weekly_quiz_enabled)
              where user_id = :uid
         """).bindparams(bindparam("times", type_=ARRAY(Time))),
-        {"enabled": prefs.enabled, "times": times, "uid": user_id},
+        {"enabled": prefs.enabled, "times": times, "weekly": prefs.weekly_quiz_enabled, "uid": user_id},
     )
     await db.commit()
 
@@ -290,8 +295,9 @@ async def patch_profile(
         if canonical is None:
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Unknown timezone")
         await db.execute(
-            text("update public.profiles set timezone = :tz where id = :uid"),
-            {"tz": canonical, "uid": user.id},
+            text("""update public.profiles set timezone = :tz, timezone_initialized = true
+                    where id = :uid and (not :initialize or not timezone_initialized)"""),
+            {"tz": canonical, "uid": user.id, "initialize": body.initialize_timezone},
         )
     if body.display_name is not None:
         await db.execute(

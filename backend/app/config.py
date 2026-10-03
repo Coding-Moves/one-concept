@@ -1,14 +1,17 @@
 from functools import lru_cache
+from urllib.parse import urlsplit
 
-from pydantic import Field
+from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
     """Server-side configuration. Missing required values fail at startup, loudly."""
 
+    owner_telemetry_enabled: bool = False
+
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_file=".env", env_file_encoding="utf-8", extra="ignore", hide_input_in_errors=True
     )
 
     environment: str = "development"
@@ -35,6 +38,9 @@ class Settings(BaseSettings):
     # Supabase's auth REST endpoint; the page is inert without it.
     supabase_anon_key: str | None = None
 
+    # Enable only after schema, worker and mobile staging verification.
+    weekly_quiz_notifications_enabled: bool = False
+
     # Generation. The key lives here and only here — never in the app bundle.
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.1-flash-lite"
@@ -44,6 +50,7 @@ class Settings(BaseSettings):
     content_low_watermark: int = Field(default=5, ge=0, le=30)
     content_active_days: int = Field(default=90, ge=1, le=365)
     content_planned_reserve: int = Field(default=90, ge=1, le=1000)
+    content_review_backlog_limit: int = Field(default=25, ge=1, le=250)
     content_generation_batch: int = Field(default=5, ge=1, le=25)
     # Shared by all generation paths; zero prevents new reservations.
     generation_max_concurrent: int = Field(default=3, ge=1, le=20)
@@ -54,6 +61,44 @@ class Settings(BaseSettings):
     generation_on_demand: bool = True
 
     allowed_origins: str = "http://localhost:8081"
+    # Off until migration, owner bootstrap and dashboard/Auth setup are verified.
+    editorial_enabled: bool = False
+    editorial_invite_redirect_url: str = ""
+    # Dedicated backend delivery; Supabase Auth templates are not a mail API.
+    editorial_email_enabled: bool = False
+    editorial_email_dashboard_url: str = ""
+    editorial_email_test_recipients: str = ""
+    editorial_email_daily_cap: int = Field(default=40, ge=0, le=500)
+    editorial_email_from: str = ""
+    editorial_gmail_client_id: str = ""
+    editorial_gmail_client_secret: str = Field(default="", repr=False)
+    editorial_gmail_refresh_token: str = Field(default="", repr=False)
+
+    @model_validator(mode="after")
+    def editorial_origins(self):
+        if not self.editorial_enabled:
+            return self
+        if not self.cors_origins:
+            raise ValueError("Editorial access requires explicit dashboard origins")
+        for origin in self.cors_origins:
+            parts = urlsplit(origin)
+            local = (
+                parts.hostname in ("localhost", "127.0.0.1") and not self.is_production
+            )
+            if (
+                "*" in origin
+                or not parts.hostname
+                or parts.username
+                or parts.password
+                or parts.path
+                or parts.query
+                or parts.fragment
+                or (parts.scheme != "https" and not (local and parts.scheme == "http"))
+            ):
+                raise ValueError(
+                    "Editorial access requires exact HTTPS origins (HTTP localhost in development only)"
+                )
+        return self
 
     @property
     def cors_origins(self) -> list[str]:

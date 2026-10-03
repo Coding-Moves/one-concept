@@ -1,3 +1,10 @@
+/** Authenticated approval snapshot for one exact lesson version. */
+export interface ReviewAttribution {
+  name: string;
+  reviewedAt: string;
+  contentVersion: number;
+}
+
 /** A single learnable concept. */
 export interface Concept {
   id: string;
@@ -7,9 +14,12 @@ export interface Concept {
   summary: string;
   /** Optional concrete example that grounds the concept. */
   example?: string;
+  /** Optional reviewed recall prompt. Missing for legacy lessons. */
+  flashcard?: { front: string; back: string };
   /** Likes from other users; the viewer's own like is added on top for display. */
   likeCount?: number;
   contentVersion?: number;
+  review?: ReviewAttribution;
 }
 
 /** Display labels come from the subject registry. The bundled five are demo data. */
@@ -59,10 +69,12 @@ export interface DailyPayload {
     title: string;
     summary: string;
     example: string | null;
+    flashcard?: { front: string; back: string } | null;
     topic_slug: string;
     topic_name: string;
     like_count?: number;
     content_version?: number;
+    review?: { name: string; reviewed_at: string; content_version: number } | null;
   };
 }
 
@@ -89,8 +101,22 @@ export interface StreakStats {
   totalReviews?: number;
 }
 
+/** A server-issued milestone for one exact published subtopic catalog. */
+export interface SubtopicCompletion {
+  id: string;
+  topic_slug: string;
+  topic_name: string;
+  subtopic_slug: string;
+  subtopic_name: string;
+  completed_at: string;
+}
+
 /** Everything the app persists locally. */
 export interface ProgressState {
+  /** Server profile identity; never substitute an account identifier when absent. */
+  displayName?: string | null;
+  /** IANA timezone returned by the profile and used for local-time presentation. */
+  timezone?: string;
   learned: LearnedRecord[];
   assignment: DailyAssignment | null;
   /** Topics the user follows; daily concepts are drawn from these. */
@@ -117,6 +143,8 @@ export interface ProgressState {
   stats?: StreakStats;
   /** Pre-completion totals, retained until a queued review is acknowledged. */
   pendingReviewStats?: { reviewId: string; stats?: StreakStats };
+  /** Ephemeral confirmed result; omitted from every fresh server state. */
+  recentSubtopicCompletion?: SubtopicCompletion;
   /**
    * Today's concept, folded into the server state so startup needs one request
    * (#102). Present only for server-backed state; the signed-out demo picks the

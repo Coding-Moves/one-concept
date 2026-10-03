@@ -347,3 +347,11 @@ from `.env.example` in Railway's variable store — never in the image, never in
 git. Point the health check at `/health`, and set `ENVIRONMENT=production` to
 disable both `/docs` and `/openapi.json` (the raw schema). A cron worker for
 pool top-up and reminders joins later, in Phases 6 and 7.
+
+## Deployment schema verification
+
+The migration ledger is an operator record. Before deployment, run
+`python -m app.workers.schema_check` with `DIRECT_URL` supplied privately. This
+read-only check fails on missing or changed required schema even if every SQL
+filename is listed. See [setup and contract maintenance](../docs/SCHEMA_VERIFICATION.md)
+for the Railway pre-deploy command and protected GitHub release check.

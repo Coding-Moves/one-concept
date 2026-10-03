@@ -2,7 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useRef } from 'react';
 import { Animated, Pressable, StyleSheet, Text } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
-import { scaleIcon, scaleFont, radius, spacing, ThemeColors } from '../theme';
+import { useReducedMotion } from '../hooks/useReducedMotion';
+import { scaleIcon, scaleFont, radius, spacing, ThemeColors, touchTarget } from '../theme';
 
 interface Props {
   following: boolean;
@@ -13,10 +14,12 @@ interface Props {
 export function FollowPill({ following, onPress }: Props) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
+  const reducedMotion = useReducedMotion();
   const scale = useRef(new Animated.Value(1)).current;
 
   const press = () => {
     onPress();
+    if (reducedMotion) return;
     scale.setValue(0.9);
     Animated.spring(scale, {
       toValue: 1,
@@ -58,17 +61,15 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: spacing.xs,
       borderRadius: radius.pill,
+      minHeight: touchTarget,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm,
-      borderWidth: 1,
     },
     followPill: {
       backgroundColor: colors.text,
-      borderColor: colors.text,
     },
     followingPill: {
       backgroundColor: colors.surface,
-      borderColor: colors.border,
     },
     pressed: {
       opacity: 0.75,

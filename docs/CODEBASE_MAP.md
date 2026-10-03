@@ -12,6 +12,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Area | Entry points and purpose |
 | --- | --- |
 | Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. |
+| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private FastAPI calls. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
@@ -23,21 +24,175 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
 | Engineering handbook | `docs/handbook/ONE_CONCEPT_HANDBOOK.md` explains the full stack and learning lifecycle; `docs/handbook/build_pdf.py` renders the printable guide with vector diagrams. Build and verification instructions are in `docs/handbook/README.md`. |
 
-## Achievements (#209)
+## Editorial identities (#274)
 
-`services/achievements.py` awards permanent streak milestones under the existing
-completion transaction/profile lock. Migration `0016_achievements.sql` adds the
-catalog and per-user awards and backfills historical milestones. The owner
-confirmed production application and both tables on 2026-09-25.
-`api/v1/achievements.py` serves collection and seen APIs.
-On mobile, `AchievementsContext` owns one keyed account instance, `achievementStore`
-fences async results, and `achievementCache` joins account cleanup. Profile opens
-`AchievementsScreen`; shared badge/detail/celebration components render the
-collection. See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
+`api/v1/editorial.py` exposes private account/onboarding and owner-management APIs.
+`services/editorial_accounts.py` verifies current Supabase sessions, confirmed
+email, membership, capabilities and MFA before account-lock acquisition and
+again afterward, using current-query time for session deadlines;
+`editorial_management.py` serializes
+versioned account mutations and records their audit events. `editorial_invites.py`
+is the server-only Auth invitation adapter. Migration `0032_editorial_accounts.sql`
+keeps memberships and account events inaccessible to browser roles. The one-time
+owner CLI is `python -m app.workers.editorial_accounts`; see
+[editorial-accounts.md](editorial-accounts.md) for activation and frontend handoff.
+`services/editorial_revisions.py` adds authenticated, immutable exact-revision
+review decisions and legacy attestation (#275); migration 0033 stores the one-time
+published inventory, review events and exact-version provenance. `publication.py`
+requires that approval through the authenticated service; the old free-text CLI
+publish/reject commands fail closed. See [editorial-provenance.md](editorial-provenance.md).
+`api/v1/editorial_content.py` exposes #276 queues, details, history/timeline and
+versioned actions. `editorial_queries.py` builds private read models;
+`editorial_workflow.py` owns authenticated commands, request receipts and workflow
+audit. Migration 0034 adds private workflow evidence/assignment metadata. The
+operator client `python -m app.workers.editorial_review` uses those same HTTP
+gates. See [editorial-api.md](editorial-api.md) for permissions, retry semantics
+and rollout. The `admin/` website (#278) consumes these APIs; mobile attribution (#280) projects exact-version evidence through learner reads;
+owner reporting (#297) remains a separate child of #263.
+`services/editorial_notifications.py` drains the private #279 outbox through the
+existing reminders worker; `editorial_mail.py` uses Gmail HTTPS/OAuth (no Railway
+SMTP upgrade). `editorial_email_template.py` renders the escaped HTML template
+in `app/templates/editorial_review.html` alongside a plain-text fallback.
+`api/v1/editorial_notifications.py` exposes owner delivery/policy
+controls and the reviewer timezone. `admin/src/Notifications.tsx` shows overdue
+work and safe retries. See [editorial-notifications.md](editorial-notifications.md)
+for migration 0038, free sender setup and the direct production email rollout.
+
+`editorial_generation.py` owns #277 authenticated durable revision requests,
+claim fencing, provider orchestration and private draft completion. Migration
+0035 stores immutable source/feedback/result links and backlog claim tokens.
+`editorial_generation_status.py` exposes bounded private supply/planning status;
+`review_capacity.py` shares human-work limits across pool/prefetch/rewrite paths.
+The existing `workers/pool_topup.py` runs a bounded revision batch before refill;
+`content_health.py` adds aggregate job conditions. See
+[editorial-generation.md](editorial-generation.md) for API and staging contracts.
+
+## Learner review attribution (#280)
+
+`services/review_attribution.py` selects public name/date/version evidence in the
+same SQL statement as a published lesson. `schemas/daily.py` adds nullable
+`ConceptOut.review`; detail, daily selection and folded state/review paths use it.
+`mobile/src/services/conceptMapping.ts` shares version validation across detail,
+daily and cached reads. `components/ReviewAttribution.tsx` renders borderless credit only in
+`ConceptDetailScreen`, below the card opened from History/Saved. Today/review
+cards and legacy/mismatched metadata have no label.
+See [editorial-provenance.md](editorial-provenance.md#learner-attribution-280)
+for compatibility, historical offline semantics and rollout.
+
+## Editorial website (#278)
+
+`admin/src/App.tsx` owns session fencing, capability gates and navigation.
+`Auth.tsx` handles invitation/recovery, password and MFA; `Settings.tsx` handles
+registered identity. `Queue.tsx` supplies topic/status/deadline filtering and
+shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete
+packages, diffs, history, comments, checklist decisions and safe corrections.
+`Team.tsx` manages owner-only membership; `Generation.tsx` requests bounded work.
+`api.ts` and `useCommand.ts` preserve exact operation retries and stale-token
+failures. Migration 0037 adds audited review deadlines. Queue totals are computed
+with page results in one statement; published rows require matching exact-version
+provenance. Build/browser CI uses public fixture values only. See
+[the review website guide](../admin/README.md) for staging and hosting boundaries.
+
+## Owner dashboard (#297)
+
+`admin/src/OwnerDashboard.tsx` contains read-only activity, reviewer, operations
+and event views. `OwnerDemo.tsx` / `ownerDemo.ts` provide a deterministic adapter
+selected before Auth/API initialization. `api/v1/owner.py` enforces the existing
+`manage_reviewers` administrator capability; `services/owner_reporting.py`
+aggregates canonical completions and immutable editorial evidence.
+`services/owner_telemetry.py` records opt-in bounded observations from the API and
+existing workers. Migration 0039 adds the private telemetry table and report
+indexes; the schema contract includes them. See [owner-dashboard.md](owner-dashboard.md)
+for metrics, privacy, retention and activation deferred to #281.
+
+## Achievements (#209, #259)
+
+`services/achievements.py` awards permanent, data-driven milestones under the
+existing profile lock and caller transaction. Migration `0016_achievements.sql`
+introduces streak awards; `0027_expanded_achievements.sql` adds categorized
+concept, review, weekly-quiz, perfect-score and distinct learning-path
+achievements with a historical backfill. The evaluator reads only accepted
+server records, with the composite award key preserving a first-earned date on
+retries or concurrent devices. Weekly quiz submission takes the profile lock
+before scoring and evaluating awards. `api/v1/achievements.py` serves the
+collection, category/requirement/progress metadata and seen APIs.
+
+On mobile, `AchievementsContext` owns one keyed account instance,
+`achievementStore` fences async results, and `achievementCache` joins account
+cleanup. Profile opens `AchievementsScreen`; shared badge/detail/celebration
+components render every category and a server-confirmed nearest milestone.
+See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
+
+## Future multilingual content (#265)
+
+`docs/multilingual-content/README.md` is the approved future-work design for
+localized daily lessons, flashcards and quizzes. Canonical concept identities
+remain the source of progress, history and analytics; future reviewed locale
+variants supply complete learner-facing payloads with server-selected fallback.
+Language-learning study cards and games are a separate future model, not copies
+of technical concepts or translations. This section documents no runtime
+implementation.
+
+## Learning analytics (#258)
+
+`services/analytics.py` provides the single bounded, account-scoped read model
+behind `GET /v1/me/analytics`. It counts accepted concept completions, completed
+reviews and immutable weekly quiz attempts; derives streaks with the existing
+service; groups the fixed 28-day activity window in the profile IANA timezone;
+and reuses the existing server evaluators for topic, subtopic and achievement
+progress. It does not write client-derived counters or expose another account’s
+data. `schemas/analytics.py` owns the response contract and
+`tests/test_analytics.py` covers authentication and local-day aggregation.
+
+`services/analyticsApi.ts` supplies an account-fenced typed client. Profile opens
+`AnalyticsScreen`, which displays a quiet server-confirmed summary, seven-day
+activity view, quiz performance, actual topic distribution, learning-path
+progress, recent concepts and achievement totals. Empty/loading/unavailable
+states are explicit; the screen fetches only for the signed-in account and can
+be refreshed manually.
+
+## Subtopic completion (#261)
+
+`user_concept_completions` is the authoritative record that a learner has
+consumed a concept, distinct from the date a daily assignment counts for a
+streak. Migration `0023_subtopic_completions.sql` backfills it from completed
+daily assignments; `0024_backfill_subtopic_completion_events.sql` records
+already-complete paths as seen historical events. `user_subtopic_completions` records an immutable event for
+the exact sorted set of published concept IDs in an active subtopic. A new
+published concept produces a different catalog signature and naturally returns
+the path to active progress; an editorial revision does not.
+
+`services/subtopic_progress.py` calculates boundaries server-side under the
+same profile lock as daily completion. `GET /v1/me/subtopics/progress` provides
+Profile’s learning-path summary; `POST /v1/daily/complete` returns a completion
+event only when it was newly recorded. The Today card appears only for that
+confirmed response, while the acknowledgement endpoint retains delivery state
+for later achievement and challenge work.
+
+## Optional subtopic quizzes (#262)
+
+`subtopic_quizzes` freezes up to seven reviewed MCQs against a learner-owned
+`user_subtopic_completions` event. The snapshot stores every source concept
+slug, content version, question, option and answer key. A new content catalog
+therefore creates a distinct future completion event, while an already opened
+quiz stays unchanged. `subtopic_quiz_attempts` is append-only: retries create
+new answer/score rows and the history endpoint retains earlier results.
+
+`services/subtopic_quizzes.py` chooses only reviewed MCQs from the completion
+record’s exact concept IDs and never generates questions at request time.
+`api/v1/subtopic_quizzes.py` keeps answer keys server-side until submission.
+Composite ownership constraints keep quizzes and attempts bound to the same
+account as their completion parent. Profile exposes completed paths through
+`SubtopicQuizzesScreen` and `SubtopicQuizScreen`; the feature is optional and
+never changes a daily lesson, streak or weekly quiz.
 
 ## Mobile navigation and presentation
 
 `App.tsx` composes SafeArea, Theme, Connectivity, Auth, and Progress providers.
+The signed-in shell owns top/side safe-area padding outside scrolling screens;
+its offline/sync banners and Achievements header avoid adding that inset twice.
+Bottom tabs retain their own bottom inset. Native achievement modals still
+handle their own insets.
 It holds the native splash until fonts are ready (or fail), checks public API and
 Supabase configuration before starting providers, and wraps the root in
 `AppRecoveryBoundary`. `ConfigurationState`, `UnavailableState`, and
@@ -51,8 +206,13 @@ inside a root stack, with a concept-detail modal above them.
 | --- | --- |
 | `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states. |
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
-| `StatsScreen.tsx` | Streak and topic statistics. |
-| `ProfileScreen.tsx` | Account, reminder preferences, theme, sign-out, and links to profile subpages. |
+| `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
+| `AnalyticsScreen.tsx` | Profile-linked, server-confirmed concepts, reviews, activity, quizzes, topics, learning paths and achievements with empty/recovery states. |
+| `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, result feedback and reattempts. |
+| `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, retries, and prior-score history. |
+| `ProfileScreen.tsx` | Account, learning-path progress, reminder preferences, theme, sign-out, and links to profile subpages. |
+| `EditProfileScreen.tsx` | Preferred-name editing; confirmed, account-fenced Progress state update. |
+| `ProfileSharingScreen.tsx` / `PublicProfileLink.tsx` | Opt-in field choices, native share/local QR and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
 | `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |
@@ -64,7 +224,16 @@ All screens live in `mobile/src/screens/`. Reusable presentation in
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.
-`src/theme/index.ts` defines colors, spacing, radii,
+`ScreenHeader` supplies the common eyebrow/title/supporting-copy hierarchy and
+`Surface` supplies the borderless elevated containers. `useReducedMotion` gates
+tap feedback, while `UnavailableState` uses a single short entrance motion and
+`SyncStatusBanner` gives paused offline writes a clear retry action.
+Saved uses a non-shrinking horizontal ScrollView for its short filter rail, with
+content-driven chip height and separate virtualized lesson rows.
+`src/theme/index.ts` defines readable text/control, success, danger and subtle
+surface colours plus touch-target and motion constants.
+Only Today’s green completion pill has a half-point UI outline; other containers
+use borderless surfaces and spacing. The theme also defines spacing, radii,
 typography, shadows, and scaling; `ThemeContext` persists light/dark preference.
 `src/navigation.ts` types the root stack.
 
@@ -171,10 +340,11 @@ Authenticated routes pass through `core/rate_limit.py` after JWT verification. I
 | `daily.py`: `GET /v1/daily`, `POST /v1/daily/complete` | Selection, completion, server-derived date and streaks. Exhaustion returns 409 with `catalog_exhausted`. |
 | `me.py`: `GET /v1/me/state`, `/stats` | Optional compact state, exact totals, today's lesson. |
 | `me.py`: `GET /v1/me/history`, `/saved` | Cursor pages through `services/collections.py`; default 50, maximum 100 items. |
+| `analytics.py`: `GET /v1/me/analytics` | Bounded account-owned learning totals, timezone-grouped activity, quizzes, topic/subtopic progress and achievement collection. |
 | `me.py`: `PUT /v1/me/topics`, `PATCH /v1/me` | Whole-set follows, profile name, PostgreSQL-validated timezone. |
 | `me.py`: `GET/PUT /v1/me/notifications`, `POST/DELETE /v1/me/push-token` | Reminder preferences and scoped device registration/removal. |
 | `concepts.py`: `GET /v1/concepts/{slug}`, `PUT/DELETE .../like`, `.../save` | Published lesson detail and independent interaction writes. |
-| `pages.py`: `GET /privacy`, `/confirmed`, `/reset-password` | Public privacy and auth landing pages; reset uses Supabase Auth in the browser. |
+| `pages.py`: `GET /privacy`, `/confirmed`, `/reset-password` | Public privacy and branded Auth landing pages; email redirects use the mobile API origin and reset uses Supabase Auth in the browser. See [auth redirects](AUTH_REDIRECTS.md). |
 
 `router.py` mounts authenticated feature routers under `/v1`. Response/input
 models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
@@ -204,7 +374,8 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   together before contacting the provider; quota denial rolls back the claim.
 - `services/generation_budget.py` atomically reserves from the shared
   `generation_daily_usage` ledger using PostgreSQL's Pacific calendar day. All
-  API prefetch, scheduled refill, and manual rewrite calls share this budget.
+  API prefetch, scheduled refill, manual rewrite and editorial revision jobs share
+  this budget and concurrency limit.
   Failed/uncertain calls retain their reservation; restarts do not reset it.
 - `services/prefetch.py` schedules bounded background top-ups, with a low unread
   watermark, durable per-topic targets, and per-process in-flight topic tracking.
@@ -219,9 +390,10 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 
 ## Sustainable learning additions (#195)
 
-- `services/curriculum.py` validates subject/plan imports, duplicate candidates
-  and prerequisite graphs. `backend/content/subjects.json` retains the five
-  subjects; `curriculum.example.json` shows future data-only expansion.
+- `services/curriculum.py` validates subject/subtopic/plan imports, duplicate
+  candidates and prerequisite graphs. `backend/content/subjects.json` and
+  `backend/content/subtopics.json` retain the five-topic taxonomy;
+  `curriculum.example.json` shows future data-only expansion.
 - `services/supply.py` persists assigned-count-plus-reserve demand and plans for
   active readers. `pool.py` counts drafts/in-flight claims in capacity and calls
   the shared quota/concurrency checks before committing any provider request.
@@ -233,6 +405,9 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   records. `selection.py` locks profiles across daily choice; `streaks.py`,
   `state.py` and reminders count completed review days without increasing unique
   learned totals. `me/state?reviews=true` opts into a separate review payload.
+- `services/weekly_quiz_notifications.py` queues opted-in unfinished quizzes at local 09:00, claims per-device deliveries before HTTP, and tracks Expo tickets/receipts with bounded safe retries. Migration `0031_weekly_quiz_notifications.sql` stores preferences and the private outbox. `workers/reminders.py` runs it after daily reminders only when its rollout flag is enabled. Mobile `WeeklyQuizNotificationNavigator.tsx` consumes cold/warm taps inside the authenticated navigation tree; `weeklyQuizNotificationIntent.ts` validates and deduplicates payloads. See [weekly-quiz-notifications.md](weekly-quiz-notifications.md) for activation and delivery limits.
+- `services/weekly_quizzes.py` freezes one reviewed MCQ from each of seven completed concepts into a per-user weekly snapshot. `api/v1/quizzes.py` scores submissions server-side and appends immutable attempts; answer keys are only returned after submission.
+- `services/subtopic_quizzes.py` independently freezes reviewed questions from one completed subtopic’s exact catalog. `api/v1/subtopic_quizzes.py` permits repeat attempts and returns account-scoped attempt history; it does not couple the subtopic flow to the weekly quiz.
 - `workers/content.py` exposes maintainer-only imports, revision inspection,
   approval, failed-plan correction/retry and health reports. `content_health.py`
   computes supply/queue/quota/worker conditions and deduplicates transitions.
@@ -246,6 +421,11 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
   backup restoration, and browser offline/reconnect in both themes.
 
 ## Schema and migrations
+
+`db/schema.py` compares actual catalog metadata against `backend/schema/contract.json`.
+`workers/schema_check.py` performs the bounded read-only target check using
+`DIRECT_URL`; `docs/SCHEMA_VERIFICATION.md` covers contract maintenance and
+Railway/GitHub setup. No SQL is applied by verification.
 
 `db/models.py` mirrors the SQL schema; migrations are the schema authority.
 The seventeen tables cover profiles, topics, concepts, user topics, daily assignments,
@@ -269,6 +449,7 @@ enforce one daily assignment and no concept repeats per user. RLS adds isolation
 | `0013_daily_reviews.sql` | Separate review activities; preserves new-assignment uniqueness. |
 | `0014_content_operations.sql` | Worker heartbeat and deduplicated condition state. |
 | `0015_revision_generation_claims.sql` | Durable claims for correction drafting. |
+| `0017_topic_subtopics.sql`–`0019_subtopic_topic_cleanup.sql` | Parent-scoped subtopics, explicit classification of published/planned content, category integrity, and safe empty-topic cleanup. |
 
 Migrations 0001–0015 are recorded in `migrations/applied.txt`. The owner applied
 0011–0015 during 1.9.0 release preparation, and a separate read-only production
@@ -309,7 +490,8 @@ and the session pooler. Applied migrations must not be rewritten.
   The backend job installs Podman and fails if its disposable PostgreSQL 16
   fixture skips, so a green backend result includes database coverage.
   `migrations.yml` separately checks the applied ledger on `main` and PRs into
-  `main`. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
+  `main`; trusted main runs also call protected `production-schema.yml`. The
+  Release OTA job requires that same actual-schema check. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
   files findings as issues. `cleanup.yml` manages stale issues; Dependabot
   schedules dependency updates with Expo-managed version restrictions.
 - `mobile/app.config.js` currently has app version `1.8.0` and native runtime
@@ -333,3 +515,24 @@ the implementation or older documentation:
   background scheduling remains outside the current APK's capabilities.
 - The backend README's test-count/phase notes are historical. See
   [WORK_LOG.md](WORK_LOG.md) for the actual local validation baseline.
+
+### Public profile privacy
+
+`api/v1/profile_sharing.py` exposes caller-owned settings and separately filtered
+public JSON/browser reads. `services/profile_sharing.py` owns row locking, version
+checks, earned-achievement filtering and revocable random tokens. Migration 0028
+adds the backend-only sharing table; 0029 preserves stored timezones during phone
+initialization. `mobile/src/services/profileSharing.ts` owns link parsing, local QR
+and anonymous visitor requests. See [profile-sharing.md](profile-sharing.md) for
+privacy guarantees, migration order and phone acceptance checks.
+
+### Mutual Connections
+
+`api/v1/connections.py`, `schemas/connections.py` and `services/connections.py`
+provide the private consent lifecycle, request preferences, blocks and database
+rate/cooldown limits. Migration 0030 adds the RLS-protected tables and pair/index
+constraints. `ConnectionsScreen.tsx` owns private list/settings states;
+`ConnectionControls.tsx` adds explicit actions to a shared-profile view. The typed
+`services/connections.ts` client and transient `publicProfileNavigation.ts` keep
+navigation/account boundaries separate from anonymous profile data. See
+[connections.md](connections.md) for API, privacy, deployment and acceptance steps.

@@ -3,7 +3,7 @@ import { Animated, Modal, Pressable, ScrollView, StyleSheet, Text, View } from '
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
 import { useReducedMotion } from '../hooks/useReducedMotion';
-import { Achievement } from '../services/achievementStore';
+import { Achievement, achievementRequirement } from '../services/achievementStore';
 import { scaleFont, spacing, radius, typography } from '../theme';
 import { AchievementBadge } from './AchievementBadge';
 
@@ -26,7 +26,7 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
   return (
     <Modal transparent visible animationType={reduced ? 'none' : 'fade'} onRequestClose={onClose}>
       <View style={[styles.backdrop, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
-        <View style={[styles.sheet, { backgroundColor: colors.surface, borderColor: colors.border }]} accessibilityViewIsModal>
+        <View style={[styles.sheet, { backgroundColor: colors.surface }]} accessibilityViewIsModal>
           <ScrollView contentContainerStyle={styles.body}>
             <Text accessibilityRole="header" style={[styles.eyebrow, { color: colors.textSecondary }]}>
               {celebration ? count > 1 ? `${count} achievements earned` : 'Achievement unlocked' : 'Your achievement'}
@@ -35,12 +35,12 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
               <AchievementBadge artwork={award.artwork_key} size={128} />
             </Animated.View>
             <Text style={[styles.title, { color: colors.text }]}>{award.name}</Text>
-            <Text style={[styles.days, { color: colors.text }]}>{award.threshold.toLocaleString()} consecutive days</Text>
+            <Text style={[styles.days, { color: colors.text }]}>{achievementRequirement(award)}</Text>
             <Text style={[styles.copy, { color: colors.textSecondary }]}>{award.description}</Text>
             <Text style={[styles.copy, { color: colors.textSecondary }]}>Earned {award.earned_on}</Text>
             <View style={[styles.note, { backgroundColor: colors.background }]}>
               <Text style={[styles.copy, { color: colors.textSecondary }]}>
-                {count > 1 ? 'Your previous learning counts. All earned badges are waiting in your collection.' : 'Earned by completing daily lessons or reviews. This badge is yours to keep, even if your streak ends.'}
+                {count > 1 ? 'Your previous learning counts. All earned badges are waiting in your collection.' : 'This badge is based on your confirmed learning activity. It is yours to keep.'}
               </Text>
             </View>
           </ScrollView>
@@ -55,7 +55,7 @@ export function AchievementDetail({ award, onClose, celebration = false, count =
 }
 const styles = StyleSheet.create({
   backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.55)', justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 },
-  sheet: { width: '100%', maxWidth: 420, maxHeight: '100%', borderRadius: radius.xl, borderWidth: 1, overflow: 'hidden' },
+  sheet: { width: '100%', maxWidth: 420, maxHeight: '100%', borderRadius: radius.xl, overflow: 'hidden' },
   body: { alignItems: 'center', padding: spacing.lg, gap: spacing.md },
   eyebrow: { fontSize: scaleFont(13), fontWeight: '700', textAlign: 'center' },
   title: { ...typography.title, fontSize: scaleFont(28), textAlign: 'center' },

@@ -1,0 +1,3702 @@
+{
+  "migrations": {
+    "0001_schema.sql": "aaeb4af7b4f6dd38478e4874883fd36c2c0c255045e16d11e8ad91fbedde1958",
+    "0002_rls.sql": "6419c4d1f86d70ce457a658517aaad79f3ac1d999adaef0cc6354f77ca72984e",
+    "0003_seed_topics.sql": "757cf30c4095f085063b1fceb5e9f49e83f9a9c4224160d0ba0b20c90d1fd20e",
+    "0004_seed_concepts.sql": "acc20e170e567a2044449095d0ecebeb1a3239900350a10398d9deb199889e74",
+    "0005_concept_backlog.sql": "e3844d573009d3395aac425e0a30031aca28c3e4830d96cb78b97097228b5027",
+    "0006_seed_backlog.sql": "3aa361c675b0091a2feea903d3d716e1ef3129532d58487623aa4881a3ee50ea",
+    "0007_reminder_log.sql": "a296c18808bfb2ef8879f3b71f873a337ec0fd57778defb8a580fc7b4e4af831",
+    "0008_backlog_claimed_at.sql": "d8abde340335c9c35a7455e7edfb801ffe69ab3593a5ec019a92d98322b1bf0e",
+    "0009_like_count_index.sql": "4320855ca61269beca043dc4cc679b41b464e80faa3761002dead628ab9ecdee",
+    "0010_generation_daily_usage.sql": "c51653481676f4968029dff382644c97fa84df368b124c7957b08b1da8658d17",
+    "0011_content_supply.sql": "6faa9afa7ae74e4f03ad1cf5aea731301f5651c1a90a5d338018b9ae3badbbd8",
+    "0012_curriculum_publication.sql": "0c0208a48298e85c83a1b1fbd5ceac2c49e5a316f78ac2dd74d1dca64bb31759",
+    "0013_daily_reviews.sql": "22569710fa76da5558c67bb90563824975d7c82ce33236a57fa85dfbfc046582",
+    "0014_content_operations.sql": "35be688ceeb0e2e0438c82c712eaafb6b4f3e38fe7e18ee96358279e831f70cc",
+    "0015_revision_generation_claims.sql": "0b7e75a9eb27cd6716878d7a00557cd26febe5d4982c1c858a82bb1567d3e8e9",
+    "0016_achievements.sql": "b2d4e2d053d57fe7b10289610896a612f066d65380a3ea806ac8ae8e8c2e012b",
+    "0017_topic_subtopics.sql": "6ae4b04f79ee145404af4d551cdd12d7725696f800bd367f15a9176309149f62",
+    "0018_classify_legacy_backlog.sql": "1ee81d184523c781d86bf6491b40858367e3b2732c7d9ad5dc0116a454d41c9d",
+    "0019_subtopic_topic_cleanup.sql": "94fa1264d21e5ba721cc01a8c0df7da1c9f5d1c782d75160778a7327c4c6a52e",
+    "0020_content_quality_gate.sql": "8452e75646811903df08c85bb03221084292fe81a67428d12734f4fb2a41f04c",
+    "0021_concept_flashcards.sql": "7bb00f50cbe6e16d0b70411128d25b2cf5a25e0962b6603402f0c8c692248a95",
+    "0022_weekly_quizzes.sql": "8faf72df5585b9f163fdf2514131b792bf14b743187520881ab3bad1a62bf8c7",
+    "0023_subtopic_completions.sql": "00946c7a856e7b883174411d0f142839b47f25348780afbe24c784bdf4e1947b",
+    "0024_backfill_subtopic_completion_events.sql": "d35b611207831e60942aafc9da73b0d558fa917df71113e83ad940cd6707f8a4",
+    "0025_subtopic_quizzes.sql": "e0edebb44215d6501566d2b268ac4542306b41d418635a36c7d76abde073fb9e",
+    "0026_subtopic_quiz_owner_integrity.sql": "e53d509dd9b2cb39cdaa353168328d0040a22845c4f4d30ec42165fc4e817204",
+    "0027_expanded_achievements.sql": "b02bbcb95f44e9eebd4582bbb537dd02911ec0598699dc433aa15b7159746a67",
+    "0028_public_profiles.sql": "c693e786a2d787eef9128eddf1bd5cd0cd8a8d1a031212dd155c44bc181bfbe8",
+    "0029_profile_timezone.sql": "cc14e637fe90172687eb25d10e0a354b32050c535541250f9955742526a5812e",
+    "0030_connections.sql": "1dedd4fef237cf0b012bff1969c4edcb9ab3f67abecbdcdb354b95ef4e193941",
+    "0031_weekly_quiz_notifications.sql": "63f5323681092ee1790a16c4e6f7120172f7f9eb94bd125082424297cbc6125a",
+    "0032_editorial_accounts.sql": "3cb659dcc3c67150dcfa857882d105bedc55ace7a1ba00aef41d169a63f6d400",
+    "0033_editorial_provenance.sql": "766fba13569238cd61132bbe645f02f12737d379405757204697aae0e3f26076",
+    "0034_editorial_workflow.sql": "8fb7506328b2e29c2d7550309587269897d83e4af9679b9350408e0728092e07",
+    "0035_editorial_generation.sql": "596c08467bfd22bbaf13d9f4770618b716c8222848fe11775a2d5258b7d13d18",
+    "0036_editorial_cancelled_leases.sql": "99405898aa81f1e2f54481d7c3343576c8039c8b64a7b93f33498e76ebed6394",
+    "0037_editorial_review_deadlines.sql": "ab59eabee6d674c89836b394b53a514c114c577e2533081a19a0c16dc77831bb",
+    "0038_editorial_notifications.sql": "7665a4b53d52b5707e6f0f8964bc5d9fc56e8980e7fc0b7e6ee6bba483caa717",
+    "0039_owner_reporting.sql": "0c2659c2a6e8df166a0801bed4da16188bd0c3b0412dfd2de1021223b495d2c0"
+  },
+  "schema": {
+    "columns": {
+      "achievement_definitions.artwork_key": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.category": {
+        "default": "'consistency'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.code": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.description": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.metric": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "achievement_definitions.requirement": {
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "achievement_definitions.show_progress": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "achievement_definitions.sort_order": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "achievement_definitions.threshold": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "concept_backlog.angle": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concept_backlog.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "concept_backlog.claim_token": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "concept_backlog.claimed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_backlog.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concept_backlog.curriculum": {
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "concept_backlog.difficulty": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "smallint"
+      },
+      "concept_backlog.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_backlog.last_error": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concept_backlog.slug": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concept_backlog.status": {
+        "default": "'pending'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concept_backlog.subtopic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_backlog.title": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concept_backlog.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_backlog.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concept_interactions.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_interactions.liked_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_interactions.saved_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_interactions.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concept_interactions.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_revisions.assigned_to": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "concept_revisions.base_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "concept_revisions.body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "concept_revisions.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_revisions.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concept_revisions.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concept_revisions.notification_epoch": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "concept_revisions.quality_review": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "jsonb"
+      },
+      "concept_revisions.review_assigned_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_revisions.review_due_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_revisions.review_note": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concept_revisions.reviewed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concept_revisions.reviewed_by": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concept_revisions.status": {
+        "default": "'draft'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.content_version": {
+        "default": "1",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "concepts.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "concepts.curriculum": {
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "concepts.difficulty": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "smallint"
+      },
+      "concepts.example": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concepts.flashcard": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "jsonb"
+      },
+      "concepts.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concepts.mcqs": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "jsonb"
+      },
+      "concepts.model": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concepts.prompt_version": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "concepts.published_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "concepts.slug": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.source": {
+        "default": "'seed'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.status": {
+        "default": "'published'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.subtopic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "concepts.summary": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.title": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "concepts.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_blocks.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "connection_blocks.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_blocks.owner_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_blocks.target_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_preferences.accepting_requests": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "connection_preferences.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connection_preferences.version": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "connection_request_events.id": {
+        "default": null,
+        "identity": "a",
+        "not_null": true,
+        "type": "bigint"
+      },
+      "connection_request_events.requested_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "connection_request_events.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.changed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "connections.high_user": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.initiator": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.low_user": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "connections.requested_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "connections.state": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_conditions.active": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "content_conditions.changed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_conditions.key": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_conditions.observed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_retry_log.backlog_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "content_retry_log.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_retry_log.id": {
+        "default": null,
+        "identity": "a",
+        "not_null": true,
+        "type": "bigint"
+      },
+      "content_retry_log.operator": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_retry_log.reason": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_supply_targets.expires_at": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_supply_targets.requested_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_supply_targets.target_count": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "content_supply_targets.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "content_worker_runs.failed": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "content_worker_runs.finished_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "content_worker_runs.generated": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "content_worker_runs.outcome": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "content_worker_runs.started_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "content_worker_runs.worker": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "daily_assignments.assigned_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "daily_assignments.assigned_for": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "daily_assignments.completed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "daily_assignments.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_assignments.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_assignments.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_reviews.assigned_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "daily_reviews.assigned_for": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "daily_reviews.completed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "daily_reviews.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_reviews.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "daily_reviews.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "device_tokens.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "device_tokens.expo_push_token": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "device_tokens.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "device_tokens.last_seen_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "device_tokens.platform": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "device_tokens.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_account_events.action": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_account_events.actor_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_account_events.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_account_events.details": {
+        "default": "'{}'::jsonb",
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_account_events.id": {
+        "default": null,
+        "identity": "a",
+        "not_null": true,
+        "type": "bigint"
+      },
+      "editorial_account_events.subject_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_email_attempts.attempt": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_email_attempts.batch_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_email_attempts.started_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_email_batches.available_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_email_batches.claim_token": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_email_batches.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.failure_code": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_email_batches.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_email_batches.lease_until": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.recipient_email": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_email_batches.recipient_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_email_batches.sent_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_email_batches.status": {
+        "default": "'pending'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_email_batches.subject": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_generation_jobs.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_generation_jobs.available_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_generation_jobs.claim_token": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.claimed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_generation_jobs.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.created_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_generation_jobs.failure_code": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_generation_jobs.feedback": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_generation_jobs.feedback_event_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.request_event_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.requested_by": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.result_revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.source_body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_generation_jobs.source_revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.source_token": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_generation_jobs.status": {
+        "default": "'pending'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_generation_jobs.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_generation_jobs.updated_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_versions.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_legacy_versions.content_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_legacy_versions.inventoried_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_versions.snapshot": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_memberships.approved_name": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_memberships.capabilities": {
+        "default": "'{}'::text[]",
+        "identity": "",
+        "not_null": true,
+        "type": "text[]"
+      },
+      "editorial_memberships.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_memberships.invited_email": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_memberships.notification_timezone": {
+        "default": "'UTC'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_memberships.requested_name": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_memberships.status": {
+        "default": "'active'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_memberships.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_memberships.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_memberships.version": {
+        "default": "1",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_outbox.batch_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_notification_outbox.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_notification_outbox.epoch": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_outbox.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_notification_outbox.ordinal": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_outbox.recipient_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_notification_outbox.revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_notification_outbox.suppressed": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "editorial_notification_policy.deadline_hours": {
+        "default": "48",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_policy.max_reminders": {
+        "default": "2",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_policy.reminder_hours": {
+        "default": "24",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_notification_policy.singleton": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "editorial_notification_policy.version": {
+        "default": "1",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_publications.approval_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_publications.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_publications.content_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_publications.recorded_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_publications.snapshot": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_request_receipts.actor_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_request_receipts.created_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_request_receipts.fingerprint": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_request_receipts.request_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_request_receipts.result": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_revision_events.action": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_revision_events.actor_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_revision_events.base_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_revision_events.checklist_version": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "integer"
+      },
+      "editorial_revision_events.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_revision_events.created_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_revision_events.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_revision_events.note": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_revision_events.quality_review": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "jsonb"
+      },
+      "editorial_revision_events.registered_name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_revision_events.revision_body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_revision_events.revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_revision_events.source_snapshot": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_workflow_events.action": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_workflow_events.actor_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_workflow_events.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_workflow_events.created_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_workflow_events.details": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_workflow_events.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_workflow_events.note": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_workflow_events.registered_name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_workflow_events.revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_workflow_events.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "generation_daily_usage.budget_day": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "generation_daily_usage.calls_used": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "notification_preferences.enabled": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "notification_preferences.reminder_times": {
+        "default": "'{08:00:00,14:00:00,20:00:00}'::time without time zone[]",
+        "identity": "",
+        "not_null": true,
+        "type": "time without time zone[]"
+      },
+      "notification_preferences.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "notification_preferences.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "notification_preferences.weekly_quiz_enabled": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "owner_operation_events.code": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "owner_operation_events.correlation_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "owner_operation_events.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "owner_operation_events.observed_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "owner_operation_events.service": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "owner_operation_events.severity": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "profile_sharing.achievement_codes": {
+        "default": "'{}'::text[]",
+        "identity": "",
+        "not_null": true,
+        "type": "text[]"
+      },
+      "profile_sharing.enabled": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profile_sharing.public_token": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "profile_sharing.show_learning": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profile_sharing.show_name": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profile_sharing.show_streak": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profile_sharing.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profile_sharing.version": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "profiles.avatar_url": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "profiles.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "profiles.display_name": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "profiles.id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profiles.timezone": {
+        "default": "'UTC'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "profiles.timezone_initialized": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "profiles.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "reminder_log.local_date": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "reminder_log.sent_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "reminder_log.slot": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "time without time zone"
+      },
+      "reminder_log.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopic_quiz_attempts.answers": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "subtopic_quiz_attempts.attempted_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "subtopic_quiz_attempts.correct_count": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "subtopic_quiz_attempts.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopic_quiz_attempts.quiz_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopic_quiz_attempts.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopic_quizzes.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "subtopic_quizzes.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopic_quizzes.questions": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "subtopic_quizzes.subtopic_completion_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopic_quizzes.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopics.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "subtopics.description": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "subtopics.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "subtopics.is_active": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "subtopics.name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "subtopics.slug": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "subtopics.sort_order": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "subtopics.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "topics.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "topics.description": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "topics.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "topics.is_active": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
+      "topics.name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "topics.slug": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "topics.sort_order": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "user_achievements.achievement_code": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "user_achievements.earned_on": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "user_achievements.recorded_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_achievements.seen_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "user_achievements.source": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "user_achievements.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_concept_completions.completed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_concept_completions.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_concept_completions.source_assignment_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "user_concept_completions.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_subtopic_completions.catalog_concept_ids": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid[]"
+      },
+      "user_subtopic_completions.catalog_signature": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "user_subtopic_completions.completed_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_subtopic_completions.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_subtopic_completions.seen_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "user_subtopic_completions.subtopic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_subtopic_completions.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_topics.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "user_topics.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "user_topics.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_attempts.answers": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "weekly_quiz_attempts.attempted_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "weekly_quiz_attempts.correct_count": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "smallint"
+      },
+      "weekly_quiz_attempts.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_attempts.quiz_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_attempts.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_notifications.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "weekly_quiz_notifications.expo_push_token": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "weekly_quiz_notifications.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_notifications.next_attempt_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "weekly_quiz_notifications.quiz_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quiz_notifications.status": {
+        "default": "'pending'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "weekly_quiz_notifications.ticket_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "weekly_quiz_notifications.updated_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "weekly_quizzes.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "weekly_quizzes.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quizzes.notification_queued_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "weekly_quizzes.questions": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "weekly_quizzes.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "weekly_quizzes.week_start": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      }
+    },
+    "constraints": {
+      "achievement_definitions.achievement_definitions_category_check": {
+        "definition": "CHECK ((category = ANY (ARRAY['consistency'::text, 'learning'::text, 'review'::text, 'quiz'::text, 'path'::text])))",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_metric_threshold_key": {
+        "definition": "UNIQUE (metric, threshold)",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_pkey": {
+        "definition": "PRIMARY KEY (code)",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_requirement_check": {
+        "definition": "CHECK ((jsonb_typeof(requirement) = 'object'::text))",
+        "validated": true
+      },
+      "achievement_definitions.achievement_definitions_threshold_check": {
+        "definition": "CHECK ((threshold > 0))",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_difficulty_check": {
+        "definition": "CHECK (((difficulty >= 1) AND (difficulty <= 3)))",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_slug_key": {
+        "definition": "UNIQUE (slug)",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'generating'::text, 'done'::text, 'failed'::text])))",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_subtopic_topic_fkey": {
+        "definition": "FOREIGN KEY (subtopic_id, topic_id) REFERENCES public.subtopics(id, topic_id)",
+        "validated": true
+      },
+      "concept_backlog.concept_backlog_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "concept_interactions.concept_interactions_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "concept_interactions.concept_interactions_pkey": {
+        "definition": "PRIMARY KEY (user_id, concept_id)",
+        "validated": true
+      },
+      "concept_interactions.concept_interactions_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "concept_revisions.concept_revisions_base_version_check": {
+        "definition": "CHECK ((base_version >= 0))",
+        "validated": true
+      },
+      "concept_revisions.concept_revisions_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "concept_revisions.concept_revisions_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "concept_revisions.concept_revisions_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['generating'::text, 'draft'::text, 'validation_failed'::text, 'pending_review'::text, 'changes_requested'::text, 'approved'::text, 'rejected'::text, 'published'::text, 'retired'::text])))",
+        "validated": true
+      },
+      "concepts.concepts_content_version_check": {
+        "definition": "CHECK ((content_version >= 0))",
+        "validated": true
+      },
+      "concepts.concepts_difficulty_check": {
+        "definition": "CHECK (((difficulty >= 1) AND (difficulty <= 3)))",
+        "validated": true
+      },
+      "concepts.concepts_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "concepts.concepts_slug_key": {
+        "definition": "UNIQUE (slug)",
+        "validated": true
+      },
+      "concepts.concepts_source_check": {
+        "definition": "CHECK ((source = ANY (ARRAY['seed'::text, 'gemini'::text])))",
+        "validated": true
+      },
+      "concepts.concepts_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text, 'archived'::text])))",
+        "validated": true
+      },
+      "concepts.concepts_subtopic_topic_fkey": {
+        "definition": "FOREIGN KEY (subtopic_id, topic_id) REFERENCES public.subtopics(id, topic_id)",
+        "validated": true
+      },
+      "concepts.concepts_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_check": {
+        "definition": "CHECK ((owner_id <> target_id))",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_owner_id_fkey": {
+        "definition": "FOREIGN KEY (owner_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_owner_id_target_id_key": {
+        "definition": "UNIQUE (owner_id, target_id)",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "connection_blocks.connection_blocks_target_id_fkey": {
+        "definition": "FOREIGN KEY (target_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connection_preferences.connection_preferences_pkey": {
+        "definition": "PRIMARY KEY (user_id)",
+        "validated": true
+      },
+      "connection_preferences.connection_preferences_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connection_preferences.connection_preferences_version_check": {
+        "definition": "CHECK ((version >= 0))",
+        "validated": true
+      },
+      "connection_request_events.connection_request_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "connection_request_events.connection_request_events_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connections.connections_check": {
+        "definition": "CHECK ((low_user < high_user))",
+        "validated": true
+      },
+      "connections.connections_check1": {
+        "definition": "CHECK (((initiator = low_user) OR (initiator = high_user)))",
+        "validated": true
+      },
+      "connections.connections_high_user_fkey": {
+        "definition": "FOREIGN KEY (high_user) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connections.connections_initiator_fkey": {
+        "definition": "FOREIGN KEY (initiator) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connections.connections_low_user_fkey": {
+        "definition": "FOREIGN KEY (low_user) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "connections.connections_low_user_high_user_key": {
+        "definition": "UNIQUE (low_user, high_user)",
+        "validated": true
+      },
+      "connections.connections_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "connections.connections_state_check": {
+        "definition": "CHECK ((state = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'canceled'::text, 'removed'::text])))",
+        "validated": true
+      },
+      "content_conditions.content_conditions_pkey": {
+        "definition": "PRIMARY KEY (key)",
+        "validated": true
+      },
+      "content_retry_log.content_retry_log_backlog_id_fkey": {
+        "definition": "FOREIGN KEY (backlog_id) REFERENCES public.concept_backlog(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "content_retry_log.content_retry_log_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "content_supply_targets.content_supply_targets_pkey": {
+        "definition": "PRIMARY KEY (topic_id)",
+        "validated": true
+      },
+      "content_supply_targets.content_supply_targets_target_count_check": {
+        "definition": "CHECK ((target_count >= 0))",
+        "validated": true
+      },
+      "content_supply_targets.content_supply_targets_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "content_worker_runs.content_worker_runs_pkey": {
+        "definition": "PRIMARY KEY (worker)",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_no_repeat": {
+        "definition": "UNIQUE (user_id, concept_id)",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_one_per_day": {
+        "definition": "UNIQUE (user_id, assigned_for)",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "daily_assignments.daily_assignments_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "daily_reviews.daily_reviews_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "daily_reviews.daily_reviews_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "daily_reviews.daily_reviews_user_id_assigned_for_key": {
+        "definition": "UNIQUE (user_id, assigned_for)",
+        "validated": true
+      },
+      "daily_reviews.daily_reviews_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "device_tokens.device_tokens_expo_push_token_key": {
+        "definition": "UNIQUE (expo_push_token)",
+        "validated": true
+      },
+      "device_tokens.device_tokens_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "device_tokens.device_tokens_platform_check": {
+        "definition": "CHECK ((platform = ANY (ARRAY['ios'::text, 'android'::text])))",
+        "validated": true
+      },
+      "device_tokens.device_tokens_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "editorial_account_events.editorial_account_events_action_check": {
+        "definition": "CHECK ((action = ANY (ARRAY['bootstrap'::text, 'invite'::text, 'profile_requested'::text, 'profile_approved'::text, 'access_changed'::text, 'notification_policy'::text, 'notification_timezone'::text, 'notification_retry'::text])))",
+        "validated": true
+      },
+      "editorial_account_events.editorial_account_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_email_attempts.editorial_email_attempts_batch_id_fkey": {
+        "definition": "FOREIGN KEY (batch_id) REFERENCES public.editorial_email_batches(id)",
+        "validated": true
+      },
+      "editorial_email_attempts.editorial_email_attempts_pkey": {
+        "definition": "PRIMARY KEY (batch_id, attempt)",
+        "validated": true
+      },
+      "editorial_email_batches.editorial_email_batches_attempts_check": {
+        "definition": "CHECK (((attempts >= 0) AND (attempts <= 5)))",
+        "validated": true
+      },
+      "editorial_email_batches.editorial_email_batches_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_email_batches.editorial_email_batches_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'sending'::text, 'sent'::text, 'failed'::text, 'suppressed'::text])))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_attempts_check": {
+        "definition": "CHECK (((attempts >= 0) AND (attempts <= 3)))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_check1": {
+        "definition": "CHECK (((status = 'ready_for_review'::text) = (result_revision_id IS NOT NULL)))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_failure_code_check": {
+        "definition": "CHECK ((failure_code = ANY (ARRAY['provider_error'::text, 'rate_limited'::text, 'invalid_output'::text, 'stale_claim'::text, 'requester_inactive'::text])))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_feedback_event_id_fkey": {
+        "definition": "FOREIGN KEY (feedback_event_id) REFERENCES public.editorial_revision_events(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_request_event_id_fkey": {
+        "definition": "FOREIGN KEY (request_event_id) REFERENCES public.editorial_workflow_events(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_result_revision_id_fkey": {
+        "definition": "FOREIGN KEY (result_revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_result_revision_id_key": {
+        "definition": "UNIQUE (result_revision_id)",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_source_revision_id_fkey": {
+        "definition": "FOREIGN KEY (source_revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_source_revision_id_key": {
+        "definition": "UNIQUE (source_revision_id)",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'generating'::text, 'failed'::text, 'ready_for_review'::text, 'cancelled'::text, 'superseded'::text])))",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_jobs_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_generation_jobs.editorial_generation_provider_lease_check": {
+        "definition": "CHECK ((((claim_token IS NULL) = (claimed_at IS NULL)) AND ((status <> 'generating'::text) OR (claim_token IS NOT NULL)) AND ((claim_token IS NULL) OR (status = ANY (ARRAY['generating'::text, 'cancelled'::text])))))",
+        "validated": true
+      },
+      "editorial_legacy_versions.editorial_legacy_versions_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_legacy_versions.editorial_legacy_versions_pkey": {
+        "definition": "PRIMARY KEY (concept_id, content_version)",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_approved_name_check": {
+        "definition": "CHECK (((length(approved_name) >= 2) AND (length(approved_name) <= 80)))",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_capabilities_check": {
+        "definition": "CHECK ((capabilities <@ ARRAY['review'::text, 'approve'::text, 'publish'::text, 'request_generation'::text, 'manage_reviewers'::text]))",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_pkey": {
+        "definition": "PRIMARY KEY (user_id)",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_requested_name_check": {
+        "definition": "CHECK (((length(requested_name) >= 2) AND (length(requested_name) <= 80)))",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['active'::text, 'revoked'::text])))",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "editorial_memberships.editorial_memberships_version_check": {
+        "definition": "CHECK ((version > 0))",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_batch_id_fkey": {
+        "definition": "FOREIGN KEY (batch_id) REFERENCES public.editorial_email_batches(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_ordinal_check": {
+        "definition": "CHECK (((ordinal >= 0) AND (ordinal <= 10)))",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_revision_id_epoch_ordinal_key": {
+        "definition": "UNIQUE (revision_id, epoch, ordinal)",
+        "validated": true
+      },
+      "editorial_notification_outbox.editorial_notification_outbox_revision_id_fkey": {
+        "definition": "FOREIGN KEY (revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_deadline_hours_check": {
+        "definition": "CHECK (((deadline_hours >= 1) AND (deadline_hours <= 720)))",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_max_reminders_check": {
+        "definition": "CHECK (((max_reminders >= 0) AND (max_reminders <= 10)))",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_pkey": {
+        "definition": "PRIMARY KEY (singleton)",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_reminder_hours_check": {
+        "definition": "CHECK (((reminder_hours >= 1) AND (reminder_hours <= 168)))",
+        "validated": true
+      },
+      "editorial_notification_policy.editorial_notification_policy_singleton_check": {
+        "definition": "CHECK (singleton)",
+        "validated": true
+      },
+      "editorial_publications.editorial_publications_approval_id_fkey": {
+        "definition": "FOREIGN KEY (approval_id) REFERENCES public.editorial_revision_events(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_publications.editorial_publications_approval_id_key": {
+        "definition": "UNIQUE (approval_id)",
+        "validated": true
+      },
+      "editorial_publications.editorial_publications_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_publications.editorial_publications_pkey": {
+        "definition": "PRIMARY KEY (concept_id, content_version)",
+        "validated": true
+      },
+      "editorial_request_receipts.editorial_request_receipts_pkey": {
+        "definition": "PRIMARY KEY (actor_id, request_id)",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_action_check": {
+        "definition": "CHECK ((action = ANY (ARRAY['pending_review'::text, 'validation_failed'::text, 'changes_requested'::text, 'approved'::text, 'rejected'::text, 'retired'::text, 'published'::text, 'attested'::text])))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_base_version_check": {
+        "definition": "CHECK ((base_version >= 0))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_check": {
+        "definition": "CHECK ((((action = ANY (ARRAY['approved'::text, 'attested'::text])) AND (checklist_version IS NOT NULL) AND (checklist_version = 1) AND (quality_review IS NOT NULL)) OR ((action <> ALL (ARRAY['approved'::text, 'attested'::text])) AND (checklist_version IS NULL) AND (quality_review IS NULL))))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_check1": {
+        "definition": "CHECK (((action = 'attested'::text) = (revision_id IS NULL)))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_note_check": {
+        "definition": "CHECK ((length(btrim(note)) >= 10))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_registered_name_check": {
+        "definition": "CHECK ((length(btrim(registered_name)) >= 2))",
+        "validated": true
+      },
+      "editorial_revision_events.editorial_revision_events_revision_id_fkey": {
+        "definition": "FOREIGN KEY (revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_workflow_events.editorial_workflow_events_action_check": {
+        "definition": "CHECK ((action = ANY (ARRAY['comment'::text, 'assigned'::text, 'staged'::text, 'content_retired'::text, 'generation_requested'::text])))",
+        "validated": true
+      },
+      "editorial_workflow_events.editorial_workflow_events_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_workflow_events.editorial_workflow_events_note_check": {
+        "definition": "CHECK (((length(btrim(note)) >= 10) AND (length(btrim(note)) <= 4000)))",
+        "validated": true
+      },
+      "editorial_workflow_events.editorial_workflow_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_workflow_events.editorial_workflow_events_revision_id_fkey": {
+        "definition": "FOREIGN KEY (revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_workflow_events.editorial_workflow_events_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "generation_daily_usage.generation_daily_usage_calls_used_check": {
+        "definition": "CHECK ((calls_used >= 0))",
+        "validated": true
+      },
+      "generation_daily_usage.generation_daily_usage_pkey": {
+        "definition": "PRIMARY KEY (budget_day)",
+        "validated": true
+      },
+      "notification_preferences.notification_preferences_max_three": {
+        "definition": "CHECK (((array_length(reminder_times, 1) >= 1) AND (array_length(reminder_times, 1) <= 3)))",
+        "validated": true
+      },
+      "notification_preferences.notification_preferences_pkey": {
+        "definition": "PRIMARY KEY (user_id)",
+        "validated": true
+      },
+      "notification_preferences.notification_preferences_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "owner_operation_events.owner_operation_events_code_check": {
+        "definition": "CHECK ((code = ANY (ARRAY['started'::text, 'completed'::text, 'failed'::text, 'database_unavailable'::text, 'unexpected_failure'::text])))",
+        "validated": true
+      },
+      "owner_operation_events.owner_operation_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "owner_operation_events.owner_operation_events_service_check": {
+        "definition": "CHECK ((service = ANY (ARRAY['api'::text, 'reminders'::text, 'pool_topup'::text])))",
+        "validated": true
+      },
+      "owner_operation_events.owner_operation_events_severity_check": {
+        "definition": "CHECK ((severity = ANY (ARRAY['info'::text, 'error'::text])))",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_achievement_codes_check": {
+        "definition": "CHECK ((cardinality(achievement_codes) <= 32))",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_pkey": {
+        "definition": "PRIMARY KEY (user_id)",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_public_token_check": {
+        "definition": "CHECK ((public_token ~ '^[A-Za-z0-9_-]{43}$'::text))",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_public_token_key": {
+        "definition": "UNIQUE (public_token)",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "profile_sharing.profile_sharing_version_check": {
+        "definition": "CHECK ((version >= 0))",
+        "validated": true
+      },
+      "profiles.profiles_id_fkey": {
+        "definition": "FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "profiles.profiles_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "profiles.profiles_timezone_not_blank": {
+        "definition": "CHECK ((length(btrim(timezone)) > 0))",
+        "validated": true
+      },
+      "reminder_log.reminder_log_pkey": {
+        "definition": "PRIMARY KEY (user_id, local_date, slot)",
+        "validated": true
+      },
+      "reminder_log.reminder_log_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "subtopic_quiz_attempts.subtopic_quiz_attempts_answers_check": {
+        "definition": "CHECK ((jsonb_typeof(answers) = 'array'::text))",
+        "validated": true
+      },
+      "subtopic_quiz_attempts.subtopic_quiz_attempts_correct_count_check": {
+        "definition": "CHECK (((correct_count >= 0) AND (correct_count <= 7)))",
+        "validated": true
+      },
+      "subtopic_quiz_attempts.subtopic_quiz_attempts_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "subtopic_quiz_attempts.subtopic_quiz_attempts_quiz_id_fkey": {
+        "definition": "FOREIGN KEY (quiz_id) REFERENCES public.subtopic_quizzes(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "subtopic_quiz_attempts.subtopic_quiz_attempts_quiz_owner_fkey": {
+        "definition": "FOREIGN KEY (quiz_id, user_id) REFERENCES public.subtopic_quizzes(id, user_id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "subtopic_quiz_attempts.subtopic_quiz_attempts_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_completion_owner_fkey": {
+        "definition": "FOREIGN KEY (subtopic_completion_id, user_id) REFERENCES public.user_subtopic_completions(id, user_id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_id_user_id_key": {
+        "definition": "UNIQUE (id, user_id)",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_questions_check": {
+        "definition": "CHECK (\nCASE\n    WHEN (jsonb_typeof(questions) = 'array'::text) THEN ((jsonb_array_length(questions) >= 1) AND (jsonb_array_length(questions) <= 7))\n    ELSE false\nEND)",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_subtopic_completion_id_fkey": {
+        "definition": "FOREIGN KEY (subtopic_completion_id) REFERENCES public.user_subtopic_completions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "subtopic_quizzes.subtopic_quizzes_user_id_subtopic_completion_id_key": {
+        "definition": "UNIQUE (user_id, subtopic_completion_id)",
+        "validated": true
+      },
+      "subtopics.subtopics_id_topic_id_key": {
+        "definition": "UNIQUE (id, topic_id)",
+        "validated": true
+      },
+      "subtopics.subtopics_name_check": {
+        "definition": "CHECK (((length(TRIM(BOTH FROM name)) >= 2) AND (length(TRIM(BOTH FROM name)) <= 80)))",
+        "validated": true
+      },
+      "subtopics.subtopics_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "subtopics.subtopics_slug_check": {
+        "definition": "CHECK ((slug ~ '^[a-z0-9]+(?:-[a-z0-9]+)*$'::text))",
+        "validated": true
+      },
+      "subtopics.subtopics_sort_order_check": {
+        "definition": "CHECK ((sort_order >= 0))",
+        "validated": true
+      },
+      "subtopics.subtopics_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "subtopics.subtopics_topic_id_slug_key": {
+        "definition": "UNIQUE (topic_id, slug)",
+        "validated": true
+      },
+      "topics.topics_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "topics.topics_slug_key": {
+        "definition": "UNIQUE (slug)",
+        "validated": true
+      },
+      "user_achievements.user_achievements_achievement_code_fkey": {
+        "definition": "FOREIGN KEY (achievement_code) REFERENCES public.achievement_definitions(code)",
+        "validated": true
+      },
+      "user_achievements.user_achievements_pkey": {
+        "definition": "PRIMARY KEY (user_id, achievement_code)",
+        "validated": true
+      },
+      "user_achievements.user_achievements_source_check": {
+        "definition": "CHECK ((source = ANY (ARRAY['history'::text, 'completion'::text, 'review'::text, 'quiz'::text, 'subtopic'::text])))",
+        "validated": true
+      },
+      "user_achievements.user_achievements_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_pkey": {
+        "definition": "PRIMARY KEY (user_id, concept_id)",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_source_assignment_id_fkey": {
+        "definition": "FOREIGN KEY (source_assignment_id) REFERENCES public.daily_assignments(id) ON DELETE SET NULL",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_source_assignment_id_key": {
+        "definition": "UNIQUE (source_assignment_id)",
+        "validated": true
+      },
+      "user_concept_completions.user_concept_completions_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_catalog_concept_ids_check": {
+        "definition": "CHECK ((cardinality(catalog_concept_ids) > 0))",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_catalog_signature_check": {
+        "definition": "CHECK ((catalog_signature ~ '^[0-9a-f]{64}$'::text))",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_id_user_id_key": {
+        "definition": "UNIQUE (id, user_id)",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_subtopic_id_fkey": {
+        "definition": "FOREIGN KEY (subtopic_id) REFERENCES public.subtopics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "user_subtopic_completions.user_subtopic_completions_user_id_subtopic_id_catalog_signa_key": {
+        "definition": "UNIQUE (user_id, subtopic_id, catalog_signature)",
+        "validated": true
+      },
+      "user_topics.user_topics_pkey": {
+        "definition": "PRIMARY KEY (user_id, topic_id)",
+        "validated": true
+      },
+      "user_topics.user_topics_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "user_topics.user_topics_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "weekly_quiz_attempts.weekly_quiz_attempts_correct_count_check": {
+        "definition": "CHECK (((correct_count >= 0) AND (correct_count <= 7)))",
+        "validated": true
+      },
+      "weekly_quiz_attempts.weekly_quiz_attempts_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "weekly_quiz_attempts.weekly_quiz_attempts_quiz_id_fkey": {
+        "definition": "FOREIGN KEY (quiz_id) REFERENCES public.weekly_quizzes(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "weekly_quiz_attempts.weekly_quiz_attempts_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_attempts_check": {
+        "definition": "CHECK (((attempts >= 0) AND (attempts <= 3)))",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_quiz_id_expo_push_token_key": {
+        "definition": "UNIQUE (quiz_id, expo_push_token)",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_quiz_id_fkey": {
+        "definition": "FOREIGN KEY (quiz_id) REFERENCES public.weekly_quizzes(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "weekly_quiz_notifications.weekly_quiz_notifications_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['pending'::text, 'sending'::text, 'accepted'::text, 'retry'::text, 'failed'::text, 'unknown'::text, 'skipped'::text])))",
+        "validated": true
+      },
+      "weekly_quizzes.weekly_quizzes_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "weekly_quizzes.weekly_quizzes_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "weekly_quizzes.weekly_quizzes_user_id_week_start_key": {
+        "definition": "UNIQUE (user_id, week_start)",
+        "validated": true
+      }
+    },
+    "functions": {
+      "capture_editorial_notification": {
+        "definition": "CREATE OR REPLACE FUNCTION public.capture_editorial_notification()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\ndeclare changed boolean; hours integer;\nbegin\n  changed := TG_OP='INSERT';\n  if TG_OP='UPDATE' then\n    changed := new.assigned_to is distinct from old.assigned_to\n      or new.review_due_at is distinct from old.review_due_at\n      or (new.status in ('draft','pending_review')) <> (old.status in ('draft','pending_review'));\n  end if;\n  if changed then\n    new.notification_epoch := coalesce(new.notification_epoch,0)+1;\n    if new.assigned_to is not null and new.status in ('draft','pending_review') then\n      new.review_assigned_at := statement_timestamp();\n      if new.review_due_at is null then\n        select deadline_hours into hours from public.editorial_notification_policy;\n        new.review_due_at := statement_timestamp() + make_interval(hours=>hours);\n      end if;\n    end if;\n  end if;\n  return new;\nend $function$\n"
+      },
+      "enqueue_editorial_notification": {
+        "definition": "CREATE OR REPLACE FUNCTION public.enqueue_editorial_notification()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  if new.assigned_to is not null and new.review_assigned_at is not null\n     and new.status in ('draft','pending_review') then\n    insert into public.editorial_notification_outbox(revision_id,recipient_id,epoch,ordinal)\n      values(new.id,new.assigned_to,new.notification_epoch,0) on conflict do nothing;\n  end if;\n  return new;\nend $function$\n"
+      },
+      "handle_new_user": {
+        "definition": "CREATE OR REPLACE FUNCTION public.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  insert into public.profiles (id, display_name)\n  values (\n    new.id,\n    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1))\n  )\n  on conflict (id) do nothing;\n\n  insert into public.notification_preferences (user_id)\n  values (new.id)\n  on conflict (user_id) do nothing;\n\n  -- Follow every active topic by default, matching the app's current behaviour.\n  insert into public.user_topics (user_id, topic_id)\n  select new.id, t.id from public.topics t where t.is_active\n  on conflict do nothing;\n\n  return new;\nend;\n$function$\n"
+      },
+      "prevent_editorial_evidence_mutation": {
+        "definition": "CREATE OR REPLACE FUNCTION public.prevent_editorial_evidence_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  raise exception 'Editorial evidence is append-only';\nend $function$\n"
+      },
+      "protect_editorial_job_input": {
+        "definition": "CREATE OR REPLACE FUNCTION public.protect_editorial_job_input()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ begin\n  if TG_OP='DELETE' then raise exception 'Editorial generation evidence cannot be deleted'; end if;\n  if (to_jsonb(new)-array['status','attempts','claim_token','claimed_at','available_at','result_revision_id','failure_code','updated_at'])\n     is distinct from\n     (to_jsonb(old)-array['status','attempts','claim_token','claimed_at','available_at','result_revision_id','failure_code','updated_at'])\n     or (old.result_revision_id is not null and new.result_revision_id is distinct from old.result_revision_id) then\n    raise exception 'Editorial generation inputs and results are immutable';\n  end if;\n  return new;\nend $function$\n"
+      },
+      "protect_generated_revision_body": {
+        "definition": "CREATE OR REPLACE FUNCTION public.protect_generated_revision_body()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ begin\n  if (new.body,new.base_version,new.concept_id) is distinct from (old.body,old.base_version,old.concept_id)\n    and exists(select 1 from public.editorial_generation_jobs\n      where source_revision_id=old.id or result_revision_id=old.id) then\n    raise exception 'Generated revision evidence is immutable; stage a new revision';\n  end if;\n  return new;\nend $function$\n"
+      },
+      "protect_reviewed_revision_body": {
+        "definition": "CREATE OR REPLACE FUNCTION public.protect_reviewed_revision_body()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  if (new.body,new.concept_id,new.base_version) is distinct from\n     (old.body,old.concept_id,old.base_version)\n     and exists(select 1 from public.editorial_revision_events where revision_id=old.id) then\n    raise exception 'Reviewed revisions are immutable; create a new revision';\n  end if;\n  return new;\nend $function$\n"
+      },
+      "touch_updated_at": {
+        "definition": "CREATE OR REPLACE FUNCTION public.touch_updated_at()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nbegin\n  new.updated_at = now();\n  return new;\nend;\n$function$\n"
+      }
+    },
+    "indexes": {
+      "achievement_definitions_metric_threshold_key": {
+        "definition": "CREATE UNIQUE INDEX achievement_definitions_metric_threshold_key ON public.achievement_definitions USING btree (metric, threshold)",
+        "ready": true,
+        "valid": true
+      },
+      "achievement_definitions_pkey": {
+        "definition": "CREATE UNIQUE INDEX achievement_definitions_pkey ON public.achievement_definitions USING btree (code)",
+        "ready": true,
+        "valid": true
+      },
+      "assignments_streak_idx": {
+        "definition": "CREATE INDEX assignments_streak_idx ON public.daily_assignments USING btree (user_id, assigned_for) WHERE (completed_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "assignments_user_day_idx": {
+        "definition": "CREATE INDEX assignments_user_day_idx ON public.daily_assignments USING btree (user_id, assigned_for DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_backlog_pending_idx": {
+        "definition": "CREATE INDEX concept_backlog_pending_idx ON public.concept_backlog USING btree (topic_id, created_at) WHERE (status = 'pending'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_backlog_pkey": {
+        "definition": "CREATE UNIQUE INDEX concept_backlog_pkey ON public.concept_backlog USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_backlog_slug_key": {
+        "definition": "CREATE UNIQUE INDEX concept_backlog_slug_key ON public.concept_backlog USING btree (slug)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_backlog_subtopic_pending_idx": {
+        "definition": "CREATE INDEX concept_backlog_subtopic_pending_idx ON public.concept_backlog USING btree (subtopic_id) WHERE (status = 'pending'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_interactions_like_count_idx": {
+        "definition": "CREATE INDEX concept_interactions_like_count_idx ON public.concept_interactions USING btree (concept_id) WHERE (liked_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_interactions_pkey": {
+        "definition": "CREATE UNIQUE INDEX concept_interactions_pkey ON public.concept_interactions USING btree (user_id, concept_id)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_revisions_generating_idx": {
+        "definition": "CREATE INDEX concept_revisions_generating_idx ON public.concept_revisions USING btree (created_at) WHERE (status = 'generating'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_revisions_pending_idx": {
+        "definition": "CREATE INDEX concept_revisions_pending_idx ON public.concept_revisions USING btree (concept_id) WHERE (status = 'draft'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concept_revisions_pkey": {
+        "definition": "CREATE UNIQUE INDEX concept_revisions_pkey ON public.concept_revisions USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "concepts_pkey": {
+        "definition": "CREATE UNIQUE INDEX concepts_pkey ON public.concepts USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "concepts_pool_idx": {
+        "definition": "CREATE INDEX concepts_pool_idx ON public.concepts USING btree (topic_id) WHERE (status = 'published'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "concepts_slug_key": {
+        "definition": "CREATE UNIQUE INDEX concepts_slug_key ON public.concepts USING btree (slug)",
+        "ready": true,
+        "valid": true
+      },
+      "concepts_subtopic_published_idx": {
+        "definition": "CREATE INDEX concepts_subtopic_published_idx ON public.concepts USING btree (subtopic_id) WHERE (status = 'published'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_blocks_owner_id": {
+        "definition": "CREATE INDEX connection_blocks_owner_id ON public.connection_blocks USING btree (owner_id, id)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_blocks_owner_id_target_id_key": {
+        "definition": "CREATE UNIQUE INDEX connection_blocks_owner_id_target_id_key ON public.connection_blocks USING btree (owner_id, target_id)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_blocks_pkey": {
+        "definition": "CREATE UNIQUE INDEX connection_blocks_pkey ON public.connection_blocks USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_preferences_pkey": {
+        "definition": "CREATE UNIQUE INDEX connection_preferences_pkey ON public.connection_preferences USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_request_events_limit": {
+        "definition": "CREATE INDEX connection_request_events_limit ON public.connection_request_events USING btree (user_id, requested_at)",
+        "ready": true,
+        "valid": true
+      },
+      "connection_request_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX connection_request_events_pkey ON public.connection_request_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "connections_high_state": {
+        "definition": "CREATE INDEX connections_high_state ON public.connections USING btree (high_user, state, id)",
+        "ready": true,
+        "valid": true
+      },
+      "connections_low_state": {
+        "definition": "CREATE INDEX connections_low_state ON public.connections USING btree (low_user, state, id)",
+        "ready": true,
+        "valid": true
+      },
+      "connections_low_user_high_user_key": {
+        "definition": "CREATE UNIQUE INDEX connections_low_user_high_user_key ON public.connections USING btree (low_user, high_user)",
+        "ready": true,
+        "valid": true
+      },
+      "connections_pkey": {
+        "definition": "CREATE UNIQUE INDEX connections_pkey ON public.connections USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "content_conditions_pkey": {
+        "definition": "CREATE UNIQUE INDEX content_conditions_pkey ON public.content_conditions USING btree (key)",
+        "ready": true,
+        "valid": true
+      },
+      "content_retry_log_pkey": {
+        "definition": "CREATE UNIQUE INDEX content_retry_log_pkey ON public.content_retry_log USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "content_supply_targets_pkey": {
+        "definition": "CREATE UNIQUE INDEX content_supply_targets_pkey ON public.content_supply_targets USING btree (topic_id)",
+        "ready": true,
+        "valid": true
+      },
+      "content_worker_runs_pkey": {
+        "definition": "CREATE UNIQUE INDEX content_worker_runs_pkey ON public.content_worker_runs USING btree (worker)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_assignments_no_repeat": {
+        "definition": "CREATE UNIQUE INDEX daily_assignments_no_repeat ON public.daily_assignments USING btree (user_id, concept_id)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_assignments_one_per_day": {
+        "definition": "CREATE UNIQUE INDEX daily_assignments_one_per_day ON public.daily_assignments USING btree (user_id, assigned_for)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_assignments_pkey": {
+        "definition": "CREATE UNIQUE INDEX daily_assignments_pkey ON public.daily_assignments USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_assignments_recent_reader_idx": {
+        "definition": "CREATE INDEX daily_assignments_recent_reader_idx ON public.daily_assignments USING btree (assigned_at, user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_reviews_pkey": {
+        "definition": "CREATE UNIQUE INDEX daily_reviews_pkey ON public.daily_reviews USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_reviews_rotation_idx": {
+        "definition": "CREATE INDEX daily_reviews_rotation_idx ON public.daily_reviews USING btree (user_id, concept_id, assigned_for DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_reviews_streak_idx": {
+        "definition": "CREATE INDEX daily_reviews_streak_idx ON public.daily_reviews USING btree (user_id, assigned_for) WHERE (completed_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "daily_reviews_user_id_assigned_for_key": {
+        "definition": "CREATE UNIQUE INDEX daily_reviews_user_id_assigned_for_key ON public.daily_reviews USING btree (user_id, assigned_for)",
+        "ready": true,
+        "valid": true
+      },
+      "device_tokens_expo_push_token_key": {
+        "definition": "CREATE UNIQUE INDEX device_tokens_expo_push_token_key ON public.device_tokens USING btree (expo_push_token)",
+        "ready": true,
+        "valid": true
+      },
+      "device_tokens_pkey": {
+        "definition": "CREATE UNIQUE INDEX device_tokens_pkey ON public.device_tokens USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "device_tokens_user_idx": {
+        "definition": "CREATE INDEX device_tokens_user_idx ON public.device_tokens USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_account_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_account_events_pkey ON public.editorial_account_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_account_events_subject": {
+        "definition": "CREATE INDEX editorial_account_events_subject ON public.editorial_account_events USING btree (subject_id, id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_email_attempt_time": {
+        "definition": "CREATE INDEX editorial_email_attempt_time ON public.editorial_email_attempts USING btree (started_at)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_email_attempts_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_email_attempts_pkey ON public.editorial_email_attempts USING btree (batch_id, attempt)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_email_batches_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_email_batches_pkey ON public.editorial_email_batches USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_email_ready": {
+        "definition": "CREATE INDEX editorial_email_ready ON public.editorial_email_batches USING btree (status, available_at)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_active_concept_idx": {
+        "definition": "CREATE UNIQUE INDEX editorial_generation_active_concept_idx ON public.editorial_generation_jobs USING btree (concept_id) WHERE (status = ANY (ARRAY['pending'::text, 'generating'::text]))",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_jobs_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_generation_jobs_pkey ON public.editorial_generation_jobs USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_jobs_result_revision_id_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_generation_jobs_result_revision_id_key ON public.editorial_generation_jobs USING btree (result_revision_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_jobs_source_revision_id_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_generation_jobs_source_revision_id_key ON public.editorial_generation_jobs USING btree (source_revision_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_pending_idx": {
+        "definition": "CREATE INDEX editorial_generation_pending_idx ON public.editorial_generation_jobs USING btree (available_at, created_at) WHERE (status = ANY (ARRAY['pending'::text, 'generating'::text]))",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_generation_provider_lease_idx": {
+        "definition": "CREATE INDEX editorial_generation_provider_lease_idx ON public.editorial_generation_jobs USING btree (claimed_at) WHERE (claim_token IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_legacy_versions_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_versions_pkey ON public.editorial_legacy_versions USING btree (concept_id, content_version)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_memberships_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_memberships_pkey ON public.editorial_memberships USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_notification_outbox_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_notification_outbox_pkey ON public.editorial_notification_outbox USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_notification_outbox_revision_id_epoch_ordinal_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_notification_outbox_revision_id_epoch_ordinal_key ON public.editorial_notification_outbox USING btree (revision_id, epoch, ordinal)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_notification_pending": {
+        "definition": "CREATE INDEX editorial_notification_pending ON public.editorial_notification_outbox USING btree (created_at) WHERE ((batch_id IS NULL) AND (NOT suppressed))",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_notification_policy_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_notification_policy_pkey ON public.editorial_notification_policy USING btree (singleton)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_publications_approval_id_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_publications_approval_id_key ON public.editorial_publications USING btree (approval_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_publications_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_publications_pkey ON public.editorial_publications USING btree (concept_id, content_version)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_request_receipts_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_request_receipts_pkey ON public.editorial_request_receipts USING btree (actor_id, request_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_review_due_idx": {
+        "definition": "CREATE INDEX editorial_review_due_idx ON public.concept_revisions USING btree (review_due_at) WHERE (status <> ALL (ARRAY['published'::text, 'retired'::text]))",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_revision_events_approval_idx": {
+        "definition": "CREATE UNIQUE INDEX editorial_revision_events_approval_idx ON public.editorial_revision_events USING btree (revision_id) WHERE (action = 'approved'::text)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_revision_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_revision_events_pkey ON public.editorial_revision_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_revision_events_revision_idx": {
+        "definition": "CREATE INDEX editorial_revision_events_revision_idx ON public.editorial_revision_events USING btree (revision_id, created_at)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_workflow_events_concept_idx": {
+        "definition": "CREATE INDEX editorial_workflow_events_concept_idx ON public.editorial_workflow_events USING btree (concept_id, created_at, id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_workflow_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_workflow_events_pkey ON public.editorial_workflow_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_workflow_events_revision_idx": {
+        "definition": "CREATE INDEX editorial_workflow_events_revision_idx ON public.editorial_workflow_events USING btree (revision_id, created_at, id)",
+        "ready": true,
+        "valid": true
+      },
+      "generation_daily_usage_pkey": {
+        "definition": "CREATE UNIQUE INDEX generation_daily_usage_pkey ON public.generation_daily_usage USING btree (budget_day)",
+        "ready": true,
+        "valid": true
+      },
+      "interactions_liked_idx": {
+        "definition": "CREATE INDEX interactions_liked_idx ON public.concept_interactions USING btree (user_id, liked_at DESC) WHERE (liked_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "interactions_saved_idx": {
+        "definition": "CREATE INDEX interactions_saved_idx ON public.concept_interactions USING btree (user_id, saved_at DESC) WHERE (saved_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "notification_preferences_pkey": {
+        "definition": "CREATE UNIQUE INDEX notification_preferences_pkey ON public.notification_preferences USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_accounts_time": {
+        "definition": "CREATE INDEX owner_accounts_time ON public.editorial_account_events USING btree (created_at, id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_completion_time": {
+        "definition": "CREATE INDEX owner_completion_time ON public.user_concept_completions USING btree (completed_at, user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_evidence_actor_time": {
+        "definition": "CREATE INDEX owner_evidence_actor_time ON public.editorial_revision_events USING btree (actor_id, created_at)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_evidence_time": {
+        "definition": "CREATE INDEX owner_evidence_time ON public.editorial_revision_events USING btree (created_at, id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_operation_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX owner_operation_events_pkey ON public.owner_operation_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_operations_correlation": {
+        "definition": "CREATE INDEX owner_operations_correlation ON public.owner_operation_events USING btree (correlation_id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_operations_service_time": {
+        "definition": "CREATE INDEX owner_operations_service_time ON public.owner_operation_events USING btree (service, observed_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_operations_time": {
+        "definition": "CREATE INDEX owner_operations_time ON public.owner_operation_events USING btree (observed_at DESC, id DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_registration_time": {
+        "definition": "CREATE INDEX owner_registration_time ON public.profiles USING btree (created_at)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_review_time": {
+        "definition": "CREATE INDEX owner_review_time ON public.daily_reviews USING btree (completed_at, user_id) WHERE (completed_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_workflow_time": {
+        "definition": "CREATE INDEX owner_workflow_time ON public.editorial_workflow_events USING btree (created_at, id)",
+        "ready": true,
+        "valid": true
+      },
+      "profile_sharing_pkey": {
+        "definition": "CREATE UNIQUE INDEX profile_sharing_pkey ON public.profile_sharing USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "profile_sharing_public_token_key": {
+        "definition": "CREATE UNIQUE INDEX profile_sharing_public_token_key ON public.profile_sharing USING btree (public_token)",
+        "ready": true,
+        "valid": true
+      },
+      "profiles_pkey": {
+        "definition": "CREATE UNIQUE INDEX profiles_pkey ON public.profiles USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "reminder_log_pkey": {
+        "definition": "CREATE UNIQUE INDEX reminder_log_pkey ON public.reminder_log USING btree (user_id, local_date, slot)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopic_quiz_attempts_history_idx": {
+        "definition": "CREATE INDEX subtopic_quiz_attempts_history_idx ON public.subtopic_quiz_attempts USING btree (user_id, attempted_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopic_quiz_attempts_pkey": {
+        "definition": "CREATE UNIQUE INDEX subtopic_quiz_attempts_pkey ON public.subtopic_quiz_attempts USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopic_quizzes_id_user_id_key": {
+        "definition": "CREATE UNIQUE INDEX subtopic_quizzes_id_user_id_key ON public.subtopic_quizzes USING btree (id, user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopic_quizzes_owner_created_idx": {
+        "definition": "CREATE INDEX subtopic_quizzes_owner_created_idx ON public.subtopic_quizzes USING btree (user_id, created_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopic_quizzes_pkey": {
+        "definition": "CREATE UNIQUE INDEX subtopic_quizzes_pkey ON public.subtopic_quizzes USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopic_quizzes_user_id_subtopic_completion_id_key": {
+        "definition": "CREATE UNIQUE INDEX subtopic_quizzes_user_id_subtopic_completion_id_key ON public.subtopic_quizzes USING btree (user_id, subtopic_completion_id)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopics_active_topic_order_idx": {
+        "definition": "CREATE INDEX subtopics_active_topic_order_idx ON public.subtopics USING btree (topic_id, sort_order, name) WHERE is_active",
+        "ready": true,
+        "valid": true
+      },
+      "subtopics_id_topic_id_key": {
+        "definition": "CREATE UNIQUE INDEX subtopics_id_topic_id_key ON public.subtopics USING btree (id, topic_id)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopics_pkey": {
+        "definition": "CREATE UNIQUE INDEX subtopics_pkey ON public.subtopics USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "subtopics_topic_id_slug_key": {
+        "definition": "CREATE UNIQUE INDEX subtopics_topic_id_slug_key ON public.subtopics USING btree (topic_id, slug)",
+        "ready": true,
+        "valid": true
+      },
+      "topics_pkey": {
+        "definition": "CREATE UNIQUE INDEX topics_pkey ON public.topics USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "topics_slug_key": {
+        "definition": "CREATE UNIQUE INDEX topics_slug_key ON public.topics USING btree (slug)",
+        "ready": true,
+        "valid": true
+      },
+      "user_achievements_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_achievements_pkey ON public.user_achievements USING btree (user_id, achievement_code)",
+        "ready": true,
+        "valid": true
+      },
+      "user_concept_completions_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_concept_completions_pkey ON public.user_concept_completions USING btree (user_id, concept_id)",
+        "ready": true,
+        "valid": true
+      },
+      "user_concept_completions_source_assignment_id_key": {
+        "definition": "CREATE UNIQUE INDEX user_concept_completions_source_assignment_id_key ON public.user_concept_completions USING btree (source_assignment_id)",
+        "ready": true,
+        "valid": true
+      },
+      "user_concept_completions_user_completed_idx": {
+        "definition": "CREATE INDEX user_concept_completions_user_completed_idx ON public.user_concept_completions USING btree (user_id, completed_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "user_subtopic_completions_id_user_id_key": {
+        "definition": "CREATE UNIQUE INDEX user_subtopic_completions_id_user_id_key ON public.user_subtopic_completions USING btree (id, user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "user_subtopic_completions_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_subtopic_completions_pkey ON public.user_subtopic_completions USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "user_subtopic_completions_unseen_idx": {
+        "definition": "CREATE INDEX user_subtopic_completions_unseen_idx ON public.user_subtopic_completions USING btree (user_id, completed_at DESC) WHERE (seen_at IS NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "user_subtopic_completions_user_id_subtopic_id_catalog_signa_key": {
+        "definition": "CREATE UNIQUE INDEX user_subtopic_completions_user_id_subtopic_id_catalog_signa_key ON public.user_subtopic_completions USING btree (user_id, subtopic_id, catalog_signature)",
+        "ready": true,
+        "valid": true
+      },
+      "user_topics_pkey": {
+        "definition": "CREATE UNIQUE INDEX user_topics_pkey ON public.user_topics USING btree (user_id, topic_id)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quiz_attempts_history_idx": {
+        "definition": "CREATE INDEX weekly_quiz_attempts_history_idx ON public.weekly_quiz_attempts USING btree (user_id, attempted_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quiz_attempts_pkey": {
+        "definition": "CREATE UNIQUE INDEX weekly_quiz_attempts_pkey ON public.weekly_quiz_attempts USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quiz_notifications_due": {
+        "definition": "CREATE INDEX weekly_quiz_notifications_due ON public.weekly_quiz_notifications USING btree (next_attempt_at, id) WHERE (status = ANY (ARRAY['pending'::text, 'retry'::text]))",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quiz_notifications_pkey": {
+        "definition": "CREATE UNIQUE INDEX weekly_quiz_notifications_pkey ON public.weekly_quiz_notifications USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quiz_notifications_quiz_id_expo_push_token_key": {
+        "definition": "CREATE UNIQUE INDEX weekly_quiz_notifications_quiz_id_expo_push_token_key ON public.weekly_quiz_notifications USING btree (quiz_id, expo_push_token)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quizzes_owner_week_idx": {
+        "definition": "CREATE INDEX weekly_quizzes_owner_week_idx ON public.weekly_quizzes USING btree (user_id, week_start DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quizzes_pkey": {
+        "definition": "CREATE UNIQUE INDEX weekly_quizzes_pkey ON public.weekly_quizzes USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "weekly_quizzes_user_id_week_start_key": {
+        "definition": "CREATE UNIQUE INDEX weekly_quizzes_user_id_week_start_key ON public.weekly_quizzes USING btree (user_id, week_start)",
+        "ready": true,
+        "valid": true
+      }
+    },
+    "policies": {
+      "achievement_definitions.achievements_catalog_read": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "true",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "concept_interactions.concept_interactions_delete_own": {
+        "cmd": "DELETE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "concept_interactions.concept_interactions_insert_own": {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "qual": null,
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "concept_interactions.concept_interactions_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "concept_interactions.concept_interactions_update_own": {
+        "cmd": "UPDATE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "concepts.concepts_select_published": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(status = 'published'::text)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "daily_assignments.daily_assignments_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "device_tokens.device_tokens_delete_own": {
+        "cmd": "DELETE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "device_tokens.device_tokens_insert_own": {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "qual": null,
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "device_tokens.device_tokens_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "device_tokens.device_tokens_update_own": {
+        "cmd": "UPDATE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "notification_preferences.notification_preferences_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "notification_preferences.notification_preferences_update_own": {
+        "cmd": "UPDATE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "profiles.profiles_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "profiles.profiles_update_own": {
+        "cmd": "UPDATE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = id)",
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = id)"
+      },
+      "topics.topics_select_active": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "is_active",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "user_achievements.achievements_owner_read": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(user_id = auth.uid())",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "user_topics.user_topics_delete_own": {
+        "cmd": "DELETE",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      },
+      "user_topics.user_topics_insert_own": {
+        "cmd": "INSERT",
+        "permissive": "PERMISSIVE",
+        "qual": null,
+        "roles": "{authenticated}",
+        "with_check": "(auth.uid() = user_id)"
+      },
+      "user_topics.user_topics_select_own": {
+        "cmd": "SELECT",
+        "permissive": "PERMISSIVE",
+        "qual": "(auth.uid() = user_id)",
+        "roles": "{authenticated}",
+        "with_check": null
+      }
+    },
+    "tables": {
+      "achievement_definitions": {
+        "rls": true
+      },
+      "concept_backlog": {
+        "rls": true
+      },
+      "concept_interactions": {
+        "rls": true
+      },
+      "concept_revisions": {
+        "rls": true
+      },
+      "concepts": {
+        "rls": true
+      },
+      "connection_blocks": {
+        "rls": true
+      },
+      "connection_preferences": {
+        "rls": true
+      },
+      "connection_request_events": {
+        "rls": true
+      },
+      "connections": {
+        "rls": true
+      },
+      "content_conditions": {
+        "rls": true
+      },
+      "content_retry_log": {
+        "rls": true
+      },
+      "content_supply_targets": {
+        "rls": true
+      },
+      "content_worker_runs": {
+        "rls": true
+      },
+      "daily_assignments": {
+        "rls": true
+      },
+      "daily_reviews": {
+        "rls": true
+      },
+      "device_tokens": {
+        "rls": true
+      },
+      "editorial_account_events": {
+        "rls": true
+      },
+      "editorial_email_attempts": {
+        "rls": true
+      },
+      "editorial_email_batches": {
+        "rls": true
+      },
+      "editorial_generation_jobs": {
+        "rls": true
+      },
+      "editorial_legacy_versions": {
+        "rls": true
+      },
+      "editorial_memberships": {
+        "rls": true
+      },
+      "editorial_notification_outbox": {
+        "rls": true
+      },
+      "editorial_notification_policy": {
+        "rls": true
+      },
+      "editorial_publications": {
+        "rls": true
+      },
+      "editorial_request_receipts": {
+        "rls": true
+      },
+      "editorial_revision_events": {
+        "rls": true
+      },
+      "editorial_workflow_events": {
+        "rls": true
+      },
+      "generation_daily_usage": {
+        "rls": true
+      },
+      "notification_preferences": {
+        "rls": true
+      },
+      "owner_operation_events": {
+        "rls": true
+      },
+      "profile_sharing": {
+        "rls": true
+      },
+      "profiles": {
+        "rls": true
+      },
+      "reminder_log": {
+        "rls": true
+      },
+      "subtopic_quiz_attempts": {
+        "rls": true
+      },
+      "subtopic_quizzes": {
+        "rls": true
+      },
+      "subtopics": {
+        "rls": true
+      },
+      "topics": {
+        "rls": true
+      },
+      "user_achievements": {
+        "rls": true
+      },
+      "user_concept_completions": {
+        "rls": true
+      },
+      "user_subtopic_completions": {
+        "rls": true
+      },
+      "user_topics": {
+        "rls": true
+      },
+      "weekly_quiz_attempts": {
+        "rls": true
+      },
+      "weekly_quiz_notifications": {
+        "rls": true
+      },
+      "weekly_quizzes": {
+        "rls": true
+      }
+    },
+    "triggers": {
+      "auth.users.on_auth_user_created": {
+        "definition": "CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION public.handle_new_user()",
+        "enabled": "O"
+      },
+      "public.concept_backlog.concept_backlog_touch_updated_at": {
+        "definition": "CREATE TRIGGER concept_backlog_touch_updated_at BEFORE UPDATE ON public.concept_backlog FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.concept_backlog.test_assign_backlog_subtopic": {
+        "definition": "CREATE TRIGGER test_assign_backlog_subtopic BEFORE INSERT ON public.concept_backlog FOR EACH ROW EXECUTE FUNCTION public.test_assign_core_subtopic()",
+        "enabled": "O"
+      },
+      "public.concept_interactions.concept_interactions_touch_updated_at": {
+        "definition": "CREATE TRIGGER concept_interactions_touch_updated_at BEFORE UPDATE ON public.concept_interactions FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.concept_revisions.editorial_notification_cycle": {
+        "definition": "CREATE TRIGGER editorial_notification_cycle BEFORE INSERT OR UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.capture_editorial_notification()",
+        "enabled": "O"
+      },
+      "public.concept_revisions.editorial_notification_event": {
+        "definition": "CREATE TRIGGER editorial_notification_event AFTER INSERT OR UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.enqueue_editorial_notification()",
+        "enabled": "O"
+      },
+      "public.concept_revisions.generated_revision_body_immutable": {
+        "definition": "CREATE TRIGGER generated_revision_body_immutable BEFORE UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.protect_generated_revision_body()",
+        "enabled": "O"
+      },
+      "public.concept_revisions.reviewed_revision_body_immutable": {
+        "definition": "CREATE TRIGGER reviewed_revision_body_immutable BEFORE UPDATE ON public.concept_revisions FOR EACH ROW EXECUTE FUNCTION public.protect_reviewed_revision_body()",
+        "enabled": "O"
+      },
+      "public.concepts.test_assign_concept_subtopic": {
+        "definition": "CREATE TRIGGER test_assign_concept_subtopic BEFORE INSERT ON public.concepts FOR EACH ROW EXECUTE FUNCTION public.test_assign_core_subtopic()",
+        "enabled": "O"
+      },
+      "public.editorial_generation_jobs.editorial_generation_inputs_immutable": {
+        "definition": "CREATE TRIGGER editorial_generation_inputs_immutable BEFORE DELETE OR UPDATE ON public.editorial_generation_jobs FOR EACH ROW EXECUTE FUNCTION public.protect_editorial_job_input()",
+        "enabled": "O"
+      },
+      "public.editorial_legacy_versions.editorial_legacy_immutable": {
+        "definition": "CREATE TRIGGER editorial_legacy_immutable BEFORE DELETE OR UPDATE ON public.editorial_legacy_versions FOR EACH ROW EXECUTE FUNCTION public.prevent_editorial_evidence_mutation()",
+        "enabled": "O"
+      },
+      "public.editorial_publications.editorial_publications_immutable": {
+        "definition": "CREATE TRIGGER editorial_publications_immutable BEFORE DELETE OR UPDATE ON public.editorial_publications FOR EACH ROW EXECUTE FUNCTION public.prevent_editorial_evidence_mutation()",
+        "enabled": "O"
+      },
+      "public.editorial_request_receipts.editorial_receipts_immutable": {
+        "definition": "CREATE TRIGGER editorial_receipts_immutable BEFORE DELETE OR UPDATE ON public.editorial_request_receipts FOR EACH ROW EXECUTE FUNCTION public.prevent_editorial_evidence_mutation()",
+        "enabled": "O"
+      },
+      "public.editorial_revision_events.editorial_events_immutable": {
+        "definition": "CREATE TRIGGER editorial_events_immutable BEFORE DELETE OR UPDATE ON public.editorial_revision_events FOR EACH ROW EXECUTE FUNCTION public.prevent_editorial_evidence_mutation()",
+        "enabled": "O"
+      },
+      "public.editorial_workflow_events.editorial_workflow_immutable": {
+        "definition": "CREATE TRIGGER editorial_workflow_immutable BEFORE DELETE OR UPDATE ON public.editorial_workflow_events FOR EACH ROW EXECUTE FUNCTION public.prevent_editorial_evidence_mutation()",
+        "enabled": "O"
+      },
+      "public.notification_preferences.notification_preferences_touch_updated_at": {
+        "definition": "CREATE TRIGGER notification_preferences_touch_updated_at BEFORE UPDATE ON public.notification_preferences FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.profiles.profiles_touch_updated_at": {
+        "definition": "CREATE TRIGGER profiles_touch_updated_at BEFORE UPDATE ON public.profiles FOR EACH ROW EXECUTE FUNCTION public.touch_updated_at()",
+        "enabled": "O"
+      },
+      "public.subtopic_quiz_attempts.subtopic_quiz_attempts_immutable": {
+        "definition": "CREATE TRIGGER subtopic_quiz_attempts_immutable BEFORE DELETE OR UPDATE ON public.subtopic_quiz_attempts FOR EACH ROW EXECUTE FUNCTION public.reject_subtopic_quiz_attempt_mutation()",
+        "enabled": "O"
+      },
+      "public.weekly_quiz_attempts.weekly_quiz_attempts_immutable": {
+        "definition": "CREATE TRIGGER weekly_quiz_attempts_immutable BEFORE DELETE OR UPDATE ON public.weekly_quiz_attempts FOR EACH ROW EXECUTE FUNCTION public.reject_weekly_quiz_attempt_mutation()",
+        "enabled": "O"
+      }
+    }
+  }
+}

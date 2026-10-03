@@ -7,6 +7,991 @@ claims as completed work.
 
 ## Current status
 
+### Release #317 version correction — PR #320
+
+- Current production `main` is `67bdd68` from release #253, with the
+  published `v1.10.1` tag and `expo.version=1.10.1`. Release PR #317
+  still carried that marketing version, so its Release workflow would reject
+  the existing tag. [PR #320](https://github.com/Coding-Moves/one-concept/pull/320)
+  targets `develop` with `2b1d448`: bump to app v1.10.2, add the new
+  feature-focused card, and restore the published 1.10.1 card. The native
+  runtime stays at 1.10.1 for the new APK; production APKs use runtime 1.10.0.
+- Validation: mobile TypeScript passed; 90 mobile unit tests passed; synthetic
+  Expo web export and six-layout light/dark What's New browser checks passed,
+  including offline-restart dismissal; diff checks passed. PR CI follows.
+- Owner-pasted Railway pool-topup deployment `21364d82` uses `main` commit
+  `67bdd68` and logs `generation disabled`. That source has no
+  `schema_check.py`, and the pasted deployment has no `schema_ready` output.
+  The owner earlier reported all three Railway pre-deploy checks passed, but
+  their exact source revisions and outputs remain unverified. Do not treat
+  deployment success as schema verification.
+- #317 has not merged; no production OTA/APK, backend deployment, generation
+  activation or email send was performed. Continue checking actual production
+  schema, effective flags, release compatibility and owner approval before
+  release.
+
+### Release #317 native/card preparation — PR #319
+
+- [PR #318](https://github.com/Coding-Moves/one-concept/pull/318) merged into
+  `develop` as `7467151`; release PR #317 now passes the migration-ledger check.
+  The protected actual-schema check is main-only and was skipped on the PR.
+- [PR #319](https://github.com/Coding-Moves/one-concept/pull/319) targets
+  `develop` with three focused commits: `83d5c5b` removes duplicate dependency
+  keys without changing resolved versions; `4cf0654` replaces 1.10.1 recovery-only
+  card copy with delivered learning/profile benefits; `c389385` raises the native
+  runtime to 1.10.1 for the updated Expo modules. The owner chose a new APK over
+  reverting the native packages. Existing 1.10.0 installs need that APK to get
+  this release's mobile features; no OTA will target their old runtime.
+- Verification: `npm ci` succeeded, TypeScript passed, **90 mobile unit tests**
+  passed, and the synthetic web export passed the six-layout light/dark What's New
+  browser check with offline-restart dismissal. Manifest and lockfile root match,
+  neither JSON file has duplicate keys, and diff checks passed. An initial
+  sandboxed test run had one subprocess assertion fail because stderr was empty;
+  the isolated test and full suite passed outside that restriction. Screenshots
+  were inspected at narrow dark and landscape light sizes.
+- No release merge, production OTA/APK publication, backend deploy or native
+  device acceptance has occurred. Release #317 remains subject to final CI,
+  actual-schema/deployment checks and explicit owner merge approval.
+
+### Production migration ledger for release #317 — PR #318
+
+- The owner reports successful production SQL Editor execution through
+  migration `0039`. For the uncertain `0023`/`0024` pair, both `0023`
+  tables existed, the completed-assignment backfill gap query returned zero,
+  and `0024` reported Success before `0025` onward was run.
+- `e1d35a5` records all 23 filenames in `backend/migrations/applied.txt` without
+  editing or rerunning SQL. [PR #318](https://github.com/Coding-Moves/one-concept/pull/318)
+  targets `develop`; after its owner-approved merge, release PR #317 will
+  inherit the ledger. This entry's commit is identified by its subject.
+- Local verification: all 39 SQL filenames exactly match the 39 ledger entries;
+  no missing or extra names; `git diff --check` passed. The production database
+  was not independently queried by this branch. The protected actual-schema
+  check, release-head CI, native-runtime decision, and remaining PR #317 release
+  gates still require verification. Neither PR was merged and no deployment or
+  mobile publication occurred.
+
+### PR #316 — second code review complete
+
+- Reviewed reporting authority, aggregation, privacy, telemetry, filters, demo
+  and responsive browser flows against #297; fixes remain in the same PR.
+- `59771e1`: accept compact public incident IDs as well as hyphenated UUIDs.
+  The browser regression failed on the original validation, then passed; the
+  real API regression also verifies compact IDs locate the correct event.
+- `999d54c`: retain worker observations independently of the API telemetry flag.
+  The PostgreSQL regression reproduced the incorrect unavailable status before
+  the fix. Switches/cap are now explicitly labeled as API configuration because
+  separately deployed workers can have different values.
+- `beeea58`: hide the dashboard queue shortcut without review permission while
+  retaining reporting/account management. `e0fe2dd` aligns synthetic UUID filters
+  with the real API. `78e57e1` prevents narrow status values wrapping into broken
+  words; inspected the corrected phone-width dark operations view.
+- Passed: **522 backend tests, no skips**, on disposable PostgreSQL 16; **31
+  browser tests**, plus both-theme reruns after the final scoped CSS fix; **10
+  admin unit tests**, TypeScript/production build, F/E9 lint, documentation links
+  and diff checks. An initial build lacked public configuration; reran with
+  explicit synthetic settings successfully. Existing ~519 kB bundle warning remains.
+- No remaining actionable blocker found in this review. Hosted checks follow
+  this push. No merge, production SQL, deployment or flag change; no manual setup
+  is required before merge into develop. Activation remains under #281.
+
+### #297 — owner dashboard implementation complete
+
+- Scope is implementation only in the existing `admin/` application. Both
+  reviewer and owner sections deploy under #281 after the normal production
+  release. No staging creation, production migration, live flag change, version
+  bump, deployment or merge was performed.
+- [PR #316](https://github.com/Coding-Moves/one-concept/pull/316) targets
+  `develop`; base `31300ce`, branch `codex/297-owner-dashboard`. `8b1460b` adds private
+  reporting endpoints, migration 0039 and schema contract. `768c5b4` adds opt-in
+  bounded worker/API observations. `ffaf68d` adds the four report pages, isolated
+  demo, responsive themes and browser coverage. `adec7e9` isolates report fixtures
+  from the default topic list used by later learner tests.
+- Access reuses explicit `manage_reviewers`, approved identity, live session and
+  MFA. Report data is memory-only; date windows, paging and SQL timeouts are
+  bounded. Names come from immutable review evidence; delayed publications keep
+  attribution even after account deletion. Missing/stale signals are explicit.
+- Passed: admin TypeScript/build and 10 unit tests; all 29 browser tests, plus
+  a focused two-test rerun for OAuth-fragment demo isolation and real invitation
+  callbacks. Visually inspected light desktop and dark narrow screenshots.
+  Vite reports a non-blocking bundle-size warning (about 518 kB before gzip).
+- Final full backend suite: **521 passed, no skips**, including the schema
+  contract on disposable PostgreSQL 16. Initial fixture-only failures (short
+  evidence note and active test topics affecting bootstrap tests) were corrected.
+  Backend F/E9 lint, documentation links and diff checks passed. Hosted checks
+  follow the final documentation push; the PR remains unmerged for owner action.
+- [owner-dashboard.md](owner-dashboard.md) defines metrics, exclusions,
+  permissions, retention, missing infrastructure signals and manual activation
+  deferred to #281. No owner action is required before merging into develop.
+
+### PR #314 — code review fixes complete
+
+- Reviewed head `0e762b6` against #280, including SQL snapshot/version matching,
+  public-field projection, mapping, caches and detail-only UI. Used an isolated
+  checkout because the main workspace belongs to another task.
+- `5f24e6a` fixes cached text/reviewer credit surviving authoritative 403/404/410
+  responses. Detail load/refresh now removes the entry and shows unavailable;
+  bundled demo fallback cannot hide removal. Offline/503 reading remains usable.
+- The exported-app regression failed on the old implementation, then passed in
+  both themes. Covers removal on refresh/reopen, bundled slug, cache eviction,
+  transient failures and existing attribution/offline/account cases. Inspected
+  the dark detail screenshot: long credit wraps below the card with no border.
+- Node 24: **88 passed, no skips**; TypeScript, web export and diff check passed.
+  Initial sandbox-only run blocked the validator subprocess; unsandboxed rerun
+  passed. Backend unchanged; previous full CI: **502 passed**, no skips. New
+  hosted CI follows this push. No production or merge action was performed.
+- This documentation commit records the reviewed behavior and test coverage.
+  No owner setup is required; native screen-reader/device font-scaling checks
+  remain unverified. Credit stays only in History/Saved detail screens.
+
+### #280 — exact-version learner attribution implemented
+
+- [PR #314](https://github.com/Coding-Moves/one-concept/pull/314) targets
+  `develop`. Owner requested the complete dedicated PR. Branch
+  `codex/280-reviewed-attribution` starts at merged #312 (`3d361d8`).
+- `fca5754`: nullable public reviewer name/date/version on full detail, daily,
+  folded state and review responses; content/evidence selected in one SQL
+  snapshot. Full PostgreSQL suite: **502 passed, no skips**; F/E9 lint passed.
+- `5b89a4d`: shared mobile mapping, strict version checks, full cache pair
+  replacement and account-change rejection. Node 24 suite: **87 passed**;
+  TypeScript passed. Old payloads/caches show no invented attribution.
+- `9b33935`: borderless accessible credit outside card flip faces. Both-theme
+  exported-app browser checks passed for legacy/attested/new versions, long
+  names, Today, History/Saved, recall, offline reload, corrupt cache and sign-out.
+  Inspected light Today and dark recall screenshots after animation settled.
+- This documentation commit records contract, tests, offline limits and rollout.
+  Exact Expo SDK 57 docs were read. No native dependency, schema migration,
+  app/runtime version bump, production action or issue closure. Deploy compatible
+  backend first, then mobile JavaScript through the normal release procedure.
+- Owner then requested detail-only credit. This follow-up restores the shared
+  card to its base presentation and renders credit below the card only in
+  History/Saved details. Updated both-theme browser scenarios and TypeScript
+  pass; inspected the final light detail screenshot. Initial PR CI was all green;
+  final-placement CI follows this push.
+- Native screen-reader/font-scaling QA is not claimed by browser checks. #313
+  hosting/email activation is independent. No manual configuration is required to merge.
+- Existing unrelated demo and previous email handoff log edits remain unstaged.
+
+### #287 — production email confirmation redirect prepared
+
+- `codex/287-confirmation-redirect`, based on current `develop` (`3d361d8`),
+  fixes the sign-up redirect without a schema or native change. The mobile app
+  passes the configured API landing page to Supabase for confirmation and
+  recovery, refusing malformed public URL values. The existing public
+  `/confirmed` page now has a regression test.
+- The required owner configuration is documented in
+  [AUTH_REDIRECTS.md](AUTH_REDIRECTS.md): prove the active Railway API domain
+  serves `/confirmed`, set the Supabase Site URL/fallback and exact allowlist,
+  then verify the EAS production public API value. Dashboard configuration can
+  occur before merge; preview test follows the `develop` merge; production OTA
+  waits for a normal release PR and manual Release workflow.
+- No Railway, Supabase, EAS, email template, production account, migration,
+  deployment, merge, or issue closure has been performed by this PR. A fresh
+  controlled-account confirmation and recovery test remains mandatory before a
+  production release is claimed complete.
+
+
+### PR #312 — direct production email rollout
+
+- Owner explicitly declined staging creation/testing and requested the complete
+  email implementation in the same PR. No staging attestation is required.
+- `5632356` removes the staging-only production gate and obsolete settings/UI
+  status. Production still requires explicit editorial/email enable switches,
+  valid sender configuration, exact HTTPS dashboard origin and current reviewer
+  eligibility. Existing `EDITORIAL_EMAIL_STAGING_VERIFIED=false` is ignored.
+- The new production regression failed against the old gate, then passed after
+  the change. Final focused PostgreSQL/provider/API/template suite: **17 passed,
+  no skips**. Admin typecheck and **8 unit tests** passed; F/E9 lint and diff
+  checks passed. Final full CI follows this push; prior head had all three gates
+  green, including 496 backend tests and 23 browser scenarios.
+- This documentation commit replaces mandatory staging instructions with the
+  direct production runbook. HTML/text templates, caps, retries and 48/24/2
+  policy remain implemented. No schema or migration ledger changes were needed.
+- Owner reports fresh Gmail credentials stored on API and reminders with sending
+  disabled; live settings were not independently inspected. Remaining activation
+  inputs: durable Google OAuth authorization (Testing tokens expire in seven
+  days), deployed reviewer HTTPS origin/account setup, ordered migration 0038,
+  and matching production API/worker release before enabling email. Website URL
+  requested; no response yet. No actual email delivery is claimed.
+- No merge, live send, paid service, staging infrastructure or production setting
+  change was performed. Preserve unrelated local demo work-log edits unstaged.
+
+### PR #312 — follow-up review fixes validated
+
+- Reviewed SQL/outbox lifecycle, provider delivery, authorization, owner controls,
+  tests and deployment documentation in the same PR. Initial head `8556ea7`
+  passed all three GitHub quality gates.
+- `e76a485` fixes a reproduced batching bug: an old initial notice could suppress
+  a newly created reminder before its collection window. Select the newest
+  pending ordinal first and suppress only older events in that same cycle.
+- `edbc139` adds a branded, responsive HTML email with a plain-text fallback.
+  Escape content and permit action buttons only for exact workspace revision
+  URLs; no external assets or tracking. Existing Supabase Auth templates remain
+  unchanged. The backend image already copies the template with `app/`.
+- Final focused PostgreSQL/provider/API/template suite: **17 passed, no skips**.
+  F/E9 lint and diff checks passed. Rendered and inspected the two-lesson email
+  at desktop and 390px phone widths; no horizontal overflow. Gmail client/inbox
+  rendering remains part of real staging acceptance, not claimed by local tests.
+- This documentation commit records the activation order and template paths.
+  Final-head hosted CI follows the push. Merge readiness is for disabled sending;
+  OAuth authorization, isolated staging inbox/login/MFA acceptance and production
+  activation after the release remain manual. No production migration, live email,
+  secret/configuration change, merge or issue closure performed. Prior unrelated
+  local demo work-log edits remain unstaged.
+
+### #279 — reviewer notifications: PR #312 open for review
+
+- [PR #312](https://github.com/Coding-Moves/one-concept/pull/312) targets
+  `develop` from `codex/279-reviewer-notifications`, based on `bf95496`.
+  Scope: durable assigned-review emails, 48-hour deadlines, 24-hour reminders
+  (maximum two), reviewer timezone and owner delivery controls. References #279;
+  no automatic closure while real staging acceptance is pending. #263 remains open.
+- `05f4035`: private migration 0038/outbox and corrected-draft assignment.
+  `7c09a16`: Gmail HTTPS worker, bounded retries/caps and delivery tests.
+  `b5624b3`: authenticated owner controls/timezone APIs. `ae72ba4`: correct the
+  browser fixture's concept-action response. `47b7a74`: dashboard and browser
+  coverage. `d0ff557`: free sender/OAuth setup, rollout guide and codebase map.
+  This entry's commit is `docs: record reviewer notification PR handoff`.
+- Verification: full disposable PostgreSQL 16 suite **491 passed, no skips**;
+  final notification/API suite **14 passed** after additional batching/crash
+  cases and final changes. F/E9 lint and diff checks passed. Node 24.19 TypeScript,
+  **8 unit tests**, **23 browser scenarios**, fixture production build passed;
+  both notification browser cases passed again after final display changes.
+  Light desktop/dark narrow layouts inspected; no horizontal overflow.
+- Provider decision: existing Gmail via HTTPS OAuth; Railway Free/Trial/Hobby
+  block SMTP. No paid sender/domain/hosting upgrade. Owner reports Gmail API
+  enabled; consent/client authorization and staging mailbox/link acceptance are
+  still manual. Supabase Auth templates stay unchanged. Use
+  [editorial-notifications.md](editorial-notifications.md) for exact steps.
+- Sending defaults off. No live email, secrets changes, production migration,
+  deployment, mobile release or merge performed. `applied.txt` remains unchanged.
+  Production activation remains #281. GitHub CI is pending at handoff; local
+  checks are the evidence above. Prior local-demo work-log edits remain unstaged
+  and are not included in this PR.
+
+### PR #311 follow-up review — fixes validated
+
+- Reviewed head `3541cca` across backend contracts, authentication, decisions,
+  corrections, shared reviewer concurrency, GUI/HCI and deployment boundaries.
+- `8a8d17d`: render the Supabase SDK's QR data URI directly; wait for existing
+  authenticators before permitting enrollment. `e5e4e05`: block approval/legacy
+  attestation during manual edits, freeze pending draft edits, and offer submit
+  only for drafts, matching the backend's immutable correction workflow.
+- `44d16ab`: success notices identify the actual action instead of inferring a
+  new publication from existing status. `697ed85`: reload correction jobs even
+  when their source revision token is unchanged; surface refresh errors.
+- `4a1788e`: preserve feedback through transient account-check outages and keep
+  keyboard focus during queue refreshes. Subsequent 403 revocation still clears
+  private content; expiry retains the sign-in explanation. `01826c1` updates
+  the owner-workflow assertion for its action-specific confirmation.
+- Seven regression scenarios reproduced failures before fixes and now pass.
+  Local browser suite: 20 passed initially; the remaining owner-flow assertion
+  expected obsolete wording and passed after correction. All 21 scenarios are
+  verified. Node 24 TypeScript/build and 8 unit tests passed. Full disposable
+  PostgreSQL 16 backend suite: **478 passed, no skips** (301 seconds); F/E9 lint
+  passed. Light desktop queue, dark desktop lesson and narrow dark layout were
+  visually inspected; responsive/keyboard checks passed.
+- README clarifies public source versus invitation-only, authenticated workspace
+  access. Documentation links and whitespace checked. No repository visibility,
+  production flags, live accounts, migration ledger, infrastructure or merge
+  changed. Hosting/real Auth emails/different-device acceptance remain #281.
+- All corrections remain in [PR #311](https://github.com/Coding-Moves/one-concept/pull/311).
+  Hosted final-head checks follow the push; no self-approval or merge performed.
+  Handoff log commit: `docs: record reviewer workspace review and privacy boundary`.
+
+### #278 One Concept Review website — PR #311
+
+- [PR #311](https://github.com/Coding-Moves/one-concept/pull/311), targeting
+  `develop`, closes only #278. `codex/278-review-workspace` starts at `411c9af`, after #310
+  merged; step 5/9 of #263. Deliver only #278, with #279 next.
+- `3246bd9`: shared queue totals, taxonomy/subtopic/deadline filters, exact-version
+  published view, owner-audited deadlines and forward migration 0037.
+  `68f6312`: independent static web/auth foundation. `1d15cb8`: reviewer comments
+  on existing lessons and concept-scoped correction-job queries.
+- `adbc898`: complete review/diff/history/checklist, approved/published/legacy
+  queues, safe manual and AI corrections, owner assignment/account/invitation
+  controls, profile/MFA gates, light/dark responsive UI. One reviewer approval
+  is shared; another reviewer cannot approve the same revision again.
+  `e5e7ffb`: fixture browser coverage and a separate website CI job.
+- Local validation: full disposable PostgreSQL 16 backend suite **478 passed,
+  no skips** (207 seconds), backend F/E9 lint; web TypeScript/build, **8 unit
+  tests**, **14 browser tests** passed. Browser cases include shared approval,
+  conflicts, lost-response identical retries, expiry/revocation, MFA/onboarding,
+  invitation password setup, topic filters, owner controls and safe text/links.
+- Visually inspected desktop light queue, dark complete lesson and narrow dark
+  review; no horizontal overflow. Build with a forbidden fixture secret key
+  failed before emission; sentinel absent from static output. Local documentation
+  links and whitespace checks passed. Node 24 used; no mobile code changed.
+- Initial browser attempt preceded browser installation; first installed-browser
+  run exposed exact-label lookup failures and a test expiry race. Explicit form
+  labels and synchronized assertions fixed them; all cases passed afterward; a final malformed-draft regression also passed.
+  Initial backend fixture failures were corrected before the full passing run.
+- `admin/README.md` documents staging migration 0037 after 0036, compatible API/
+  worker, public web config, HTTPS callback/CORS/headers, owner bootstrap and
+  different-account live acceptance. Real hosting/email/device verification is
+  deferred to #281; deadline email delivery #279 and owner analytics #297 remain
+  outside this chunk. Production migration ledger and infrastructure untouched.
+- Hosted [quality run 36999497828](https://github.com/Coding-Moves/one-concept/actions/runs/36999497828)
+  passed backend, mobile and review-website jobs at `9761422`. Final review added
+  a null/malformed draft heading guard and preserved the concept’s approved
+  taxonomy when repairing it; the expanded 14-case browser suite passed locally.
+  Latest-head CI is recorded in the PR checks. Ready for owner review after those
+  checks pass; live staging acceptance is still #281.
+- Final handoff documentation: `docs: record reviewer website PR and validation`.
+  No production flags, real invitations, paid requests, deployment or merge.
+
+### PR #310 follow-up code review — fixed and validated
+
+- Reviewed `6402cf7`: asynchronous cancellation/concurrency, exact revision
+  evidence, private prompt handling, status APIs and rollout.
+- `dfc885e`: reproduced P2 cancellation freeing a provider slot while the HTTP
+  request remained in flight. Retain the fenced lease until completion/expiry;
+  discard cancelled output and never retry abandoned cancelled work. Add forward
+  migration 0036 and reviewed schema contract without changing applied history.
+- `d28d1ac`: reproduced P2 configured secrets surviving JSON escaping in feedback
+  and nested lesson content. Redact raw prompt strings, including title/taxonomy,
+  before serialization while retaining immutable original evidence.
+- PostgreSQL 16 migration/job suite: **40 passed, no skips**. Four prompt tests
+  passed; quotes, backslashes and newlines failed before the correction. Full
+  local backend suite: **474 passed, no skips** (209 seconds). Hosted run
+  [36992838352](https://github.com/Coding-Moves/one-concept/actions/runs/36992838352)
+  passed on `962b0c5`: **474 backend tests**, lint, mobile typecheck and mobile
+  tests. Documentation file links and whitespace checks passed. Initial
+  root-directory pytest attempts failed
+  collection; the reported tests ran from backend with test-only configuration.
+- Updated staging instructions: 0035 then 0036 after 0034, compatible worker/API
+  images; no immediate production action needed to merge into develop. No
+  production changes, live provider calls, release or merge performed.
+- Review corrections and documentation are pushed to the same PR; no remaining
+  actionable blocker found. Final documentation-only handoff commit:
+  `docs: record PR 310 review validation`. Latest-head CI is recorded in the PR.
+
+### #277 bounded draft replenishment and AI revisions — PR #310
+
+- [PR #310](https://github.com/Coding-Moves/one-concept/pull/310) is step 4/9
+  of #263, based on merged #309 (`5de7acf`), from
+  `codex/277-editorial-generation` into `develop`; closes only #277.
+  Open and ready for review; no merge performed.
+- `f66b991`: private durable job schema/immutable evidence and fenced backlog
+  claims. `ff86bfd`: shared human review capacity, active supply and concurrency.
+  `cefe332`: authenticated exact-source revision requests, safe status/cancel APIs,
+  three-attempt retry handling, current-authority checks and immutable new drafts.
+  `8178bda`: explicit draft retirement frees capacity without removing evidence.
+  `a9a1dd8`: existing scheduled worker integration and aggregate job monitoring.
+  `e810951` fixes eligibility/reporting found in the final code review.
+  `077c3be` documents API/worker contracts and staged activation.
+- Original bodies, feedback and decisions remain linked; no approval is inherited.
+  New/manual revisions, cancellation, retirement, revocation and reclaimed tokens
+  fence late provider results. Quota and disabled generation never auto-publish.
+  No new scheduler/provider; dashboard/email/production activation remain later
+  #263 steps. See [editorial-generation.md](editorial-generation.md).
+- Local PostgreSQL 16: **16 schema checks**, **34 focused tests**, then the full
+  backend suite **466 passed, no skips** (360 seconds). After the final two small
+  eligibility/reporting fixes, **39 focused regressions passed, no skips** (40
+  seconds). All provider calls were mocked. Backend F/E9 lint, documentation
+  local links and diff whitespace checks passed. Hosted exact-head results will
+  be recorded in the PR handoff.
+- Initial schema invocation used the wrong directory and failed collection; it
+  was rerun correctly. Early focused runs exposed one stale-claim fixture that
+  selected a different title and whitespace normalization of the saved AI source.
+  The fixture now reclaims the intended title and jobs preserve the exact body;
+  final tests above pass. No hidden/skipped database validation.
+- No immediate manual production work. Staging needs migration 0035 after 0034,
+  compatible API/worker images, shared capacity settings and identity/MFA setup.
+  Production activation remains #281; the applied ledger was not changed. No
+  production SQL, paid purchase, live Gemini call, release or merge performed.
+
+### PR #309 follow-up code review — fixed and validated
+
+- Reviewed `e6440f0` in [PR #309](https://github.com/Coding-Moves/one-concept/pull/309)
+  against #276: request/permission boundaries, exact revision/state locks,
+  idempotency, private evidence, operator paths, inventory and learner eligibility.
+- `13ff516` fixes two P2 demand defects: retired subtopic inventory inflated the
+  worker target, and the response/receipt/audit could report a smaller target
+  than the upsert retained. Count active inventory and return the actual saved
+  target. Four regression combinations include pre-existing demand and replay.
+- `f0b5aca` fixes a P2 publication gap: published prerequisites under retired
+  topics/subtopics were treated as available. Shared preflight/final validation
+  now rejects both cases, with atomic rollback of approval/receipt verified.
+- Baseline regressions reproduced wrong targets (3 instead of 2; reported 2/3
+  when 10 was saved) and two HTTP 200 publications that should have been denied.
+  The initial parameterized supply fixture reused a title/objective and hit
+  import deduplication; unique fixtures now exercise the intended behavior.
+- `1a7ea86` cleans up the new prerequisite fixture's active topic so the shared
+  disposable catalog does not affect later generation/selection tests. Those
+  four prerequisite/isolation checks passed together after cleanup. The first
+  broad run exposed those two fixture interactions and ended before its summary;
+  it is not counted as a completed validation.
+- **32 focused PostgreSQL tests passed, no skips** after fixes. The final full
+  PostgreSQL 16 suite passed **438 tests, no skips**, in 167 seconds. Exact-head
+  hosted CI and the review handoff are recorded in PR #309. Backend F/E9 lint, changed
+  documentation links and diff whitespace checks passed.
+- No additional migration/manual production task, release, live provider call,
+  account invitation or PR merge. Existing staged activation remains #281.
+  Documentation commit: "Document PR 309 review findings and regression results".
+
+### #276 editorial review and publication APIs — PR #309 implemented and validated
+
+- [PR #309](https://github.com/Coding-Moves/one-concept/pull/309) targets `develop`
+  from `codex/276-editorial-review-api`, step 3/9 of #263; closes only
+  #276. Based on merged #299, then updated to `develop` at `77d175d` via `b71f865`
+  to preserve the newly merged dependency updates and all focused commits.
+- `c603396`: migration 0034/private workflow audit and receipts/schema contract.
+  `352670a`: versioned commands and private queues/package/diff/history/validation.
+  `1364e9a`: protected HTTP routes and integration tests. `8f51b8a`: authenticated
+  operator CLI. `56ca4c6`: rewrite-worker compatibility with open reviews and the
+  complete package. `9c95adc`: retain publisher notes and validate legacy attestation.
+- Covers comments, assignments, exact-version decisions, atomic approval/publication,
+  stale/concurrent/replayed commands, legacy attestation, retirement preserving
+  progress, and bounded audited generation demand. No provider call in review HTTP.
+  Website remains #278 and generation/revision orchestration remains #277.
+- Local full PostgreSQL 16 suite: **432 passed, no skips** (169 seconds). Earlier
+  44 HTTP/publication checks and eight CLI/worker checks passed. The first full
+  database run had 431 passes and one new fixture search failure after changing
+  its title; the final run uses its stable topic filter. A sandbox-only attempt
+  could not start Podman and was stopped rather than reporting skipped DB tests
+  as validation. All successful DB runs used disposable local data, no providers.
+- After installing the current repository pins (SQLAlchemy 2.1.1, Uvicorn 0.54.0,
+  PyJWT 2.15.1), a second full local PostgreSQL run passed **432 tests, no skips**
+  in 167 seconds. Backend F/E9 lint, documentation links and whitespace checks
+  passed. Exact-head hosted CI/handoff is recorded in PR #309.
+- [editorial-api.md](editorial-api.md) describes permissions, endpoints, retry
+  contracts, private text handling, publication entry-point audit and rollout.
+  Documentation commits: `631ae7d` and "Record PR 309 validation and handoff".
+- No immediate manual production task. Staging needs migration 0034 after 0033;
+  production activation remains #281 with identity/MFA, compatible workers and
+  device rehearsal. No production SQL, applied-ledger edit, account invitation,
+  content publication, paid service, mobile/native build or PR merge performed.
+
+### PR #299 follow-up code review — fixed and validated
+
+- Reviewed `82c80b1` against #275, including authenticated decisions, immutable
+  evidence, cutover, CLI bypass prevention and learner visibility. Three failing
+  PostgreSQL cases reproduced two P2 regressions before fixes.
+- `29ec677` preserves today's assignment/review slot when its lesson is hidden,
+  prevents a second activity and safely handles retirement before the payload
+  read. `f9eb91a` keeps earned counts/streaks independent of visible history and
+  uses visible counts for pagination (including an entirely hidden history).
+- **31 focused tests passed.** The first full review run had **403 passes and
+  one failure**: an old like-count test assumed no earlier likes on a shared seed
+  that API tests select randomly. `4765b57` checks the exact increment and own-like
+  exclusion without that assumption. The final full PostgreSQL 16 rerun passed
+  **404 tests, no skips**, including all four new regression cases.
+- Backend F/E9 lint, changed documentation links and whitespace checks passed.
+  Final exact-head hosted checks and review summary are recorded in PR #299.
+  The documentation commit is "Document PR 299 review fixes and validation".
+- No additional migration, environment setting or manual task for these fixes;
+  the staged editorial activation prerequisites remain unchanged. No merge or
+  production change. Preserve all original and follow-up commits.
+
+### #275 exact-revision approval and provenance — implemented and validated
+
+- [PR #299](https://github.com/Coding-Moves/one-concept/pull/299) targets `develop`
+  from `codex/275-editorial-provenance` at base `db34afc`, after #298 merged. Closes
+  only #275, step 2 of #263; HTTP entry points and the website remain #276/#278.
+- `690f699` adds immutable evidence, explicit legacy-version cutover inventory
+  and the schema contract. `c4c66b1` adds authenticated transitions, exact approval,
+  version-safe publication and unchanged legacy attestation; free-text CLI
+  publish/reject now fail closed. `4c76ecc` adds published-only collection/state
+  and existing-assignment/review guards, with pagination filtering before limits.
+- Follow-up "Verify editorial cutover and retain immutable regression evidence"
+  tests real pre-0033 catalog/progress preservation and CLI bypass denial, and
+  retires the yearly simulation's catalog instead of deleting its audit evidence.
+- Validation: final full PostgreSQL 16 backend suite **400 passed, no skips**;
+  backend F/E9 lint, local documentation links and whitespace checks passed.
+  Earlier 23 focused cases passed. The first broad run had 396 passes and one
+  obsolete simulation-cleanup failure; the final run includes its corrected
+  cleanup plus the real cutover and CLI tests. No live provider calls occurred.
+- Review checked lock order/session recheck, immutable source/body/name snapshots,
+  checklist validation, stale/retired states, simultaneous approvals, idempotent
+  publication, unchanged legacy attestation, private storage and learner reads.
+- [editorial-provenance.md](editorial-provenance.md) documents the service contract,
+  state machine, transaction requirements and staging/rollout procedure. No
+  production SQL, ledger update, mobile/native release or content publication.
+- Handoff: final exact-head CI is recorded in PR #299; preserve the focused
+  commits and merge only with owner approval. No immediate manual action:
+  0033 application and authenticated entry-point activation belong to the later
+  coordinated rollout. The old publication CLI is intentionally unavailable;
+  do not treat this intermediate backend as a complete production review UI.
+
+### PR #298 review fixes — implemented and validated
+
+- Owner requested both reproduced findings fixed in the same PR. The original
+  review at `b8807a9` demonstrated an expired session still saving a queued
+  profile and a nonmember occupying the shared advisory-lock queue.
+- `8ab74c0` checks session deadlines against the post-wait statement timestamp;
+  its regression lets a pre-existing deadline expire naturally during contention
+  and verifies HTTP 401, unchanged profile/version and no profile audit write.
+- `c89877e` checks current session, membership and required capability/name/MFA
+  before taking the lock, then repeats all checks afterward. Nine denial cases
+  finish while another transaction still holds the lock; queued revocation and
+  capability-removal cases remain denied. No preliminary authority is reused.
+- Validation: **38 focused tests passed**, then **378 backend tests passed, no
+  skips**, against disposable PostgreSQL 16. Full backend F/E9 lint, local
+  documentation links and `git diff --check` passed. No live providers were used.
+- Runbook and codebase map document pre/post-lock authorization and the READ
+  COMMITTED requirement. These corrections add no migration, configuration or
+  manual setup step. Authorized writes still serialize across invitation HTTP.
+- Handoff: preserve all focused commits in [PR #298](https://github.com/Coding-Moves/one-concept/pull/298).
+  The final pushed revision's hosted CI result is recorded on the PR; this log's
+  commit is "Document editorial authorization review fixes". No merge or
+  production activation; existing #274 staging prerequisites remain unchanged.
+
+### #274 reviewer identity foundation — implemented and locally validated
+
+- First child of #263, on `codex/274-editorial-reviewer-accounts`, based on
+  `develop` after #296 merged. Scope: private memberships/audit, verified-session
+  authorization, invitations, profile onboarding/name approval, owner controls,
+  tests and an activation runbook. Frontend screens remain in #278.
+- Commits: `0b19127` private storage/session contract; `aee2804` authorization and
+  owner bootstrap; `a481af9` invitation/profile/access APIs; `02dc854` origin and
+  bootstrap safeguards; `faf265d` secret-safe settings errors. The documentation
+  commit is identified by its subject, "Document editorial account activation and
+  frontend handoff". Preserve all individual commits.
+- Incorporate Faizan's multi-reviewer/profile flow using individual Supabase
+  invitations and user-set passwords. Three is an initial team target, not a cap.
+- No live invitations, production schema/configuration or mobile release changes.
+- Verification: **367 backend tests passed, no skips**, using disposable PG16;
+  **63** focused security/schema tests passed before that run; the final settings
+  error-redaction change passed all **21** provider/configuration tests. Backend
+  F/E9 lint, local documentation links and whitespace checks passed. A profile
+  validator name collision initially blocked collection and was fixed before
+  these passing runs. No new dependency or frontend/native change was introduced.
+- Reusable authority checks verified JWT/session ownership, confirmed/unbanned
+  Auth user, live membership, approved name and independent capabilities with
+  MFA. Versioned writes recheck authority under the account lock. Tests include
+  queued writes versus revocation, team growth, duplicate invitations, provider
+  timeouts, stale name approvals, private storage and final-admin protection.
+- [editorial-accounts.md](editorial-accounts.md) records API contracts, bootstrap,
+  recovery, MFA, Auth sender/redirect setup, migration and rollback. Live mailbox
+  and browser acceptance await #278/#281. Keep `EDITORIAL_ENABLED=false` until
+  staging activation; #275/#276 still own exact-content provenance and publication.
+- Handoff: [PR #298](https://github.com/Coding-Moves/one-concept/pull/298) targets
+  `develop` and closes only #274 when merged. Hosted CI is checked on the final
+  pushed revision and reported on the PR. No merge/closure or production
+  activation is authorized by this implementation task.
+
+
+### #268 weekly quiz notifications — owner-requested review fixes completed
+
+- Review scope: current PR diff, delivery boundaries, mobile account safety and
+  CI. Add focused regression/fix commits for candidate-queue starvation and
+  malformed provider ticket isolation; preserve all existing commits.
+- Both defects reproduced before the fixes (six failing regression cases).
+  `12f033e` pages the complete due cohort; its 28 weekly regression tests passed.
+  `f3dae3e` isolates malformed success IDs as unknown while valid
+  peers retain their accepted receipts. Existing mobile code required no changes.
+- Post-fix local validation: **51 passed, no skips** across weekly delivery, daily
+  reminders, notification preferences and quiz lifecycle; F/E9 lint and whitespace
+  checks passed. This includes **36 weekly notification cases**. Initial PR CI was
+  green; final-revision hosted checks are reported on the PR. Physical staging
+  delivery/tap verification and migration 0031 remain activation prerequisites.
+- [PR #296](https://github.com/Coding-Moves/one-concept/pull/296) targets `develop`
+  from `codex/268-weekly-quiz-notifications` (base `df67cae`), with `Closes #268`.
+  Independent weekly opt-in respects the master switch, saved timezone, current
+  quiz and completion. No production rollout, user-data change or release is part
+  of this task; migration 0031 remains unapplied in the production ledger.
+- `1d945d0` stores preferences/outbox and preserves old-client updates;
+  `405e7a8` adds local 09:00 selection, durable claims, per-device tickets/receipts,
+  bounded definite-failure retries and concurrency/failure regression tests.
+  `fdf048a` adds settings/browser coverage; `6055d08` adds authenticated
+  notification-tap routing and stale quiz-response protection.
+- Worker uses the existing reminders cron after daily reminders, behind default-off
+  `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED`. Ambiguous outcomes/crash claims are never
+  replayed; Expo cannot guarantee exactly-once handset display. Frozen quiz identity
+  retains the shared ISO week, independent of local delivery time.
+- Passed: full disposable PostgreSQL 16 suite **307 tests, no skips**, including
+  schema contract, daily reminders and 27 weekly-notification cases; F/E9 lint;
+  mobile TypeScript and **83 Node 24 tests**; final web export. Mocked browser
+  settings checks passed at 320px in both themes, covering failures, weekly opt-in,
+  retained preference under the master switch, and existing profile regression.
+- Earlier targeted failures were test isolation issues (persistent test users and
+  unscoped outbox assertions); owner-scoped assertions and isolated device fixtures
+  resolved them. The full suite passed afterward. A final export permission review
+  timed out; the permitted single retry succeeded. The mobile-control commit
+  approval also timed out and succeeded on its single retry.
+- Exact Expo SDK 57 response APIs and official push receipt/error docs informed the
+  implementation. No new native dependency, secret, service or runtime change.
+  `docs/weekly-quiz-notifications.md` records behavior, delivery limits, aggregate
+  verification SQL, staging acceptance and the production activation/rollback order.
+- Remaining before production activation: ordered migration application, reviewed
+  API/worker/mobile release, physical staging-phone cold/warm tap and delivery tests,
+  then owner enables the flag on the existing reminders service. Local mocks do not
+  establish native delivery. No manual action is needed to review this feature PR.
+- `1d82de9` records the rollout guide and codebase map. Final handoff commit
+  `docs: record weekly notification PR handoff` records this PR link. GitHub CI
+  status is reported separately on the PR; no merge or production activation occurred.
+
+
+### PRs #293 / #295 owner-requested merge-readiness review — completed locally
+
+- Reviewed current profile and Connections diffs, auth/ownership, public allowlist,
+  revocation, migrations, mobile account/foreground boundaries, consent races,
+  dependency order and hosted CI. No remaining blocker found in #293 at `3229a6f`.
+- Reproduced stale invitation reuse in #295, then fixed it in `ecd33b9`: renewed
+  requests receive a new action ID and ownership is rechecked after the pair lock.
+  The regression failed before the fix and passed afterward. Focused PostgreSQL
+  profile, sharing, Connections and schema checks: **45 passed, no skips**; F/E9
+  lint and whitespace checks passed. An initial test invocation used the wrong
+  working directory; rerunning from backend resolved collection.
+- Both PRs belong to the authorized owner account, so GitHub self-approval is
+  unavailable. Record review results without substituting another account.
+- Owner requested both PRs ready. Mark #295 ready after final hosted CI, preserving
+  the merge order **#293, then #295** and all individual commits. No merge occurs
+  in this task. Production migration/phone checks remain release prerequisites,
+  not a prerequisite to merging these feature branches into `develop`.
+
+### #294 complete mutual Connections — reviewed, merge after #293
+
+- [PR #295](https://github.com/Coding-Moves/one-concept/pull/295) targets `develop`
+  from `codex/294-mutual-connections`. Merge profile PR #293 first.
+  Its current develop diff includes that dependency; compare against
+  `codex/267-complete-profile` to review Connections alone. No merge is authorized.
+- `1e3f522`: constrained schema, private API and request controls; `9d28063`:
+  account-safe client and invitation-only cooldowns; `d6969d1`: full mobile
+  lifecycle and browser acceptance; `8ae1269`: blocking races and pagination;
+  `a04dd43`: privacy disclosure; `177d3f8`: wait for status before the offline test.
+  `400dc2e` preserves the latest profile share-sheet commits through a branch merge.
+- Covers opt-in requests, explicit acceptance, decline/cancel/remove/block/unblock,
+  private paginated lists, online-only mutations and server limits. Profile/QR
+  work stays in #293; there is no XP, leaderboard, public graph or paid service.
+- Passed: full PostgreSQL 16 suite **275 tests, no skips**, then **16 Connections
+  tests** including three additional race/pagination cases; mobile TypeScript
+  and **80 Node 24 tests**; backend F/E9 lint; web export. Final mocked browser
+  checks passed for both profile and Connections at 320px in both themes,
+  including failed saves, offline request retry and all relationship actions.
+  The offline fixture initially disconnected before status finished loading;
+  synchronizing that prerequisite resolved the test failure.
+- Migration `0030_connections.sql` follows #293's 0028/0029. Production ledger,
+  settings, users and release/runtime versions are unchanged. Physical two-phone,
+  native sharing, camera/deep-link and TalkBack checks remain before publication.
+  See [connections.md](connections.md) for the rollout and acceptance checklist.
+- Handoff: final hosted CI and review results are recorded on #295. Owner merges
+  #293 first, then #295 with green checks. Neither merge nor mobile publication
+  is part of this task.
+
+### #267 complete learner profile with opt-in sharing — completion review
+
+- PR [#293](https://github.com/Coding-Moves/one-concept/pull/293) keeps all profile
+  work together on `codex/267-complete-profile`, targeting `develop`.
+- `271f14e`: preferred-name editor, validation and confirmed account-safe cache/
+  greeting refresh. `d9cd8b0`: private-by-default field sharing, earned-award
+  allowlist, random revocable links, anonymous public HTML/JSON, RLS and contract.
+  `51ae52f`: preserve existing learning timezones during automatic phone sync.
+  `d374fcd`: privacy UI, native Share, local QR and uncached incoming-link view.
+  `5372fd3`: reminder permission/network feedback, retry and account-scoped cache.
+- Validation: full PostgreSQL 16 backend suite **260 passed, no skips**; backend
+  F/E9 lint passed; mobile TypeScript and **77 Node 24 tests passed**. Mocked
+  browser acceptance checks passed in both themes at 320px for failed/duplicate
+  name saves, confirmed header updates, reminder errors, field opt-in, QR,
+  conflicting privacy saves and disabling sharing. Earlier test failures were
+  resolved: stored-streak assertion now distinguishes the boolean visibility
+  preference, and browser fixtures acknowledge awards before navigating.
+- Migrations `0028_public_profiles.sql` and `0029_profile_timezone.sql` remain
+  unapplied to production; the ledger is unchanged. Deploy schema/backend before
+  mobile publication. No production settings, data, release version or runtime
+  were changed. See [profile-sharing.md](profile-sharing.md) for rollout and
+  required physical-phone/TalkBack/native-share/camera checks. Browser fallback
+  works independently of optional verified HTTPS App Links, which need separate
+  domain/native configuration; those associations are not claimed complete.
+- Exact Expo SDK 57 docs were reviewed. Public QR is pure JavaScript and uses the
+  existing API hostname; no new paid service or native package is introduced.
+- Follow-up: use the supplied screenshots as inspiration for a dedicated share
+  preview sheet, local avatar and QR card. Preview data comes only from the public
+  API allowlist; native Share is revalidated before use. No XP, leagues, leaderboard,
+  subscription promotion or external images were added.
+- User authorized a separate complete Connections issue/PR after #293. Created
+  [#294](https://github.com/Coding-Moves/one-concept/issues/294), with mutual request,
+  accept/decline/cancel, private lists, remove/block/unblock, server abuse controls
+  and acceptance tests in one scope. Keep this out of #293. Neither PR is
+  authorized to merge without the owner's specific confirmation.
+
+### #265 multilingual daily digest, flashcard, and quiz content — architecture recorded
+
+- Scope: planning only. `docs/multilingual-content/README.md` records canonical
+  concept localization, reviewed complete-payload fallback, locale preferences,
+  translation-version provenance, and the later separate study-card/game model.
+- No schema, mobile or backend runtime behavior, content translation, user data,
+  release configuration, deployment or production setting changed. The owner
+  requested this tracker be closed after the documentation PR is opened; future
+  implementation requires a new focused issue and PR after pilot-language,
+  fallback, reviewer and content-pack decisions are made.
+
+### #258 serious learning and activity analytics — ready for review
+
+- Scope: add one authenticated, server-derived analytics read model and a quiet
+  mobile Analytics screen. It will combine completed concepts, reviews, weekly
+  quiz attempts/scores, streaks, timezone-correct recent activity, actual topic
+  distribution, learning-path progress and achievements without client counters
+  or a productivity-dashboard score.
+- `41707a8` adds the protected `GET /v1/me/analytics` endpoint, bounded
+  timezone-correct aggregation, typed response contract and PostgreSQL coverage.
+  `6ceb7e4` adds the typed, account-fenced mobile API client; `eea476e` adds the
+  Profile-linked screen with empty, loading, pull-to-refresh and safe recovery states.
+- Passed: backend F/E9 lint, Python compilation and the focused PostgreSQL
+  analytics suite (**2 passed**); mobile TypeScript. The full mobile Node run
+  has the pre-existing ignored-public-config assertion failure; all other 71
+  tests passed. GitHub’s Backend lint and tests and Mobile typecheck and tests
+  checks are green. No migration, production content, production user data,
+  release version or deployment belongs in this PR.
+- Review corrections: `271b097` keeps the back control in the conventional left
+  position and formats server-supplied local activity dates without using the
+  device timezone. `79f551a` adds profile-timezone window bounds before activity
+  grouping; `f43054e` disambiguates the generated date series, with the real
+  PostgreSQL integration test proving the endpoint now returns its contract.
+- PR [#291](https://github.com/Coding-Moves/one-concept/pull/291) targets
+  `develop` and declares `Closes #258`. It is ready for review; no merge,
+  release or deployment action has been taken.
+- The exact Expo SDK 57 documentation was reviewed before mobile work. The
+  screen uses existing React Native primitives and project UI components; no
+  native dependency is needed.
+
+### #259 expanded achievements — merged
+
+- Scope: extend permanent, optional recognition beyond streaks without changing
+  the daily-learning, streak or offline-write contracts. Definitions cover
+  concepts, reviews, distinct weekly quizzes, perfect weekly scores and distinct
+  completed learning paths; no leaderboard, adaptive score or client-side award
+  exists.
+- `33af2e5` adds migration `0027`, definition metadata, source constraints and
+  a historical backfill. `c251da0` adds the shared server evaluator, confirmed
+  progress response and weekly-quiz transaction integration. `73d3542` makes
+  the mobile collection show every category and its server-confirmed nearest
+  target while retaining account fencing and one-time acknowledgement.
+- PostgreSQL coverage proves threshold dates, quiz retry deduplication, exact
+  perfect scoring, distinct-subtopic counting, RLS denial and category progress.
+  The schema contract was regenerated from a disposable PostgreSQL 16 instance.
+  Mobile TypeScript passed; all mobile Node tests passed except the pre-existing
+  ignored-public-config assertion, caused by this checkout intentionally lacking
+  a public API URL. No production migration, user-data change, deployment,
+  version or release configuration has occurred.
+- Review correction: `eca8237` removes an unused test import and restores the
+  service import ordering so the backend's required F/E9 lint check stays clean.
+- PR [#290](https://github.com/Coding-Moves/one-concept/pull/290) was merged by
+  the owner. Staging must apply and verify migration `0027` before production;
+  do not add it to `backend/migrations/applied.txt` until actual production
+  verification.
+
+### #262 optional repeatable subtopic quizzes — ready for review
+
+- Scope: provide an optional, Profile-linked quiz only after a server-confirmed
+  subtopic completion. It remains separate from the weekly cross-concept quiz,
+  daily learning, streaks, achievements and release configuration.
+- `66c2ba5` adds the immutable quiz/attempt storage; `81d1fc2` adds the
+  server-owned snapshot, scoring, protected endpoints and integration coverage;
+  `f0dfb86` records the reviewed schema contract. `bfc3b40` covers Profile’s
+  completion-ID contract; `544c0a2` adds the dedicated mobile list/detail
+  screens; `6f889b4` adds composite database ownership constraints and a
+  cross-account regression; `8153f7a` rejects unknown history IDs and uses
+  lint-clean typed FastAPI dependencies.
+- A quiz freezes one deterministic reviewed MCQ per selected completed concept,
+  up to seven. It stores source slug/version and answer key in the server-only
+  snapshot. Later content changes cannot alter an existing quiz; each retry
+  appends a score and selected-answer record, while history keeps prior scores.
+  The feature honestly reports unavailable until enough reviewed MCQs exist.
+- Passed: full disposable PostgreSQL backend suite; focused quiz/completion/
+  weekly-quiz coverage (**13 passed**); regenerated schema contract; mobile
+  TypeScript and all **71** Node tests. No production migration, user-data
+  change, deployment, app-version or release configuration was performed.
+- PR: [#289](https://github.com/Coding-Moves/one-concept/pull/289) targets
+  `develop` and declares `Closes #262`. Obtain normal review and staging
+  validation before any merge.
+
+### #261 server-authoritative subtopic completion — ready for review
+
+- Scope: detect completion against every currently published concept in an
+  active subtopic, show one quiet confirmation after the accepted daily write,
+  and expose server-derived path progress in Profile. Topic follows remain a
+  recommendation preference and do not alter the completion boundary.
+- `ab98efa` adds the dedicated consumption/event schema and historical
+  backfill. `d1d914e` evaluates and persistently deduplicates an exact catalog
+  completion under the existing profile lock, returns it from daily completion,
+  and adds protected progress/acknowledgement APIs. `81affb6` adds the
+  confirmation card and Profile summary. `2f6c444`, `69fa871`, and `3d095b7`
+  isolate catalog-growth tests, refresh the generated schema contract, and
+  cover the HTTP contract.
+- Review correction: `565ef8d` adds `0024` to backfill already-complete
+  subtopics for existing users as seen historical events; `375a2de` refreshes
+  its generated schema contract. This prevents the Profile from incorrectly
+  showing a previously finished path as active forever.
+- A catalog event stores the sorted published concept IDs plus a stable
+  signature. Adding a new published concept makes the current path active
+  again; revising existing material does not. Empty or retired subtopics are
+  not reported as completed. Reviews do not add concept consumption.
+- Passed: PostgreSQL 16 focused completion/API/schema suite, including exact
+  boundary, replay, catalog growth, concurrent-device serialization and RLS;
+  mobile TypeScript. The complete mobile Node suite has one pre-existing local
+  public-config failure because this checkout’s ignored `.env` intentionally
+  omits an anonymous key. No production migration, production data, deployment
+  or release configuration changed.
+- Next: push the dedicated `develop` PR with `Closes #261`. #259 will consume
+  the completion-event data for achievement definitions; #262 will consume it
+  for the optional subtopic quiz. They intentionally remain separate.
+
+### #263 remote content-review dashboard — planning complete
+
+- Assigned scope: refine the parent issue and create dedicated sub-issues for
+  invited reviewer access, versioned human approval, review APIs, bounded AI
+  revisions, the branded web workspace, email deadlines, learner attribution
+  and free frontend deployment. This is issue planning, not implementation.
+- Reuse the existing editorial services and coordinate with #264 quality,
+  #255 staging, #256/#257 content packages and #171 email delivery. Preserve
+  existing published lessons without inventing reviewer provenance; new
+  content must pass exact-version human approval before learner publication.
+- Recommend static React/TypeScript/Vite on Cloudflare Pages Free with the
+  existing FastAPI/Supabase stack. Free frontend hosting does not remove
+  backend, AI or email quotas/costs. No paid setup or live deployment performed.
+- Delivery boundary: one focused future PR per child with small coherent
+  commits; no application-code commit is planned for this tracker-only task.
+  The unrelated mobile UI changes in the owner checkout remain untouched.
+- Updated [#263](https://github.com/Coding-Moves/one-concept/issues/263) and
+  created native sub-issues #274–#281 in the order above. Read-back verified
+  every body, all eight parent-child links and Muawiya-contact authorship.
+  Existing related issues remain separate dependencies. Whitespace check
+  passed; no application tests were needed because this task changes no code.
+- Next implementation slice: #274 reviewer identity plus the #275 provenance
+  contract, each in its own focused PR. Deadline length and email sender
+  feasibility remain explicit setup decisions. This local work-log note is
+  uncommitted; no unrelated branch or production setting was changed.
+
+### #273 cohesive mobile UI/UX refinement — in progress
+
+- Scope: one dedicated mobile PR that builds on the merged #271 readability
+  fixes. It will establish a small shared visual foundation, apply it across
+  learning, collections, progress, profile, authentication and recovery
+  surfaces, and preserve the existing account, offline and API behaviours.
+- Planned commits: visual tokens and shared feedback primitives; learning and
+  collection screens; progress and profile/account surfaces; accessibility and
+  regression coverage; then the PR handoff. No native dependency, release
+  version, backend, schema or production change is part of this work.
+- Expo SDK 57 documentation was reviewed before mobile implementation. The
+  project can use the built-in React Native Animated API for short motion, so
+  this work will not add a native animation dependency.
+- Related issue #271 is already merged through PR #272. This PR must retain
+  those fixes and close #273 only; it must not claim to close an issue that is
+  already closed.
+- `24418cf` adds the semantic visual foundation, shared screen/surface
+  components, 44-point primary/follow controls, reduced-motion-aware tap
+  feedback, and the refined Today hierarchy. `83fe5de` clarifies Stats;
+  `a4e2ea2` refines History/Saved collection feedback; `2bbc20a` aligns
+  auth/profile states; `e41d649` aligns personalisation and About;
+  `0bc2ae3` replaces the recovery loop with a short entrance motion and makes
+  paused-sync recovery explicit. `86bbef6` updates the mocked browser coverage;
+  `3dd6a3e` guards feedback and subtle-surface contrast in both themes.
+- Passed: mobile TypeScript and all **69 Node 24** tests. A clean dummy-config
+  web export was produced at `/tmp/one-concept-273-web-final`; no production
+  service or user data was used. The optional mocked-browser scripts could not
+  run locally because Playwright is not installed. Android/iOS physical-device
+  checks for system font/display scaling, TalkBack/VoiceOver and reduced motion
+  remain required before release.
+- Next: push the dedicated branch and open a `develop` PR with `Closes #273`.
+
+### #271 mobile readability and collection layout — ready for review
+
+- [PR #272](https://github.com/Coding-Moves/one-concept/pull/272) targets
+  `develop` from `codex/271-mobile-ui-readability` and closes #271 on merge.
+  Started from `1d77a34`; unrelated owner-checkout work was preserved.
+- `0f6c718` improves theme contrast and thin component outlines; `198b87a`
+  replaces catalog fractions/bars with learned-only Stats and compact reviews.
+  `a43cc05` adds signed-in top/side safe-area ownership and prevents Saved filter
+  compression; `fa0949f` preserves unavailable review totals rather than zero;
+  `aad36e0` wraps narrow Saved headings; `9d655c4` adds browser regression coverage.
+- Reviewed Expo SDK 57 and safe-area-context documentation. Zero reviews is
+  valid when no assigned review was completed; reading new or saved lessons
+  does not increment it. No production user data was inspected.
+- Passed: TypeScript, all 68 Node 24 tests, dummy-config web export, new
+  light/dark readability browser scenario, existing review, History and
+  learning-UI browser scenarios, and whitespace checks. Review tests cover
+  deduplication, offline restart/reconnect and unchanged unique learned totals.
+  New UI checks cover catalog growth, older-topic aggregates, zero/nonzero/
+  unavailable review totals, Saved search/filtering and 320px enlarged chips.
+- Generated eight local screenshots in `/tmp/one-concept-271-screens`; inspected
+  Today, Stats and enlarged Saved output. Physical Android/iOS safe areas,
+  native font/display scaling and screen readers remain manual acceptance;
+  browser enlargement does not prove native behavior. Device checklist is in
+  `mobile/tests/README.md`. Backend tests were not run locally: no backend changed.
+- Review follow-up: merged develop `4cebf61` in `c086e2b`, preserving both work-log
+  entries and all commits. `10ba0cd` responds to the owner's visual feedback with
+  shared half-point outlines, including Stats, action groups and navigation.
+  `b7f4acd` fixes an identified review edge case: offline completion must preserve
+  an unavailable lifetime review total, not fabricate one. Its regression covers
+  replay, repeated completion and rollback.
+- Revalidated: TypeScript, 69 Node tests, web export, both-theme readability and
+  review browser scenarios. The PR description carries the current validation
+  and remaining native-device checks. No remaining blocking code finding was
+  identified in the reviewed mobile diff.
+- Final owner design supersedes the earlier broad-outline approach: retain a
+  0.5-point border only on Today's green completion pill. Other UI containers,
+  filters, inputs, action groups and navigation are borderless; existing badge
+  illustrations retain their artwork. Removed the broad outline token and
+  updated browser assertions to require borderless cards/filters/search.
+- No native dependency/runtime/version, schema, production deployment or release
+  change. Hosted PR checks are pending at handoff. Keep commits separate;
+  merge requires owner confirmation. Final bookkeeping commit updates this log
+  and the codebase map.
+
+
+### #260 topic and subtopic taxonomy — in progress
+
+- Scope: a dedicated PR for the first item in the owner-approved sequence. It
+  gives the existing five topics a durable, parent-scoped subtopic registry and
+  classifies every existing published lesson and planned backlog item. New
+  plans, generated drafts and editorial revisions must carry that category.
+- Commits: `bedf72a` adds the taxonomy migration, SQLAlchemy mirror and curated
+  registry. `52d7ec9` classifies legacy backlog and carries subtopics through
+  curriculum import, generation and review. `3604f2d` exposes the category in
+  daily/concept responses while preserving already assigned material if a
+  subtopic is retired.
+- Validation: Python compilation and whitespace checks passed. Focused
+  generation checks passed (**17 passed**). The focused PostgreSQL-backed
+  curriculum/publication/selection/year checks were collected but skipped
+  (**20 skipped**) because Podman is not installed locally; GitHub's disposable
+  PostgreSQL 16 quality gate remains required evidence. No production migration,
+  deployment, release, or app update has occurred.
+- PR: [#270](https://github.com/Coding-Moves/one-concept/pull/270) targets
+  `develop` and uses `Fixes #260`; it remains open for owner review.
+- Review follow-up: GitHub's PostgreSQL suite exposed temporary-topic teardown
+  failures because the test fixture adds a subtopic. `0019` makes only an
+  otherwise deletable topic cascade to its private taxonomy; populated topics
+  remain protected by the existing content and user-topic foreign keys.
+- Second review follow-up: after #269 became the current base, its schema gate
+  correctly rejected the taxonomy migrations until the reviewed contract
+  included subtopics and `0017`–`0019`. The temporary retirement regression now
+  restores its fixture subtopic after the daily-selection function commits.
+- Local verification after those corrections: full disposable PostgreSQL 16
+  backend suite passed (**217 passed**, no skips); Ruff on the changed schema
+  verifier and regression test passed. Await the hosted rerun before treating
+  the PR as green.
+- Next: review the PR and its PostgreSQL quality-gate result; do not merge or
+  apply the migration until the owner approves it.
+### #165 verify deployed schema — dedicated fix
+
+- Owner requested a focused PR independent of deferred VM draft #231. Branch
+  starts at develop 61efc97; the VM draft and its history remain untouched.
+- `82f221b` extracts the read-only metadata contract/verifier with negative
+  database and credential-redaction tests. `7bb42af` packages it in the Railway
+  image and legacy pre-deploy config. `3d7083a` adds a main-only protected check
+  and makes Release OTA depend on it; ordinary PRs receive no production secret.
+- Final review also preserves libpq `sslmode` as asyncpg's `ssl`, with connection
+  and TLS-policy regressions. No SQL is applied and the ledger is unchanged.
+- Passed: full backend suite 213 tests, zero skips, on disposable PostgreSQL 16;
+  nine Node 24 release-revision tests; Ruff F/E9; Actionlint for all three changed
+  workflows; local documentation links and whitespace checks. Follow-up URL
+  normalization passed all 20 focused schema tests, zero skips. Docker build and packaged
+  checker smoke passed for healthy schema, missing claimed_at and absent URL.
+- Production was not accessed. The owner must configure GitHub environment
+  production-schema (main-only, protected, PRODUCTION_SCHEMA_DIRECT_URL secret)
+  and Railway pre-deploy command on each service. Missing GitHub configuration
+  blocks the new Release flow; merging cannot set dashboard protection rules.
+- The contract checks required schema, not seed/backfill contents or migration
+  execution history. PostgreSQL-version differences need reviewed investigation.
+  Operating instructions and draft #231 reconciliation are in
+  [SCHEMA_VERIFICATION.md](SCHEMA_VERIFICATION.md).
+- Documentation/handoff commit: `docs: explain schema gate setup and validation`.
+- Opened [PR #269](https://github.com/Coding-Moves/one-concept/pull/269) against
+  develop with `Closes #165`. Five focused implementation/documentation commits
+  preserve the scope; no PR merge, deployment or source-draft modification.
+  Hosted PR checks are pending at opening. This handoff commit records the PR.
+
 ### PR quality-gate PostgreSQL readiness follow-up — ready for review
 
 - GitHub-hosted CI exposed a real fixture race: `pg_isready` could succeed against the official PostgreSQL image's temporary initialization server, which then stopped before the migration harness ran.
@@ -1129,3 +2114,32 @@ Copy this structure when a task is assigned; replace placeholders with facts.
 - **Validation (passed / failed / skipped / not run):**
 - **Remaining work or blockers:**
 - **Handoff / next step:**
+
+### #264 production content-quality gate — in progress
+
+- Investigation confirmed #260 is merged into `develop`; the current pipeline
+  classified topics/subtopics and preserved a human publication gate, but only
+  generated a summary/example and recorded a free-form review note. It could
+  not demonstrate review of flashcards, three MCQs, sensitive-topic handling,
+  or each quality criterion.
+- `bdda622` adds strict generated learning-package validation: one non-repetitive
+  flashcard, exactly three distinct MCQs, four distinct options per question,
+  and a valid answer index. Gemini receives the matching structured-output
+  schema; malformed output remains a draft-generation failure. `ece01fa` adds
+  immutable backend-only quality-review evidence to each approved revision and
+  requires the protected CLI publish command to read the complete checklist.
+- The gate validates structure and records human judgment; it never claims that
+  automation proves factual accuracy. Existing published content is untouched.
+- Passed locally: focused generation and quality tests (19 passed, 13 database
+  tests skipped before disposable PostgreSQL startup), then the disposable
+  PostgreSQL 16 schema-contract migration test. Next: run the publication and
+  full backend tests, add the operations checklist, push and open the dedicated
+  `develop` PR with `Closes #264`.
+
+
+### #257 weekly quiz — draft PR in progress
+
+- [PR #286](https://github.com/Coding-Moves/one-concept/pull/286) targets `develop` and uses `Closes #257`. It remains a draft while final validation and review are completed.
+- `b38aaf2` stores reviewed MCQs with published concepts, backfills exact-version approved revisions, and adds frozen weekly quiz/append-only attempt tables with the schema contract. `574de6b` adds the authenticated server selection and scoring endpoints plus PostgreSQL integration coverage. `32edf5c` adds the mobile Quiz tab with eligibility, seven answer choices, result feedback and reattempts.
+- Passed: disposable PostgreSQL 16 focused schema/publication/quiz tests (**16 passed**) and mobile TypeScript. The full mobile suite reported **70 passed, 1 failed** in the unrelated public-config subprocess test; a focused rerun also failed without its expected diagnostics.
+- No production migration, deployment, release version or OTA update has occurred. Next: inspect the final diff and hosted CI, resolve any actionable review finding, then mark the PR ready for owner review.

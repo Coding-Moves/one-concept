@@ -8,6 +8,8 @@ import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
+import { SubtopicCompletionCard } from '../components/SubtopicCompletionCard';
+import { ScreenHeader } from '../components/ScreenHeader';
 import { StreakBadge } from '../components/StreakBadge';
 import { UnavailableState } from '../components/UnavailableState';
 import { useAuth } from '../context/AuthContext';
@@ -15,7 +17,8 @@ import { useOnline } from '../context/ConnectivityContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { toConcept } from '../services/dailyApi';
-import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors, typography } from '../theme';
+import { greetingFor } from '../services/greeting';
+import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 
 export function TodayScreen() {
   const {
@@ -25,6 +28,7 @@ export function TodayScreen() {
     hasLearned,
     learnedToday,
     streaks,
+    progress,
     markLearned,
     completeReview,
     refresh,
@@ -54,6 +58,7 @@ export function TodayScreen() {
   const done = review ? outcome.payload.learned : learnedToday || (!!serverConcept && hasLearned(serverConcept.id));
   const loading = localLoading;
   const exhausted = outcome?.status === 'exhausted';
+  const greeting = greetingFor(new Date(), progress.timezone, progress.displayName);
   const offline = (outcome?.status === 'ok' || outcome?.status === 'review') && outcome.stale;
   const outsideTopics =
     outcome?.status === 'ok' && outcome.payload.outside_followed_topics;
@@ -61,24 +66,26 @@ export function TodayScreen() {
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
       {refreshUI.action}
-      <View style={styles.header}>
-        <View style={styles.headerText}>
-          <Text style={styles.appName}>One Concept</Text>
-          <Text style={styles.tagline}>One day. One concept. One small step forward.</Text>
-        </View>
-        <Pressable
-          onPress={toggle}
-          style={({ pressed }) => [styles.themeButton, pressed && styles.themeButtonPressed]}
-          accessibilityRole="button"
-          accessibilityLabel={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          <Ionicons
-            name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
-            size={scaleIcon(20)}
-            color={colors.textSecondary}
-          />
-        </Pressable>
-      </View>
+      <ScreenHeader
+        eyebrow="Daily learning"
+        title={greeting}
+        large
+        subtitle="One day. One concept. One small step forward."
+        action={(
+          <Pressable
+            onPress={toggle}
+            style={({ pressed }) => [styles.themeButton, pressed && styles.themeButtonPressed]}
+            accessibilityRole="button"
+            accessibilityLabel={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          >
+            <Ionicons
+              name={mode === 'dark' ? 'sunny-outline' : 'moon-outline'}
+              size={scaleIcon(20)}
+              color={colors.textSecondary}
+            />
+          </Pressable>
+        )}
+      />
 
       {loading ? (
         <>
@@ -141,10 +148,13 @@ export function TodayScreen() {
           ) : null}
 
           {concept && (done ? (
-            <View style={styles.doneBox}>
-              <Ionicons name="checkmark-circle" size={scaleIcon(20)} color={colors.success} />
-              <Text style={styles.doneText}>{review ? "Review complete — your learning day counts." : "Learned today — see you tomorrow!"}</Text>
-            </View>
+            <>
+              <View style={styles.doneBox}>
+                <Ionicons name="checkmark-circle" size={scaleIcon(20)} color={colors.success} />
+                <Text style={styles.doneText}>{review ? "Review complete — your learning day counts." : "Learned today — see you tomorrow!"}</Text>
+              </View>
+              {!review && progress.recentSubtopicCompletion ? <SubtopicCompletionCard completion={progress.recentSubtopicCompletion} /> : null}
+            </>
           ) : (
             <PrimaryButton
               label={review ? "Complete review" : "Mark as learned"}
@@ -175,32 +185,10 @@ const createStyles = (colors: ThemeColors) =>
       paddingBottom: spacing.xl,
       gap: spacing.lg,
     },
-    header: {
-      flexDirection: 'row',
-      alignItems: 'flex-start',
-      justifyContent: 'space-between',
-      gap: spacing.md,
-    },
-    headerText: {
-      gap: spacing.xs,
-      flexShrink: 1,
-    },
-    appName: {
-      ...typography.title,
-      fontSize: scaleFont(30),
-      color: colors.text,
-    },
-    tagline: {
-      fontSize: scaleFont(13.5),
-      lineHeight: scaleFont(19),
-      color: colors.textMuted,
-    },
     themeButton: {
-      width: 40,
-      height: 40,
+      width: 44,
+      height: 44,
       borderRadius: radius.pill,
-      borderWidth: 1,
-      borderColor: colors.border,
       backgroundColor: colors.surface,
       alignItems: 'center',
       justifyContent: 'center',
@@ -231,8 +219,6 @@ const createStyles = (colors: ThemeColors) =>
       alignItems: 'center',
       gap: spacing.sm,
       backgroundColor: colors.surface,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
       borderRadius: radius.md,
       paddingHorizontal: spacing.md,
       paddingVertical: spacing.sm + 2,
@@ -250,6 +236,8 @@ const createStyles = (colors: ThemeColors) =>
       justifyContent: 'center',
       gap: spacing.sm,
       backgroundColor: colors.successSurface,
+      borderWidth: 0.5,
+      borderColor: colors.successBorder,
       borderRadius: radius.pill,
       paddingVertical: spacing.md + 2,
       // Room for the pill's curve — without this, long text pushed the icon

@@ -15,3 +15,13 @@ async def test_privacy_policy_is_public_and_contains_required_contact_informatio
     assert "contactmuawia@gmail.com" in response.text
     assert "Expo push token" in response.text
     assert "advertising" in response.text
+
+
+async def test_confirmation_landing_is_public_and_tells_verified_users_to_return_to_app():
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get("/confirmed")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/html")
+    assert "Email confirmed" in response.text
+    assert "One Concept" in response.text

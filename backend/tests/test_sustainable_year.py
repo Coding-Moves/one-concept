@@ -7,14 +7,27 @@ from unittest.mock import AsyncMock
 from sqlalchemy import text
 
 from app.services import pool, selection
+from app.services.content_quality import QualityReview
 from app.services.curriculum import PlannedLesson, import_lessons
 from app.services.generation import GeneratedConcept
 from app.services.interactions import complete_today, set_followed_topics
-from app.services.publication import publish_revision
+from tests.editorial_helpers import approve_and_publish as publish_revision
 from app.services.reviews import complete_review
 from app.services.selection import get_or_create_daily
 from app.services.streaks import compute_streaks
 from app.services.supply import signal_reader, target_for
+
+_APPROVED_QUALITY_REVIEW = QualityReview.model_validate({
+    "factual_accuracy": True,
+    "usefulness": True,
+    "clarity": True,
+    "topic_subtopic_accuracy": True,
+    "example_quality": True,
+    "flashcard_quality": True,
+    "mcq_quality": True,
+    "references_checked": True,
+    "sensitive_topic_handling": "not_applicable",
+})
 
 
 async def test_three_readers_learn_for_a_year_through_refills_and_outages(
@@ -83,6 +96,7 @@ async def test_three_readers_learn_for_a_year_through_refills_and_outages(
                 lesson = PlannedLesson(
                     slug=slug,
                     topic_slug=topic.slug,
+                    subtopic_slug="core-concepts",
                     title=f"Simulation objective {offset}",
                     curriculum={
                         "objective": f"Explain the distinct simulated behaviour numbered {offset}",
@@ -133,6 +147,7 @@ async def test_three_readers_learn_for_a_year_through_refills_and_outages(
                     rid,
                     "Fixture reviewer",
                     "Verified simulated lesson and source for the yearly regression.",
+                    _APPROVED_QUALITY_REVIEW,
                 )
                 await session.commit()
             for uid in users:
@@ -171,18 +186,19 @@ async def test_three_readers_learn_for_a_year_through_refills_and_outages(
         await session.execute(
             text("delete from auth.users where id=any(:ids)"), {"ids": users}
         )
+        # Retain immutable review evidence; retire this synthetic catalog instead
+        # of deleting the revisions referenced by authenticated approvals.
         await session.execute(
-            text(
-                "delete from public.concept_revisions where concept_id in (select id from public.concepts where slug like :p)"
-            ),
+            text("update public.concepts set status='archived' where slug like :p"),
+            {"p": prefix + "%"},
+        )
+        await session.execute(
+            text("update public.topics set is_active=false where slug like :p"),
             {"p": prefix + "%"},
         )
         await session.execute(
             text("delete from public.concept_backlog where slug like :p"),
             {"p": prefix + "%"},
-        )
-        await session.execute(
-            text("delete from public.concepts where slug like :p"), {"p": prefix + "%"}
         )
         await session.execute(text("delete from public.content_supply_targets"))
         await session.commit()

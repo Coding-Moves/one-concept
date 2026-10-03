@@ -1,6 +1,6 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ApiError, apiRequest, apiRetryDelay } from '../api/client';
-import type { Category, DailyPayload, ReviewPayload, ProgressState } from '../types';
+import type { Category, DailyPayload, ReviewPayload, ProgressState, SubtopicCompletion } from '../types';
 import { todayKey } from './dates';
 import { cacheSavedConcepts, conceptCache } from './conceptApi';
 import { toConcept } from './dailyApi';
@@ -51,6 +51,8 @@ interface StatePayload {
 
 function toProgressState(payload: StatePayload): ProgressState {
   return {
+    displayName: payload.display_name,
+    timezone: payload.timezone,
     learned: payload.learned.map((r) => ({
       conceptId: r.concept_slug,
       date: r.learned_on,
@@ -81,7 +83,7 @@ function toProgressState(payload: StatePayload): ProgressState {
       current: payload.stats.current,
       longest: payload.stats.longest,
       totalLearned: payload.stats.total_learned,
-      totalReviews: payload.stats.total_reviews ?? 0,
+      totalReviews: payload.stats.total_reviews,
     },
     // Today's concept, folded in (#102). A fresh fetch is never "stale"; the
     // offline flag is set only when load() falls back to cache after a failure.
@@ -167,6 +169,15 @@ export class RemoteProgressRepository implements ProgressRepository {
     }
   }
 
+  async updateDisplayName(name: string, userId: string): Promise<ProgressState> {
+    const epoch = this.epoch;
+    const payload = await this.request<StatePayload>(epoch, '/v1/me?compact=true', {
+      method: 'PATCH', body: { display_name: name }, expectedUserId: userId,
+    });
+    if (epoch !== this.epoch) throw new ApiError(401, 'Account changed');
+    return this.fromState(payload, epoch);
+  }
+
   async load(): Promise<ProgressState> {
     const epoch = this.epoch;
     try {
@@ -207,6 +218,7 @@ export class RemoteProgressRepository implements ProgressRepository {
       completed: boolean;
       assigned_for: string;
       stats: { current: number; longest: number; total_learned: number; total_reviews?: number };
+      subtopic_completion?: SubtopicCompletion | null;
     };
     try {
       done = await this.request(epoch, '/v1/daily/complete', { method: 'POST' });
@@ -242,7 +254,8 @@ export class RemoteProgressRepository implements ProgressRepository {
     // guess (the caller's concept id, no title). Without this the History tab
     // only caught up on a full reload, i.e. an app restart (issue #91).
     try {
-      return await this.fromState(await this.request<StatePayload>(epoch, '/v1/me/state?compact=true&reviews=true'), epoch);
+      const state = await this.fromState(await this.request<StatePayload>(epoch, '/v1/me/state?compact=true&reviews=true'), epoch);
+      return done.subtopic_completion ? { ...state, recentSubtopicCompletion: done.subtopic_completion } : state;
     } catch {
       // The completion already persisted; a failed reload must not roll it back.
       // Patch in place using the caller's concept id (the cached assignment can
@@ -251,16 +264,19 @@ export class RemoteProgressRepository implements ProgressRepository {
       const learned = this.cache.learned.some((r) => r.date === done.assigned_for)
         ? this.cache.learned
         : [...this.cache.learned, { conceptId, date: done.assigned_for }];
-      return this.remember({
+      const state = await this.remember({
         ...this.cache,
         learned,
         stats: {
           current: done.stats.current,
           longest: done.stats.longest,
           totalLearned: done.stats.total_learned,
-          totalReviews: done.stats.total_reviews ?? this.cache.stats?.totalReviews ?? 0,
+          totalReviews: done.stats.total_reviews ?? this.cache.stats?.totalReviews,
         },
       }, epoch);
+      // A completion notice is transient: keep it out of the account cache so
+      // an app restart cannot celebrate an event a second time.
+      return done.subtopic_completion ? { ...state, recentSubtopicCompletion: done.subtopic_completion } : state;
     }
   }
 

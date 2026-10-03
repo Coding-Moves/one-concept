@@ -19,10 +19,10 @@ from app.services.curriculum import (
     Subject,
     import_lessons,
     import_subjects,
+    import_subtopics,
 )
 from app.services.publication import (
     LessonBody,
-    publish_revision,
     retry_failed,
     stage_revision,
 )
@@ -31,7 +31,7 @@ from app.services.publication import (
 def parser():
     root = argparse.ArgumentParser(description=__doc__)
     sub = root.add_subparsers(dest="command", required=True)
-    for name in ("import-subjects", "import-curriculum", "revise-plan"):
+    for name in ("import-subjects", "import-subtopics", "import-curriculum", "revise-plan"):
         p = sub.add_parser(name)
         p.add_argument("file", type=Path)
     p = sub.add_parser(
@@ -53,6 +53,9 @@ def parser():
         p.add_argument("revision", type=uuid.UUID)
         p.add_argument("--reviewed-by", required=True)
         p.add_argument("--note", required=True)
+        if name == "publish":
+            p.add_argument("--quality-review", required=True, type=Path,
+                           help="JSON human-review checklist for this exact draft")
     p = sub.add_parser("retry")
     p.add_argument("slug")
     p.add_argument("--operator", required=True)
@@ -82,6 +85,13 @@ async def run(args):
                         args.file.read_text()
                     )
                     result = {"subjects": await import_subjects(session, rows)}
+                elif args.command == "import-subtopics":
+                    from app.services.curriculum import Subtopic
+
+                    rows = TypeAdapter(list[Subtopic]).validate_json(
+                        args.file.read_text()
+                    )
+                    result = {"subtopics": await import_subtopics(session, rows)}
                 elif args.command in ("import-curriculum", "revise-plan"):
                     rows = TypeAdapter(list[PlannedLesson]).validate_json(
                         args.file.read_text()
@@ -102,27 +112,11 @@ async def run(args):
                             )
                         )
                     }
-                elif args.command == "publish":
-                    result = {
-                        "version": await publish_revision(
-                            session, args.revision, args.reviewed_by, args.note
-                        )
-                    }
-                elif args.command == "reject":
-                    if not args.reviewed_by.strip() or len(args.note.strip()) < 10:
-                        raise ValueError("Record reviewer and rejection reason")
-                    count = await session.scalar(
-                        text("""with changed as (
-                      update public.concept_revisions set status='rejected',reviewed_at=now(),
-                        reviewed_by=:who,review_note=:note where id=:id and status='draft' returning id
-                      ) select count(*) from changed"""),
-                        {
-                            "id": args.revision,
-                            "who": args.reviewed_by,
-                            "note": args.note,
-                        },
+                elif args.command in ("publish", "reject"):
+                    raise ValueError(
+                        "Free-text reviewer decisions are disabled. Use authenticated "
+                        "editorial HTTP actions with a current reviewer token. See docs/editorial-api.md."
                     )
-                    result = {"rejected": count}
                 elif args.command == "retry":
                     await retry_failed(session, args.slug, args.operator, args.reason)
                     result = {"retry_granted": args.slug}

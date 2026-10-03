@@ -20,6 +20,9 @@ from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 # insulates the suite from whatever the developer has configured locally.
 # With a real key and GENERATION_ENABLED=true in .env, selection would call
 # the actual Gemini API instead of reporting exhaustion.
+os.environ["OWNER_TELEMETRY_ENABLED"] = "false"
+os.environ["EDITORIAL_EMAIL_ENABLED"] = "false"
+os.environ["EDITORIAL_GMAIL_REFRESH_TOKEN"] = ""
 os.environ["GENERATION_ENABLED"] = "false"
 os.environ["GEMINI_API_KEY"] = ""
 os.environ["GENERATION_DAILY_CALL_CAP"] = "200"
@@ -37,11 +40,43 @@ create schema auth;
 create table auth.users (
   id uuid primary key default gen_random_uuid(),
   email text,
+  email_confirmed_at timestamptz,
+  banned_until timestamptz,
   raw_user_meta_data jsonb
+);
+create table auth.sessions (
+  id uuid primary key,
+  user_id uuid not null references auth.users(id) on delete cascade,
+  not_after timestamptz
 );
 create or replace function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
+"""
+
+# Older tests create isolated topics with compact raw SQL. Keep that setup
+# focused on the behavior under test while production rejects unclassified
+# writes: only the disposable test database assigns its fixture rows to a
+# private Core Concepts subtopic.
+TEST_TAXONOMY_STUB = """
+create or replace function public.test_assign_core_subtopic() returns trigger
+language plpgsql as $$
+begin
+  if new.subtopic_id is null then
+    insert into public.subtopics(topic_id,slug,name)
+    values (new.topic_id, 'core-concepts', 'Core Concepts')
+    on conflict(topic_id,slug) do nothing;
+    select id into new.subtopic_id from public.subtopics
+     where topic_id=new.topic_id and slug='core-concepts';
+  end if;
+  return new;
+end $$;
+create trigger test_assign_concept_subtopic
+before insert on public.concepts for each row
+execute function public.test_assign_core_subtopic();
+create trigger test_assign_backlog_subtopic
+before insert on public.concept_backlog for each row
+execute function public.test_assign_core_subtopic();
 """
 
 
@@ -87,6 +122,7 @@ def database():
     for migration in sorted(MIGRATIONS.glob("0*.sql")):
         result = _psql(file=migration)
         assert result.returncode == 0, f"{migration.name} failed: {result.stderr[:400]}"
+    assert _psql(sql=TEST_TAXONOMY_STUB).returncode == 0, "taxonomy fixture stub failed"
 
     yield DSN
     subprocess.run(["podman", "rm", "-f", CONTAINER], capture_output=True)

@@ -4,17 +4,27 @@ from datetime import date, datetime
 from pydantic import BaseModel
 
 
+class ReviewAttributionOut(BaseModel):
+    name: str
+    reviewed_at: datetime
+    content_version: int
+
+
 class ConceptOut(BaseModel):
     id: uuid.UUID
     slug: str
     title: str
     summary: str
     example: str | None = None
+    flashcard: dict[str, str] | None = None
     topic_slug: str
     topic_name: str
+    subtopic_slug: str
+    subtopic_name: str
     # Likes from other users; the client adds the viewer's own like.
     like_count: int = 0
     content_version: int = 1
+    review: ReviewAttributionOut | None = None
 
 
 class DailyOut(BaseModel):

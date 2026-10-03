@@ -20,7 +20,13 @@ permissions:
   actions: write # to dispatch the Release APK workflow
 
 jobs:
+  schema:
+    uses: ./.github/workflows/production-schema.yml
+    permissions:
+      contents: read
+
   ota:
+    needs: schema
     runs-on: ubuntu-latest
     defaults:
       run:

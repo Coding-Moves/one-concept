@@ -47,8 +47,6 @@ const createStyles = (colors: ThemeColors) =>
       flexDirection: 'row',
       backgroundColor: colors.surface,
       borderRadius: radius.lg,
-      borderWidth: StyleSheet.hairlineWidth,
-      borderColor: colors.border,
       paddingVertical: spacing.md,
       ...shadows.card,
     },

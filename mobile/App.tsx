@@ -3,6 +3,7 @@ import {
   DarkTheme,
   DefaultTheme,
   NavigationContainer,
+  useNavigationContainerRef,
   Theme,
 } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
@@ -10,9 +11,9 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { SpaceGrotesk_700Bold, useFonts } from '@expo-google-fonts/space-grotesk';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { ComponentProps, useCallback, useRef } from 'react';
+import { ComponentProps, useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { AchievementCelebration } from './src/components/AchievementCelebration';
 import { AppRecoveryBoundary } from './src/components/AppRecoveryBoundary';
 import { ConfigurationState } from './src/components/ConfigurationState';
@@ -28,13 +29,22 @@ import { useWhatsNew } from './src/hooks/useWhatsNew';
 import { AuthScreen } from './src/screens/AuthScreen';
 import { HistoryScreen } from './src/screens/HistoryScreen';
 import { AchievementsScreen } from './src/screens/AchievementsScreen';
+import { AnalyticsScreen } from './src/screens/AnalyticsScreen';
 import { AboutScreen } from './src/screens/AboutScreen';
 import { ConceptDetailScreen } from './src/screens/ConceptDetailScreen';
 import { PersonalizationScreen } from './src/screens/PersonalizationScreen';
+import { ConnectionsScreen } from './src/screens/ConnectionsScreen';
+import { WeeklyQuizNotificationNavigator } from './src/components/WeeklyQuizNotificationNavigator';
+import { PublicProfileLink } from './src/components/PublicProfileLink';
+import { ProfileSharingScreen } from './src/screens/ProfileSharingScreen';
+import { EditProfileScreen } from './src/screens/EditProfileScreen';
 import { ProfileScreen, ProfileStackParamList } from './src/screens/ProfileScreen';
 import { SavedScreen } from './src/screens/SavedScreen';
 import { StatsScreen } from './src/screens/StatsScreen';
+import { SubtopicQuizScreen } from './src/screens/SubtopicQuizScreen';
+import { SubtopicQuizzesScreen } from './src/screens/SubtopicQuizzesScreen';
 import { TodayScreen } from './src/screens/TodayScreen';
+import { WeeklyQuizScreen } from './src/screens/WeeklyQuizScreen';
 import { RootStackParamList } from './src/navigation';
 import { isApiConfigured } from './src/api/client';
 import { isSupabaseConfigured } from './src/lib/supabase';
@@ -52,12 +62,18 @@ function ProfileStackScreen() {
   return (
     <ProfileStack.Navigator screenOptions={{ headerShown: false }}>
       <ProfileStack.Screen name="ProfileHome" component={ProfileScreen} />
+      <ProfileStack.Screen name="EditProfile" component={EditProfileScreen} />
+      <ProfileStack.Screen name="ProfileSharing" component={ProfileSharingScreen} />
+      <ProfileStack.Screen name="Connections" component={ConnectionsScreen} />
       <ProfileStack.Screen
         name="Personalization"
         component={PersonalizationScreen}
         options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
       />
       <ProfileStack.Screen name="Achievements" component={AchievementsScreen} />
+      <ProfileStack.Screen name="Analytics" component={AnalyticsScreen} />
+      <ProfileStack.Screen name="SubtopicQuizzes" component={SubtopicQuizzesScreen} />
+      <ProfileStack.Screen name="SubtopicQuiz" component={SubtopicQuizScreen} />
       <ProfileStack.Screen name="Saved" component={SavedScreen} />
       <ProfileStack.Screen
         name="About"
@@ -79,6 +95,12 @@ function tabIcon(focusedName: IoniconName, name: IoniconName) {
 function ThemedApp() {
   const { colors, mode } = useTheme();
   const { loading, session } = useAuth();
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
+  const [readyAccount, setReadyAccount] = useState<string | null>(null);
+  useEffect(() => { if (loading || !session) setReadyAccount(null); }, [loading, session?.user.id]);
+  const openWeeklyQuiz = useCallback((notificationRequestId: string) => {
+    if (navigationRef.isReady()) navigationRef.navigate('Tabs', { screen: 'Quiz', params: { notificationRequestId } });
+  }, [navigationRef]);
   const whatsNew = useWhatsNew();
   const online = useOnline();
 
@@ -103,6 +125,7 @@ function ThemedApp() {
       <View style={{ flex: 1 }}>
         {!online && <OfflineBanner />}
         <AuthScreen />
+        <PublicProfileLink />
         <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
       </View>
     );
@@ -117,16 +140,18 @@ function ThemedApp() {
       background: colors.background,
       card: colors.surface,
       text: colors.text,
-      border: colors.border,
+      border: 'transparent',
     },
   };
 
   return (
-    <View style={{ flex: 1 }}>
-      {!online && <OfflineBanner />}
+    <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
+      {!online && <OfflineBanner insetTop={false} />}
       <SyncStatusBanner />
+      <PublicProfileLink />
       <View style={{ flex: 1 }}>
-        <NavigationContainer theme={navigationTheme}>
+        <NavigationContainer key={session.user.id} ref={navigationRef} onReady={() => setReadyAccount(session.user.id)} theme={navigationTheme}>
+          <WeeklyQuizNotificationNavigator ready={readyAccount === session.user.id} onOpen={openWeeklyQuiz} />
           <RootStack.Navigator screenOptions={{ headerShown: false }}>
             <RootStack.Screen name="Tabs" component={Tabs} />
             <RootStack.Screen
@@ -142,7 +167,7 @@ function ThemedApp() {
         <WhatsNewCard entry={whatsNew.entry} onDismiss={whatsNew.dismiss} />
       )}
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -158,7 +183,7 @@ function Tabs() {
         tabBarInactiveTintColor: colors.textMuted,
         tabBarStyle: {
           backgroundColor: colors.surface,
-          borderTopColor: colors.border,
+          borderTopWidth: 0,
         },
         tabBarLabelStyle: { fontWeight: '600' },
       }}
@@ -172,6 +197,11 @@ function Tabs() {
         name="History"
         component={HistoryScreen}
         options={{ tabBarIcon: tabIcon('library', 'library-outline') }}
+      />
+      <Tab.Screen
+        name="Quiz"
+        component={WeeklyQuizScreen}
+        options={{ tabBarIcon: tabIcon('help-circle', 'help-circle-outline') }}
       />
       <Tab.Screen
         name="Stats"

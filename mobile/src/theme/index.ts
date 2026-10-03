@@ -11,6 +11,8 @@ export const scaleIcon = (n: number): number => Math.round(n * FONT_SCALE);
 export interface ThemeColors {
   background: string;
   surface: string;
+  /** A quiet inset surface for examples, selected metadata and inline states. */
+  surfaceSubtle: string;
   text: string;
   textSecondary: string;
   textMuted: string;
@@ -21,6 +23,9 @@ export interface ThemeColors {
   offlineText: string;
   success: string;
   successSurface: string;
+  successBorder: string;
+  danger: string;
+  dangerSurface: string;
   streak: string;
   /** The Like heart — deliberately rose, not the streak's orange flame (#114). */
   like: string;
@@ -33,16 +38,20 @@ export interface ThemeColors {
 export const lightColors: ThemeColors = {
   background: '#F4F5FB',
   surface: '#FFFFFF',
+  surfaceSubtle: '#EEF0FF',
   text: '#171923',
   textSecondary: '#565D6D',
-  textMuted: '#8A91A0',
-  primary: '#6366F1',
+  textMuted: '#626B7D',
+  primary: '#5558DB',
   primaryPressed: '#4F46E5',
   onPrimary: '#FFFFFF',
   offlineBackground: '#3730A3',
   offlineText: '#FFFFFF',
-  success: '#16A34A',
+  success: '#137A3A',
   successSurface: '#E9F8EF',
+  successBorder: '#137A3A',
+  danger: '#C81E3A',
+  dangerSurface: '#FFF0F2',
   streak: '#F97316',
   like: '#E11D48',
   border: '#E9EBF4',
@@ -54,16 +63,20 @@ export const lightColors: ThemeColors = {
 export const darkColors: ThemeColors = {
   background: '#0A0C14',
   surface: '#141828',
+  surfaceSubtle: '#1D2242',
   text: '#F1F3F9',
   textSecondary: '#A6ADC0',
-  textMuted: '#6E7688',
+  textMuted: '#A0A9BC',
   primary: '#818CF8',
-  primaryPressed: '#6366F1',
-  onPrimary: '#FFFFFF',
+  primaryPressed: '#A5B4FC',
+  onPrimary: '#0A0C14',
   offlineBackground: '#C7D2FE',
   offlineText: '#1E1B4B',
   success: '#34D399',
   successSurface: '#10291F',
+  successBorder: '#34D399',
+  danger: '#FB7185',
+  dangerSurface: '#3A1520',
   streak: '#FB923C',
   like: '#FB7185',
   border: '#20263D',
@@ -80,6 +93,15 @@ export const spacing = {
   xl: 32,
 };
 
+/** Minimum target size recommended by platform accessibility guidance. */
+export const touchTarget = 44;
+
+/** Short feedback timings keep actions responsive without becoming decoration. */
+export const motion = {
+  quick: 160,
+  standard: 220,
+};
+
 export const radius = {
   sm: 10,
   md: 14,
@@ -88,8 +110,7 @@ export const radius = {
   pill: 999,
 };
 
-/** Soft elevation for borderless cards. Invisible on dark backgrounds, where
- *  the hairline border carries the separation instead. */
+/** Soft elevation for borderless cards; theme surface colors provide separation. */
 export const shadows = {
   card: {
     shadowColor: '#101433',

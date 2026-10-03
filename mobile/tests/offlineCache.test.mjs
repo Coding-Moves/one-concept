@@ -67,3 +67,19 @@ test('failed storage writes do not poison subsequent downloads or cleanup', asyn
   await cache.clear();
   assert.equal(await cache.get('two'), null);
 });
+
+
+test('removal evicts only its lesson and a late denial cannot delete the next account copy', async () => {
+  const storage = disk();
+  const cache = new OfflineCache(storage, 'lessons/');
+  await cache.set('removed', { summary: 'withdrawn text', review: { name: 'Reviewer' } });
+  await cache.set('kept', { summary: 'still available' });
+  await cache.remove('removed');
+  assert.equal(await new OfflineCache(storage, 'lessons/').get('removed'), null);
+  assert.deepEqual(await cache.get('kept'), { summary: 'still available' });
+  const oldAccount = cache.epoch;
+  await cache.clear();
+  await cache.set('kept', { summary: 'next account copy' });
+  await cache.remove('kept', oldAccount);
+  assert.deepEqual(await cache.get('kept'), { summary: 'next account copy' });
+});

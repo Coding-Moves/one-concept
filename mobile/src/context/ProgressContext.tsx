@@ -28,6 +28,7 @@ import { computeStreaks, StreakStats } from '../services/streak';
 export interface ProgressContextValue {
   loading: boolean;
   refresh: () => Promise<void>;
+  updateDisplayName: (name: string) => Promise<void>;
   pausedSyncCount: number;
   retrySync: () => Promise<void>;
   progress: ProgressState;
@@ -254,6 +255,17 @@ export function ProgressProvider({ children, repository: override }: Props) {
 
   // Retry shares the mutation chain, so a refresh cannot overwrite a later tap.
   const refresh = useCallback(() => apply(null, () => repository.load()), [apply, repository]);
+  const updateDisplayName = useCallback(async (name: string) => {
+    if (!userId || !repository.updateDisplayName) throw new Error('Sign in to edit your profile');
+    const epoch = accountEpoch.current;
+    let failure: unknown;
+    await apply(null, async () => {
+      try { return await repository.updateDisplayName!(name, userId); }
+      catch (error) { failure = error; throw error; }
+    });
+    if (epoch !== accountEpoch.current) throw new Error('Account changed');
+    if (failure) throw failure;
+  }, [apply, repository, userId]);
   const retrySync = useCallback(() => apply(null, async () => {
     await retryPaused();
     return repository.flushQueue?.() ?? null;
@@ -377,6 +389,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
     () => ({
       loading,
       refresh,
+      updateDisplayName,
       pausedSyncCount,
       retrySync,
       progress,
@@ -394,6 +407,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
     [
       loading,
       refresh,
+      updateDisplayName,
       pausedSyncCount,
       retrySync,
       progress,

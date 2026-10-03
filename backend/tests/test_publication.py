@@ -3,15 +3,33 @@ import uuid
 from unittest.mock import AsyncMock
 
 import pytest
+
 from app.services import pool
+from app.services.content_quality import QualityReview
 from app.services.curriculum import (
     PlannedLesson,
     Subject,
+    Subtopic,
     import_lessons,
     import_subjects,
+    import_subtopics,
 )
 from app.services.generation import GeneratedConcept
-from app.services.publication import LessonBody, publish_revision, stage_revision
+from app.services.publication import LessonBody, stage_revision
+from tests.editorial_helpers import approve_and_publish as _publish_revision
+
+
+def _approved_review():
+    return QualityReview.model_validate({
+        "factual_accuracy": True, "usefulness": True, "clarity": True,
+        "topic_subtopic_accuracy": True, "example_quality": True,
+        "flashcard_quality": True, "mcq_quality": True, "references_checked": True,
+        "sensitive_topic_handling": "not_applicable",
+    })
+
+
+async def publish_revision(session, revision_id, reviewer, note):
+    return await _publish_revision(session, revision_id, reviewer, note, _approved_review())
 from sqlalchemy import text
 
 
@@ -19,6 +37,10 @@ from sqlalchemy import text
 async def draft(session, monkeypatch, empty_generation_budget):
     slug = "editorial-" + uuid.uuid4().hex
     await import_subjects(session, [Subject(slug=slug, name="Editorial fixture")])
+    await import_subtopics(
+        session,
+        [Subtopic(topic_slug=slug, slug="foundations", name="Foundations")],
+    )
     data = {
         "objective": f"Explain and demonstrate {slug}",
         "difficulty": 1,
@@ -30,7 +52,11 @@ async def draft(session, monkeypatch, empty_generation_budget):
         session,
         [
             PlannedLesson(
-                slug=slug, topic_slug=slug, title=f"Lesson {slug}", curriculum=data
+                slug=slug,
+                topic_slug=slug,
+                subtopic_slug="foundations",
+                title=f"Lesson {slug}",
+                curriculum=data,
             )
         ],
     )
@@ -193,15 +219,15 @@ async def test_legacy_correction_keeps_original_text_without_inventing_review(se
         text("select id,body from public.concept_revisions where concept_id=:id"),
         {"id": cid},
     )).one()
-    await publish_revision(session, original.id, "Maintainer", "Checked original against references.")
-    # Simulate a migrated published lesson which predates revision records.
-    await session.execute(text("delete from public.concept_revisions where concept_id=:id"), {"id": cid})
+    # Simulate the pre-review catalog without creating authenticated evidence.
+    await session.execute(text("update concepts set status='published',content_version=1 where id=:id"), {"id": cid})
+    await session.execute(text("delete from concept_revisions where concept_id=:id"), {"id": cid})
     body = LessonBody.model_validate(original.body)
     body.summary = "A corrected explanation with a stable concept identity. " * 3
     revision = await stage_revision(session, slug, body)
     assert await publish_revision(session, revision, "Maintainer", "Checked corrected example and source.") == 2
     legacy = (await session.execute(text("select body,reviewed_by,reviewed_at,review_note from public.concept_revisions where concept_id=:id and base_version=0"), {"id": cid})).one()
-    assert legacy.body["summary"] == original.body["summary"].strip()
+    assert legacy.body["summary"] == original.body["summary"]
     assert legacy.reviewed_by is None and legacy.reviewed_at is None
     assert "original review was not recorded" in legacy.review_note
     await session.commit()

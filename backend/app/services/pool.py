@@ -1,4 +1,4 @@
-"""Keeping each topic stocked with published concepts.
+"""Keeping each topic stocked with private drafts awaiting human review.
 
 The catalog is global: one generated lesson serves every user, which is the
 single biggest cost lever in the design. Topping up ahead of demand is what
@@ -23,6 +23,8 @@ from app.services.generation_budget import (
     reserve_generation_call,
 )
 from app.services.supply import target_for
+from app.services.review_capacity import review_load, slots_available
+from app.services.curriculum import catalog_lock
 
 log = logging.getLogger(__name__)
 
@@ -37,9 +39,12 @@ MAX_CONSECUTIVE_RATE_LIMITS = 5
 _POOL_COUNTS = text("""
     select t.id, t.slug, t.name,
            (select count(*) from public.concepts c
+             join public.subtopics s on s.id=c.subtopic_id and s.is_active
              where c.topic_id = t.id and c.status in ('published','draft'))::int as published,
            (select count(*) from public.concept_backlog b
-             where b.topic_id = t.id and b.status = 'pending')::int   as pending
+             join public.subtopics s on s.id=b.subtopic_id and s.is_active
+             where b.topic_id = t.id and b.status = 'pending'
+               and b.attempts<3+(select count(*) from content_retry_log l where l.backlog_id=b.id))::int   as pending
       from public.topics t
      where t.is_active
      order by published asc
@@ -68,7 +73,7 @@ STALE_CLAIM_MINUTES = 30
 # too rather than leaving them stuck forever.
 _REAP_STALE = text("""
     update public.concept_backlog
-       set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end, claimed_at = null
+       set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end, claimed_at = null, claim_token = null
      where status = 'generating'
        and (claimed_at is null
             or claimed_at < now() - make_interval(mins => :max_minutes))
@@ -77,12 +82,14 @@ _REAP_STALE = text("""
 
 _CLAIM = text("""
     update public.concept_backlog b
-       set status = 'generating', attempts = b.attempts + 1, claimed_at = now()
-      from public.topics t
+       set status = 'generating', attempts = b.attempts + 1, claimed_at = now(), claim_token = gen_random_uuid()
+      from public.topics t, public.subtopics s
      where b.id = (
          select b2.id from public.concept_backlog b2
           where b2.status = 'pending'
             and exists(select 1 from public.topics active where active.id=b2.topic_id and active.is_active)
+            and exists(select 1 from public.subtopics active where active.id=b2.subtopic_id
+              and active.topic_id=b2.topic_id and active.is_active)
             and (cast(:topic_id as uuid) is null or b2.topic_id = cast(:topic_id as uuid))
             and b2.attempts < 3 + (select count(*) from public.content_retry_log r where r.backlog_id=b2.id)
           order by b2.created_at
@@ -90,23 +97,29 @@ _CLAIM = text("""
           limit 1
      )
        and t.id = b.topic_id
-    returning b.id, b.slug, b.title, b.angle, b.difficulty, b.topic_id, b.curriculum,
-              t.name as topic_name
+       and s.id = b.subtopic_id
+       and s.topic_id = b.topic_id
+       and s.is_active
+    returning b.id, b.claim_token, b.slug, b.title, b.angle, b.difficulty, b.topic_id, b.subtopic_id,
+              b.curriculum, t.name as topic_name, s.slug as subtopic_slug,
+              s.name as subtopic_name
 """)
 
 _PUBLISH = text("""
     with inserted as (
         insert into public.concepts
-            (topic_id, slug, title, summary, example, difficulty,
+            (topic_id, subtopic_id, slug, title, summary, example, difficulty,
              status, source, model, prompt_version, curriculum, content_version)
-        values (:topic_id, :slug, :title, :summary, :example, :difficulty,
+        values (:topic_id, :subtopic_id, :slug, :title, :summary, :example, :difficulty,
                 'draft', 'gemini', :model, :prompt_version, cast(:curriculum as jsonb), 0)
         on conflict (slug) do nothing
         returning *
     ), revision as (
         insert into public.concept_revisions(concept_id,base_version,body)
         select id,0,jsonb_build_object('title',title,'summary',summary,'example',example,
-          'curriculum',curriculum,'model',model,'prompt_version',prompt_version)
+          'subtopic_slug',cast(:subtopic_slug as text),'curriculum',curriculum,
+          'model',model,'prompt_version',prompt_version,
+          'learning_package',cast(:learning_package as jsonb))
         from inserted returning id
     )
     update public.concept_backlog
@@ -116,24 +129,24 @@ _PUBLISH = text("""
        set status = case when exists (select 1 from inserted) then 'done' else 'failed' end,
            last_error = case when exists (select 1 from inserted) then null
                              else 'slug already exists; nothing published' end,
-           claimed_at = null
-     where id = :backlog_id
+           claimed_at = null, claim_token = null
+     where id = :backlog_id and status='generating' and claim_token=:claim_token
     returning (select id from inserted) as concept_id
 """)
 
 _FAIL = text("""
     update public.concept_backlog
        set status = case when attempts >= 3 + (select count(*) from public.content_retry_log r where r.backlog_id=concept_backlog.id) then 'failed' else 'pending' end,
-           last_error = :error, claimed_at = null
-     where id = :backlog_id
+           last_error = :error, claimed_at = null, claim_token = null
+     where id = :backlog_id and status='generating' and claim_token=:claim_token
 """)
 
 # A rate limit is our problem, not the title's: return it to the queue and
 # refund the attempt so throttling can never retire an item.
 _RELEASE = text("""
     update public.concept_backlog
-       set status = 'pending', attempts = greatest(attempts - 1, 0), claimed_at = null
-     where id = :backlog_id
+       set status = 'pending', attempts = greatest(attempts - 1, 0), claimed_at = null, claim_token = null
+     where id = :backlog_id and status='generating' and claim_token=:claim_token
 """)
 
 
@@ -164,8 +177,12 @@ async def generate_one(
             )
             inventory = await session.scalar(
                 text("""select
-              (select count(*) from public.concepts where topic_id=:t and status in ('published','draft')) +
-              (select count(*) from public.concept_backlog where topic_id=:t and status='generating')"""),
+              (select count(*) from public.concepts c join public.subtopics s
+                 on s.id=c.subtopic_id and s.is_active
+               where c.topic_id=:t and c.status in ('published','draft')) +
+              (select count(*) from public.concept_backlog b join public.subtopics s
+                 on s.id=b.subtopic_id and s.is_active
+               where b.topic_id=:t and b.status='generating')"""),
                 {"t": topic_id},
             )
             if not active or inventory >= supply_target:
@@ -175,6 +192,14 @@ async def generate_one(
         if claimed is not None:
             await reserve_generation_call(session, cap)
             await check_generation_capacity(session)
+            # The shared quota lock serializes all provider claimers. Include
+            # this claim in the load, then roll back it and quota if full.
+            if (
+                await review_load(session, claimed.topic_id)
+                > get_settings().content_review_backlog_limit
+            ):
+                await session.rollback()
+                return None
         await session.commit()
     except BaseException:
         # Quota denial/DB failure/cancellation must undo the claim and its attempt.
@@ -190,6 +215,7 @@ async def generate_one(
         result = await generate_concept(
             title=claimed.title,
             topic_name=claimed.topic_name,
+            subtopic_name=claimed.subtopic_name,
             angle="\n".join(
                 filter(
                     None,
@@ -207,24 +233,50 @@ async def generate_one(
             model=model,
         )
     except RateLimitedError:
-        await session.execute(_RELEASE, {"backlog_id": claimed.id})
+        await session.execute(
+            _RELEASE, {"backlog_id": claimed.id, "claim_token": claimed.claim_token}
+        )
         await session.commit()
         raise
     except GenerationError as exc:
         # Leave it pending for another attempt; give up after three so one bad
         # title cannot block the queue forever.
-        log.warning("generation failed for %s (%s); inspect the protected backlog", claimed.slug, type(exc).__name__)
+        log.warning(
+            "generation failed for %s (%s); inspect the protected backlog",
+            claimed.slug,
+            type(exc).__name__,
+        )
         await session.execute(
-            _FAIL, {"backlog_id": claimed.id, "error": str(exc)[:500]}
+            _FAIL,
+            {
+                "backlog_id": claimed.id,
+                "claim_token": claimed.claim_token,
+                "error": "provider_error",
+            },
         )
         await session.commit()
         return None
 
+    # Lock and fence before inserting anything: an expired worker must not
+    # complete another worker's newer claim or create an obsolete draft.
+    await catalog_lock(session)
+    live = await session.scalar(
+        text("""select b.id from concept_backlog b
+      join topics t on t.id=b.topic_id join subtopics s on s.id=b.subtopic_id
+      where b.id=:id and b.status='generating' and b.claim_token=:token
+        and t.is_active and s.is_active for update of b"""),
+        {"id": claimed.id, "token": claimed.claim_token},
+    )
+    if live is None:
+        await session.rollback()
+        return None
     concept_id = (
         await session.execute(
             _PUBLISH,
             {
                 "topic_id": claimed.topic_id,
+                "subtopic_id": claimed.subtopic_id,
+                "subtopic_slug": claimed.subtopic_slug,
                 "slug": claimed.slug,
                 "title": claimed.title,
                 "summary": result.summary,
@@ -233,7 +285,9 @@ async def generate_one(
                 "model": result.model,
                 "prompt_version": result.prompt_version,
                 "backlog_id": claimed.id,
+                "claim_token": claimed.claim_token,
                 "curriculum": json.dumps(claimed.curriculum),
+                "learning_package": result.learning_package.model_dump_json(),
             },
         )
     ).scalar_one_or_none()
@@ -257,7 +311,7 @@ async def top_up(
     call_cap: int,
     pace_seconds: float = 0.0,
 ) -> TopUpResult:
-    """Bring every topic up to `minimum_per_topic` published concepts."""
+    """Refill toward the inventory target without exceeding review capacity."""
     if not enabled:
         return TopUpResult(0, 0, "generation disabled")
     if not api_key:
@@ -280,7 +334,12 @@ async def top_up(
         deficit = target - topic.published
         if deficit <= 0:
             continue
-        remaining = min(deficit, topic.pending, get_settings().content_generation_batch)
+        remaining = min(
+            deficit,
+            topic.pending,
+            get_settings().content_generation_batch,
+            await slots_available(session, topic.id),
+        )
         while remaining > 0:
             try:
                 concept_id = await generate_one(

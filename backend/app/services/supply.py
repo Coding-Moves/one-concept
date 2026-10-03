@@ -18,6 +18,7 @@ _SIGNAL = text("""
       count(*) filter (where exists (select 1 from public.daily_assignments a
         where a.user_id=:uid and a.concept_id=c.id))::int as assigned
     from public.concepts c join public.topics t on t.id=c.topic_id
+    join public.subtopics s on s.id=c.subtopic_id and s.is_active
     where c.topic_id=:tid and c.status='published' and t.is_active
   )
   insert into public.content_supply_targets(topic_id,target_count,expires_at)
@@ -25,7 +26,8 @@ _SIGNAL = text("""
     from inventory where published-assigned<=:low
       and exists(select 1 from public.topics where id=:tid and is_active)
   on conflict(topic_id) do update set
-    target_count=greatest(content_supply_targets.target_count,excluded.target_count),
+    target_count=greatest(case when content_supply_targets.expires_at>now()
+      then content_supply_targets.target_count else 0 end,excluded.target_count),
     requested_at=now(), expires_at=excluded.expires_at
 """)
 
@@ -69,6 +71,7 @@ async def plan_active_readers(session: AsyncSession) -> None:
         left join lateral (
           select count(*) as n from public.daily_assignments da
           join public.concepts c on c.id=da.concept_id
+          join public.subtopics s on s.id=c.subtopic_id and s.is_active
           where da.user_id=a.user_id and c.topic_id=ut.topic_id and c.status='published'
         ) seen on true group by ut.topic_id
       )

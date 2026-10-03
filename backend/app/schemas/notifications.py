@@ -13,6 +13,8 @@ class PushTokenIn(BaseModel):
 
 class NotificationPrefs(BaseModel):
     enabled: bool
+    # Omitted by older apps: preserve the saved weekly opt-in on PUT.
+    weekly_quiz_enabled: bool | None = None
     # Local wall-clock times in the user's profile timezone.
     reminder_times: list[str] = Field(min_length=1, max_length=3)
 

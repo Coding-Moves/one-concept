@@ -87,8 +87,11 @@ export function ProfileScreen() {
 
   const toggleReminders = useCallback(async (weekly = false) => {
     if (!prefs || !session?.user.id || reminderPending.current) return;
-    reminderPending.current = true; setReminderBusy(true); setReminderMessage('');
+    const previous = prefs;
     const next = weekly ? { ...prefs, weekly_quiz_enabled: !prefs.weekly_quiz_enabled } : { ...prefs, enabled: !prefs.enabled };
+    // Move the switch immediately. The request remains serialized, and a failed
+    // save restores the last server-confirmed value instead of pretending it worked.
+    reminderPending.current = true; setReminderBusy(true); setReminderMessage(''); setPrefs(next);
     try {
       const confirmed = await putNotificationPrefs(next, session.user.id);
       if (!mounted.current) return;
@@ -104,7 +107,7 @@ export function ProfileScreen() {
         }
       }
     } catch {
-      if (mounted.current) setReminderMessage('Could not save reminder settings. Check your connection and try again.');
+      if (mounted.current) { setPrefs(previous); setReminderMessage('Could not save reminder settings. The previous choice was restored; check your connection and try again.'); }
     } finally {
       reminderPending.current = false;
       if (mounted.current) setReminderBusy(false);
@@ -277,6 +280,7 @@ export function ProfileScreen() {
           <Switch
             accessibilityLabel="Notifications"
             disabled={reminderBusy}
+            accessibilityState={{ disabled: reminderBusy, busy: reminderBusy, checked: prefs.enabled }}
             value={prefs.enabled}
             onValueChange={() => void toggleReminders()}
             trackColor={{ true: colors.primary, false: colors.border }}
@@ -293,6 +297,7 @@ export function ProfileScreen() {
             : 'Turn on Notifications above to receive weekly quiz alerts.'}</Text>
         </View></View>
         <Switch accessibilityLabel="Weekly quiz notifications" disabled={reminderBusy || !prefs.enabled}
+          accessibilityState={{ disabled: reminderBusy || !prefs.enabled, busy: reminderBusy, checked: prefs.weekly_quiz_enabled ?? false }}
           value={prefs.weekly_quiz_enabled ?? false} onValueChange={() => void toggleReminders(true)}
           trackColor={{ true: colors.primary, false: colors.border }} thumbColor={colors.onPrimary} />
       </View>}

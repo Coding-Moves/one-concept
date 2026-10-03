@@ -24,6 +24,7 @@ function AccountConnections({ userId }: { userId: string }) {
   const [cursor, setCursor] = useState<string | null>(null);
   const [prefs, setPrefs] = useState<ConnectionPreferences | null>(null);
   const [busy, setBusy] = useState(false);
+  const [preferenceSaving, setPreferenceSaving] = useState(false);
   const [message, setMessage] = useState('');
   const [link, setLink] = useState('');
   const [confirm, setConfirm] = useState<{id:string; action:'remove'|'block'} | null>(null);
@@ -52,13 +53,27 @@ function AccountConnections({ userId }: { userId: string }) {
     } catch (error) { if (active.current) setMessage(connectionError(error)); }
     finally { pending.current = false; if (active.current) setBusy(false); }
   };
+  const saveAcceptingRequests = async (acceptingRequests: boolean) => {
+    if (!prefs || preferenceSaving) return;
+    const previous = prefs;
+    const next = { ...prefs, accepting_requests: acceptingRequests };
+    // The switch should acknowledge the tap immediately. Roll back only when
+    // the server rejects the preference, without blocking connection actions.
+    setPrefs(next); setPreferenceSaving(true); setMessage('');
+    try {
+      const confirmed = await saveConnectionSettings(userId, next);
+      if (active.current) { setPrefs(confirmed); setMessage('Request preference saved.'); }
+    } catch (error) {
+      if (active.current) { setPrefs(previous); setMessage(connectionError(error)); }
+    } finally { if (active.current) setPreferenceSaving(false); }
+  };
   const button = (label: string, action: () => void, disabled = busy) => <Pressable key={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={action} style={({ pressed }) => ({ minHeight: 48, padding: 14, borderRadius: 14, backgroundColor: colors.surfaceSubtle, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 })}><Text style={{ color: colors.primary, fontWeight: '700' }}>{label}</Text></Pressable>;
   const act = (id: string, verb: 'accept'|'decline'|'cancel'|'remove'|'block') => void mutate(() => actOnConnection(userId, id, verb), 'Connection updated.');
   return <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24, gap: 20 }}>
     {button('← Back', () => navigation.goBack(), false)}
     <ScreenHeader title="Connections" subtitle="Learn alongside people you choose. Your list is private." />
     <View style={{ padding: 18, borderRadius: 22, backgroundColor: colors.surface, gap: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ flex: 1, color: colors.text, fontWeight: '700' }}>Accept new requests</Text><Switch accessibilityLabel="Accept new connection requests" value={prefs?.accepting_requests ?? false} disabled={busy || !prefs} onValueChange={accepting_requests => { if (prefs) void mutate(() => saveConnectionSettings(userId, { ...prefs, accepting_requests }), 'Request preference saved.'); }} /></View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ flex: 1, color: colors.text, fontWeight: '700' }}>Accept new requests</Text><Switch accessibilityLabel="Accept new connection requests" value={prefs?.accepting_requests ?? false} disabled={preferenceSaving || !prefs} accessibilityState={{ disabled: preferenceSaving || !prefs, busy: preferenceSaving, checked: prefs?.accepting_requests ?? false }} onValueChange={acceptingRequests => void saveAcceptingRequests(acceptingRequests)} /></View>
       <Text style={{ color: colors.textSecondary }}>People with your shared profile can ask to connect when this is on. You decide whether to accept. Public profile sharing must also be enabled.</Text>
     </View>
     <View style={{ gap: 12 }}>

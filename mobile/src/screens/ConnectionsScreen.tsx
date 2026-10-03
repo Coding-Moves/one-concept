@@ -28,15 +28,17 @@ function AccountConnections({ userId }: { userId: string }) {
   const [message, setMessage] = useState('');
   const [link, setLink] = useState('');
   const [confirm, setConfirm] = useState<{id:string; action:'remove'|'block'} | null>(null);
-  const active = useRef(true), pending = useRef(false), revision = useRef(0);
+  const active = useRef(true), pending = useRef(false), revision = useRef(0), preferenceRevision = useRef(0);
   const reload = async (more = false) => {
     const run = ++revision.current;
+    const observedPreference = preferenceRevision.current;
     setBusy(true); setMessage(''); setConfirm(null);
     if (!more) { setItems([]); setCursor(null); }
     try {
       const [settings, page] = await Promise.all([connectionSettings(userId), connectionList(userId, kind, more ? cursor ?? undefined : undefined)]);
       if (!active.current || run !== revision.current) return false;
-      setPrefs(settings); setItems(old => more ? [...old, ...page.items.filter(item => !old.some(o => o.id === item.id))] : page.items); setCursor(page.next_cursor);
+      if (observedPreference === preferenceRevision.current) setPrefs(settings);
+      setItems(old => more ? [...old, ...page.items.filter(item => !old.some(o => o.id === item.id))] : page.items); setCursor(page.next_cursor);
       return true;
     } catch (error) { if (active.current && run === revision.current) setMessage(connectionError(error)); return false; }
     finally { if (active.current && run === revision.current) setBusy(false); }
@@ -56,15 +58,16 @@ function AccountConnections({ userId }: { userId: string }) {
   const saveAcceptingRequests = async (acceptingRequests: boolean) => {
     if (!prefs || preferenceSaving) return;
     const previous = prefs;
+    const mutation = ++preferenceRevision.current;
     const next = { ...prefs, accepting_requests: acceptingRequests };
     // The switch should acknowledge the tap immediately. Roll back only when
     // the server rejects the preference, without blocking connection actions.
     setPrefs(next); setPreferenceSaving(true); setMessage('');
     try {
       const confirmed = await saveConnectionSettings(userId, next);
-      if (active.current) { setPrefs(confirmed); setMessage('Request preference saved.'); }
+      if (active.current && mutation === preferenceRevision.current) { setPrefs(confirmed); setMessage('Request preference saved.'); }
     } catch (error) {
-      if (active.current) { setPrefs(previous); setMessage(connectionError(error)); }
+      if (active.current && mutation === preferenceRevision.current) { setPrefs(previous); setMessage(connectionError(error)); }
     } finally { if (active.current) setPreferenceSaving(false); }
   };
   const button = (label: string, action: () => void, disabled = busy) => <Pressable key={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={action} style={({ pressed }) => ({ minHeight: 48, padding: 14, borderRadius: 14, backgroundColor: colors.surfaceSubtle, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 })}><Text style={{ color: colors.primary, fontWeight: '700' }}>{label}</Text></Pressable>;

@@ -19,7 +19,7 @@ const server=http.createServer((req,res)=>{
   for(const theme of ['light','dark']) {
    let nameSaves=0, failName=true, holdName=false, releaseName;
    let sharing={enabled:false,show_name:false,show_streak:false,show_learning:false,achievement_codes:[],version:0,public_path:null};
-   let conflict=false,failReminders=true,remindersEnabled=false,weeklyEnabled=false;
+   let conflict=false,failReminders=true,holdReminders=false,releaseReminders,remindersEnabled=false,weeklyEnabled=false;
    const token='a'.repeat(43), errors=[];
    const state={display_name:'Reader',timezone:'UTC',today,followed_topics:['computer-science'],learned:[],likes:[],bookmarks:[],saved:[],stats:{current:0,longest:0,total_learned:0,total_reviews:0},assignment_slug:concept.slug,daily:{assigned_for:today,assigned_at:today+'T08:00:00Z',learned:false,completed_at:null,outside_followed_topics:false,concept}};
    const context=await browser.newContext({viewport:{width:320,height:740}});
@@ -46,7 +46,7 @@ const server=http.createServer((req,res)=>{
     else if(endpoint.startsWith('/v1/public-profiles/'))body={display_name:'Amina',achievements:[]};
     else if(endpoint==='/v1/me/achievements')body={items:[{code:'concept_1',name:'First concept',earned_on:today,seen_at:today,metric:'concepts',threshold:1,description:'A beginning',artwork_key:'candle'}]};
     else if(endpoint==='/v1/topics')body=[{slug:'computer-science',name:'Computer Science',concept_count:125,following:true}];
-    else if(endpoint==='/v1/me/notifications'){if(request.method()==='PUT'){if(failReminders)status=503;else {remindersEnabled=request.postDataJSON().enabled;weeklyEnabled=request.postDataJSON().weekly_quiz_enabled ?? weeklyEnabled;}}body={enabled:remindersEnabled,weekly_quiz_enabled:weeklyEnabled,reminder_times:['08:00']};}
+    else if(endpoint==='/v1/me/notifications'){if(request.method()==='PUT'){if(holdReminders)await new Promise(r=>releaseReminders=r);if(failReminders)status=503;else {remindersEnabled=request.postDataJSON().enabled;weeklyEnabled=request.postDataJSON().weekly_quiz_enabled ?? weeklyEnabled;}}body={enabled:remindersEnabled,weekly_quiz_enabled:weeklyEnabled,reminder_times:['08:00']};}
     else if(endpoint.startsWith('/v1/concepts/'))body=concept;
     await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
    });
@@ -75,8 +75,10 @@ const server=http.createServer((req,res)=>{
    await expect(page.getByRole('switch',{name:'Notifications',exact:true})).toBeChecked();
    await expect(page.getByText(/Could not save reminder settings/)).toBeVisible();
    await expect(page.getByRole('switch',{name:'Notifications',exact:true})).not.toBeChecked();
-   failReminders=false;
+   failReminders=false;holdReminders=true;
    await page.getByRole('switch',{name:'Notifications',exact:true}).click();
+   await expect(page.getByRole('switch',{name:'Notifications',exact:true})).toBeChecked();
+   await expect.poll(()=>!!releaseReminders).toBe(true);releaseReminders();holdReminders=false;
    await expect(page.getByText(/this device blocks notifications|Push notifications require a supported physical device/)).toBeVisible();
    const weeklySwitch=page.getByRole('switch',{name:'Weekly quiz notifications',exact:true});
    await expect(weeklySwitch).not.toBeChecked();

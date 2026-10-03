@@ -20,7 +20,7 @@ const server=http.createServer((req,res)=>{
    const errors=[],token='b'.repeat(43), pair='22222222-2222-4222-8222-222222222222',blockedId='44444444-4444-4444-8444-444444444444';
    const peer={id:pair,display_name:'Bea',public_path:`/p/${token}`};
    let offline=false;
-   let relationship='available',blocked=false,prefs={accepting_requests:false,version:0},failSettings=true,requestCalls=0,releaseRequest;
+   let relationship='available',blocked=false,prefs={accepting_requests:false,version:0},failSettings=true,holdSettings=false,releaseSettings,requestCalls=0,releaseRequest;
    const state={display_name:'Reader',timezone:'UTC',today,followed_topics:['computer-science'],learned:[],likes:[],bookmarks:[],saved:[],stats:{current:0,longest:0,total_learned:0,total_reviews:0},assignment_slug:concept.slug,daily:{assigned_for:today,assigned_at:today+'T08:00:00Z',learned:false,completed_at:null,outside_followed_topics:false,concept}};
    const context=await browser.newContext({viewport:{width:320,height:740}});
    await context.addInitScript(({session,version,theme})=>{
@@ -36,7 +36,7 @@ const server=http.createServer((req,res)=>{
     else if(endpoint.startsWith('/v1/concepts/'))body=concept;
     else if(endpoint.startsWith('/v1/public-profiles/'))body={display_name:'Bea',concepts_learned:12,achievements:[]};
     else if(endpoint==='/v1/me/connections/settings'){
-     if(request.method()==='PUT'){if(failSettings)status=503;else prefs={...request.postDataJSON(),version:prefs.version+1};}body=prefs;
+     if(request.method()==='PUT'){if(holdSettings)await new Promise(r=>releaseSettings=r);if(failSettings)status=503;else prefs={...request.postDataJSON(),version:prefs.version+1};}body=prefs;
     }
     else if(endpoint===`/v1/me/connections/with/${token}`){
      if(request.method()==='POST'){requestCalls++;await new Promise(r=>releaseRequest=r);relationship='outgoing';}
@@ -61,7 +61,7 @@ const server=http.createServer((req,res)=>{
    await expect(page.getByText(/No connections yet/)).toBeVisible();
    const preference=page.getByRole('switch',{name:'Accept new connection requests'});
    await preference.click();await expect(preference).toBeChecked();await expect(page.getByText(/Could not confirm/)).toBeVisible();await expect(preference).not.toBeChecked();
-   failSettings=false;await preference.click();await expect(preference).toBeChecked();
+   failSettings=false;holdSettings=true;await preference.click();await expect(preference).toBeChecked();await expect.poll(()=>!!releaseSettings).toBe(true);releaseSettings();holdSettings=false;await expect(preference).toBeChecked();
    const input=page.getByRole('textbox',{name:'Shared profile link'});
    await input.fill('invalid');await page.getByRole('button',{name:'Open shared profile',exact:true}).click();await expect(page.getByText(/Enter a valid One Concept/)).toBeVisible();
    await input.fill(`http://127.0.0.1:4781/api/p/${token}`);await page.getByRole('button',{name:'Open shared profile',exact:true}).click();

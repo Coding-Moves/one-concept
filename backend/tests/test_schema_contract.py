@@ -12,13 +12,21 @@ async def test_migrations_produce_reviewed_schema_contract(database):
     engine = create_async_engine(database)
     try:
         async with engine.begin() as connection:
+            # The disposable fixture adds these helpers after applying the
+            # migrations. They must not become production requirements.
+            schema = await snapshot(connection)
+            for name in (
+                "public.concept_backlog.test_assign_backlog_subtopic",
+                "public.concepts.test_assign_concept_subtopic",
+            ):
+                assert schema["triggers"].pop(name, None) is not None
+            expected = {"migrations": migration_hashes(), "schema": schema}
             # This fixture only ever constructs a disposable container. It has
             # no URL override that could accidentally baseline a production DB.
             if os.environ.get("UPDATE_SCHEMA_CONTRACT") == "1":
                 CONTRACT_PATH.parent.mkdir(exist_ok=True)
-                CONTRACT_PATH.write_text(json.dumps({
-                    "migrations": migration_hashes(), "schema": await snapshot(connection),
-                }, indent=2, sort_keys=True) + "\n")
+                CONTRACT_PATH.write_text(json.dumps(expected, indent=2, sort_keys=True) + "\n")
+            assert json.loads(CONTRACT_PATH.read_text()) == expected
             assert await verify_schema(connection) == []
     finally:
         await engine.dispose()

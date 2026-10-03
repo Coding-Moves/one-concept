@@ -19,7 +19,7 @@ Use Node 24. From `admin/`:
 ```sh
 npm ci
 cp .env.example .env.local
-# Fill only the public settings below, using a staging environment.
+# Fill only the public settings below, using the intended environment.
 npm run dev
 ```
 
@@ -45,7 +45,8 @@ npm run test:browser
 an isolated local server, intercept API/Auth calls with fixtures, and exercise
 actual browser navigation. They do not send invitations, run Gemini or publish
 real lessons. Backend authorization/concurrency tests use disposable PostgreSQL.
-The hosting provider's headers and real Auth email delivery need staging checks.
+The deployed host's headers and real Auth/email delivery need checks on the
+actual HTTPS origin; local fixtures do not prove them.
 
 ## Reviewer journey
 
@@ -106,52 +107,20 @@ only HTTP(S), open separately with no opener, and lesson text is rendered as tex
 
 ## Hosting and manual activation
 
-This PR supplies static deployment output and a staging runbook. It does **not**
-create a paid service, choose a production host, change live flags, or send real
-invitations. Hosting and live acceptance remain [#281](https://github.com/Coding-Moves/one-concept/issues/281).
-Owner analytics are implemented in the shared **Owner dashboard** section.
-See [owner reporting and activation](../docs/owner-dashboard.md). Both dashboard
-sections are deployed together under #281 after the normal production release.
+The reviewer workspace and Owner dashboard deploy as one static site. The
+[direct production rollout guide](../docs/EDITORIAL_ROLLOUT.md) gives the free
+Netlify build settings, exact API/Auth origins, account and email setup,
+verification and rollback. `npm run build` writes `dist/_headers` with CSP
+`connect-src` restricted to the two configured origins; the old broad static
+header file is no longer used. Netlify uses `public/_redirects` for the
+`/auth/callback` SPA fallback. Preview deployments remain off until a separate
+non-production environment exists under #255.
 
-Before a staging deployment:
-
-1. Apply ordered backend migrations through
-   [`0037_editorial_review_deadlines.sql`](../backend/migrations/0037_editorial_review_deadlines.sql),
-   after 0036, and verify the schema using the existing migration procedure.
-   Do not mark production `applied.txt` based on staging or CI.
-2. Deploy the compatible backend/API and existing worker revision. Follow
-   [editorial accounts](../docs/editorial-accounts.md),
-   [workflow API](../docs/editorial-api.md), and
-   [generation operations](../docs/editorial-generation.md) for prerequisites.
-   Set editorial flags only in the intended environment; generation remains
-   independently controlled and is unnecessary for reviewing existing drafts.
-3. Configure a static host with root `admin`, install `npm ci`, build
-   `npm run build`, output `dist`. It needs HTTPS and an SPA fallback to
-   `/index.html`, including `/auth/callback`. There is no Node production server.
-4. Supply only the four public build values. Preserve `public/_headers` on hosts
-   that support that format; translate them on other hosts. Narrow CSP
-   `connect-src` to the exact API/Auth origins. Retain `no-store`, `no-referrer`,
-   frame denial, no external scripts, and no search indexing. Verify the deployed
-   headers; the Vite development server does not validate host header rules.
-5. Add the exact web origin to backend `ALLOWED_ORIGINS`. Set backend
-   `EDITORIAL_INVITE_REDIRECT_URL=https://<review-host>/auth/callback`; add the
-   same exact URL in Supabase's redirect allowlist for invitations and recovery.
-   Verify Auth mail delivery and open recovery links in the browser that requested
-   them (PKCE). Do not remove the mobile app's existing allowed origins/redirects.
-6. Bootstrap the confirmed owner using the protected CLI documented in the
-   accounts guide. Sign in, set up MFA, then invite the actual reviewers. Never
-   share owner passwords or paste private keys in issues.
-7. Test two **different** invited accounts on staging: topic filtering, comment,
-   change request, correction, one shared approval, publication, name attribution,
-   owner-only assignment, revocation, lost-response retry, expiry, and sign-out.
-   Check light/dark themes, keyboard navigation and a narrow browser. Confirm
-   published lessons reach a staging mobile client through its normal API.
-
-Merging this feature into `develop` neither publishes the website nor applies SQL.
-Once the compatible backend is deployed, newly approved-and-published cards enter
-normal server selection automatically; each content approval needs no mobile
-release. Mobile attribution UI remains #280. The existing rules for a software
-release still apply when shipping new application code.
+Merging a code PR into `develop` does not publish the website or change Railway
+flags. After the compatible backend and website are live, an approved and
+published card enters normal server selection automatically; each content
+approval needs no app release. Software/schema changes still use the normal
+release procedure.
 
 ## Reviewer notifications
 

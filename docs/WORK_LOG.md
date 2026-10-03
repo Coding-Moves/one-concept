@@ -7,6 +7,30 @@ claims as completed work.
 
 ## Current status
 
+### #281 / #313 reviewer website rollout — in progress
+
+- Owner chose the next #263 child and confirmed existing Netlify and Render accounts.
+  Netlify Free is the selected static host: its `_headers` and `_redirects`
+  support the review site without a paid plan, separate server or domain. The
+  free plan has a hard 300-credit monthly cap; keep previews off until #255.
+  Owner asked about a combined Render/Vercel service; their free worker/cron
+  limits and the production Railway Docker-context change favor keeping the
+  healthy API/workers there and hosting only static assets on Netlify.
+- This chunk prepares production static-host configuration and a direct
+  production runbook. `main` already contains the compatible v1.10.4 API/site;
+  the owner reported migrations through 0039 and protected schema verification.
+  It does not claim live hosting, owner bootstrap or inbox delivery.
+- `6f9067e` adds Node 24 pin, Netlify SPA rewrite and build-time exact-origin
+  security headers with a regression check. The separate operator-runbook and
+  codebase-map commit is identified by its subject. PR targets `develop`. No PR merge,
+  production flag change, paid service or real email is part of these commits.
+- Admin TypeScript/build and all 11 unit tests passed with fixture public
+  origins. The generated `dist/_headers` and `_redirects` were inspected;
+  all 31 existing browser tests passed. An initial header-test assertion
+  matched a valid `https://` URL and was corrected. Live Netlify headers,
+  owner sign-in, permission denial and inbox delivery still need deployment
+  acceptance; fixtures do not prove them.
+
 ### v1.10.4 release gate repair — PR #325
 
 - [Release PR #324](https://github.com/Coding-Moves/one-concept/pull/324)

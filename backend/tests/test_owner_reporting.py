@@ -37,7 +37,7 @@ async def test_owner_report_authority_and_private_headers(api, session, path):
 async def concept(session):
     tid, cid = uuid4(), uuid4()
     await session.execute(
-        text("insert into topics(id,slug,name) values(:id,:slug,'Metrics fixture')"),
+        text("insert into topics(id,slug,name,is_active) values(:id,:slug,'Metrics fixture',false)"),
         {"id": tid, "slug": str(tid)},
     )
     await session.execute(

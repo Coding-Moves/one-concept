@@ -23,7 +23,7 @@ export function EditProfileScreen() {
     if (busy.current) return;
     let normalized: string;
     try { normalized = normalizeProfileName(name); }
-    catch (error) { setMessage((error as Error).message); return; }
+    catch (error) { setSaveSucceeded(false); setMessage((error as Error).message); return; }
     busy.current = true; setSaving(true); setMessage(''); setSaveSucceeded(false);
     try {
       await updateDisplayName(normalized);

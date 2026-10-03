@@ -41,7 +41,10 @@ Up to three reminder times per user, interpreted in the user's own timezone.
 A worker runs every 15 minutes on Railway, claims each due (user, day, slot)
 occurrence in a log table before pushing — so a crash or overlapping run can
 miss a nudge but never send a duplicate — and stops the moment the user marks
-the concept learned. Due-ness is computed on full timestamps: a slot shortly
+the concept learned. If the learner follows no active topic, the worker preserves
+their reminder preferences and device tokens but does not claim a topic-dependent
+daily nudge; following an active topic resumes normal delivery. Due-ness is
+computed on full timestamps: a slot shortly
 before midnight caught by the first run after it still fires, and is claimed
 against the day it was scheduled for — so a reminder_log row dated
 "yesterday" is expected, not a bug. Delivery is Expo push over FCM.

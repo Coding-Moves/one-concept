@@ -6,6 +6,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
+    owner_telemetry_enabled: bool = False
+
     """Server-side configuration. Missing required values fail at startup, loudly."""
 
     model_config = SettingsConfigDict(

@@ -37,7 +37,8 @@
     "0035_editorial_generation.sql": "596c08467bfd22bbaf13d9f4770618b716c8222848fe11775a2d5258b7d13d18",
     "0036_editorial_cancelled_leases.sql": "99405898aa81f1e2f54481d7c3343576c8039c8b64a7b93f33498e76ebed6394",
     "0037_editorial_review_deadlines.sql": "ab59eabee6d674c89836b394b53a514c114c577e2533081a19a0c16dc77831bb",
-    "0038_editorial_notifications.sql": "7665a4b53d52b5707e6f0f8964bc5d9fc56e8980e7fc0b7e6ee6bba483caa717"
+    "0038_editorial_notifications.sql": "7665a4b53d52b5707e6f0f8964bc5d9fc56e8980e7fc0b7e6ee6bba483caa717",
+    "0039_owner_reporting.sql": "0c2659c2a6e8df166a0801bed4da16188bd0c3b0412dfd2de1021223b495d2c0"
   },
   "schema": {
     "columns": {
@@ -1385,6 +1386,42 @@
         "not_null": true,
         "type": "boolean"
       },
+      "owner_operation_events.code": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "owner_operation_events.correlation_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "owner_operation_events.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "owner_operation_events.observed_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "owner_operation_events.service": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "owner_operation_events.severity": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
       "profile_sharing.achievement_codes": {
         "default": "'{}'::text[]",
         "identity": "",
@@ -2413,6 +2450,22 @@
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
       },
+      "owner_operation_events.owner_operation_events_code_check": {
+        "definition": "CHECK ((code = ANY (ARRAY['started'::text, 'completed'::text, 'failed'::text, 'database_unavailable'::text, 'unexpected_failure'::text])))",
+        "validated": true
+      },
+      "owner_operation_events.owner_operation_events_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "owner_operation_events.owner_operation_events_service_check": {
+        "definition": "CHECK ((service = ANY (ARRAY['api'::text, 'reminders'::text, 'pool_topup'::text])))",
+        "validated": true
+      },
+      "owner_operation_events.owner_operation_events_severity_check": {
+        "definition": "CHECK ((severity = ANY (ARRAY['info'::text, 'error'::text])))",
+        "validated": true
+      },
       "profile_sharing.profile_sharing_achievement_codes_check": {
         "definition": "CHECK ((cardinality(achievement_codes) <= 32))",
         "validated": true
@@ -3067,6 +3120,61 @@
         "ready": true,
         "valid": true
       },
+      "owner_accounts_time": {
+        "definition": "CREATE INDEX owner_accounts_time ON public.editorial_account_events USING btree (created_at, id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_completion_time": {
+        "definition": "CREATE INDEX owner_completion_time ON public.user_concept_completions USING btree (completed_at, user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_evidence_actor_time": {
+        "definition": "CREATE INDEX owner_evidence_actor_time ON public.editorial_revision_events USING btree (actor_id, created_at)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_evidence_time": {
+        "definition": "CREATE INDEX owner_evidence_time ON public.editorial_revision_events USING btree (created_at, id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_operation_events_pkey": {
+        "definition": "CREATE UNIQUE INDEX owner_operation_events_pkey ON public.owner_operation_events USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_operations_correlation": {
+        "definition": "CREATE INDEX owner_operations_correlation ON public.owner_operation_events USING btree (correlation_id)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_operations_service_time": {
+        "definition": "CREATE INDEX owner_operations_service_time ON public.owner_operation_events USING btree (service, observed_at DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_operations_time": {
+        "definition": "CREATE INDEX owner_operations_time ON public.owner_operation_events USING btree (observed_at DESC, id DESC)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_registration_time": {
+        "definition": "CREATE INDEX owner_registration_time ON public.profiles USING btree (created_at)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_review_time": {
+        "definition": "CREATE INDEX owner_review_time ON public.daily_reviews USING btree (completed_at, user_id) WHERE (completed_at IS NOT NULL)",
+        "ready": true,
+        "valid": true
+      },
+      "owner_workflow_time": {
+        "definition": "CREATE INDEX owner_workflow_time ON public.editorial_workflow_events USING btree (created_at, id)",
+        "ready": true,
+        "valid": true
+      },
       "profile_sharing_pkey": {
         "definition": "CREATE UNIQUE INDEX profile_sharing_pkey ON public.profile_sharing USING btree (user_id)",
         "ready": true,
@@ -3464,6 +3572,9 @@
         "rls": true
       },
       "notification_preferences": {
+        "rls": true
+      },
+      "owner_operation_events": {
         "rls": true
       },
       "profile_sharing": {

@@ -7,6 +7,33 @@ claims as completed work.
 
 ## Current status
 
+### #297 — owner dashboard implemented; final validation
+
+- Scope is implementation only in the existing `admin/` application. Both
+  reviewer and owner sections deploy under #281 after the normal production
+  release. No staging creation, production migration, live flag change, version
+  bump, deployment or merge was performed.
+- Base `31300ce`; branch `codex/297-owner-dashboard`. `8b1460b` adds private
+  reporting endpoints, migration 0039 and schema contract. `768c5b4` adds opt-in
+  bounded worker/API observations. `ffaf68d` adds the four report pages, isolated
+  demo, responsive themes and browser coverage. `adec7e9` isolates report fixtures
+  from the default topic list used by later learner tests.
+- Access reuses explicit `manage_reviewers`, approved identity, live session and
+  MFA. Report data is memory-only; date windows, paging and SQL timeouts are
+  bounded. Names come from immutable review evidence; delayed publications keep
+  attribution even after account deletion. Missing/stale signals are explicit.
+- Passed: admin TypeScript/build and 10 unit tests; all 29 browser tests, plus
+  a focused two-test rerun for OAuth-fragment demo isolation and real invitation
+  callbacks. Visually inspected light desktop and dark narrow screenshots.
+  Vite reports a non-blocking bundle-size warning (about 518 kB before gzip).
+- Schema contract tests passed on disposable PostgreSQL. The initial full
+  backend run exposed fixture-only issues (short evidence note and active test
+  topics affecting later bootstrap tests); corrected and rerunning all backend
+  tests. No passing full-suite result is claimed until that rerun finishes.
+- [owner-dashboard.md](owner-dashboard.md) defines metrics, exclusions,
+  permissions, retention, missing infrastructure signals and manual activation
+  deferred to #281. No owner action is required before merging into develop.
+
 ### PR #314 — code review fixes complete
 
 - Reviewed head `0e762b6` against #280, including SQL snapshot/version matching,

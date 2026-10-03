@@ -109,7 +109,9 @@ only HTTP(S), open separately with no opener, and lesson text is rendered as tex
 This PR supplies static deployment output and a staging runbook. It does **not**
 create a paid service, choose a production host, change live flags, or send real
 invitations. Hosting and live acceptance remain [#281](https://github.com/Coding-Moves/one-concept/issues/281).
-Owner analytics are [#297](https://github.com/Coding-Moves/one-concept/issues/297).
+Owner analytics are implemented in the shared **Owner dashboard** section.
+See [owner reporting and activation](../docs/owner-dashboard.md). Both dashboard
+sections are deployed together under #281 after the normal production release.
 
 Before a staging deployment:
 
@@ -159,3 +161,15 @@ in **Settings**. Delivery uses the existing backend worker and the sender's Gmai
 HTTPS API; no SMTP upgrade or new paid mail service is required. Follow the
 [notification setup and direct production rollout](../docs/editorial-notifications.md)
 before enabling email. Supabase Auth email templates remain separate.
+
+## Owner dashboard and safe demo
+
+Administrators with `manage_reviewers`, an approved name and MFA can open
+**Owner dashboard** for learner activity, reviewer contributions, service/job
+observations and safe event searches. These read-only reports are server-gated.
+See [metric definitions, limits and rollout](../docs/owner-dashboard.md).
+
+For a synthetic preview, run the development server and open `/?demo=owner`.
+This mode constructs no Auth/API client and requires no live credentials. It
+shares the real report components, light/dark themes and responsive layouts.
+No new dashboard deployment or staging setup occurs in #297; #281 owns activation.

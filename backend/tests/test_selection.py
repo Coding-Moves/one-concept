@@ -96,6 +96,29 @@ async def test_empty_follow_set_requires_personalization_without_assignment(sess
     ) == 0
 
 
+async def test_concurrent_empty_follow_requests_create_no_assignment(
+    session, sessionmaker_for_test, user
+):
+    """Two devices must see the same setup state without creating a race slot."""
+    await session.execute(
+        text("delete from public.user_topics where user_id = :u"), {"u": user}
+    )
+    await session.commit()
+
+    async def request_daily():
+        async with sessionmaker_for_test() as concurrent_session:
+            return await get_or_create_daily(concurrent_session, user, today=DAY)
+
+    first, second = await asyncio.gather(request_daily(), request_daily())
+
+    assert first.status == second.status == "personalization_required"
+    async with sessionmaker_for_test() as check:
+        assert await check.scalar(
+            text("select count(*) from public.daily_assignments where user_id = :u"),
+            {"u": user},
+        ) == 0
+
+
 async def test_existing_assignment_survives_unfollowing_every_topic(session, user):
     """Changing preferences cannot hide or replace today's durable assignment."""
     assigned = await get_or_create_daily(session, user, today=DAY)

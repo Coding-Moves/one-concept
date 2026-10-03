@@ -770,11 +770,13 @@ export function OwnerDashboard({
   api,
   environment,
   demo = false,
+  canReview = false,
   navigate,
 }: {
   api: ReportingApi;
   environment: string;
   demo?: boolean;
+  canReview?: boolean;
   navigate?: (r: Route) => void;
 }) {
   const today = demo ? "2026-10-02" : new Date().toISOString().slice(0, 10);
@@ -868,7 +870,7 @@ export function OwnerDashboard({
             query={query}
             refresh={refresh}
             demo={demo}
-            navigate={navigate}
+            navigate={canReview ? navigate : undefined}
           />
         ) : tab === "Reviewers" ? (
           <TeamPanel

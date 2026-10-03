@@ -60,6 +60,9 @@ for (const theme of ["light", "dark"]) {
       page.getByRole("heading", { name: "Your learning community" }),
     ).toBeVisible();
     await expect(page.getByText("1,248", { exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Open review queue" }),
+    ).toBeVisible();
     if (theme === "dark")
       await page.getByRole("button", { name: "Use dark theme" }).click();
     await page.screenshot({
@@ -271,4 +274,26 @@ test("event filters accept public incident IDs and canonical UUIDs", async ({
       .getByLabel("Correlation ID", { exact: true })
       .evaluate((el: HTMLInputElement) => el.checkValidity()),
   ).toBe(false);
+});
+
+test("account administrators without review permission keep reporting and team access", async ({
+  context,
+  page,
+}) => {
+  await fixture(context, { caps: ["manage_reviewers"] });
+  await reports(context);
+  await login(page);
+  await page.getByRole("button", { name: "Owner dashboard" }).click();
+  await expect(page.getByText("1,248", { exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open review queue" }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("navigation", { name: "Owner reports" })
+    .getByRole("button", { name: "Reviewers", exact: true })
+    .click();
+  await page.getByRole("button", { name: "Manage reviewers" }).click();
+  await expect(
+    page.getByRole("heading", { name: "Reviewer accounts" }),
+  ).toBeVisible();
 });

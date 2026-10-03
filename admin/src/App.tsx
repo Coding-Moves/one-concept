@@ -316,7 +316,7 @@ export function App({
           ) : active ? (
             <>
               {current.view === "owner" && can("manage_reviewers") ? (
-                <OwnerDashboard api={api} environment={environment} navigate={navigate} />
+                <OwnerDashboard api={api} environment={environment} canReview={can("review")} navigate={navigate} />
               ) : current.view === "notifications" && can("manage_reviewers") ? (
                 <Notifications api={api} />
               ) : current.view === "team" && can("manage_reviewers") ? (

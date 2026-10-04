@@ -17,9 +17,9 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.db.session import SessionLocal
+from app.services.future_refill_budget import FutureRefillBudgetExhausted
 from app.services.generation import RateLimitedError
 from app.services.generation_budget import GenerationBudgetExhausted, GenerationBusy
-from app.services.future_refill_budget import FutureRefillBudgetExhausted
 from app.services.pool import generate_one
 from app.services.supply import target_for
 
@@ -76,9 +76,12 @@ async def _run(topic_id: uuid.UUID) -> None:
         # Its own session: the request's session is closed the moment the
         # response returns, long before this finishes.
         async with SessionLocal() as session:
-            # A demand-triggered run receives one normal allowance only. Urgent
-            # escalation belongs to the scheduled, fair worker policy.
-            for _ in range(1):
+            # New future-refill settings limit this request-triggered path to
+            # one normal allowance. Legacy configurations retain their existing
+            # configurable batch behavior until they adopt that policy.
+            future_cap = getattr(settings, "future_refill_daily_call_cap", None)
+            attempts = 1 if future_cap is not None else settings.content_generation_batch
+            for _ in range(attempts):
                 # Re-check against a shared target each iteration so a prefetch
                 # in another process (its lessons land in the same catalog) can
                 # satisfy the topic and let this one stop early — bounding the
@@ -90,7 +93,6 @@ async def _run(topic_id: uuid.UUID) -> None:
                 if published is not None and published >= target:
                     break
                 try:
-                    future_cap = getattr(settings, "future_refill_daily_call_cap", None)
                     concept_id = await generate_one(
                         session,
                         settings.gemini_api_key,

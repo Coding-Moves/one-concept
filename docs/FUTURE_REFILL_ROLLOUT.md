@@ -35,11 +35,13 @@ FUTURE_REFILL_TOPIC_DAILY_CAP=1
 FUTURE_REFILL_URGENT_ENABLED=false
 FUTURE_REFILL_URGENT_DAILY_CALL_CAP=10
 FUTURE_REFILL_URGENT_TOPIC_DAILY_CAP=2
-CONTENT_GENERATION_BATCH=1
 ```
 
 `GENERATION_ENABLED=false` and `FUTURE_REFILL_DAILY_CALL_CAP=0` are independent
-immediate stops. Do not enable urgent mode during the first rollout.
+immediate stops. The future-refill worker creates one lesson per eligible topic
+per normal day regardless of the older `CONTENT_GENERATION_BATCH` setting; do
+not lower that general legacy/correction setting for this rollout. Do not enable
+urgent mode during the first rollout.
 
 ## First-day verification
 

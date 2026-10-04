@@ -18,7 +18,7 @@ const server=http.createServer((req,res)=>{
  try {
   for(const theme of ['light','dark']) {
    let nameSaves=0, failName=true, holdName=false, releaseName;
-   let sharing={enabled:false,show_name:false,show_streak:false,show_learning:false,achievement_codes:[],version:0,public_path:null};
+   let sharing={enabled:false,show_name:false,show_avatar:false,show_streak:false,show_learning:false,achievement_codes:[],version:0,public_path:null};
    let conflict=false,failReminders=true,holdReminders=false,releaseReminders,remindersEnabled=false,weeklyEnabled=false;
    const token='a'.repeat(43), errors=[];
    const state={display_name:'Reader',timezone:'UTC',today,followed_topics:['computer-science'],learned:[],likes:[],bookmarks:[],saved:[],stats:{current:0,longest:0,total_learned:0,total_reviews:0},assignment_slug:concept.slug,daily:{assigned_for:today,assigned_at:today+'T08:00:00Z',learned:false,completed_at:null,outside_followed_topics:false,concept}};

@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 
 export type PublicProfileFields = {
   displayName: boolean;
+  avatar?: boolean;
   streak: boolean;
   concepts: boolean;
   achievements: boolean;
@@ -12,6 +13,7 @@ export type PublicProfileFields = {
 
 const fieldLabels: Record<keyof PublicProfileFields, string> = {
   displayName: 'Your display name',
+  avatar: 'Your profile avatar',
   streak: 'Your learning streak',
   concepts: 'Concepts learned',
   achievements: 'Earned achievements',

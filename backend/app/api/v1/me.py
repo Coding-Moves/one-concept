@@ -67,11 +67,12 @@ def _daily_availability(result: DailyResult) -> str:
     return "catalog_exhausted"
 
 
-def _to_state_out(state) -> StateOut:
+async def _to_state_out(state) -> StateOut:
     return StateOut(
         display_name=state.display_name,
         bio=state.bio,
         avatar_ref=state.avatar_ref,
+        avatar_url=await signed_avatar_url(get_settings(), state.avatar_ref),
         timezone=state.timezone,
         today=state.today,
         followed_topics=state.followed_topics,
@@ -118,7 +119,7 @@ async def get_state(
         await ensure_bootstrapped(db, user.id, user.email)
         await db.commit()
         state = await load_state(db, user.id, compact=compact)
-    out = _to_state_out(state)
+    out = await _to_state_out(state)
     # Fold today's concept in so the app needs one startup round trip (#102).
     # Same create-on-first-call behaviour as GET /v1/daily.
     result = await get_or_create_daily(db, user.id, allow_review=reviews)
@@ -173,7 +174,7 @@ async def put_topics(
     db: AsyncSession = Depends(get_db),
 ) -> StateOut:
     await set_followed_topics(db, user.id, body.topics)
-    return _to_state_out(await load_state(db, user.id, compact=compact))
+    return await _to_state_out(await load_state(db, user.id, compact=compact))
 
 
 @router.post("/push-token", status_code=status.HTTP_204_NO_CONTENT)
@@ -327,7 +328,7 @@ async def patch_profile(
         await db.execute(text("update public.profiles set avatar_url=:avatar where id=:uid"), {"avatar": f"preset:{body.avatar_preset}", "uid": user.id})
         await delete_avatar(get_settings(), old)
     await db.commit()
-    return _to_state_out(await load_state(db, user.id, compact=compact))
+    return await _to_state_out(await load_state(db, user.id, compact=compact))
 
 
 @router.put("/avatar", response_model=StateOut)
@@ -347,7 +348,7 @@ async def put_avatar(
     await db.execute(text("update public.profiles set avatar_url=:key where id=:uid"), {"key": key, "uid": user.id})
     await db.commit()
     await delete_avatar(settings, old)
-    return _to_state_out(await load_state(db, user.id, compact=compact))
+    return await _to_state_out(await load_state(db, user.id, compact=compact))
 
 
 @router.delete("/avatar", response_model=StateOut)
@@ -361,4 +362,4 @@ async def delete_profile_avatar(
     await db.execute(text("update public.profiles set avatar_url=null where id=:uid"), {"uid": user.id})
     await db.commit()
     await delete_avatar(settings, old)
-    return _to_state_out(await load_state(db, user.id, compact=compact))
+    return await _to_state_out(await load_state(db, user.id, compact=compact))

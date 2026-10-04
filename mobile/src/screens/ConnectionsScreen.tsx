@@ -82,7 +82,7 @@ function AccountConnections({ userId }: { userId: string }) {
       title="Accept new requests"
       subtitle="Allow people with your public profile link to send a request. You still choose whom to accept."
       value={prefs?.accepting_requests ?? false}
-      disabled={!prefs}
+      disabled={!prefs || preferenceSaving}
       pending={preferenceSaving}
       onValueChange={acceptingRequests => void saveAcceptingRequests(acceptingRequests)}
       accessibilityLabel="Accept new connection requests"

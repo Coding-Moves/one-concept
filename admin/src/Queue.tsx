@@ -4,6 +4,7 @@ import type { Route } from "./App";
 import type { Me, Member, Page, QueueItem, Taxon } from "./types";
 import { shortId } from "./types";
 import { allPages, Badge, Empty, Field, Notice, useResource } from "./ui";
+import { MarkdownText } from "./MarkdownText";
 export function Queue({
   api,
   me,
@@ -244,7 +245,7 @@ export function Queue({
                   <span className="row-meta">
                     {item.topic_name} <span> / {item.subtopic_name}</span>
                   </span>
-                  <strong>{item.title}</strong>
+                  <strong><MarkdownText value={item.title} inline /></strong>
                   <span className="muted">
                     #{shortId(item.id)} ·{" "}
                     {kind === "revisions"

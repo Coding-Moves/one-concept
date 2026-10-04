@@ -1,6 +1,7 @@
 import { safeUrl } from "./api";
 import type { Lesson } from "./types";
 import { Field } from "./ui";
+import { MarkdownText } from "./MarkdownText";
 export function Value({ value }: { value: unknown }) {
   return (
     <pre className="plain-value">
@@ -21,17 +22,17 @@ export function LessonView({
     <div className="lesson-document">
       <section>
         <p className="eyebrow">01 · CONCEPT</p>
-        <h2>{body.title || "Untitled lesson"}</h2>
-        <Value value={body.summary} />
+        <h2><MarkdownText value={body.title || "Untitled lesson"} inline /></h2>
+        <MarkdownText value={body.summary} />
       </section>
       <section className="example">
         <h3>Worked example</h3>
-        <Value value={body.example} />
+        <MarkdownText value={body.example} />
       </section>
       <section>
         <p className="eyebrow">02 · CURRICULUM</p>
         <h3>Learning objective</h3>
-        <Value value={body.curriculum?.objective} />
+        <MarkdownText value={body.curriculum?.objective} />
         <div className="metadata">
           <span>Difficulty {body.curriculum?.difficulty ?? "—"}</span>
           <span>Subtopic: {body.subtopic_slug}</span>
@@ -57,7 +58,7 @@ export function LessonView({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  {link.title} ↗
+                  <MarkdownText value={link.title} inline links={false} /> ↗
                 </a>
               </li>
             ))}
@@ -68,9 +69,9 @@ export function LessonView({
         <h3>Flashcard</h3>
         <div className="flashcard">
           <span className="muted">FRONT</span>
-          <Value value={body.learning_package?.flashcard?.front} />
+          <MarkdownText value={body.learning_package?.flashcard?.front} />
           <span className="muted">BACK</span>
-          <Value value={body.learning_package?.flashcard?.back} />
+          <MarkdownText value={body.learning_package?.flashcard?.back} />
         </div>
       </section>
       <section>
@@ -80,7 +81,7 @@ export function LessonView({
           body.learning_package.mcqs.map((q, i) => (
             <article key={i} className="question">
               <h4>Question {i + 1}</h4>
-              <Value value={q.question} />
+              <MarkdownText value={q.question} />
               <ol type="A">
                 {Array.isArray(q.options)
                   ? q.options.map((o, n) => (
@@ -90,7 +91,7 @@ export function LessonView({
                           q.correct_index === n ? "correct-answer" : ""
                         }
                       >
-                        {o}
+                        <MarkdownText value={o} inline />
                         {q.correct_index === n && (
                           <strong> · Correct answer</strong>
                         )}
@@ -101,7 +102,7 @@ export function LessonView({
               {q.explanation && (
                 <>
                   <h4>Explanation</h4>
-                  <Value value={q.explanation} />
+                  <MarkdownText value={q.explanation} />
                 </>
               )}
             </article>
@@ -148,6 +149,7 @@ export function LessonEditor({
   }
   return (
     <div className="editor">
+      <p className="muted">Lesson writing supports Markdown: **bold**, *italic*, `code`, lists, links, and fenced code blocks. URLs, slugs, and settings stay plain text.</p>
       {text("title", "Title")}
       {text("summary", "Explanation")}
       {text("example", "Worked example")}
@@ -341,6 +343,10 @@ export function LessonEditor({
           </fieldset>
         );
       })}
+      <section className="editor-preview" aria-label="Lesson Markdown preview">
+        <h3>Preview before saving</h3>
+        <LessonView body={{ ...body, curriculum, learning_package: pack }} links={curriculum.references} />
+      </section>
     </div>
   );
 }

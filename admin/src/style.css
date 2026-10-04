@@ -590,6 +590,17 @@ main {
   max-width: 100%;
   color: var(--text);
 }
+.lesson-markdown { overflow-wrap: anywhere; line-height: 1.7; }
+.lesson-markdown > :first-child { margin-top: 0; }
+.lesson-markdown > :last-child { margin-bottom: 0; }
+.lesson-markdown pre { overflow-x: auto; padding: 14px; border-radius: 8px; background: var(--subtle); }
+.lesson-markdown code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--subtle); border-radius: 4px; padding: 1px 3px; }
+.lesson-markdown pre code { padding: 0; }
+.lesson-markdown blockquote { border-left: 3px solid var(--primary); margin-left: 0; padding-left: 14px; color: var(--muted); }
+.lesson-markdown table { border-collapse: collapse; display: block; max-width: 100%; overflow-x: auto; }
+.lesson-markdown th, .lesson-markdown td { border: 1px solid var(--line); padding: 6px 10px; }
+.lesson-markdown-inline { display: inline; }
+.editor-preview { margin-top: 24px; padding: 18px; border: 1px solid var(--line); border-radius: 10px; }
 .example {
   padding: 20px !important;
   background: var(--subtle);

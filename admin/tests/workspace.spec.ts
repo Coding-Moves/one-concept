@@ -375,6 +375,22 @@ test("lesson HTML stays text, unsafe references are not clickable, edits block u
     page.getByRole("button", { name: "Add comment", exact: true }),
   ).toBeEnabled();
 });
+test("lesson Markdown previews and renders without loading embedded images or unsafe links", async ({ page, context }) => {
+  const state = await fixture(context);
+  state.body.summary = "Use **bold** and `GET /profiles/42`. ![remote](https://example.test/image.png) [unsafe](javascript:alert(1))";
+  await login(page);
+  await openLesson(page);
+  const lesson = page.locator('.lesson-document');
+  await expect(lesson.locator('strong')).toContainText(['bold']);
+  await expect(lesson.locator('code')).toContainText(['GET /profiles/42']);
+  await expect(lesson.locator('img')).toHaveCount(0);
+  await expect(lesson.locator('a[href^="javascript:"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Prepare manual correction' }).click();
+  await page.getByLabel('Explanation', { exact: true }).fill('A **reviewed** example with `PUT`.');
+  const preview = page.getByRole('region', { name: 'Lesson Markdown preview' });
+  await expect(preview.locator('strong')).toContainText(['reviewed']);
+  await expect(preview.locator('code')).toContainText(['PUT']);
+});
 
 test("a malformed draft opens safely and can be completed without losing its taxonomy", async ({
   page,

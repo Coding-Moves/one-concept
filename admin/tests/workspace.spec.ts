@@ -496,6 +496,27 @@ test("a revision correction refreshes the concept token and shows changed live c
   await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
   expect(state.commands.at(-1).expected_token).toBe("b".repeat(64));
 });
+test("an older revision cannot stage its old body without comparing the live lesson", async ({ page, context }) => {
+  const state = await fixture(context);
+  state.baseVersion = 1;
+  state.contentVersion = 2;
+  state.liveBody = { ...state.body, summary: "A newer published explanation that the old revision must not silently replace." };
+  await login(page);
+  await openLesson(page);
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await expect(page.getByRole("alert").getByText("This revision is based on an older published lesson.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Current live lesson" })).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Explanation", { exact: true })).toHaveValue(state.body.summary);
+  await page.getByLabel("Review note or comment").fill("Compare the old revision with the newer published content.");
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeDisabled();
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeDisabled();
+  await page.getByRole("button", { name: "Continue from latest version" }).click();
+  const expectedToken = state.token;
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  expect(state.commands.at(-1).expected_token).toBe(expectedToken);
+});
 test("a curriculum conflict explains the issue without locking the editor", async ({
   page,
   context,

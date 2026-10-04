@@ -48,6 +48,7 @@ export function Review({
     [stageToken, setStageToken] = useState(""),
     [editBaseBody, setEditBaseBody] = useState(""),
     [editNeedsReview, setEditNeedsReview] = useState(false),
+    [editReviewMessage, setEditReviewMessage] = useState(""),
     [latestConcept, setLatestConcept] = useState<Detail | null>(null),
     [members, setMembers] = useState<Member[]>([]),
     [assignee, setAssignee] = useState(""),
@@ -208,15 +209,23 @@ export function Review({
   async function beginEdit() {
     try {
       const concept = await api.request<Detail>(`/concepts/${cid}`);
+      const revisionIsOld =
+        revision &&
+        detail?.base_version !== undefined &&
+        concept.content_version !== undefined &&
+        detail.base_version !== concept.content_version;
       setStageToken(concept.token);
       setEditBaseBody(JSON.stringify(concept.body));
-      setEditNeedsReview(false);
-      setLatestConcept(null);
+      setEditNeedsReview(revisionIsOld);
+      setEditReviewMessage(
+        revisionIsOld ? "This revision is based on an older published lesson." : "",
+      );
+      setLatestConcept(revisionIsOld ? concept : null);
       setEdit({
         ...editableLesson(revision ? detail!.body : concept.body),
         subtopic_slug: concept.body.subtopic_slug,
       });
-      setTab("edit");
+      setTab(revisionIsOld ? "lesson" : "edit");
     } catch (e) {
       setError(message(e));
     }
@@ -237,11 +246,17 @@ export function Review({
     if (!edit) return;
     if (JSON.stringify(concept.body) === editBaseBody) {
       setStageToken(concept.token);
-      setEditNeedsReview(false);
-      setLatestConcept(null);
-      setNotice("Latest lesson loaded. Your correction is still here.");
+      if (editNeedsReview) {
+        setLatestConcept(concept);
+        setNotice("Latest lesson loaded. Compare it with your correction before continuing.");
+      } else {
+        setEditReviewMessage("");
+        setLatestConcept(null);
+        setNotice("Latest lesson loaded. Your correction is still here.");
+      }
     } else {
       setEditNeedsReview(true);
+      setEditReviewMessage("The live lesson changed while you edited.");
       setLatestConcept(concept);
       setTab("lesson");
       setNotice(
@@ -318,13 +333,14 @@ export function Review({
       )}
       {editNeedsReview && latestConcept && (
         <Notice error>
-          The live lesson changed while you edited. Your correction is
-          preserved. Compare the current live lesson below with your Edit, then{" "}
+          {editReviewMessage} Your correction is preserved. Compare the current
+          live lesson below with your Edit, then{" "}
           <button
             onClick={() => {
               setStageToken(latestConcept.token);
               setEditBaseBody(JSON.stringify(latestConcept.body));
               setEditNeedsReview(false);
+              setEditReviewMessage("");
               setLatestConcept(null);
               setTab("edit");
             }}

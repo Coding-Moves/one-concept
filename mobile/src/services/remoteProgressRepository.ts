@@ -46,6 +46,8 @@ interface StatePayload {
   stats: { current: number; longest: number; total_learned: number; total_reviews?: number };
   assignment_slug: string | null;
   daily?: DailyPayload | null;
+  /** Added by the #330 backend contract. Older servers simply omit it. */
+  daily_availability?: 'available' | 'personalization_required' | 'catalog_exhausted' | 'review_available';
   review?: ReviewPayload | null;
 }
 
@@ -91,7 +93,9 @@ function toProgressState(payload: StatePayload): ProgressState {
       ? { status: 'ok', payload: payload.daily, stale: false }
       : payload.review
         ? { status: 'review', payload: payload.review, stale: false }
-        : { status: 'exhausted' },
+        : payload.daily_availability === 'personalization_required'
+          ? { status: 'personalization_required', stale: false }
+          : { status: 'exhausted' },
   };
 }
 
@@ -192,7 +196,9 @@ export class RemoteProgressRepository implements ProgressRepository {
         // cache-first preview (loadCached) leaves it not-stale, so the banner
         // still doesn't flash during a normal load (#92).
         const offline: ProgressState =
-          (cached.serverDaily?.status === 'ok' || cached.serverDaily?.status === 'review')
+          (cached.serverDaily?.status === 'ok'
+            || cached.serverDaily?.status === 'review'
+            || cached.serverDaily?.status === 'personalization_required')
             ? { ...cached, serverDaily: { ...cached.serverDaily, stale: true } }
             : cached;
         this.cache = offline;

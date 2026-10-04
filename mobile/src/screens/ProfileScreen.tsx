@@ -86,6 +86,7 @@ export function ProfileScreen() {
   }, [session?.user.id]);
 
   const completedSubtopics = subtopics.filter(item => item.completed).length;
+  const hasFollowedTopics = progress.followedTopics.length > 0;
 
   const toggleReminders = useCallback(async (weekly = false) => {
     if (!prefs || !session?.user.id || reminderPending.current) return;
@@ -275,13 +276,16 @@ export function ProfileScreen() {
               <Text style={styles.rowTitle}>Notifications</Text>
               <Text style={styles.rowSubtitle}>
                 {prefs.enabled
-                  ? `Daily reminders: ${prefs.reminder_times.join(' · ')}`
-                  : 'Off — no nudges'}
+                  ? hasFollowedTopics
+                    ? `Daily reminders: ${prefs.reminder_times.join(' · ')}. Changes affect future reminders and need device permission.`
+                    : 'Daily reminders are paused until you follow a topic. Your preference stays saved.'
+                  : 'Off — no future daily reminders. Device permission is needed when you turn them on.'}
               </Text>
             </View>
           </View>
           <Switch
             accessibilityLabel="Notifications"
+            accessibilityHint="Turns future daily reminders on or off. Notification permission is required to deliver them."
             disabled={reminderBusy}
             accessibilityState={{ disabled: reminderBusy, busy: reminderBusy, checked: prefs.enabled }}
             value={prefs.enabled}
@@ -294,12 +298,18 @@ export function ProfileScreen() {
 
       {prefs && <View style={styles.rowCard}>
         <View style={styles.rowLeft}><View style={{ flex: 1 }}>
-          <Text style={styles.rowTitle}>Weekly quiz ready</Text>
-          <Text style={styles.rowSubtitle}>{prefs.enabled
-            ? `Once per quiz, at 9 AM (${progress.timezone ?? 'your learning timezone'}). Completed quizzes stay quiet.`
-            : 'Turn on Notifications above to receive weekly quiz alerts.'}</Text>
+          <Text style={styles.rowTitle}>Weekly quiz alerts</Text>
+          <Text style={styles.rowSubtitle}>{!prefs.enabled
+            ? 'Enable daily reminders first. Weekly quiz alerts also need notification permission.'
+            : prefs.weekly_quiz_enabled
+              ? `On — once when a new quiz is ready at 9 AM (${progress.timezone ?? 'your learning timezone'}). Completed quizzes stay quiet.`
+              : `Off — turn on to hear about future quizzes at 9 AM (${progress.timezone ?? 'your learning timezone'}).`}</Text>
         </View></View>
-        <Switch accessibilityLabel="Weekly quiz notifications" disabled={reminderBusy || !prefs.enabled}
+        <Switch accessibilityLabel="Weekly quiz notifications"
+          accessibilityHint={prefs.enabled
+            ? 'Turns future weekly quiz alerts on or off. Notification permission is required to deliver them.'
+            : 'Enable daily reminders before changing weekly quiz alerts.'}
+          disabled={reminderBusy || !prefs.enabled}
           accessibilityState={{ disabled: reminderBusy || !prefs.enabled, busy: reminderBusy, checked: prefs.weekly_quiz_enabled ?? false }}
           value={prefs.weekly_quiz_enabled ?? false} onValueChange={() => void toggleReminders(true)}
           trackColor={{ true: colors.primary, false: colors.border }} thumbColor={colors.onPrimary} />

@@ -21,7 +21,7 @@ TABLES = (
     "editorial_legacy_batches", "editorial_legacy_batch_entries",
     "editorial_legacy_versions", "editorial_revision_events", "editorial_publications",
     "editorial_memberships", "editorial_account_events",
-    "connection_preferences", "connections", "connection_blocks", "connection_request_events",
+    "connection_preferences", "connections", "connection_blocks", "connection_request_events", "profile_connections",
     "profiles", "profile_sharing", "topics", "subtopics", "concepts", "user_topics", "daily_assignments",
     "concept_interactions", "notification_preferences", "device_tokens",
     "concept_backlog", "reminder_log", "generation_daily_usage",

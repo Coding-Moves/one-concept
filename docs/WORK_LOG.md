@@ -13,6 +13,12 @@ claims as completed work.
 - Planned commits: durable batch/entry storage, owner-fenced batch API and worker claims, reviewer generation console, integration coverage, and a Railway runbook with temporary-key rotation.
 - Migration guard: `0042_legacy_enrichment_batches.sql` remains unapplied during development. `docs/LEGACY_ENRICHMENT_ROLLOUT.md` requires applying and recording it only in the completed release process after backup and RLS verification.
 
+### #349 QR scanning and one-way Connect — in progress
+
+- Scope: replace the mutual-request path with safe directed connections that start only from an opaque public profile QR/link. Preserve accepted legacy pairs as two directed rows, enforce blocks and current sharing at every operation, and add QR-only camera scanning with a paste fallback. The dedicated PR targets `develop` and closes #349.
+- Implemented: `cd9e752` adds the additive directed storage and two-way backfill of accepted legacy pairs; `92a0973` adds authenticated owner-fenced relationship APIs, privacy/block enforcement and PostgreSQL coverage; `60adf23` adds the mobile Connect/Disconnect/Block controls and one-way list; `ce22365` adds the QR-only scanner and SDK 57 camera configuration. Existing invitation routes remain for compatibility while the mobile client uses the new directed APIs.
+- Validation: PostgreSQL relationship/schema-contract tests passed against a disposable local database; mobile TypeScript and Expo dependency check pass. The Node suite has one pre-existing `publicConfig.test.mjs` stderr assertion failure; its remaining 89 tests pass. A fresh Android/iOS build is required because `expo-camera` is native.
+
 ### #348 private avatar and concise bio — in progress
 
 - Scope: add an optional, account-fenced learner bio and private avatar, with built-in avatar choices, library selection and camera capture. The implementation preserves the existing `profiles.avatar_url` reference, keeps public sharing opt-in, and adds no login/onboarding requirement.

@@ -40,6 +40,7 @@
     "0038_editorial_notifications.sql": "7665a4b53d52b5707e6f0f8964bc5d9fc56e8980e7fc0b7e6ee6bba483caa717",
     "0039_owner_reporting.sql": "0c2659c2a6e8df166a0801bed4da16188bd0c3b0412dfd2de1021223b495d2c0",
     "0040_profile_avatar_bio.sql": "86c216aeeae0b0b81d7b2e0daa8708d56a870736322069ea0249a79b9fca2708",
+    "0041_directed_profile_connections.sql": "240efb2583ec82cb1fe1077bf7a10b006413a204262d6caf26d0ab01dd76571c",
     "0042_legacy_enrichment_batches.sql": "04a951903b6e0189d4faace67b4dfb0859d7d48ecb5832e78d99accfb1d81db0"
   },
   "schema": {
@@ -1574,6 +1575,30 @@
         "not_null": true,
         "type": "text"
       },
+      "profile_connections.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "profile_connections.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profile_connections.source_user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profile_connections.target_user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
       "profile_sharing.achievement_codes": {
         "default": "'{}'::text[]",
         "identity": "",
@@ -2710,6 +2735,26 @@
         "definition": "CHECK ((severity = ANY (ARRAY['info'::text, 'error'::text])))",
         "validated": true
       },
+      "profile_connections.profile_connections_check": {
+        "definition": "CHECK ((source_user_id <> target_user_id))",
+        "validated": true
+      },
+      "profile_connections.profile_connections_id_key": {
+        "definition": "UNIQUE (id)",
+        "validated": true
+      },
+      "profile_connections.profile_connections_pkey": {
+        "definition": "PRIMARY KEY (source_user_id, target_user_id)",
+        "validated": true
+      },
+      "profile_connections.profile_connections_source_user_id_fkey": {
+        "definition": "FOREIGN KEY (source_user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "profile_connections.profile_connections_target_user_id_fkey": {
+        "definition": "FOREIGN KEY (target_user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
       "profile_sharing.profile_sharing_achievement_codes_check": {
         "definition": "CHECK ((cardinality(achievement_codes) <= 32))",
         "validated": true
@@ -3463,6 +3508,21 @@
         "ready": true,
         "valid": true
       },
+      "profile_connections_id_key": {
+        "definition": "CREATE UNIQUE INDEX profile_connections_id_key ON public.profile_connections USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "profile_connections_pkey": {
+        "definition": "CREATE UNIQUE INDEX profile_connections_pkey ON public.profile_connections USING btree (source_user_id, target_user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "profile_connections_source_created": {
+        "definition": "CREATE INDEX profile_connections_source_created ON public.profile_connections USING btree (source_user_id, created_at DESC, target_user_id)",
+        "ready": true,
+        "valid": true
+      },
       "profile_sharing_pkey": {
         "definition": "CREATE UNIQUE INDEX profile_sharing_pkey ON public.profile_sharing USING btree (user_id)",
         "ready": true,
@@ -3869,6 +3929,9 @@
         "rls": true
       },
       "owner_operation_events": {
+        "rls": true
+      },
+      "profile_connections": {
         "rls": true
       },
       "profile_sharing": {

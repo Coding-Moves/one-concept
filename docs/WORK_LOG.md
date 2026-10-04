@@ -20,10 +20,11 @@ claims as completed work.
   Profile → About showed the new link on a 390px screen with no browser errors.
   The live destination and physical-device tap are unverified until deployment.
 - [Release-preparation PR #342](https://github.com/Coding-Moves/one-concept/pull/342)
-  targets `develop`; hosted checks are pending. After its merge, verify the
-  final `develop` → `main` diff contains both the version bump and card before
-  opening the production release PR. No OAuth publishing, Gmail send, mobile
-  OTA, production merge, or issue closure occurred in this chunk.
+  targets `develop`; all three hosted checks passed at `92bf989`. After its
+  merge, verify the final `develop` → `main` diff contains both the version
+  bump and card before opening the production release PR. No OAuth publishing,
+  Gmail send, mobile OTA, production merge, or issue closure occurred in this
+  chunk.
 
 ### #313 Google OAuth production branding — PR #341
 

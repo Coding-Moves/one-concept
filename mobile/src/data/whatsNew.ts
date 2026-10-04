@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.6',
+    highlights: [
+      'Learn how new lessons are checked by human reviewers from the About screen.',
+    ],
+  },
+  {
     version: '1.10.5',
     highlights: [
       'See a clear confirmation when your preferred name has been saved.',

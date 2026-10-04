@@ -41,7 +41,8 @@
     "0039_owner_reporting.sql": "0c2659c2a6e8df166a0801bed4da16188bd0c3b0412dfd2de1021223b495d2c0",
     "0040_profile_avatar_bio.sql": "86c216aeeae0b0b81d7b2e0daa8708d56a870736322069ea0249a79b9fca2708",
     "0041_directed_profile_connections.sql": "240efb2583ec82cb1fe1077bf7a10b006413a204262d6caf26d0ab01dd76571c",
-    "0042_legacy_enrichment_batches.sql": "04a951903b6e0189d4faace67b4dfb0859d7d48ecb5832e78d99accfb1d81db0"
+    "0042_legacy_enrichment_batches.sql": "04a951903b6e0189d4faace67b4dfb0859d7d48ecb5832e78d99accfb1d81db0",
+    "0043_future_refill_daily_usage.sql": "0f50e876b4d5b07e1902792d611ccf6df6553d78e88aa590ceaced28240b856b"
   },
   "schema": {
     "columns": {
@@ -1497,6 +1498,36 @@
         "not_null": false,
         "type": "uuid"
       },
+      "future_refill_daily_usage.budget_day": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "future_refill_daily_usage.calls_used": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "future_refill_topic_daily_usage.budget_day": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "future_refill_topic_daily_usage.calls_used": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "future_refill_topic_daily_usage.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
       "generation_daily_usage.budget_day": {
         "default": null,
         "identity": "",
@@ -2699,6 +2730,26 @@
         "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
         "validated": true
       },
+      "future_refill_daily_usage.future_refill_daily_usage_calls_used_check": {
+        "definition": "CHECK ((calls_used >= 0))",
+        "validated": true
+      },
+      "future_refill_daily_usage.future_refill_daily_usage_pkey": {
+        "definition": "PRIMARY KEY (budget_day)",
+        "validated": true
+      },
+      "future_refill_topic_daily_usage.future_refill_topic_daily_usage_calls_used_check": {
+        "definition": "CHECK ((calls_used >= 0))",
+        "validated": true
+      },
+      "future_refill_topic_daily_usage.future_refill_topic_daily_usage_pkey": {
+        "definition": "PRIMARY KEY (budget_day, topic_id)",
+        "validated": true
+      },
+      "future_refill_topic_daily_usage.future_refill_topic_daily_usage_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
+        "validated": true
+      },
       "generation_daily_usage.generation_daily_usage_calls_used_check": {
         "definition": "CHECK ((calls_used >= 0))",
         "validated": true
@@ -3433,6 +3484,16 @@
         "ready": true,
         "valid": true
       },
+      "future_refill_daily_usage_pkey": {
+        "definition": "CREATE UNIQUE INDEX future_refill_daily_usage_pkey ON public.future_refill_daily_usage USING btree (budget_day)",
+        "ready": true,
+        "valid": true
+      },
+      "future_refill_topic_daily_usage_pkey": {
+        "definition": "CREATE UNIQUE INDEX future_refill_topic_daily_usage_pkey ON public.future_refill_topic_daily_usage USING btree (budget_day, topic_id)",
+        "ready": true,
+        "valid": true
+      },
       "generation_daily_usage_pkey": {
         "definition": "CREATE UNIQUE INDEX generation_daily_usage_pkey ON public.generation_daily_usage USING btree (budget_day)",
         "ready": true,
@@ -3920,6 +3981,12 @@
         "rls": true
       },
       "editorial_workflow_events": {
+        "rls": true
+      },
+      "future_refill_daily_usage": {
+        "rls": true
+      },
+      "future_refill_topic_daily_usage": {
         "rls": true
       },
       "generation_daily_usage": {

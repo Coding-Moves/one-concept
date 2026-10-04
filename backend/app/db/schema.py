@@ -25,6 +25,7 @@ TABLES = (
     "profiles", "profile_sharing", "topics", "subtopics", "concepts", "user_topics", "daily_assignments",
     "concept_interactions", "notification_preferences", "device_tokens",
     "concept_backlog", "reminder_log", "generation_daily_usage",
+    "future_refill_daily_usage", "future_refill_topic_daily_usage",
     "content_supply_targets", "concept_revisions", "content_retry_log",
     "daily_reviews", "content_worker_runs", "content_conditions",
     "achievement_definitions", "user_achievements", "user_concept_completions",

@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { AppState, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { SettingRow } from '../components/SettingRow';
 import { actOnConnection, connectionError, connectionList, ConnectionEntry, ConnectionKind, ConnectionPreferences, connectionSettings, onConnectionsChanged, saveConnectionSettings, unblockConnection } from '../services/connections';
 import { openPublicProfile } from '../services/publicProfileNavigation';
 import { publicProfileUrl } from '../services/profileSharing';
@@ -75,10 +76,18 @@ function AccountConnections({ userId }: { userId: string }) {
   return <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24, gap: 20 }}>
     {button('← Back', () => navigation.goBack(), false)}
     <ScreenHeader title="Connections" subtitle="Your connections are private and always under your control." />
-    <View style={{ padding: 18, borderRadius: 22, backgroundColor: colors.surface, gap: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ flex: 1, color: colors.text, fontWeight: '700' }}>Accept new requests</Text><Switch accessibilityLabel="Accept new connection requests" value={prefs?.accepting_requests ?? false} disabled={preferenceSaving || !prefs} accessibilityState={{ disabled: preferenceSaving || !prefs, busy: preferenceSaving, checked: prefs?.accepting_requests ?? false }} onValueChange={acceptingRequests => void saveAcceptingRequests(acceptingRequests)} /></View>
-      <Text style={{ color: colors.textSecondary }}>When this is on, people who have your public profile link can send a request. You choose whether to accept.</Text>
-    </View>
+    <SettingRow
+      icon="people-outline"
+      tone="connection"
+      title="Accept new requests"
+      subtitle="Allow people with your public profile link to send a request. You still choose whom to accept."
+      value={prefs?.accepting_requests ?? false}
+      disabled={!prefs}
+      pending={preferenceSaving}
+      onValueChange={acceptingRequests => void saveAcceptingRequests(acceptingRequests)}
+      accessibilityLabel="Accept new connection requests"
+      accessibilityHint="Allows or pauses connection requests from people with your public profile link."
+    />
     <View style={{ gap: 12 }}>
       <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>Add a connection</Text>
       <TextInput accessibilityLabel="Shared profile link" placeholder="Paste a One Concept profile link" placeholderTextColor={colors.textMuted} value={link} onChangeText={setLink} autoCapitalize="none" autoCorrect={false} style={{ minHeight: 50, padding: 14, borderRadius: 14, color: colors.text, backgroundColor: colors.surface }} />

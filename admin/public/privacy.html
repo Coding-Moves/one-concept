@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>One Concept Review — Privacy Policy</title>
+  <meta name="description" content="How One Concept Review handles editorial accounts, review records, and Gmail reviewer notifications.">
+  <link rel="stylesheet" href="/public-info.css">
+</head>
+<body>
+  <main>
+    <a class="brand" href="/about.html" aria-label="One Concept Review home"><span class="brand-mark">1</span> One Concept <span class="brand-suffix">Review</span></a>
+    <p class="eyebrow">Privacy policy</p>
+    <h1>How we handle review workspace data</h1>
+    <p class="updated">Effective October 4, 2026</p>
+    <p>One Concept Review is a private editorial workspace operated by Coding Moves. This policy describes its accounts, review records, and optional email notifications. The <a href="https://one-concept-production.up.railway.app/privacy">One Concept learning app privacy policy</a> covers learner accounts and app data.</p>
+
+    <h2>Editorial accounts and work</h2>
+    <p>Supabase Auth handles sign-in, password recovery, and authenticator enrollment. We use an invited reviewer's email address, approved name, permissions, and timezone to manage access and assignments. Our backend records assigned lessons, review comments, requested corrections, decisions, publication history, and related timestamps. Approved reviewer names may appear in the details of lessons they verify.</p>
+
+    <h2>Reviewer notification email</h2>
+    <p>The owner may authorize the Gmail API with the limited <code>gmail.send</code> permission to send assignment, deadline, and reminder emails from the owner's chosen Gmail account. The backend keeps the OAuth authorization credentials in private server configuration. It uses the reviewer address and relevant assignment details to create these messages; Google processes them to deliver email. The connection cannot read mailbox messages, contacts, or attachments. Emails contain a link to the review workspace, but never a login token or approval action.</p>
+    <p>We keep bounded delivery records such as message batch, attempt time, provider acceptance or failure, and sanitized error status to troubleshoot notifications. Gmail acceptance does not prove inbox delivery. The owner can turn reviewer email sending off, and the Gmail account holder can revoke the app's access in their Google Account.</p>
+
+    <h2>Hosting, use, and retention</h2>
+    <p>Netlify serves the website; Railway hosts the API and workers; Supabase provides authentication and database infrastructure; Google delivers optional reviewer emails. These providers process information needed to operate their respective services. We do not use review data or Google account access for advertising. Hosting providers may process technical request information to deliver and secure the service.</p>
+    <p>We retain account and editorial records while needed to run the review workflow and preserve the integrity of published decisions. Delivery attempts are retained for operational diagnosis. If you want to access, correct, or request deletion of your personal information, contact us below; we may need to verify your identity and retain records that are necessary for audit or service integrity.</p>
+
+    <h2>Security and contact</h2>
+    <p>Editorial pages require an invited account, server-checked permissions, and multifactor authentication. Only authorized personnel can access private lessons and reviewer records. No internet service can guarantee absolute security.</p>
+    <p>Contact <a href="mailto:contactmuawia@gmail.com">contactmuawia@gmail.com</a> with privacy questions or requests. We may update this policy as the service changes and will publish the current version at this address.</p>
+    <footer><a href="/about.html">About One Concept Review</a> · <a href="/">Workspace sign-in</a></footer>
+  </main>
+</body>
+</html>

@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### #348 private avatar and concise bio — in progress
+
+- Scope: add an optional, account-fenced learner bio and private avatar, with built-in avatar choices, library selection and camera capture. The implementation preserves the existing `profiles.avatar_url` reference, keeps public sharing opt-in, and adds no login/onboarding requirement.
+- Planned commits separate storage/migration policy, authenticated profile/avatar API, mobile profile model and fallback avatars, image picker/camera experience, public sharing visibility, coverage, and operations handoff. The dedicated PR targets `develop` and closes #348.
+
 ### v1.10.7 release preparation — PR #354
 
 - Scope: promote the reviewed `develop` work, including PR #351's editorial draft conflict and Markdown fixes, through the normal release process. `cfe4422` adds app version 1.10.7, a matching one-time What's New card, and a new native runtime; the production PR remains `develop` → `main`.

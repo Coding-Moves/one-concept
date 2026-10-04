@@ -29,11 +29,13 @@ async def create(db, actor, settings, command):
         return old
     if not settings.generation_enabled or not settings.gemini_api_key:
         raise HTTPException(409, 'Generation is paused or not configured')
-    await db.execute(text('select id from topics where id=:id and is_active for update'), {'id': command.topic_id})
+    topic = await db.scalar(text('select id from topics where id=:id and is_active for update'), {'id': command.topic_id})
+    if topic is None:
+        raise ValueError('Choose an active subject')
     eligible = (await db.execute(text('''select c.id,c.content_version,jsonb_build_object(
       'title',c.title,'summary',c.summary,'example',c.example,'curriculum',c.curriculum,
-      'topic_id',c.topic_id,'subtopic_id',c.subtopic_id) as body
-      from concepts c where c.topic_id=:topic and c.status='published'
+      'topic_id',c.topic_id,'subtopic_id',c.subtopic_id,'subtopic_slug',s.slug) as body
+      from concepts c join subtopics s on s.id=c.subtopic_id where c.topic_id=:topic and c.status='published'
       and not exists(select 1 from concept_revisions r where r.concept_id=c.id
         and r.status in ('draft','generating','validation_failed','pending_review','changes_requested','approved'))
       order by c.created_at,c.id'''), {'topic': command.topic_id})).mappings().all()

@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { safeUrl } from "./api";
@@ -6,8 +7,14 @@ import { safeUrl } from "./api";
 export function MarkdownText({ value, inline = false, links = true }: { value: unknown; inline?: boolean; links?: boolean }) {
   const source = typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "Not provided");
   const content = inline ? source.replaceAll("\n", " ") : source;
+  const inlineElement = ({ children }: { children?: ReactNode }) => <span>{children}</span>;
   const rendered = <Markdown remarkPlugins={[remarkGfm]} components={{
-      ...(inline ? { p: ({ children }: { children?: ReactNode }) => <span>{children}</span> } : {}),
+      ...(inline ? {
+        p: inlineElement, h1: inlineElement, h2: inlineElement,
+        h3: inlineElement, h4: inlineElement, h5: inlineElement,
+        h6: inlineElement, ul: inlineElement, ol: inlineElement,
+        li: inlineElement, blockquote: inlineElement, pre: inlineElement,
+      } : {}),
       img: ({ alt }) => <span>{alt ?? "[image]"}</span>,
       a: ({ href, children }) => {
         const url = safeUrl(href ?? "");
@@ -16,4 +23,3 @@ export function MarkdownText({ value, inline = false, links = true }: { value: u
     }}>{content}</Markdown>;
   return inline ? <span className="lesson-markdown lesson-markdown-inline">{rendered}</span> : <div className="lesson-markdown">{rendered}</div>;
 }
-import type { ReactNode } from "react";

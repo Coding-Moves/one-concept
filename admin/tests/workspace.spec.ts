@@ -377,10 +377,14 @@ test("lesson HTML stays text, unsafe references are not clickable, edits block u
 });
 test("lesson Markdown previews and renders without loading embedded images or unsafe links", async ({ page, context }) => {
   const state = await fixture(context);
+  state.body.title = "# Database Migrations";
   state.body.summary = "Use **bold** and `GET /profiles/42`. ![remote](https://example.test/image.png) [unsafe](javascript:alert(1))";
   await login(page);
   await openLesson(page);
   const lesson = page.locator('.lesson-document');
+  await expect(page.locator('.page-heading h1')).toHaveText('Database Migrations');
+  await expect(lesson.locator('h2 h1')).toHaveCount(0);
+  await expect(page.locator('.page-heading h1 h1')).toHaveCount(0);
   await expect(lesson.locator('strong')).toContainText(['bold']);
   await expect(lesson.locator('code')).toContainText(['GET /profiles/42']);
   await expect(lesson.locator('img')).toHaveCount(0);

@@ -4,7 +4,7 @@ const root=process.argv[2];
 if(!root || !fs.existsSync(path.join(root,'index.html'))) throw Error('Pass the exported web directory');
 const version=require('../app.config.js').expo.version;
 const today=new Date().toISOString().slice(0,10);
-const concept={id:'33333333-3333-4333-8333-333333333333',slug:'known-lesson',title:'Reviewing invariants',summary:'An invariant is a rule that stays true while a system changes. Use it to check whether each operation keeps your data consistent.',example:'A library book can have one active borrower. Returning and lending it should preserve that rule.',topic_slug:'computer-science',topic_name:'Computer Science',content_version:2,like_count:0};
+const concept={id:'33333333-3333-4333-8333-333333333333',slug:'known-lesson',title:'Reviewing invariants',summary:'An **invariant** is a rule that stays true while a system changes. Use `GET` to inspect data without changing it.',example:'A library book can have one active borrower. Returning and lending it should preserve that rule.',topic_slug:'computer-science',topic_name:'Computer Science',content_version:2,like_count:0};
 const session={access_token:'fixture',refresh_token:'fixture-refresh',token_type:'bearer',expires_in:864000,expires_at:Math.floor(Date.now()/1000)+864000,user:{id:'11111111-1111-1111-1111-111111111111',email:'fixture@example.invalid',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{},created_at:'2026-01-01T00:00:00Z'}};
 const server=http.createServer((req,res)=>{
  const relative=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
@@ -38,7 +38,10 @@ const server=http.createServer((req,res)=>{
    await context.route('**/auth/v1/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(session)}));
    const page=await context.newPage();page.on('pageerror',e=>errors.push(e.message));
    await page.goto('http://127.0.0.1:4781');
-   await expect(page.getByText(concept.summary,{exact:true})).toBeVisible();
+   const bold=page.getByText('invariant',{exact:true});
+   await expect(bold).toBeVisible();
+   assert.ok(Number(await bold.evaluate(el=>getComputedStyle(el).fontWeight))>=600,'Markdown emphasis should render in the lesson');
+   await expect(page.getByText('GET',{exact:true})).toBeVisible();
    const before=reads;hold=true;
    await page.getByRole('button',{name:'Refresh today',exact:true}).click();
    await expect.poll(()=>!!release).toBe(true);
@@ -47,7 +50,7 @@ const server=http.createServer((req,res)=>{
    await expect(page.getByRole('button',{name:'Refresh today',exact:true})).toBeEnabled();assert.equal(reads,before+1);
    online=false;await page.evaluate(()=>window.dispatchEvent(new Event('offline')));
    await page.getByRole('button',{name:'Refresh today',exact:true}).click();
-   await expect(page.getByText(concept.summary,{exact:true})).toBeVisible();
+   await expect(page.getByText('invariant',{exact:true})).toBeVisible();
    const banner=page.getByRole('alert',{name:'You are offline. Changes will sync when you reconnect.'});
    await expect(banner).toBeVisible();
    const ratio=await banner.evaluate(el=>{

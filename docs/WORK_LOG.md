@@ -14,6 +14,12 @@ claims as completed work.
 - Implementation and browser regressions: `46571f2`.
 - Validation: admin TypeScript, 11 Vitest tests, and four affected Playwright cases pass. The complete workspace browser run passed 16 of 17 before the malformed-revision regression was corrected; that case and the three new cases passed on rerun. No production deployment or live draft staging has been verified.
 - [PR #351](https://github.com/Coding-Moves/one-concept/pull/351) targets `develop`; hosted checks are running. Next: review the final checks and merge only with the owner's PR-specific approval, then release the site. The operator must copy their current unsaved form before opening the new site build, because that tab still runs the old JavaScript.
+### #321 dependency audit — in progress
+
+- Scope: reproduce the bot-reported mobile dependency audit against current `develop`, apply only Expo SDK 57-compatible dependency updates, and keep the audit meaningful. The backend audit reports no vulnerable dependencies.
+- Implemented `82c65b2`: updates the direct dependency set and lockfile to Expo's current SDK 57-compatible versions, including the available `brace-expansion` security patch. The dedicated PR targets `develop`.
+- Remaining audit finding: npm reports 17 high findings with no compatible fix; its suggested resolutions downgrade Expo 57 to Expo 44 and React Native 0.86 to 0.72. The existing audit workflow remains unchanged so those findings stay visible rather than being suppressed.
+- Validation: `npx expo install --check`, mobile TypeScript, and all 90 Node tests pass. [PR #350](https://github.com/Coding-Moves/one-concept/pull/350) targets `develop`. It addresses the safe dependency remediation but intentionally does not close #321 while the unresolved findings remain tracked.
 
 ### #346 learner UX flow — in progress
 

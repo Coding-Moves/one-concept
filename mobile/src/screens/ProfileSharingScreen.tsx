@@ -1,8 +1,9 @@
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, ScrollView, Share, Switch, Text, View } from 'react-native';
+import { AppState, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { ShareProfileSheet } from '../components/ShareProfileSheet';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { SettingRow } from '../components/SettingRow';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useProgress } from '../context/ProgressContext';
@@ -71,7 +72,7 @@ export function ProfileSharingScreen() {
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const discardDraft = () => { if (saved) { setDraft(saved); setMessage('Unsaved choices discarded.'); } };
   const button = (label: string, action: () => void, disabled = busy) => <Pressable key={label} accessibilityRole="button" accessibilityState={{ disabled }} disabled={disabled} onPress={action} style={({ pressed }) => ({ minHeight: 48, padding: 14, borderRadius: 14, backgroundColor: colors.surface, opacity: disabled ? 0.5 : pressed ? 0.7 : 1 })}><Text style={{ color: colors.primary, fontWeight: '700' }}>{label}</Text></Pressable>;
-  const toggle = (label: string, checked: boolean, onChange: (value: boolean) => void) => <View key={label} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, minHeight: 48 }}><Text style={{ flex: 1, color: colors.text }}>{label}</Text><Switch accessibilityLabel={label} disabled={busy} value={checked} onValueChange={value => { setPreview(null); onChange(value); }} /></View>;
+  const toggle = (label: string, icon: 'person-outline' | 'flame-outline' | 'library-outline' | 'ribbon-outline', checked: boolean, onChange: (value: boolean) => void) => <SettingRow key={label} icon={icon} tone="achievement" title={label} subtitle={checked ? 'Included when you save your public profile choices.' : 'Hidden until you choose to include it and save.'} accessibilityLabel={label} accessibilityHint="Changes this draft only. Save public choices to update your profile link." disabled={busy} value={checked} onValueChange={value => { setPreview(null); onChange(value); }} />;
   return <><ShareProfileSheet value={preview} busy={busy} onClose={() => { presentation.current += 1; setPreview(null); }} onShare={() => void share(false)} /><ScrollView style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24, gap: 18 }}>
     {button('← Back', () => navigation.goBack(), false)}
     <ScreenHeader title="Public profile" subtitle="Private by default. Choose exactly what a link can show." />
@@ -82,12 +83,12 @@ export function ProfileSharingScreen() {
     <Text style={{ color: colors.textMuted }}>Your email, saved concepts and private activity are never shared. Turning sharing off stops new link visits; it cannot remove copies someone already made.</Text>
     {!online && <Text style={{ color: colors.text }}>Connect to save settings or prepare a share link.</Text>}
     {draft && <>
-      {toggle(`Display name: ${progress.displayName || 'Learner'}`, draft.show_name, show_name => setDraft({ ...draft, show_name }))}
-      {toggle('Current and longest streak', draft.show_streak, show_streak => setDraft({ ...draft, show_streak }))}
-      {toggle('Total concepts learned', draft.show_learning, show_learning => setDraft({ ...draft, show_learning }))}
+      {toggle(`Display name: ${progress.displayName || 'Learner'}`, 'person-outline', draft.show_name, show_name => setDraft({ ...draft, show_name }))}
+      {toggle('Current and longest streak', 'flame-outline', draft.show_streak, show_streak => setDraft({ ...draft, show_streak }))}
+      {toggle('Total concepts learned', 'library-outline', draft.show_learning, show_learning => setDraft({ ...draft, show_learning }))}
       <Text accessibilityRole="header" style={{ color: colors.text, fontWeight: '700' }}>Choose achievements to share</Text>
       {awards.length === 0 && <Text style={{ color: colors.textMuted }}>No earned achievements to share yet.</Text>}
-      {awards.map(a => toggle(a.name, draft.achievement_codes.includes(a.code), checked => setDraft({ ...draft, achievement_codes: checked ? [...draft.achievement_codes, a.code] : draft.achievement_codes.filter(code => code !== a.code) })))}
+      {awards.map(a => toggle(a.name, 'ribbon-outline', draft.achievement_codes.includes(a.code), checked => setDraft({ ...draft, achievement_codes: checked ? [...draft.achievement_codes, a.code] : draft.achievement_codes.filter(code => code !== a.code) })))}
       {dirty && <View accessibilityLiveRegion="polite" style={{ padding: 12, borderRadius: 12, backgroundColor: colors.surfaceSubtle }}><Text style={{ color: colors.text, fontWeight: '700' }}>Unsaved choices</Text><Text style={{ color: colors.textMuted }}>Save to update your link, or discard to return to the last saved settings.</Text></View>}
       {button(saved?.enabled ? 'Save public choices' : 'Enable sharing with these choices', () => void persist(true))}
       {dirty && saved && button('Discard unsaved choices', discardDraft, busy)}

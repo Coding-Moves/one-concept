@@ -1,4 +1,5 @@
 import { useRoute } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ApiError } from '../api/client';
@@ -83,14 +84,20 @@ export function WeeklyQuizScreen() {
         return <Surface key={question.id} style={styles.question}>
           <Text style={styles.eyebrow}>Question {position + 1} · {question.concept_title}</Text>
           <Text style={styles.questionText}>{question.question}</Text>
-          {question.options.map((option, index) => {
-            const selected = answers[question.id] === index;
-            const correct = result?.correct_index === index;
-            const wrong = !!result && selected && !result.correct;
-            return <Pressable key={option} disabled={!!attempt} accessibilityRole="radio" accessibilityState={{ checked: selected, disabled: !!attempt }} onPress={() => choose(question.id, index)} style={[styles.option, selected && styles.selected, correct && styles.correct, wrong && styles.wrong]}>
-              <Text style={[styles.optionText, (selected || correct) && styles.optionSelected]}>{option}</Text>
-            </Pressable>;
-          })}
+          <View accessibilityRole="radiogroup" accessibilityLabel={`Answers for question ${position + 1}`} style={styles.options}>
+            {question.options.map((option, index) => {
+              const selected = answers[question.id] === index;
+              const correct = result?.correct_index === index;
+              const wrong = !!result && selected && !result.correct;
+              const icon = correct ? 'checkmark' : wrong ? 'close' : selected ? 'ellipse' : 'ellipse-outline';
+              return <Pressable key={option} disabled={!!attempt} accessibilityRole="radio" accessibilityState={{ checked: selected, disabled: !!attempt }} accessibilityLabel={option} accessibilityHint={attempt ? (correct ? 'Correct answer.' : wrong ? 'Your selected answer was incorrect.' : 'Answer was not selected.') : 'Select this answer.'} onPress={() => choose(question.id, index)} style={[styles.option, selected && styles.selected, correct && styles.correct, wrong && styles.wrong]}>
+                <View style={[styles.radioMarker, selected && styles.radioMarkerSelected, correct && styles.radioMarkerCorrect, wrong && styles.radioMarkerWrong]}>
+                  <Ionicons name={icon} size={scaleFont(16)} color={correct ? colors.success : wrong ? colors.danger : selected ? colors.quizAccent : colors.textMuted} />
+                </View>
+                <Text style={[styles.optionText, (selected || correct) && styles.optionSelected]}>{option}</Text>
+              </Pressable>;
+            })}
+          </View>
         </Surface>;
       })}
       {!attempt ? <PrimaryButton label={submitting ? 'Scoring…' : complete ? 'Submit answers' : `Answer all 7 (${Object.keys(answers).length}/7)`} onPress={submit} disabled={!complete || submitting} /> : null}
@@ -112,10 +119,15 @@ const createStyles = (colors: ThemeColors) => StyleSheet.create({
   question: { gap: spacing.md },
   eyebrow: { color: colors.textMuted, fontSize: scaleFont(12), fontWeight: '700', letterSpacing: 0.7, textTransform: 'uppercase' },
   questionText: { ...typography.heading, fontSize: scaleFont(18), color: colors.text },
-  option: { minHeight: 44, justifyContent: 'center', borderRadius: radius.md, backgroundColor: colors.surfaceSubtle, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
-  selected: { backgroundColor: colors.categoryChip },
+  options: { gap: spacing.sm },
+  option: { minHeight: 48, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderRadius: radius.md, backgroundColor: colors.surfaceSubtle, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },
+  selected: { backgroundColor: colors.quizAccentSurface },
   correct: { backgroundColor: colors.successSurface },
   wrong: { backgroundColor: colors.dangerSurface },
+  radioMarker: { width: scaleFont(22), height: scaleFont(22), borderRadius: scaleFont(11), alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surface },
+  radioMarkerSelected: { backgroundColor: colors.quizAccentSurface },
+  radioMarkerCorrect: { backgroundColor: colors.successSurface },
+  radioMarkerWrong: { backgroundColor: colors.dangerSurface },
   optionText: { color: colors.textSecondary, fontSize: scaleFont(15), lineHeight: scaleFont(21) },
   optionSelected: { color: colors.text, fontWeight: '700' },
 });

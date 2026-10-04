@@ -7,6 +7,33 @@ claims as completed work.
 
 ## Current status
 
+### #340 mobile controls and visual system — ready for review
+
+- The mobile controls now use a shared icon-led `SettingRow` and semantic
+  light/dark accent pairs. Daily reminders update immediately, serialize the
+  full preference document to prevent stale writes, show saving only on the
+  affected row, and register a device only after the saved daily choice.
+  Weekly quiz alerts stay visibly unavailable while their Daily reminders
+  prerequisite is off, without erasing the learner's saved quiz preference.
+- Sharing and connection choices use the same native accessible control. Both
+  weekly and subtopic answer choices now show an icon marker as well as a
+  color, with radio-group semantics and explicit correct/incorrect feedback.
+- Commits: `56890d7` shared visual controls, `92cfa82` reminder responsiveness,
+  `91bd3cf` sharing/connection controls, `3ebd6d1` quiz answer markers, and
+  `93e7cb0` delayed-response browser coverage. Review follow-ups `70a0d88`
+  and `38253c8` restore only confirmed state after rapid failed changes and
+  cover that sequence. Review follow-ups `ef30342` and `37410f9` keep Weekly
+  alerts unavailable until Daily reminders are confirmed and prevent ignored
+  duplicate connection-preference taps. No backend, migration, production
+  setting, release, or OTA change is included.
+- Validation: mobile TypeScript and all 90 Node 24 tests passed. A fixture Expo
+  web export and the mocked Profile browser regression passed in light and dark
+  themes, including delayed daily/weekly saves, rollback, dependency state,
+  sharing, and narrow-layout checks. Physical Android switch feedback and
+  device notification permission remain a manual acceptance check.
+- [PR #345](https://github.com/Coding-Moves/one-concept/pull/345) targets
+  `develop`; #340 was closed after the PR was opened at the owner's request.
+
 ### #313 public review pages — v1.10.6 release preparation
 
 - PR #341 merged into `develop` at `9783fde`; its public About and privacy pages

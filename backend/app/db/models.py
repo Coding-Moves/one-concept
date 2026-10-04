@@ -34,6 +34,7 @@ class Profile(Base):
     id: Mapped[uuid.UUID] = mapped_column(PgUUID(as_uuid=True), primary_key=True)
     display_name: Mapped[str | None] = mapped_column(Text)
     avatar_url: Mapped[str | None] = mapped_column(Text)
+    bio: Mapped[str | None] = mapped_column(Text)
     timezone: Mapped[str] = mapped_column(Text, nullable=False, default="UTC")
     timezone_initialized: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -312,6 +313,27 @@ class GenerationDailyUsage(Base):
     __tablename__ = "generation_daily_usage"
 
     budget_day: Mapped[date] = mapped_column(Date, primary_key=True)
+    calls_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class FutureRefillDailyUsage(Base):
+    """Pacific-day provider reservations for future curated-card refill only."""
+
+    __tablename__ = "future_refill_daily_usage"
+
+    budget_day: Mapped[date] = mapped_column(Date, primary_key=True)
+    calls_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class FutureRefillTopicDailyUsage(Base):
+    """Per-topic refill reservations, isolated from all other Gemini jobs."""
+
+    __tablename__ = "future_refill_topic_daily_usage"
+
+    budget_day: Mapped[date] = mapped_column(Date, primary_key=True)
+    topic_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), primary_key=True
+    )
     calls_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 

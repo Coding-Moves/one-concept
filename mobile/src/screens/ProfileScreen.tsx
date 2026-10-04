@@ -8,6 +8,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AchievementPreview } from '../components/AchievementPreview';
 import { AnimatedFlame } from '../components/AnimatedFlame';
 import { Surface } from '../components/Surface';
+import { ProfileAvatar } from '../components/ProfileAvatar';
 import { SettingRow } from '../components/SettingRow';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
@@ -27,6 +28,7 @@ export type ProfileStackParamList = {
   EditProfile: undefined;
   ProfileSharing: undefined;
   Connections: undefined;
+  ScanProfile: undefined;
   Personalization: undefined;
   Saved: undefined;
   About: undefined;
@@ -165,9 +167,7 @@ export function ProfileScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} refreshControl={refreshUI.control}>
       {refreshUI.action}
       <View style={styles.header}>
-        <View style={styles.avatar}>
-          <Ionicons name="person" size={scaleIcon(26)} color={colors.primary} />
-        </View>
+        <ProfileAvatar avatarRef={progress.avatarRef} avatarUrl={progress.avatarUrl} size={58} />
         <View style={styles.headerText}>
           <Text style={styles.name}>
             {progress.displayName?.trim() || (email ? email.split('@')[0] : 'Learner')}
@@ -180,7 +180,7 @@ export function ProfileScreen() {
 
       <Text accessibilityRole="header" style={styles.sectionTitle}>Profile & privacy</Text>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('EditProfile')} style={styles.rowCard}>
-        <View><Text style={styles.rowTitle}>Edit profile</Text><Text style={styles.rowSubtitle}>Name and account details</Text></View>
+        <View><Text style={styles.rowTitle}>Edit profile</Text><Text style={styles.rowSubtitle}>Name, bio, and avatar</Text></View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </Pressable>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('ProfileSharing')} style={styles.rowCard}>

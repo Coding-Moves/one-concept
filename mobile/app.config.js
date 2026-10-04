@@ -46,7 +46,7 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: ['expo-font', 'expo-secure-store', 'expo-splash-screen'],
+    plugins: ['expo-font', 'expo-secure-store', 'expo-splash-screen', ['expo-camera', { cameraPermission: 'Allow One Concept to scan a profile QR code.', microphonePermission: false, recordAudioAndroid: false, barcodeScannerEnabled: true }], ['expo-image-picker', { photosPermission: 'Allow One Concept to choose a profile photo.', cameraPermission: 'Allow One Concept to take a profile photo.', microphonePermission: false }]],
     extra: {
       eas: {
         projectId: '2ce53ebe-f549-4a33-affc-a50d8e80b483',

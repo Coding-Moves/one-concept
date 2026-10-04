@@ -47,3 +47,7 @@
 0037_editorial_review_deadlines.sql
 0038_editorial_notifications.sql
 0039_owner_reporting.sql
+0040_profile_avatar_bio.sql
+0041_directed_profile_connections.sql
+0042_legacy_enrichment_batches.sql
+0043_future_refill_daily_usage.sql

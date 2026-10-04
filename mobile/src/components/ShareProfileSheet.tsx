@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { ProfileAvatar } from './ProfileAvatar';
 import { useMemo } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,7 +28,7 @@ export function ShareProfileSheet({ value, busy, onClose, onShare }: {
       {value && <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <Text style={[styles.brand, { color: colors.primary }]}>ONE CONCEPT</Text>
-          <View style={[styles.avatar, { backgroundColor: colors.categoryChip }]}><Ionicons name="person-outline" size={32} color={colors.primary} /></View>
+          <ProfileAvatar avatarRef={value.profile.avatar_ref} avatarUrl={value.profile.avatar_url} size={72} />
           <Text style={[styles.name, { color: colors.text }]}>{value.profile.display_name || 'One Concept learner'}</Text>
           <Text style={[styles.copy, { color: colors.textSecondary }]}>One concept. A little more understanding.</Text>
           <View style={styles.highlights}>

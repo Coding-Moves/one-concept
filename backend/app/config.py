@@ -47,11 +47,20 @@ class Settings(BaseSettings):
     generation_enabled: bool = False
     min_pool_per_topic: int = Field(default=25, ge=0)
     content_reserve_per_topic: int = Field(default=60, ge=1, le=365)
-    content_low_watermark: int = Field(default=5, ge=0, le=30)
+    # A learner nearing the end of a topic only schedules background work.
+    content_low_watermark: int = Field(default=10, ge=0, le=30)
+    content_critical_watermark: int = Field(default=3, ge=0, le=10)
     content_active_days: int = Field(default=90, ge=1, le=365)
     content_planned_reserve: int = Field(default=90, ge=1, le=1000)
     content_review_backlog_limit: int = Field(default=25, ge=1, le=250)
+    # Future curated refill is deliberately conservative and uses an
+    # allowance separate from editorial corrections and legacy enrichment.
     content_generation_batch: int = Field(default=5, ge=1, le=25)
+    future_refill_daily_call_cap: int = Field(default=5, ge=0, le=100)
+    future_refill_topic_daily_cap: int = Field(default=1, ge=1, le=10)
+    future_refill_urgent_enabled: bool = False
+    future_refill_urgent_daily_call_cap: int = Field(default=10, ge=0, le=100)
+    future_refill_urgent_topic_daily_cap: int = Field(default=2, ge=1, le=10)
     # Shared by all generation paths; zero prevents new reservations.
     generation_max_concurrent: int = Field(default=3, ge=1, le=20)
     generation_daily_call_cap: int = Field(default=200, ge=0)
@@ -76,6 +85,12 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def editorial_origins(self):
+        if self.content_critical_watermark > self.content_low_watermark:
+            raise ValueError("content_critical_watermark cannot exceed content_low_watermark")
+        if self.future_refill_urgent_daily_call_cap < self.future_refill_daily_call_cap:
+            raise ValueError("future_refill_urgent_daily_call_cap cannot be below the normal cap")
+        if self.future_refill_urgent_topic_daily_cap < self.future_refill_topic_daily_cap:
+            raise ValueError("future_refill_urgent_topic_daily_cap cannot be below the normal cap")
         if not self.editorial_enabled:
             return self
         if not self.cors_origins:

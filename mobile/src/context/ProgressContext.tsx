@@ -28,7 +28,9 @@ import { computeStreaks, StreakStats } from '../services/streak';
 export interface ProgressContextValue {
   loading: boolean;
   refresh: () => Promise<void>;
-  updateDisplayName: (name: string) => Promise<void>;
+  updateProfile: (input: { displayName?: string; bio?: string; avatarPreset?: string }) => Promise<void>;
+  uploadAvatar: (uri: string, mimeType: string) => Promise<void>;
+  removeAvatar: () => Promise<void>;
   pausedSyncCount: number;
   retrySync: () => Promise<void>;
   progress: ProgressState;
@@ -255,16 +257,19 @@ export function ProgressProvider({ children, repository: override }: Props) {
 
   // Retry shares the mutation chain, so a refresh cannot overwrite a later tap.
   const refresh = useCallback(() => apply(null, () => repository.load()), [apply, repository]);
-  const updateDisplayName = useCallback(async (name: string) => {
-    if (!userId || !repository.updateDisplayName) throw new Error('Sign in to edit your profile');
-    const epoch = accountEpoch.current;
+  const updateProfile = useCallback(async (input: { displayName?: string; bio?: string; avatarPreset?: string }) => {
+    if (!userId || !repository.updateProfile) throw new Error('Sign in to edit your profile');
     let failure: unknown;
-    await apply(null, async () => {
-      try { return await repository.updateDisplayName!(name, userId); }
-      catch (error) { failure = error; throw error; }
-    });
-    if (epoch !== accountEpoch.current) throw new Error('Account changed');
+    await apply(null, async () => { try { return await repository.updateProfile!(input, userId); } catch (error) { failure = error; throw error; } });
     if (failure) throw failure;
+  }, [apply, repository, userId]);
+  const uploadAvatar = useCallback(async (uri: string, mimeType: string) => {
+    if (!userId || !repository.uploadAvatar) throw new Error('Sign in to add a photo');
+    await apply(null, () => repository.uploadAvatar!(uri, mimeType, userId));
+  }, [apply, repository, userId]);
+  const removeAvatar = useCallback(async () => {
+    if (!userId || !repository.removeAvatar) throw new Error('Sign in to remove a photo');
+    await apply(null, () => repository.removeAvatar!(userId));
   }, [apply, repository, userId]);
   const retrySync = useCallback(() => apply(null, async () => {
     await retryPaused();
@@ -389,7 +394,9 @@ export function ProgressProvider({ children, repository: override }: Props) {
     () => ({
       loading,
       refresh,
-      updateDisplayName,
+      updateProfile,
+      uploadAvatar,
+      removeAvatar,
       pausedSyncCount,
       retrySync,
       progress,
@@ -407,7 +414,9 @@ export function ProgressProvider({ children, repository: override }: Props) {
     [
       loading,
       refresh,
-      updateDisplayName,
+      updateProfile,
+      uploadAvatar,
+      removeAvatar,
       pausedSyncCount,
       retrySync,
       progress,

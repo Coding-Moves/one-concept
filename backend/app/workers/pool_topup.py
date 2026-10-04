@@ -42,6 +42,7 @@ async def run() -> None:
                 minimum_per_topic=settings.min_pool_per_topic,
                 call_cap=settings.generation_daily_call_cap,
                 pace_seconds=settings.generation_pace_seconds,
+                future_refill=True,
             )
         except BaseException:
             await session.rollback()

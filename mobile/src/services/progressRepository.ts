@@ -12,7 +12,9 @@ import { Category, ProgressState } from '../types';
  */
 export interface ProgressRepository {
   load(): Promise<ProgressState>;
-  updateDisplayName?(name: string, userId: string): Promise<ProgressState>;
+  updateProfile?(input: { displayName?: string; bio?: string; avatarPreset?: string }, userId: string): Promise<ProgressState>;
+  uploadAvatar?(uri: string, mimeType: string, userId: string): Promise<ProgressState>;
+  removeAvatar?(userId: string): Promise<ProgressState>;
 
   /** Last known state without touching the network, or null if none exists.
    *  Lets the UI paint instantly while load() revalidates in the background. */

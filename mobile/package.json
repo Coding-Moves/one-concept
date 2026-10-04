@@ -20,6 +20,7 @@
     "expo-splash-screen": "~57.0.9",
     "expo-status-bar": "~57.0.1",
     "expo-updates": "~57.0.24",
+    "markdown-it": "15.0.2",
     "qrcode-generator": "2.0.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -30,6 +31,7 @@
     "react-native-web": "^0.21.3"
   },
   "devDependencies": {
+    "@types/markdown-it": "^14.2.0",
     "@types/react": "~19.2.2",
     "typescript": "~6.0.3"
   },

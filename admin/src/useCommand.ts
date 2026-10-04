@@ -31,7 +31,7 @@ export function useCommand(
       if (e instanceof ApiError && e.status === 0) setPending(command);
       if (e instanceof ApiError && e.status === 409) {
         setPending(null);
-        setConflict(true);
+        if (e.code !== "review_conflict") setConflict(true);
       }
     } finally {
       setBusy(false);

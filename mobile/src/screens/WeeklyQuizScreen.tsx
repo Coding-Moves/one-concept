@@ -6,6 +6,7 @@ import { ApiError } from '../api/client';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Surface } from '../components/Surface';
+import { MarkdownText, markdownPlainText } from '../components/MarkdownText';
 import { UnavailableState } from '../components/UnavailableState';
 import { useAuth } from '../context/AuthContext';
 import { useOnline } from '../context/ConnectivityContext';
@@ -82,19 +83,19 @@ export function WeeklyQuizScreen() {
       {quiz.questions.map((question, position) => {
         const result = attempt?.results.find(item => item.question_id === question.id);
         return <Surface key={question.id} style={styles.question}>
-          <Text style={styles.eyebrow}>Question {position + 1} · {question.concept_title}</Text>
-          <Text style={styles.questionText}>{question.question}</Text>
+          <Text style={styles.eyebrow}>Question {position + 1} · <MarkdownText value={question.concept_title} style={styles.eyebrow} inline /></Text>
+          <MarkdownText value={question.question} style={styles.questionText} />
           <View accessibilityRole="radiogroup" accessibilityLabel={`Answers for question ${position + 1}`} style={styles.options}>
             {question.options.map((option, index) => {
               const selected = answers[question.id] === index;
               const correct = result?.correct_index === index;
               const wrong = !!result && selected && !result.correct;
               const icon = correct ? 'checkmark' : wrong ? 'close' : selected ? 'ellipse' : 'ellipse-outline';
-              return <Pressable key={option} disabled={!!attempt} accessibilityRole="radio" accessibilityState={{ checked: selected, disabled: !!attempt }} accessibilityLabel={option} accessibilityHint={attempt ? (correct ? 'Correct answer.' : wrong ? 'Your selected answer was incorrect.' : 'Answer was not selected.') : 'Select this answer.'} onPress={() => choose(question.id, index)} style={[styles.option, selected && styles.selected, correct && styles.correct, wrong && styles.wrong]}>
+              return <Pressable key={option} disabled={!!attempt} accessibilityRole="radio" accessibilityState={{ checked: selected, disabled: !!attempt }} accessibilityLabel={markdownPlainText(option)} accessibilityHint={attempt ? (correct ? 'Correct answer.' : wrong ? 'Your selected answer was incorrect.' : 'Answer was not selected.') : 'Select this answer.'} onPress={() => choose(question.id, index)} style={[styles.option, selected && styles.selected, correct && styles.correct, wrong && styles.wrong]}>
                 <View style={[styles.radioMarker, selected && styles.radioMarkerSelected, correct && styles.radioMarkerCorrect, wrong && styles.radioMarkerWrong]}>
                   <Ionicons name={icon} size={scaleFont(16)} color={correct ? colors.success : wrong ? colors.danger : selected ? colors.quizAccent : colors.textMuted} />
                 </View>
-                <Text style={[styles.optionText, (selected || correct) && styles.optionSelected]}>{option}</Text>
+                <MarkdownText value={option} style={[styles.optionText, (selected || correct) && styles.optionSelected]} inline interactiveLinks={false} />
               </Pressable>;
             })}
           </View>

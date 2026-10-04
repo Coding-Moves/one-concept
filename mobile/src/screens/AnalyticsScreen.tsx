@@ -3,6 +3,7 @@ import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { MarkdownText } from '../components/MarkdownText';
 import { SkeletonBlock } from '../components/Skeleton';
 import { Surface } from '../components/Surface';
 import { UnavailableState } from '../components/UnavailableState';
@@ -138,7 +139,7 @@ export function AnalyticsScreen() {
           {analytics.recent_concepts.length > 0 ? <>
             <Text style={styles.note}>Recently learned</Text>
             {analytics.recent_concepts.map((concept) => <View key={`${concept.concept_slug}-${concept.completed_at}`} style={styles.activityRow}>
-              <Text style={styles.rowName}>{concept.title}</Text>
+              <MarkdownText value={concept.title} style={styles.rowName} inline />
               <Text style={styles.rowValue}>{concept.topic_name}</Text>
             </View>)}
           </> : null}

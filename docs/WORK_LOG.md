@@ -7,6 +7,17 @@ claims as completed work.
 
 ## Current status
 
+### #346 learner UX flow — in progress
+
+- Scope: simplify the learner profile, public-sharing and connections journeys
+  without changing the existing account, privacy, offline, or version-conflict
+  contracts. Independent visibility choices use accessible switches; radio
+  controls remain reserved for mutually exclusive choices.
+- Planned commits separate the publish-review flow, profile information
+  hierarchy, connections navigation, browser regression coverage, and handoff
+  documentation. The dedicated PR will target `develop` and close #346.
+
+
 ### #340 mobile controls and visual system — ready for review
 
 - The mobile controls now use a shared icon-led `SettingRow` and semantic

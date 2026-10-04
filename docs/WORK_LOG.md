@@ -29,6 +29,8 @@ claims as completed work.
   themes, including delayed daily/weekly saves, rollback, dependency state,
   sharing, and narrow-layout checks. Physical Android switch feedback and
   device notification permission remain a manual acceptance check.
+- [PR #345](https://github.com/Coding-Moves/one-concept/pull/345) targets
+  `develop`; #340 was closed after the PR was opened at the owner's request.
 
 ### #313 public review pages — v1.10.6 release preparation
 

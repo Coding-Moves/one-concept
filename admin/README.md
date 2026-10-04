@@ -116,6 +116,14 @@ header file is no longer used. Netlify uses `public/_redirects` for the
 `/auth/callback` SPA fallback. Preview deployments remain off until a separate
 non-production environment exists under #255.
 
+The public `/about.html` and `/privacy.html` pages describe the workspace and
+its send-only Gmail integration for Google's OAuth Branding form. They are
+static files in `public/`, so they load without initializing Supabase Auth or
+exposing private review data. Check both live URLs after the production Netlify
+deploy before entering them in Google Cloud. The root remains the invited-user
+sign-in page; it is not the public OAuth homepage. Do not substitute the mobile
+app's separate API privacy page for this site's privacy URL.
+
 Merging a code PR into `develop` does not publish the website or change Railway
 flags. After the compatible backend and website are live, an approved and
 published card enters normal server selection automatically; each content

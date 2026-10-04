@@ -2,7 +2,9 @@
 
 The reviewer and owner dashboards are two sections of the same `admin/` site.
 They use the existing production FastAPI service and Supabase Auth; no new
-backend service, purchased domain, or paid frontend plan is required. The owner
+backend service or paid frontend plan is required. Static hosting needs no
+purchased domain; Google's OAuth verification may require a domain the owner
+can prove they control before reviewer email can be enabled. The owner
 deferred an isolated staging environment to #255. This runbook records a direct
 production rollout, without claiming that local tests prove live email delivery.
 
@@ -139,9 +141,34 @@ for the report permission model.
 ## 4. Enable reviewer email after the sender is durable
 
 The existing Gmail HTTPS sender uses `gmail.send`, not Supabase Auth SMTP.
+Google's External Testing status issues Gmail refresh tokens that expire after
+seven days. Before attempting to publish the OAuth app, use its **Branding**
+page to set an accurate app name (for example, `One Concept Review`), the
+owner's monitored support/developer email, and these public URLs **after the
+matching `main` site deploy is live**:
+
+| Google Branding field | URL |
+| --- | --- |
+| Application home page | `https://coding-moves-one-concept-review.netlify.app/about.html` |
+| Privacy policy | `https://coding-moves-one-concept-review.netlify.app/privacy.html` |
+
+The homepage links to this same-domain policy. Leave the optional logo blank;
+do not use the sign-in root as a homepage or the separate learning-app API
+privacy page as this website's policy. No Terms of Service URL is supplied by
+this change. Register the actual site host as an authorized domain if Google
+asks for it, and follow Google's domain-ownership process if required. A free
+Netlify hostname is not a promise that Google will accept it for every level of
+OAuth verification; if Google requires a domain you cannot verify, keep email
+off and revisit the sender plan rather than inventing an address or buying a
+service without a separate decision. Publishing the OAuth app does not make
+private lessons public.
+[Google's audience rules](https://support.google.com/cloud/answer/15549945)
+explain Testing token expiry, and its
+[branding requirements](https://support.google.com/cloud/answer/15549049)
+describe public same-domain policy links and domain verification.
+
 Confirm its Google OAuth app is appropriately published/verified and refresh
-authorization was obtained after leaving External Testing. Gmail-scope refresh
-tokens issued in Testing commonly expire after seven days. Check that both API
+authorization was obtained after leaving External Testing. Check that both API
 and reminders hold the matching sender address/client ID/client secret/refresh
 token **without exposing values**. The owner-selected default remains a 48-hour
 deadline, one reminder every 24 hours, maximum two reminders and a 40-attempt

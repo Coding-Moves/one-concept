@@ -7,6 +7,45 @@ claims as completed work.
 
 ## Current status
 
+### #313 public review pages — v1.10.6 release preparation
+
+- PR #341 merged into `develop` at `9783fde`; its public About and privacy pages
+  are not yet on Netlify production, which deploys `main`.
+- `bba1b0d` adds an About-screen link to the public explanation of lesson
+  review. `1372669` prepares app version 1.10.6 and its matching one-time What's
+  New card. Native runtime 1.10.1 is unchanged; this is a JavaScript/site update.
+- Validation: Node 24 TypeScript and all 90 mobile unit tests passed; fixture
+  Expo web export passed. The What's New browser check passed in both themes
+  across phone/landscape sizes, including dismissal after offline restart.
+  Profile → About showed the new link on a 390px screen with no browser errors.
+  The live destination and physical-device tap are unverified until deployment.
+- [Release-preparation PR #342](https://github.com/Coding-Moves/one-concept/pull/342)
+  targets `develop`; all three hosted checks passed at `92bf989`. After its
+  merge, verify the final `develop` → `main` diff contains both the version
+  bump and card before opening the production release PR. No OAuth publishing,
+  Gmail send, mobile OTA, production merge, or issue closure occurred in this
+  chunk.
+
+### #313 Google OAuth production branding — PR #341
+
+- Google Auth Platform blocks leaving External Testing until an app name,
+  support email, public homepage and privacy-policy URL are set. The current
+  review site's root is a sign-in page; its SPA `/privacy` fallback is not a
+  privacy policy. The separate learning-app `/privacy` page does not disclose
+  the Gmail reviewer sender and is on another host.
+- [PR #341](https://github.com/Coding-Moves/one-concept/pull/341) on
+  `codex/313-oauth-public-pages` adds static
+  `/about.html` and `/privacy.html` to the same review-site host, with an
+  accurate explanation of send-only Gmail OAuth. `1c3d233` adds the pages and
+  their stylesheet; the runbook records the exact future live URLs and
+  the domain-verification limitation. It references #313 but cannot close it:
+  publishing, a fresh token, Railway flag changes and first inbox receipt are
+  still operational acceptance steps.
+- Validation: Node 24 admin build/typecheck passed with public fixture config;
+  built pages and links were inspected, and desktop/phone browser renders were
+  checked. No live deploy or Gmail send occurred. The operator must not enter
+  the URLs in Google Cloud until the pages reach the `main` Netlify deploy.
+
 ### #329 empty-topic learner experience — ready for PR
 
 - This mobile chunk consumes the additive `daily_availability` contract from #330 only when the server explicitly returns `personalization_required`; older API deployments keep their current exhausted behavior.

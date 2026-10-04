@@ -29,6 +29,10 @@ claims as completed work.
 - [PR #347](https://github.com/Coding-Moves/one-concept/pull/347) targets
   `develop` and closes #346 when it merges. It contains no release/version,
   backend, database, deployment, or OTA change.
+- Review follow-up: `a471832` replaces the platform-specific unpublish alert
+  with an accessible in-app confirmation panel and corrects the browser test's
+  updated Profile navigation label. TypeScript and all 90 mobile tests pass
+  again after that correction.
 
 
 ### #340 mobile controls and visual system — ready for review

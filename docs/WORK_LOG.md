@@ -26,6 +26,9 @@ claims as completed work.
   directory in this environment, so the browser regression is pending a
   successful fixture export. Physical-device switch, screen-reader and sharing
   acceptance remain manual checks before release.
+- [PR #347](https://github.com/Coding-Moves/one-concept/pull/347) targets
+  `develop` and closes #346 when it merges. It contains no release/version,
+  backend, database, deployment, or OTA change.
 
 
 ### #340 mobile controls and visual system — ready for review

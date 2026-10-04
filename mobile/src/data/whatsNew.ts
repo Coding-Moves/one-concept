@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.8',
+    highlights: [
+      'Add a profile photo, choose a built-in avatar, and write a short bio that stays under your control.',
+      'Share your learning profile by QR code and connect directly with other learners when you choose.',
+      'Get clearer profile-sharing choices and more reliable lesson refill behind the scenes as new learning content is reviewed.',
+    ],
+  },
+  {
     version: '1.10.7',
     highlights: [
       'Read lessons and quizzes with clearer formatting for code, emphasis, and examples.',

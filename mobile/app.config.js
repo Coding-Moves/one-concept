@@ -18,7 +18,7 @@ module.exports = {
     name: 'One Concept',
     slug: 'one-concept',
     owner: 'coding-moves',
-    version: '1.10.7',
+    version: '1.10.8',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -37,7 +37,7 @@ module.exports = {
       predictiveBackGestureEnabled: false,
     },
     // Updated Expo native packages require a new APK before this runtime receives updates.
-    runtimeVersion: '1.10.7',
+    runtimeVersion: '1.10.8',
     updates: {
       checkAutomatically: 'ON_LOAD',
       fallbackToCacheTimeout: 0,

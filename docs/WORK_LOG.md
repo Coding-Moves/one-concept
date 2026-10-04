@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### #349 QR scanning and one-way Connect — in progress
+
+- Scope: replace the mutual-request path with safe directed connections that start only from an opaque public profile QR/link. Preserve accepted legacy pairs as two directed rows, enforce blocks and current sharing at every operation, and add QR-only camera scanning with a paste fallback. The dedicated PR targets `develop` and closes #349.
+- Planned commits separate migration/compatibility data, authenticated directed APIs, QR scanner native configuration and screen, public-profile status/actions, Connections migration, regression coverage, and rollout documentation.
+
 ### #348 private avatar and concise bio — in progress
 
 - Scope: add an optional, account-fenced learner bio and private avatar, with built-in avatar choices, library selection and camera capture. The implementation preserves the existing `profiles.avatar_url` reference, keeps public sharing opt-in, and adds no login/onboarding requirement.

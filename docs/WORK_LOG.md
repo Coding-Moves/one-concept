@@ -10,7 +10,8 @@ claims as completed work.
 ### #349 QR scanning and one-way Connect — in progress
 
 - Scope: replace the mutual-request path with safe directed connections that start only from an opaque public profile QR/link. Preserve accepted legacy pairs as two directed rows, enforce blocks and current sharing at every operation, and add QR-only camera scanning with a paste fallback. The dedicated PR targets `develop` and closes #349.
-- Planned commits separate migration/compatibility data, authenticated directed APIs, QR scanner native configuration and screen, public-profile status/actions, Connections migration, regression coverage, and rollout documentation.
+- Implemented: `cd9e752` adds the additive directed storage and two-way backfill of accepted legacy pairs; `92a0973` adds authenticated owner-fenced relationship APIs, privacy/block enforcement and PostgreSQL coverage; `60adf23` adds the mobile Connect/Disconnect/Block controls and one-way list; `ce22365` adds the QR-only scanner and SDK 57 camera configuration. Existing invitation routes remain for compatibility while the mobile client uses the new directed APIs.
+- Validation: PostgreSQL relationship/schema-contract tests passed against a disposable local database; mobile TypeScript and Expo dependency check pass. The Node suite has one pre-existing `publicConfig.test.mjs` stderr assertion failure; its remaining 89 tests pass. A fresh Android/iOS build is required because `expo-camera` is native.
 
 ### #348 private avatar and concise bio — in progress
 

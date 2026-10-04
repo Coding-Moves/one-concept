@@ -97,6 +97,7 @@ export async function fixture(
     denied: false,
     uncertain: false,
     conflict: false,
+    validationConflict: false,
     invalid: false,
     mfa: options.mfa || false,
     commands: [] as any[],
@@ -308,11 +309,15 @@ export async function fixture(
       state.commands.push(body);
       if (receipts.has(body.request_id))
         return fulfill(route, receipts.get(body.request_id));
+      if (state.validationConflict && path.endsWith("/revisions"))
+        return fulfill(route, {
+          detail: { code: "review_conflict", message: "Unknown prerequisite missing-lesson" },
+        }, 409);
       if (
         state.conflict ||
         (body.expected_token && body.expected_token !== state.token)
       )
-        return fulfill(route, { detail: "Stale" }, 409);
+        return fulfill(route, { detail: { code: "stale_revision" } }, 409);
       if (body.action === "approved" || body.action === "approve_and_publish") {
         state.status = body.action === "approved" ? "approved" : "published";
         state.approvedBy = "Amina Khan";

@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { fixture, login, openLesson, checkAll, rid } from "./fixture";
+import { fixture, login, openLesson, checkAll, rid, cid } from "./fixture";
 test("topic filtering, full package, comments and atomic publication", async ({
   page,
   context,
@@ -398,4 +398,70 @@ test("a malformed draft opens safely and can be completed without losing its tax
   await page.getByRole("button", { name: "Save as new draft" }).click();
   await expect.poll(() => state.commands.length).toBe(1);
   expect(state.commands[0].body.subtopic_slug).toBe("databases");
+});
+test("a stale draft keeps its correction and refreshes the version on reload", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await page.goto(`/?view=review&kind=legacy&id=${cid}`);
+  await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Explanation", { exact: true }).fill(
+    "A detailed correction that should remain in the editor after a stale-version response.",
+  );
+  await page.getByLabel("Review note or comment").fill(
+    "Prepared a corrected explanation for a new review draft.",
+  );
+  state.token = "b".repeat(64);
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByText("Your feedback is preserved.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByLabel("Explanation", { exact: true })).toHaveValue(/detailed correction/);
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+  expect(state.commands.at(-1).expected_token).toBe("b".repeat(64));
+});
+test("a changed live lesson requires review before rebasing a preserved correction", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await page.goto(`/?view=review&kind=legacy&id=${cid}`);
+  await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Explanation", { exact: true }).fill(
+    "My separate correction remains available when the live text changes.",
+  );
+  await page.getByLabel("Review note or comment").fill(
+    "Reconcile this correction with the latest published lesson.",
+  );
+  state.body = { ...state.body, summary: "The live lesson was changed by a different reviewer." };
+  state.token = "b".repeat(64);
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByText("The live lesson changed while you edited.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Explanation", { exact: true })).toHaveValue(/My separate correction/);
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeDisabled();
+  await page.getByRole("button", { name: "Continue from latest version" }).click();
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeEnabled();
+});
+test("a curriculum conflict explains the issue without locking the editor", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await openLesson(page);
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Review note or comment").fill(
+    "Correct the prerequisite before submitting this review draft.",
+  );
+  state.validationConflict = true;
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByText("Unknown prerequisite missing-lesson")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeEnabled();
 });

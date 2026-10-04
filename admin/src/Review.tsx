@@ -45,6 +45,8 @@ export function Review({
     [stale, setStale] = useState(false),
     [edit, setEdit] = useState<Lesson | null>(null),
     [stageToken, setStageToken] = useState(""),
+    [editBaseBody, setEditBaseBody] = useState(""),
+    [editNeedsReview, setEditNeedsReview] = useState(false),
     [members, setMembers] = useState<Member[]>([]),
     [assignee, setAssignee] = useState(""),
     [due, setDue] = useState("");
@@ -61,12 +63,12 @@ export function Review({
     current = useRef<Detail | null>(null),
     cid = detail?.concept_id || id;
   const can = (cap: string) => me.member.capabilities.includes(cap as never);
-  async function load() {
+  async function load(): Promise<Detail | null> {
     const seq = ++sequence.current;
     setError("");
     try {
       const d = await api.request<Detail>(path);
-      if (seq !== sequence.current) return;
+      if (seq !== sequence.current) return null;
       setDetail(d);
       current.current = d;
       setStale(false);
@@ -79,11 +81,13 @@ export function Review({
         api.request<Page<Event>>(`/concepts/${concept}/timeline`),
         api.request<Page<Revision>>(`/concepts/${concept}/revisions`),
       ]);
-      if (seq !== sequence.current) return;
+      if (seq !== sequence.current) return null;
       setEvents(ev);
       setHistory(hs);
+      return d;
     } catch (e) {
       if (seq === sequence.current) setError(message(e));
+      return null;
     }
   }
   const op = useCommand(api, async (result, submitted) => {
@@ -184,7 +188,8 @@ export function Review({
     );
   const approvalKeys = Object.keys(checklist) as CheckKey[];
   const complete = approvalKeys.every((k) => checks[k]) && !!sensitive;
-  const blocked = op.busy || !!op.pending || op.conflict || stale;
+  const blocked =
+    op.busy || !!op.pending || op.conflict || stale || editNeedsReview;
   const decisionBlocked = blocked || !!edit;
   const noted = note.trim().length >= 10;
   const quality = {
@@ -202,13 +207,32 @@ export function Review({
     try {
       const concept = await api.request<Detail>(`/concepts/${cid}`);
       setStageToken(concept.token);
+      setEditBaseBody(JSON.stringify(concept.body));
+      setEditNeedsReview(false);
       setEdit({
-        ...editableLesson(detail!.body),
+        ...editableLesson(revision ? detail!.body : concept.body),
         subtopic_slug: concept.body.subtopic_slug,
       });
       setTab("edit");
     } catch (e) {
       setError(message(e));
+    }
+  }
+  async function reload() {
+    const latest = await load();
+    if (!latest) return;
+    op.reset();
+    if (!edit || revision) return;
+    if (JSON.stringify(latest.body) === editBaseBody) {
+      setStageToken(latest.token);
+      setEditNeedsReview(false);
+      setNotice("Latest lesson loaded. Your correction is still here.");
+    } else {
+      setEditNeedsReview(true);
+      setTab("lesson");
+      setNotice(
+        "The live lesson changed. Compare it with your preserved correction before continuing.",
+      );
     }
   }
   async function more(which: "events" | "history") {
@@ -280,6 +304,22 @@ export function Review({
           Another decision or edit may have changed this lesson. Your feedback
           is preserved. Reload the latest version and review it again before
           submitting.
+        </Notice>
+      )}
+      {editNeedsReview && detail && (
+        <Notice error>
+          The live lesson changed while you edited. Your correction is
+          preserved. Review the latest Lesson and your Edit, then{" "}
+          <button
+            onClick={() => {
+              setStageToken(detail.token);
+              setEditBaseBody(JSON.stringify(detail.body));
+              setEditNeedsReview(false);
+              setTab("edit");
+            }}
+          >
+            Continue from latest version
+          </button>
         </Notice>
       )}
       {op.pending && (
@@ -428,8 +468,7 @@ export function Review({
               <button
                 disabled={op.busy || !!op.pending}
                 onClick={() => {
-                  op.reset();
-                  void load();
+                  void reload();
                 }}
               >
                 Reload

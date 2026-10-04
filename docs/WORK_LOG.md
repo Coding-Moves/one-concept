@@ -20,8 +20,10 @@ claims as completed work.
   color, with radio-group semantics and explicit correct/incorrect feedback.
 - Commits: `56890d7` shared visual controls, `92cfa82` reminder responsiveness,
   `91bd3cf` sharing/connection controls, `3ebd6d1` quiz answer markers, and
-  `93e7cb0` delayed-response browser coverage. No backend, migration,
-  production setting, release, or OTA change is included.
+  `93e7cb0` delayed-response browser coverage. Review follow-ups `70a0d88`
+  and `38253c8` restore only confirmed state after rapid failed changes and
+  cover that sequence. No backend, migration, production setting, release, or
+  OTA change is included.
 - Validation: mobile TypeScript and all 90 Node 24 tests passed. A fixture Expo
   web export and the mocked Profile browser regression passed in light and dark
   themes, including delayed daily/weekly saves, rollback, dependency state,

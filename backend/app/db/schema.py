@@ -18,6 +18,7 @@ TABLES = (
     "editorial_notification_policy", "editorial_notification_outbox",
     "editorial_email_batches", "editorial_email_attempts",
     "editorial_generation_jobs", "editorial_workflow_events", "editorial_request_receipts",
+    "editorial_legacy_batches", "editorial_legacy_batch_entries",
     "editorial_legacy_versions", "editorial_revision_events", "editorial_publications",
     "editorial_memberships", "editorial_account_events",
     "connection_preferences", "connections", "connection_blocks", "connection_request_events",

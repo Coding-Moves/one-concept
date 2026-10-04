@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { fixture, login, openLesson, checkAll, rid } from "./fixture";
+import { fixture, login, openLesson, checkAll, rid, cid } from "./fixture";
 test("topic filtering, full package, comments and atomic publication", async ({
   page,
   context,
@@ -375,6 +375,26 @@ test("lesson HTML stays text, unsafe references are not clickable, edits block u
     page.getByRole("button", { name: "Add comment", exact: true }),
   ).toBeEnabled();
 });
+test("lesson Markdown previews and renders without loading embedded images or unsafe links", async ({ page, context }) => {
+  const state = await fixture(context);
+  state.body.title = "# Database Migrations";
+  state.body.summary = "Use **bold** and `GET /profiles/42`. ![remote](https://example.test/image.png) [unsafe](javascript:alert(1))";
+  await login(page);
+  await openLesson(page);
+  const lesson = page.locator('.lesson-document');
+  await expect(page.locator('.page-heading h1')).toHaveText('Database Migrations');
+  await expect(lesson.locator('h2 h1')).toHaveCount(0);
+  await expect(page.locator('.page-heading h1 h1')).toHaveCount(0);
+  await expect(lesson.locator('strong')).toContainText(['bold']);
+  await expect(lesson.locator('code')).toContainText(['GET /profiles/42']);
+  await expect(lesson.locator('img')).toHaveCount(0);
+  await expect(lesson.locator('a[href^="javascript:"]')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Prepare manual correction' }).click();
+  await page.getByLabel('Explanation', { exact: true }).fill('A **reviewed** example with `PUT`.');
+  const preview = page.getByRole('region', { name: 'Lesson Markdown preview' });
+  await expect(preview.locator('strong')).toContainText(['reviewed']);
+  await expect(preview.locator('code')).toContainText(['PUT']);
+});
 
 test("a malformed draft opens safely and can be completed without losing its taxonomy", async ({
   page,
@@ -398,4 +418,122 @@ test("a malformed draft opens safely and can be completed without losing its tax
   await page.getByRole("button", { name: "Save as new draft" }).click();
   await expect.poll(() => state.commands.length).toBe(1);
   expect(state.commands[0].body.subtopic_slug).toBe("databases");
+});
+test("a stale draft keeps its correction and refreshes the version on reload", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await page.goto(`/?view=review&kind=legacy&id=${cid}`);
+  await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Explanation", { exact: true }).fill(
+    "A detailed correction that should remain in the editor after a stale-version response.",
+  );
+  await page.getByLabel("Review note or comment").fill(
+    "Prepared a corrected explanation for a new review draft.",
+  );
+  state.token = "b".repeat(64);
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByText("Your feedback is preserved.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByLabel("Explanation", { exact: true })).toHaveValue(/detailed correction/);
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+  expect(state.commands.at(-1).expected_token).toBe("b".repeat(64));
+});
+test("a changed live lesson requires review before rebasing a preserved correction", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await page.goto(`/?view=review&kind=legacy&id=${cid}`);
+  await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Explanation", { exact: true }).fill(
+    "My separate correction remains available when the live text changes.",
+  );
+  await page.getByLabel("Review note or comment").fill(
+    "Reconcile this correction with the latest published lesson.",
+  );
+  state.body = { ...state.body, summary: "The live lesson was changed by a different reviewer." };
+  state.token = "b".repeat(64);
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByText("The live lesson changed while you edited.", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Explanation", { exact: true })).toHaveValue(/My separate correction/);
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeDisabled();
+  await page.getByRole("button", { name: "Continue from latest version" }).click();
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeEnabled();
+});
+test("a revision correction refreshes the concept token and shows changed live content", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await openLesson(page);
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Explanation", { exact: true }).fill(
+    "Keep this reviewer correction while another editor changes the published lesson.",
+  );
+  await page.getByLabel("Review note or comment").fill(
+    "Reconcile the correction with the changed published version.",
+  );
+  state.body = { ...state.body, summary: "Another editor updated the currently published lesson." };
+  state.token = "b".repeat(64);
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Current live lesson" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Current live lesson" }).locator("..").getByText(
+      "Another editor updated the currently published lesson.",
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Explanation", { exact: true })).toHaveValue(/Keep this reviewer correction/);
+  await page.getByRole("button", { name: "Continue from latest version" }).click();
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+  expect(state.commands.at(-1).expected_token).toBe("b".repeat(64));
+});
+test("an older revision cannot stage its old body without comparing the live lesson", async ({ page, context }) => {
+  const state = await fixture(context);
+  state.baseVersion = 1;
+  state.contentVersion = 2;
+  state.liveBody = { ...state.body, summary: "A newer published explanation that the old revision must not silently replace." };
+  await login(page);
+  await openLesson(page);
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await expect(page.getByRole("alert").getByText("This revision is based on an older published lesson.", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Current live lesson" })).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Explanation", { exact: true })).toHaveValue(state.body.summary);
+  await page.getByLabel("Review note or comment").fill("Compare the old revision with the newer published content.");
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeDisabled();
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeDisabled();
+  await page.getByRole("button", { name: "Continue from latest version" }).click();
+  const expectedToken = state.token;
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  expect(state.commands.at(-1).expected_token).toBe(expectedToken);
+});
+test("a curriculum conflict explains the issue without locking the editor", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await openLesson(page);
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Review note or comment").fill(
+    "Correct the prerequisite before submitting this review draft.",
+  );
+  state.validationConflict = true;
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByText("Unknown prerequisite missing-lesson")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeEnabled();
 });

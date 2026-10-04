@@ -60,7 +60,7 @@ async def test_queue_detail_comments_assignment_and_atomic_publication(
         body["validation"]["valid"]
         and len(body["body"]["learning_package"]["mcqs"]) == 3
     )
-    assert body["text_format"] == "plain_text" and body["source_links"]
+    assert body["text_format"] == "markdown" and body["source_links"]
     assert (await act(api, rid, "comment"))[0].status_code == 200
     assert (await act(api, rid, "assign", assignee_id=str(api.owner.id)))[
         0

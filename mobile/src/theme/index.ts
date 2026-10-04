@@ -33,6 +33,18 @@ export interface ThemeColors {
   categoryChip: string;
   categoryChipText: string;
   skeleton: string;
+  primaryAccent: string;
+  primaryAccentSurface: string;
+  connectionAccent: string;
+  connectionAccentSurface: string;
+  quizAccent: string;
+  quizAccentSurface: string;
+  achievementAccent: string;
+  achievementAccentSurface: string;
+  savedAccent: string;
+  savedAccentSurface: string;
+  streakAccent: string;
+  streakAccentSurface: string;
 }
 
 export const lightColors: ThemeColors = {
@@ -58,6 +70,18 @@ export const lightColors: ThemeColors = {
   categoryChip: '#EEF0FF',
   categoryChipText: '#4F46E5',
   skeleton: '#E9EBF4',
+  primaryAccent: '#5558DB',
+  primaryAccentSurface: '#EEF0FF',
+  connectionAccent: '#0F766E',
+  connectionAccentSurface: '#E2F7F3',
+  quizAccent: '#B45309',
+  quizAccentSurface: '#FFF4DE',
+  achievementAccent: '#7C3AED',
+  achievementAccentSurface: '#F3E8FF',
+  savedAccent: '#2563EB',
+  savedAccentSurface: '#E8F0FF',
+  streakAccent: '#EA580C',
+  streakAccentSurface: '#FFF0E4',
 };
 
 export const darkColors: ThemeColors = {
@@ -83,6 +107,18 @@ export const darkColors: ThemeColors = {
   categoryChip: '#1D2242',
   categoryChipText: '#A5B4FC',
   skeleton: '#20263D',
+  primaryAccent: '#A5B4FC',
+  primaryAccentSurface: '#282F62',
+  connectionAccent: '#5EEAD4',
+  connectionAccentSurface: '#103A39',
+  quizAccent: '#FCD34D',
+  quizAccentSurface: '#493712',
+  achievementAccent: '#D8B4FE',
+  achievementAccentSurface: '#3B205A',
+  savedAccent: '#93C5FD',
+  savedAccentSurface: '#193765',
+  streakAccent: '#FDBA74',
+  streakAccentSurface: '#4D2916',
 };
 
 export const spacing = {

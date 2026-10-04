@@ -7,6 +7,7 @@ import { scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 import { CategoryChip } from './CategoryChip';
 import { Surface } from './Surface';
+import { MarkdownText } from './MarkdownText';
 
 const FLIP_DURATION_MS = 280;
 
@@ -15,11 +16,11 @@ function Front({ concept }: { concept: Concept }) {
   const styles = useMemo(() => createStyles(colors), [colors]);
   return <>
     <CategoryChip category={concept.category} />
-    <Text style={styles.title}>{concept.title}</Text>
-    <Text style={styles.summary}>{concept.summary}</Text>
+    <MarkdownText value={concept.title} style={styles.title} inline />
+    <MarkdownText value={concept.summary} style={styles.summary} />
     {concept.example ? <View style={styles.exampleBox}>
       <Text style={styles.exampleLabel}>Example</Text>
-      <Text style={styles.exampleText}>{concept.example}</Text>
+      <MarkdownText value={concept.example} style={styles.exampleText} />
     </View> : null}
   </>;
 }
@@ -30,10 +31,10 @@ function Recall({ concept }: { concept: Concept }) {
   const flashcard = concept.flashcard!;
   return <>
     <Text style={styles.recallLabel}>Quick recall</Text>
-    <Text style={styles.recallPrompt}>{flashcard.front}</Text>
+    <MarkdownText value={flashcard.front} style={styles.recallPrompt} />
     <View style={styles.answerBox}>
       <Text style={styles.exampleLabel}>Answer</Text>
-      <Text style={styles.answerText}>{flashcard.back}</Text>
+      <MarkdownText value={flashcard.back} style={styles.answerText} />
     </View>
   </>;
 }

@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.7',
+    highlights: [
+      'Read lessons and quizzes with clearer formatting for code, emphasis, and examples.',
+      'Choose quiz answers with clearer selection and result cues.',
+      'Review your profile before sharing it and manage learning preferences with simpler controls.',
+    ],
+  },
+  {
     version: '1.10.6',
     highlights: [
       'Learn how new lessons are checked by human reviewers from the About screen.',

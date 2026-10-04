@@ -7,6 +7,83 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.7 release preparation — PR #354
+
+- Scope: promote the reviewed `develop` work, including PR #351's editorial draft conflict and Markdown fixes, through the normal release process. `cfe4422` adds app version 1.10.7, a matching one-time What's New card, and a new native runtime; the production PR remains `develop` → `main`.
+- Expo SDK 57 package updates from PR #350 include native Expo modules, so the next release needs a new runtime and APK rather than an OTA-only update to the installed 1.10.1 runtime. No migrations appear in the current `main` → `develop` file diff. Live draft → email → changes → publish → learner acceptance for #263 is still unverified.
+- Validation: mobile TypeScript, all 90 Node tests, `npx expo install --check`, fixture-only Expo web export, and the phone/landscape What's New browser check in both themes passed. [PR #354](https://github.com/Coding-Moves/one-concept/pull/354) targets `develop`; the production release PR can open only after its merge and a final `main` diff check for both the version and card. Production merge, website deployment and mobile publication have not occurred.
+
+### Editorial draft conflict recovery — in progress
+
+- Second review: `e0cb52b` makes an older revision show the current published lesson before its correction can be staged, including after Reload. `e3cedfb` keeps Markdown in short headings inline, and `042e634` reports Markdown accurately in editorial detail responses. All three fixes and regressions remain in PR #351.
+- Scope: preserve a manually completed correction when staging returns a stale lesson token, distinguish that case from a curriculum conflict, and make reviewer-authored Markdown display consistently on the website and in the mobile lesson/quiz experience. The live lesson remains unchanged until a draft passes review.
+- Legacy corrections now start from the current concept body. Reload keeps entered fields and refreshes the staging token when that body is unchanged; if the live body changed, it requires explicit review before continuing. Curriculum conflicts display an actionable message without locking the form.
+- Implementation and browser regressions: `46571f2`.
+- Follow-up review found that revision editing did not refresh the current concept token after a conflict. Commit `0964474` fixes that path and adds a browser regression. `b4de9ae` adds safe website Markdown and an editor preview; `376f263` renders the same lesson and quiz writing on mobile without a native module. Identifiers, URLs, and settings remain plain inputs. Embedded Markdown images and raw HTML do not load or execute.
+- Validation: admin build/typecheck, 11 Vitest tests and all 37 Playwright tests pass. The 22 backend editorial content integration tests pass against disposable local PostgreSQL. Mobile TypeScript, all 90 Node tests, `npx expo install --check`, Expo web export, and local mobile learning UI in both themes passed for the earlier mobile change. The mobile dependency audit retains the existing 17 high findings from #321; this change did not increase that count. No production deployment or live draft staging has been verified.
+- [PR #351](https://github.com/Coding-Moves/one-concept/pull/351) targets `develop`; review its hosted checks before requesting PR-specific merge approval. The operator must copy their current unsaved form before opening the new site build, because that tab still runs the old JavaScript. A mobile release or OTA publication is separate from merging this PR.
+### #321 dependency audit — in progress
+
+- Scope: reproduce the bot-reported mobile dependency audit against current `develop`, apply only Expo SDK 57-compatible dependency updates, and keep the audit meaningful. The backend audit reports no vulnerable dependencies.
+- Implemented `82c65b2`: updates the direct dependency set and lockfile to Expo's current SDK 57-compatible versions, including the available `brace-expansion` security patch. The dedicated PR targets `develop`.
+- Remaining audit finding: npm reports 17 high findings with no compatible fix; its suggested resolutions downgrade Expo 57 to Expo 44 and React Native 0.86 to 0.72. The existing audit workflow remains unchanged so those findings stay visible rather than being suppressed.
+- Validation: `npx expo install --check`, mobile TypeScript, and all 90 Node tests pass. [PR #350](https://github.com/Coding-Moves/one-concept/pull/350) targets `develop`. It addresses the safe dependency remediation but intentionally does not close #321 while the unresolved findings remain tracked.
+
+### #346 learner UX flow — in progress
+
+- Scope: simplify the learner profile, public-sharing and connections journeys
+  without changing the existing account, privacy, offline, or version-conflict
+  contracts. Independent visibility choices use accessible switches; radio
+  controls remain reserved for mutually exclusive choices.
+- Planned commits separate the publish-review flow, profile information
+  hierarchy, connections navigation, browser regression coverage, and handoff
+  documentation. The dedicated PR will target `develop` and close #346.
+- Implemented commits: `0f1941e` adds the private review-before-publish sheet,
+  one publish action and unpublish confirmation; `84f0038` groups Profile by
+  learner task; `f9aa6a0` makes connection categories an accessible selected
+  tab group and limits retry to error recovery; `603ba85` updates the mocked
+  browser regression for review, publishing, conflict recovery and unpublish.
+- Validation so far: mobile TypeScript and all 90 Node 24 tests pass. The Expo
+  web fixture export started Metro but did not write its configured output
+  directory in this environment, so the browser regression is pending a
+  successful fixture export. Physical-device switch, screen-reader and sharing
+  acceptance remain manual checks before release.
+- [PR #347](https://github.com/Coding-Moves/one-concept/pull/347) targets
+  `develop` and closes #346 when it merges. It contains no release/version,
+  backend, database, deployment, or OTA change.
+- Review follow-up: `a471832` replaces the platform-specific unpublish alert
+  with an accessible in-app confirmation panel and corrects the browser test's
+  updated Profile navigation label. TypeScript and all 90 mobile tests pass
+  again after that correction.
+
+
+### #340 mobile controls and visual system — ready for review
+
+- The mobile controls now use a shared icon-led `SettingRow` and semantic
+  light/dark accent pairs. Daily reminders update immediately, serialize the
+  full preference document to prevent stale writes, show saving only on the
+  affected row, and register a device only after the saved daily choice.
+  Weekly quiz alerts stay visibly unavailable while their Daily reminders
+  prerequisite is off, without erasing the learner's saved quiz preference.
+- Sharing and connection choices use the same native accessible control. Both
+  weekly and subtopic answer choices now show an icon marker as well as a
+  color, with radio-group semantics and explicit correct/incorrect feedback.
+- Commits: `56890d7` shared visual controls, `92cfa82` reminder responsiveness,
+  `91bd3cf` sharing/connection controls, `3ebd6d1` quiz answer markers, and
+  `93e7cb0` delayed-response browser coverage. Review follow-ups `70a0d88`
+  and `38253c8` restore only confirmed state after rapid failed changes and
+  cover that sequence. Review follow-ups `ef30342` and `37410f9` keep Weekly
+  alerts unavailable until Daily reminders are confirmed and prevent ignored
+  duplicate connection-preference taps. No backend, migration, production
+  setting, release, or OTA change is included.
+- Validation: mobile TypeScript and all 90 Node 24 tests passed. A fixture Expo
+  web export and the mocked Profile browser regression passed in light and dark
+  themes, including delayed daily/weekly saves, rollback, dependency state,
+  sharing, and narrow-layout checks. Physical Android switch feedback and
+  device notification permission remain a manual acceptance check.
+- [PR #345](https://github.com/Coding-Moves/one-concept/pull/345) targets
+  `develop`; #340 was closed after the PR was opened at the owner's request.
+
 ### #313 public review pages — v1.10.6 release preparation
 
 - PR #341 merged into `develop` at `9783fde`; its public About and privacy pages

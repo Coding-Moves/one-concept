@@ -91,12 +91,16 @@ export async function fixture(
     status: "pending_review",
     token: "a".repeat(64),
     body: structuredClone(lesson),
+    liveBody: null as typeof lesson | null,
+    baseVersion: 1,
+    contentVersion: 1,
     events: [] as object[],
     approvedBy: null as string | null,
     expired: false,
     denied: false,
     uncertain: false,
     conflict: false,
+    validationConflict: false,
     invalid: false,
     mfa: options.mfa || false,
     commands: [] as any[],
@@ -200,7 +204,7 @@ export async function fixture(
       id: rid,
       concept_id: cid,
       status: state.status,
-      base_version: 0,
+      base_version: state.baseVersion,
       token: state.token,
       body: state.invalid ? null : state.body,
       source_body: { ...lesson, summary: "Previous explanation." },
@@ -280,7 +284,7 @@ export async function fixture(
                 subtopic_name: "Databases",
                 topic_id: tid,
                 subtopic_id: sid,
-                content_version: 1,
+                content_version: state.contentVersion,
               },
             ]
           : [],
@@ -308,11 +312,15 @@ export async function fixture(
       state.commands.push(body);
       if (receipts.has(body.request_id))
         return fulfill(route, receipts.get(body.request_id));
+      if (state.validationConflict && path.endsWith("/revisions"))
+        return fulfill(route, {
+          detail: { code: "review_conflict", message: "Unknown prerequisite missing-lesson" },
+        }, 409);
       if (
         state.conflict ||
         (body.expected_token && body.expected_token !== state.token)
       )
-        return fulfill(route, { detail: "Stale" }, 409);
+        return fulfill(route, { detail: { code: "stale_revision" } }, 409);
       if (body.action === "approved" || body.action === "approve_and_publish") {
         state.status = body.action === "approved" ? "approved" : "published";
         state.approvedBy = "Amina Khan";
@@ -373,7 +381,7 @@ export async function fixture(
           {
             id: rid,
             status: state.status,
-            base_version: 0,
+            base_version: state.baseVersion,
             created_at: new Date().toISOString(),
           },
         ],
@@ -383,9 +391,9 @@ export async function fixture(
       return fulfill(route, {
         ...detail,
         id: cid,
-        body: state.body,
+        body: state.liveBody ?? state.body,
         concept_id: undefined,
-        content_version: 1,
+        content_version: state.contentVersion,
         unchanged_legacy: true,
         provenance: state.approvedBy
           ? { registered_name: state.approvedBy }

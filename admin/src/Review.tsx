@@ -16,6 +16,7 @@ import type {
 } from "./types";
 import { allPages, Badge, Field, Notice, message } from "./ui";
 import { LessonEditor, LessonView, Value } from "./LessonView";
+import { MarkdownText } from "./MarkdownText";
 import { editableLesson } from "./lesson";
 import { useCommand } from "./useCommand";
 export function Review({
@@ -45,6 +46,10 @@ export function Review({
     [stale, setStale] = useState(false),
     [edit, setEdit] = useState<Lesson | null>(null),
     [stageToken, setStageToken] = useState(""),
+    [editBaseBody, setEditBaseBody] = useState(""),
+    [editNeedsReview, setEditNeedsReview] = useState(false),
+    [editReviewMessage, setEditReviewMessage] = useState(""),
+    [latestConcept, setLatestConcept] = useState<Detail | null>(null),
     [members, setMembers] = useState<Member[]>([]),
     [assignee, setAssignee] = useState(""),
     [due, setDue] = useState("");
@@ -61,12 +66,12 @@ export function Review({
     current = useRef<Detail | null>(null),
     cid = detail?.concept_id || id;
   const can = (cap: string) => me.member.capabilities.includes(cap as never);
-  async function load() {
+  async function load(): Promise<Detail | null> {
     const seq = ++sequence.current;
     setError("");
     try {
       const d = await api.request<Detail>(path);
-      if (seq !== sequence.current) return;
+      if (seq !== sequence.current) return null;
       setDetail(d);
       current.current = d;
       setStale(false);
@@ -79,11 +84,13 @@ export function Review({
         api.request<Page<Event>>(`/concepts/${concept}/timeline`),
         api.request<Page<Revision>>(`/concepts/${concept}/revisions`),
       ]);
-      if (seq !== sequence.current) return;
+      if (seq !== sequence.current) return null;
       setEvents(ev);
       setHistory(hs);
+      return d;
     } catch (e) {
       if (seq === sequence.current) setError(message(e));
+      return null;
     }
   }
   const op = useCommand(api, async (result, submitted) => {
@@ -184,7 +191,8 @@ export function Review({
     );
   const approvalKeys = Object.keys(checklist) as CheckKey[];
   const complete = approvalKeys.every((k) => checks[k]) && !!sensitive;
-  const blocked = op.busy || !!op.pending || op.conflict || stale;
+  const blocked =
+    op.busy || !!op.pending || op.conflict || stale || editNeedsReview;
   const decisionBlocked = blocked || !!edit;
   const noted = note.trim().length >= 10;
   const quality = {
@@ -201,14 +209,59 @@ export function Review({
   async function beginEdit() {
     try {
       const concept = await api.request<Detail>(`/concepts/${cid}`);
+      const revisionIsOld =
+        revision &&
+        detail?.base_version !== undefined &&
+        concept.content_version !== undefined &&
+        detail.base_version !== concept.content_version;
       setStageToken(concept.token);
+      setEditBaseBody(JSON.stringify(concept.body));
+      setEditNeedsReview(revisionIsOld);
+      setEditReviewMessage(
+        revisionIsOld ? "This revision is based on an older published lesson." : "",
+      );
+      setLatestConcept(revisionIsOld ? concept : null);
       setEdit({
-        ...editableLesson(detail!.body),
+        ...editableLesson(revision ? detail!.body : concept.body),
         subtopic_slug: concept.body.subtopic_slug,
       });
-      setTab("edit");
+      setTab(revisionIsOld ? "lesson" : "edit");
     } catch (e) {
       setError(message(e));
+    }
+  }
+  async function reload() {
+    const latest = await load();
+    if (!latest) return;
+    let concept = latest;
+    if (edit && revision) {
+      try {
+        concept = await api.request<Detail>(`/concepts/${cid}`);
+      } catch (e) {
+        setError(message(e));
+        return;
+      }
+    }
+    op.reset();
+    if (!edit) return;
+    if (JSON.stringify(concept.body) === editBaseBody) {
+      setStageToken(concept.token);
+      if (editNeedsReview) {
+        setLatestConcept(concept);
+        setNotice("Latest lesson loaded. Compare it with your correction before continuing.");
+      } else {
+        setEditReviewMessage("");
+        setLatestConcept(null);
+        setNotice("Latest lesson loaded. Your correction is still here.");
+      }
+    } else {
+      setEditNeedsReview(true);
+      setEditReviewMessage("The live lesson changed while you edited.");
+      setLatestConcept(concept);
+      setTab("lesson");
+      setNotice(
+        "The live lesson changed. Compare it with your preserved correction before continuing.",
+      );
     }
   }
   async function more(which: "events" | "history") {
@@ -260,11 +313,7 @@ export function Review({
             {revision ? "BASE" : "CONTENT"} VERSION{" "}
             {detail.base_version ?? detail.content_version}
           </p>
-          <h1>
-            {typeof detail.body?.title === "string"
-              ? detail.body.title
-              : "Lesson needing correction"}
-          </h1>
+          <h1><MarkdownText value={typeof detail.body?.title === "string" ? detail.body.title : "Lesson needing correction"} inline /></h1>
           <p>
             {approvedBy
               ? `Approved by ${approvedBy}. This decision is shared with every reviewer.`
@@ -281,6 +330,37 @@ export function Review({
           is preserved. Reload the latest version and review it again before
           submitting.
         </Notice>
+      )}
+      {editNeedsReview && latestConcept && (
+        <Notice error>
+          {editReviewMessage} Your correction is preserved. Compare the current
+          live lesson below with your Edit, then{" "}
+          <button
+            onClick={() => {
+              setStageToken(latestConcept.token);
+              setEditBaseBody(JSON.stringify(latestConcept.body));
+              setEditNeedsReview(false);
+              setEditReviewMessage("");
+              setLatestConcept(null);
+              setTab("edit");
+            }}
+          >
+            Continue from latest version
+          </button>
+        </Notice>
+      )}
+      {editNeedsReview && latestConcept && (
+        <section className="card">
+          <h2>Current live lesson</h2>
+          {latestConcept.body ? (
+            <LessonView
+              body={latestConcept.body}
+              links={latestConcept.source_links}
+            />
+          ) : (
+            <Value value={latestConcept.body} />
+          )}
+        </section>
       )}
       {op.pending && (
         <Notice>
@@ -428,8 +508,7 @@ export function Review({
               <button
                 disabled={op.busy || !!op.pending}
                 onClick={() => {
-                  op.reset();
-                  void load();
+                  void reload();
                 }}
               >
                 Reload

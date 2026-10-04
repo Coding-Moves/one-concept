@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused, useNavigation } from '@react-navigation/native';
 import { useEffect, useRef, useState } from 'react';
-import { AppState, Pressable, ScrollView, Switch, Text, TextInput, View } from 'react-native';
+import { AppState, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { SettingRow } from '../components/SettingRow';
 import { actOnConnection, connectionError, connectionList, ConnectionEntry, ConnectionKind, ConnectionPreferences, connectionSettings, onConnectionsChanged, saveConnectionSettings, unblockConnection } from '../services/connections';
 import { openPublicProfile } from '../services/publicProfileNavigation';
 import { publicProfileUrl } from '../services/profileSharing';
@@ -74,18 +75,32 @@ function AccountConnections({ userId }: { userId: string }) {
   const act = (id: string, verb: 'accept'|'decline'|'cancel'|'remove'|'block') => void mutate(() => actOnConnection(userId, id, verb), 'Connection updated.');
   return <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24, gap: 20 }}>
     {button('← Back', () => navigation.goBack(), false)}
-    <ScreenHeader title="Connections" subtitle="Your connections are private and always under your control." />
-    <View style={{ padding: 18, borderRadius: 22, backgroundColor: colors.surface, gap: 12 }}>
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}><Text style={{ flex: 1, color: colors.text, fontWeight: '700' }}>Accept new requests</Text><Switch accessibilityLabel="Accept new connection requests" value={prefs?.accepting_requests ?? false} disabled={preferenceSaving || !prefs} accessibilityState={{ disabled: preferenceSaving || !prefs, busy: preferenceSaving, checked: prefs?.accepting_requests ?? false }} onValueChange={acceptingRequests => void saveAcceptingRequests(acceptingRequests)} /></View>
-      <Text style={{ color: colors.textSecondary }}>When this is on, people who have your public profile link can send a request. You choose whether to accept.</Text>
-    </View>
+    <ScreenHeader title="Connections" subtitle="Choose who can contact you and manage every connection from one place." />
+    <Text accessibilityRole="header" style={{ color: colors.textMuted, fontSize: 12, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase' }}>Connection settings</Text>
+    <SettingRow
+      icon="people-outline"
+      tone="connection"
+      title="Accept new requests"
+      subtitle="Allow people with your public profile link to send a request. You still choose whom to accept."
+      value={prefs?.accepting_requests ?? false}
+      disabled={!prefs || preferenceSaving}
+      pending={preferenceSaving}
+      onValueChange={acceptingRequests => void saveAcceptingRequests(acceptingRequests)}
+      accessibilityLabel="Accept new connection requests"
+      accessibilityHint="Allows or pauses connection requests from people with your public profile link."
+    />
     <View style={{ gap: 12 }}>
-      <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>Add a connection</Text>
+      <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>Find someone</Text>
+      <Text style={{ color: colors.textSecondary }}>Paste a shared One Concept profile link to view it before sending a request.</Text>
       <TextInput accessibilityLabel="Shared profile link" placeholder="Paste a One Concept profile link" placeholderTextColor={colors.textMuted} value={link} onChangeText={setLink} autoCapitalize="none" autoCorrect={false} style={{ minHeight: 50, padding: 14, borderRadius: 14, color: colors.text, backgroundColor: colors.surface }} />
       {button('Open shared profile', () => { if (!openPublicProfile(link.trim())) setMessage('Enter a valid One Concept profile link or scan its QR with your phone camera.'); }, false)}
     </View>
-    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-      {([['accepted','My connections'],['incoming','Requests'],['outgoing','Sent'],['blocked','Blocked']] as [ConnectionKind,string][]).map(([value,label]) => <Pressable key={value} accessibilityRole="button" accessibilityState={{ selected: kind===value, disabled: busy }} disabled={busy} onPress={() => setKind(value)} style={({ pressed }) => ({ padding: 12, minHeight: 48, borderRadius: 14, backgroundColor: kind===value ? colors.primary : colors.surface, opacity: pressed ? 0.7 : 1 })}><Text style={{ color: kind===value ? colors.onPrimary : colors.text }}>{label}</Text></Pressable>)}
+    <View style={{ gap: 8 }}>
+      <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 20, fontWeight: '700' }}>Your connections</Text>
+      <Text style={{ color: colors.textSecondary }}>Switch between people, requests, and the people you have blocked.</Text>
+    </View>
+    <View accessibilityRole="tablist" style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+      {([['accepted','My connections'],['incoming','Requests'],['outgoing','Sent'],['blocked','Blocked']] as [ConnectionKind,string][]).map(([value,label]) => <Pressable key={value} accessibilityRole="tab" accessibilityState={{ selected: kind===value, disabled: busy }} disabled={busy} onPress={() => setKind(value)} style={({ pressed }) => ({ padding: 12, minHeight: 48, borderRadius: 14, borderWidth: 1, borderColor: kind===value ? colors.primary : colors.border, backgroundColor: kind===value ? colors.primary : colors.surface, opacity: pressed ? 0.7 : 1 })}><Text style={{ color: kind===value ? colors.onPrimary : colors.text, fontWeight: kind===value ? '700' : '600' }}>{label}</Text></Pressable>)}
     </View>
     {busy && <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>Loading connections…</Text>}
     {!busy && !message && !items.length && <Text style={{ color: colors.textSecondary }}>{kind==='accepted' ? 'No connections yet. Open a shared profile to send your first request.' : kind==='incoming' ? 'No incoming requests.' : kind==='outgoing' ? 'No sent requests.' : 'No blocked people.'}</Text>}
@@ -101,6 +116,6 @@ function AccountConnections({ userId }: { userId: string }) {
     </View>)}
     {message ? <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{message}</Text> : null}
     {cursor && button('Load more', () => void reload(true))}
-    {button('Reload connections', () => void reload())}
+    {message ? button('Try again', () => void reload(), false) : null}
   </ScrollView>;
 }

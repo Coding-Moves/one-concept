@@ -238,7 +238,7 @@ async def revision_detail(db, rid):
         ],
         "validation": result,
         "source_links": source_links(body),
-        "text_format": "plain_text",
+        "text_format": "markdown",
     }
 
 
@@ -262,7 +262,7 @@ async def concept_detail(db, cid):
         "provenance": dict(evidence) if evidence else None,
         "validation": await validation(db, body, row),
         "source_links": source_links(body),
-        "text_format": "plain_text",
+        "text_format": "markdown",
     }
 
 

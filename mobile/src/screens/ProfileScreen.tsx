@@ -4,10 +4,11 @@ import Constants from 'expo-constants';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { AchievementPreview } from '../components/AchievementPreview';
 import { AnimatedFlame } from '../components/AnimatedFlame';
 import { Surface } from '../components/Surface';
+import { SettingRow } from '../components/SettingRow';
 import { useAuth } from '../context/AuthContext';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
@@ -49,16 +50,28 @@ export function ProfileScreen() {
   // activity card above, and the one that updates optimistically on a save so
   // the two counts never disagree.
   const savedCount = progress.bookmarks.length;
-  const reminderPending = useRef(false);
   const notificationMutation = useRef(0);
+  const notificationQueue = useRef(Promise.resolve());
+  const pendingFieldRevision = useRef({ daily: 0, weekly: 0 });
+  const prefsRef = useRef<NotificationPrefs | null>(null);
+  const confirmedPrefsRef = useRef<NotificationPrefs | null>(null);
   const mounted = useRef(true);
-  const [reminderBusy, setReminderBusy] = useState(false);
+  const [pendingNotifications, setPendingNotifications] = useState({ daily: false, weekly: false });
+  const [deviceRegistrationPending, setDeviceRegistrationPending] = useState(false);
   const [reminderMessage, setReminderMessage] = useState('');
   useEffect(() => { mounted.current = true; return () => { mounted.current = false; }; }, []);
 
   // Server-owned preference; absent until the first state fetch succeeds.
   const [prefsReload, setPrefsReload] = useState(0);
   const [prefs, setPrefs] = useState<NotificationPrefs | null>(null);
+  const setCurrentPrefs = useCallback((next: NotificationPrefs | null) => {
+    prefsRef.current = next;
+    setPrefs(next);
+  }, []);
+  const setConfirmedPrefs = useCallback((next: NotificationPrefs) => {
+    confirmedPrefsRef.current = next;
+    setCurrentPrefs(next);
+  }, [setCurrentPrefs]);
   const [subtopics, setSubtopics] = useState<SubtopicProgress[]>([]);
   useEffect(() => {
     let active = true;
@@ -66,10 +79,10 @@ export function ProfileScreen() {
     // server answer replaces it when it arrives.
     const observedMutation = notificationMutation.current;
     getCachedNotificationPrefs(session!.user.id).then((p) => {
-      if (active && p && observedMutation === notificationMutation.current) setPrefs((current) => current ?? p);
+      if (active && p && observedMutation === notificationMutation.current) setConfirmedPrefs(prefsRef.current ?? p);
     });
     getNotificationPrefs(session!.user.id)
-      .then((p) => active && observedMutation === notificationMutation.current && setPrefs(p))
+      .then((p) => active && observedMutation === notificationMutation.current && setConfirmedPrefs(p))
       .catch(() => { if (active) setReminderMessage('Could not refresh reminder settings. Check your connection and reload.'); });
     return () => {
       active = false;
@@ -88,44 +101,64 @@ export function ProfileScreen() {
   const completedSubtopics = subtopics.filter(item => item.completed).length;
   const hasFollowedTopics = progress.followedTopics.length > 0;
 
-  const toggleReminders = useCallback(async (weekly = false) => {
-    if (!prefs || !session?.user.id || reminderPending.current) return;
-    const previous = prefs;
-    const mutation = ++notificationMutation.current;
-    const next = weekly ? { ...prefs, weekly_quiz_enabled: !prefs.weekly_quiz_enabled } : { ...prefs, enabled: !prefs.enabled };
-    // Move the switch immediately. The request remains serialized, and a failed
-    // save restores the last server-confirmed value instead of pretending it worked.
-    reminderPending.current = true; setReminderBusy(true); setReminderMessage(''); setPrefs(next);
-    try {
-      const confirmed = await putNotificationPrefs(next, session.user.id);
-      if (!mounted.current || mutation !== notificationMutation.current) return;
-      setPrefs(confirmed);
-      if (next.enabled && (!weekly || next.weekly_quiz_enabled)) {
-        try {
-          const result = await registerForReminders(session.user.id);
-          if (mounted.current && result !== 'registered') setReminderMessage(result === 'denied'
-            ? 'Reminders are enabled, but this device blocks notifications. Allow them in your phone settings.'
-            : 'Reminders are enabled for your account. Push notifications require a supported physical device.');
-        } catch {
-          if (mounted.current) setReminderMessage('Reminders are enabled, but this device could not register. Check your connection, then use Retry device registration.');
-        }
-      }
-    } catch {
-      if (mounted.current && mutation === notificationMutation.current) { setPrefs(previous); setReminderMessage('Could not save reminder settings. The previous choice was restored; check your connection and try again.'); }
-    } finally {
-      reminderPending.current = false;
-      if (mounted.current) setReminderBusy(false);
-    }
-  }, [prefs, session?.user.id]);
+  const setNotificationPending = useCallback((field: 'daily' | 'weekly', revision: number, value: boolean) => {
+    if (pendingFieldRevision.current[field] !== revision) return;
+    setPendingNotifications(current => current[field] === value ? current : { ...current, [field]: value });
+  }, []);
 
-  const retryReminders = async () => {
-    if (!session?.user.id || reminderPending.current) return;
-    reminderPending.current = true; setReminderBusy(true);
+  const registerDevice = useCallback(async (userId: string) => {
+    setDeviceRegistrationPending(true);
     try {
-      const status = await registerForReminders(session.user.id);
-      if (mounted.current) setReminderMessage(status === 'registered' ? 'This device is ready for reminders.' : 'Allow notifications in your phone settings on a supported physical device.');
-    } catch { if (mounted.current) setReminderMessage('Could not register this device. Check your connection and retry.'); }
-    finally { reminderPending.current = false; if (mounted.current) setReminderBusy(false); }
+      const result = await registerForReminders(userId);
+      if (!mounted.current || result === 'registered') return;
+      setReminderMessage(result === 'denied'
+        ? 'Reminders are saved. Allow notifications in your phone settings to receive them.'
+        : 'Reminders are saved. Push notifications need a supported physical device.');
+    } catch {
+      if (mounted.current) setReminderMessage('Reminders are saved, but this device could not register. Use Retry device registration when you are connected.');
+    } finally {
+      if (mounted.current) setDeviceRegistrationPending(false);
+    }
+  }, []);
+
+  const saveNotificationPrefs = useCallback((field: 'daily' | 'weekly') => {
+    const userId = session?.user.id;
+    const current = prefsRef.current;
+    if (!userId || !current || (field === 'weekly' && !current.enabled)) return;
+    const previous = current;
+    const next = field === 'daily'
+      ? { ...current, enabled: !current.enabled }
+      : { ...current, weekly_quiz_enabled: !current.weekly_quiz_enabled };
+    const revision = ++notificationMutation.current;
+    pendingFieldRevision.current[field] = revision;
+    setCurrentPrefs(next);
+    setNotificationPending(field, revision, true);
+    setReminderMessage('');
+
+    // Writes are queued so a rapid pair of taps cannot send stale full preference
+    // documents. Each switch still moves immediately; only its own row reports saving.
+    notificationQueue.current = notificationQueue.current.catch(() => {}).then(async () => {
+      try {
+        const confirmed = await putNotificationPrefs(next, userId);
+        if (!mounted.current) return;
+        confirmedPrefsRef.current = confirmed;
+        if (notificationMutation.current === revision) setCurrentPrefs(confirmed);
+        setNotificationPending(field, revision, false);
+        if (field === 'daily' && next.enabled && !previous.enabled && notificationMutation.current === revision && prefsRef.current?.enabled) void registerDevice(userId);
+      } catch {
+        if (!mounted.current) return;
+        if (notificationMutation.current === revision) {
+          setCurrentPrefs(confirmedPrefsRef.current ?? previous);
+          setReminderMessage('Could not save that reminder choice. The previous setting was restored; check your connection and try again.');
+        }
+        setNotificationPending(field, revision, false);
+      }
+    });
+  }, [registerDevice, session?.user.id, setCurrentPrefs, setNotificationPending]);
+
+  const retryReminders = () => {
+    if (!session?.user.id || deviceRegistrationPending) return;
+    void registerDevice(session.user.id);
   };
 
   return (
@@ -145,18 +178,20 @@ export function ProfileScreen() {
         </View>
       </View>
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Profile & privacy</Text>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('EditProfile')} style={styles.rowCard}>
-        <Text style={styles.rowTitle}>Edit profile</Text>
+        <View><Text style={styles.rowTitle}>Edit profile</Text><Text style={styles.rowSubtitle}>Name and account details</Text></View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </Pressable>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('ProfileSharing')} style={styles.rowCard}>
-        <Text style={styles.rowTitle}>Public profile & sharing</Text>
+        <View><Text style={styles.rowTitle}>Public profile</Text><Text style={styles.rowSubtitle}>Choose what people can see</Text></View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </Pressable>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Connections')} style={styles.rowCard}>
-        <Text style={styles.rowTitle}>Connections</Text>
+        <View><Text style={styles.rowTitle}>Connections</Text><Text style={styles.rowSubtitle}>Requests and people you know</Text></View>
         <Ionicons name="people-outline" size={22} color={colors.primary} />
       </Pressable>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Your learning</Text>
       <View style={styles.cardsRow}>
         <Surface style={styles.card}>
           <AnimatedFlame
@@ -178,6 +213,7 @@ export function ProfileScreen() {
 
       <AchievementPreview onPress={() => navigation.navigate('Achievements')} />
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Learning details</Text>
       <Pressable
         onPress={() => navigation.navigate('Analytics')}
         style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
@@ -210,6 +246,7 @@ export function ProfileScreen() {
         <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
       </Pressable> : null}
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Topics</Text>
       <Pressable
         onPress={() => navigation.navigate('Personalization')}
         style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
@@ -227,37 +264,17 @@ export function ProfileScreen() {
         <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
       </Pressable>
 
-      <Pressable
-        onPress={() => navigation.navigate('About')}
-        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
-        accessibilityRole="button"
-      >
-        <View style={styles.rowLeft}>
-          <Ionicons name="information-circle-outline" size={scaleIcon(20)} color={colors.text} />
-          <View>
-            <Text style={styles.rowTitle}>About</Text>
-            <Text style={styles.rowSubtitle}>Version, what this app is, and how it works</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
-      </Pressable>
-
-      <View style={styles.rowCard}>
-        <View style={styles.rowLeft}>
-          <Ionicons
-            name={mode === 'dark' ? 'moon-outline' : 'sunny-outline'}
-            size={scaleIcon(20)}
-            color={colors.text}
-          />
-          <Text style={styles.rowTitle}>Dark mode</Text>
-        </View>
-        <Switch
-          value={mode === 'dark'}
-          onValueChange={toggle}
-          trackColor={{ true: colors.primary, false: colors.border }}
-          thumbColor={colors.surface}
-        />
-      </View>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Preferences</Text>
+      <SettingRow
+        icon={mode === 'dark' ? 'moon-outline' : 'sunny-outline'}
+        tone="achievement"
+        title="Dark mode"
+        subtitle="Use the color theme that feels most comfortable."
+        value={mode === 'dark'}
+        onValueChange={toggle}
+        accessibilityLabel="Dark mode"
+        accessibilityHint="Switches between light and dark color themes."
+      />
 
       <View style={styles.rowCard}>
         <View style={styles.rowLeft}>
@@ -268,61 +285,55 @@ export function ProfileScreen() {
         </View>
       </View>
 
-      {prefs ? (
-        <View style={styles.rowCard}>
-          <View style={styles.rowLeft}>
-            <Ionicons name="notifications-outline" size={scaleIcon(20)} color={colors.text} />
-            <View>
-              <Text style={styles.rowTitle}>Notifications</Text>
-              <Text style={styles.rowSubtitle}>
-                {prefs.enabled
-                  ? hasFollowedTopics
-                    ? `Daily reminders: ${prefs.reminder_times.join(' · ')}. Changes affect future reminders and need device permission.`
-                    : 'Daily reminders are paused until you follow a topic. Your preference stays saved.'
-                  : 'Off — no future daily reminders. Device permission is needed when you turn them on.'}
-              </Text>
-            </View>
-          </View>
-          <Switch
-            accessibilityLabel="Notifications"
-            accessibilityHint="Turns future daily reminders on or off. Notification permission is required to deliver them."
-            disabled={reminderBusy}
-            accessibilityState={{ disabled: reminderBusy, busy: reminderBusy, checked: prefs.enabled }}
-            value={prefs.enabled}
-            onValueChange={() => void toggleReminders()}
-            trackColor={{ true: colors.primary, false: colors.border }}
-            thumbColor={colors.surface}
-          />
-        </View>
-      ) : null}
-
-      {prefs && <View style={styles.rowCard}>
-        <View style={styles.rowLeft}><View style={{ flex: 1 }}>
-          <Text style={styles.rowTitle}>Weekly quiz alerts</Text>
-          <Text style={styles.rowSubtitle}>{!prefs.enabled
-            ? 'Enable daily reminders first. Weekly quiz alerts also need notification permission.'
+      {prefs ? <>
+        <SettingRow
+          icon="notifications-outline"
+          tone="primary"
+          title="Daily reminders"
+          subtitle={prefs.enabled
+            ? hasFollowedTopics
+              ? `On · ${prefs.reminder_times.join(' · ')} in your learning timezone.`
+              : 'On, but paused until you follow a topic. Your choice is saved.'
+            : 'Off · turn on for future daily learning reminders.'}
+          value={prefs.enabled}
+          onValueChange={() => saveNotificationPrefs('daily')}
+          pending={pendingNotifications.daily}
+          accessibilityLabel="Daily reminders"
+          accessibilityHint="Turns future daily reminders on or off. Device permission is needed to receive them."
+        />
+        <SettingRow
+          icon="help-circle-outline"
+          tone="quiz"
+          title="Weekly quiz alerts"
+          subtitle={pendingNotifications.daily
+            ? 'Finish saving Daily reminders before changing weekly quiz alerts.'
+            : !prefs.enabled
+            ? 'Turn on Daily reminders first to enable weekly quiz alerts.'
             : prefs.weekly_quiz_enabled
-              ? `On — once when a new quiz is ready at 9 AM (${progress.timezone ?? 'your learning timezone'}). Completed quizzes stay quiet.`
-              : `Off — turn on to hear about future quizzes at 9 AM (${progress.timezone ?? 'your learning timezone'}).`}</Text>
-        </View></View>
-        <Switch accessibilityLabel="Weekly quiz notifications"
-          accessibilityHint={prefs.enabled
-            ? 'Turns future weekly quiz alerts on or off. Notification permission is required to deliver them.'
-            : 'Enable daily reminders before changing weekly quiz alerts.'}
-          disabled={reminderBusy || !prefs.enabled}
-          accessibilityState={{ disabled: reminderBusy || !prefs.enabled, busy: reminderBusy, checked: prefs.weekly_quiz_enabled ?? false }}
-          value={prefs.weekly_quiz_enabled ?? false} onValueChange={() => void toggleReminders(true)}
-          trackColor={{ true: colors.primary, false: colors.border }} thumbColor={colors.onPrimary} />
-      </View>}
+              ? `On · once when a new quiz is ready at 9 AM (${progress.timezone ?? 'your learning timezone'}).`
+              : `Off · turn on to hear about future quizzes at 9 AM (${progress.timezone ?? 'your learning timezone'}).`}
+          value={prefs.weekly_quiz_enabled ?? false}
+          onValueChange={() => saveNotificationPrefs('weekly')}
+          pending={pendingNotifications.weekly}
+          disabled={!prefs.enabled || pendingNotifications.daily}
+          accessibilityLabel="Weekly quiz notifications"
+          accessibilityHint={pendingNotifications.daily
+            ? 'Unavailable while Daily reminders are saving.'
+            : prefs.enabled
+            ? 'Turns future weekly quiz alerts on or off.'
+            : 'Unavailable until Daily reminders are turned on.'}
+        />
+      </> : null}
 
-      {reminderMessage ? <Pressable accessibilityRole="button" disabled={reminderBusy} onPress={() => { setReminderMessage(''); setPrefsReload(n => n + 1); }} style={styles.rowCard}>
+      {reminderMessage ? <Pressable accessibilityRole="button" disabled={deviceRegistrationPending} onPress={() => { setReminderMessage(''); setPrefsReload(n => n + 1); }} style={styles.rowCard}>
         <Text style={styles.rowTitle}>Reload reminder settings</Text>
       </Pressable> : null}
       {reminderMessage ? <Text accessibilityLiveRegion="polite" style={styles.rowSubtitle}>{reminderMessage}</Text> : null}
-      {prefs?.enabled && reminderMessage ? <Pressable accessibilityRole="button" disabled={reminderBusy} onPress={() => void retryReminders()} style={styles.rowCard}>
+      {prefs?.enabled && reminderMessage ? <Pressable accessibilityRole="button" disabled={deviceRegistrationPending} onPress={retryReminders} style={styles.rowCard}>
         <Text style={styles.rowTitle}>Retry device registration</Text>
       </Pressable> : null}
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Your library</Text>
       <Pressable
         onPress={() => navigation.navigate('Saved')}
         style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
@@ -337,6 +348,22 @@ export function ProfileScreen() {
                 ? 'Bookmark a concept to keep it for later'
                 : `${savedCount} saved · search and filter`}
             </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
+      </Pressable>
+
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Account & support</Text>
+      <Pressable
+        onPress={() => navigation.navigate('About')}
+        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+      >
+        <View style={styles.rowLeft}>
+          <Ionicons name="information-circle-outline" size={scaleIcon(20)} color={colors.text} />
+          <View>
+            <Text style={styles.rowTitle}>About</Text>
+            <Text style={styles.rowSubtitle}>Version, what this app is, and how it works</Text>
           </View>
         </View>
         <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
@@ -436,6 +463,14 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: scaleFont(15),
       fontWeight: '600',
       color: colors.text,
+    },
+    sectionTitle: {
+      color: colors.textMuted,
+      fontSize: scaleFont(12),
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginTop: spacing.xs,
     },
     rowSubtitle: {
       fontSize: scaleFont(12),

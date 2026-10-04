@@ -2,6 +2,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public code?: string,
   ) {
     super(message);
   }
@@ -38,9 +39,17 @@ export class Api {
       if (!response.ok) {
         if ([401, 403].includes(response.status))
           this.onDenied(response.status);
+        const detail =
+          response.status === 409
+            ? (await response.json().catch(() => null))?.detail
+            : null;
+        const code =
+          typeof detail?.code === "string" ? detail.code : undefined;
         const message =
           response.status === 409
-            ? "This item changed or the action is no longer allowed. Reload and review the latest version before deciding."
+            ? code === "review_conflict" && typeof detail.message === "string"
+              ? detail.message
+              : "This item changed or the action is no longer allowed. Reload and review the latest version before deciding."
             : response.status === 422
               ? "Check the required fields and complete lesson package."
               : response.status === 503
@@ -50,7 +59,7 @@ export class Api {
                   : response.status === 403
                     ? "Your account cannot perform this action."
                     : "The request failed. Your changes have not been confirmed.";
-        throw new ApiError(response.status, message);
+        throw new ApiError(response.status, message, code);
       }
       const result = await response.json();
       if (epoch !== this.epoch) throw new ApiError(499, "Account changed.");

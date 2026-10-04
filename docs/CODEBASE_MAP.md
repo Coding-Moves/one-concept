@@ -87,6 +87,8 @@ registered identity. `Queue.tsx` supplies topic/status/deadline filtering and
 shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete
 packages, diffs, history, comments, checklist decisions and safe corrections.
 `Team.tsx` manages owner-only membership; `Generation.tsx` requests bounded work.
+`MarkdownText.tsx` safely renders lesson writing and `LessonEditor` shows a live
+preview; identifiers and configuration fields remain plain text.
 `api.ts` and `useCommand.ts` preserve exact operation retries and stale-token
 failures. Migration 0037 adds audited review deadlines. Queue totals are computed
 with page results in one statement; published rows require matching exact-version
@@ -208,11 +210,11 @@ inside a root stack, with a concept-detail modal above them.
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
 | `AnalyticsScreen.tsx` | Profile-linked, server-confirmed concepts, reviews, activity, quizzes, topics, learning paths and achievements with empty/recovery states. |
-| `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, result feedback and reattempts. |
-| `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, retries, and prior-score history. |
-| `ProfileScreen.tsx` | Account, learning-path progress, clear reminder prerequisites, theme, sign-out, and links to profile subpages. |
+| `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, icon-marked accessible answer selection, result feedback and reattempts. |
+| `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, icon-marked accessible answer selection, retries, and prior-score history. |
+| `ProfileScreen.tsx` | Task-grouped account hub: profile/privacy, learning, topics, preferences, library and support. It keeps clear reminder prerequisites and immediate per-control queued reminder writes. |
 | `EditProfileScreen.tsx` | Preferred-name editing; confirmed, account-fenced Progress state update. |
-| `ProfileSharingScreen.tsx` / `PublicProfileLink.tsx` | Opt-in field choices, native share/local QR and uncached incoming public-profile view. |
+| `ProfileSharingScreen.tsx` / `ProfilePublishReviewSheet.tsx` / `PublicProfileLink.tsx` | Opt-in, independently selected sharing fields, a private review-before-publish step, explicit unpublish confirmation, native share/local QR, and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
 | `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |
@@ -221,6 +223,7 @@ inside a root stack, with a concept-detail modal above them.
 
 All screens live in `mobile/src/screens/`. Reusable presentation in
 `mobile/src/components/` covers lesson cards/actions, category/follow controls,
+reviewed lesson and quiz Markdown through the pure-JavaScript `MarkdownText`,
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.

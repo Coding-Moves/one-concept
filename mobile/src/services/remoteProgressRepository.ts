@@ -130,7 +130,9 @@ export class RemoteProgressRepository implements ProgressRepository {
     this.cache = state;
     // Preserve the v1 disk format, using the same tested write fence as lesson
     // bodies. Sign-out waits for an in-flight write before removing account data.
-    await this.disk.set('v1', state, epoch).catch(() => {});
+    // A signed image URL is short-lived capability data. Keep it only in memory;
+    // disk cache stores the stable preset/object reference instead.
+    await this.disk.set('v1', { ...state, avatarUrl: undefined }, epoch).catch(() => {});
     return epoch === this.epoch ? state : EMPTY_PROGRESS;
   }
 

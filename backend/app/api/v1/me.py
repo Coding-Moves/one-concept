@@ -321,7 +321,7 @@ async def patch_profile(
             text("update public.profiles set display_name = :n where id = :uid"),
             {"n": body.display_name, "uid": user.id},
         )
-    if body.bio is not None:
+    if "bio" in body.model_fields_set:
         await db.execute(text("update public.profiles set bio=:bio where id=:uid"), {"bio": body.bio, "uid": user.id})
     if body.avatar_preset is not None:
         old = await db.scalar(text("select avatar_url from public.profiles where id=:uid for update"), {"uid": user.id})

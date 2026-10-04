@@ -18,6 +18,14 @@ export function EditProfileScreen() {
   const [saving, setSaving] = useState(false); const [message, setMessage] = useState('');
   const busy = useRef(false); const active = useRef(true);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
+  useEffect(() => {
+    // Android can recreate the activity while the system picker is open.
+    // Recovering the pending result avoids silently losing the user's choice.
+    void ImagePicker.getPendingResultAsync().then(result => {
+      const asset = result && 'canceled' in result && !result.canceled ? result.assets[0] : null;
+      if (asset) void run(() => uploadAvatar(asset.uri, asset.mimeType || 'image/jpeg'), 'Profile photo saved.');
+    });
+  }, []);
   const run = async (work: () => Promise<void>, success: string) => {
     if (busy.current) return; busy.current = true; setSaving(true); setMessage('');
     try { await work(); if (active.current) setMessage(success); }

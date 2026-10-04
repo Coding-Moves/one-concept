@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### #321 dependency audit — in progress
+
+- Scope: reproduce the bot-reported mobile dependency audit against current `develop`, apply only Expo SDK 57-compatible dependency updates, and keep the audit meaningful. The backend audit reports no vulnerable dependencies.
+- Planned commits separate the security-compatible dependency refresh, audit behavior correction if required by the verified advisory data, and validation/handoff documentation. The dedicated PR targets `develop` and will close #321 only when its high/critical dependency audit is clean.
+
 ### #346 learner UX flow — in progress
 
 - Scope: simplify the learner profile, public-sharing and connections journeys

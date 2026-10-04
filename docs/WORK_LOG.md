@@ -7,10 +7,16 @@ claims as completed work.
 
 ## Current status
 
-### #263 published revision display — ready for review
+### #359 editorial-to-learner integration — PR #357 expanding
+
+- The owner and reviewer workspaces are role-based views of one Netlify site, backed by the same API and database. Production rehearsal confirmed publication of Blue-Green Deployment but exposed a historical revision detail failure after version advancement. Read-only backend, website, and mobile audits found related assignment, permissions, and saved-cache gaps; [issue #359](https://github.com/Coding-Moves/one-concept/issues/359) records one integration scope and live acceptance checklist.
+- Expand [PR #357](https://github.com/Coding-Moves/one-concept/pull/357) into one reviewable `develop` chunk: historical detail and immutable diff, role-consistent assignment/reads, unsaved-field protection, saved-lesson version refresh, and PostgreSQL/browser/mobile regressions. Keep the existing focused commits and add independent fixes as new commits.
+- Production Gmail inbox receipt, AI correction, and eligible device visibility are not yet verified. A `develop` merge alone will not update the live Netlify/Railway services or the installed mobile app; release and live acceptance remain separate steps.
+
+### #263 published revision display — initial fix in #357
 
 - Production rehearsal published Blue-Green Deployment revision `74ff49eb` as content version 1. Its detail page then showed raw JSON and a stale-base warning because publication correctly advanced the concept beyond the revision's base version.
-- `6fc79e5` excludes published and retired revisions from the stale action gate while preserving it for open review work. The detail page can render the complete historical package again once the backend deploys.
+- `6fc79e5` excludes published and retired revisions from the stale action gate while preserving it for open review work. Further historical validation and diff fixes are tracked in #359 above.
 - Validation: 22 PostgreSQL-backed editorial content API tests passed, including the new publish-then-read regression. The live page remains unchanged until this fix reaches `main` and Railway. Email delivery, AI correction and learner-device visibility for #263 remain to be verified.
 - [PR #357](https://github.com/Coding-Moves/one-concept/pull/357) targets `develop`. It must be reviewed and separately released before the production page changes; no merge or production deployment occurred in this chunk.
 

@@ -10,7 +10,8 @@ claims as completed work.
 ### #353 conservative future-card refill — in progress
 
 - Scope: keep future curated supply off the request path while using durable Pacific-day per-topic and global provider allowances. This is separate from #352 legacy enrichment and retains private review/publication gates.
-- Planned commits: future-refill settings and quota storage, fair low-supply scheduler, observable supply status, regression coverage, and Railway activation/rollback guidance.
+- Implemented: `973be01` adds separate Pacific-day global and per-topic refill allowance storage and conservative settings; `ec8c476` uses those allowances only for future curated backlog work, with low-supply demand, fair normal passes and an explicit disabled-by-default urgent pass; `ebba018` exposes topic eligibility and the isolated allowance in the protected health report.
+- Migration guard: `0043_future_refill_daily_usage.sql` remains unapplied during development. `FUTURE_REFILL_ROLLOUT.md` requires applying and verifying it only during the completed release process.
 
 ### #352 legacy complete-card enrichment — in progress
 

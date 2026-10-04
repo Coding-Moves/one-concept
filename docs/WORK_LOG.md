@@ -11,6 +11,11 @@ claims as completed work.
 
 - Scope: keep future curated supply off the request path while using durable Pacific-day per-topic and global provider allowances. This is separate from #352 legacy enrichment and retains private review/publication gates.
 - Planned commits: future-refill settings and quota storage, fair low-supply scheduler, observable supply status, regression coverage, and Railway activation/rollback guidance.
+### #352 legacy complete-card enrichment — in progress
+
+- Scope: introduce a dedicated, resumable subject-at-a-time legacy enrichment pipeline. It snapshots eligible published lessons, generates private complete-card revisions, preserves old learner-facing content, and requires ordinary authenticated review and publication. It does not change future curated generation or learner progress rules.
+- Planned commits: durable batch/entry storage, owner-fenced batch API and worker claims, reviewer generation console, integration coverage, and a Railway runbook with temporary-key rotation.
+- Migration guard: `0042_legacy_enrichment_batches.sql` remains unapplied during development. `docs/LEGACY_ENRICHMENT_ROLLOUT.md` requires applying and recording it only in the completed release process after backup and RLS verification.
 
 ### #349 QR scanning and one-way Connect — in progress
 

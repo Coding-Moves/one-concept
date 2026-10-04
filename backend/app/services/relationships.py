@@ -98,7 +98,9 @@ async def list_relationships(db, actor, cursor, limit):
     predicate = ''
     if cursor:
         try:
-            created_raw, row_id = cursor.split(':', 1)
+            # ISO 8601 timestamps contain colons (including their UTC offset),
+            # so split from the right to preserve the timestamp as one value.
+            created_raw, row_id = cursor.rsplit(':', 1)
             params['created'] = datetime.fromisoformat(created_raw.replace('Z', '+00:00'))
             params['id'] = row_id
             predicate = 'and (r.created_at, r.id) < (cast(:created as timestamptz), cast(:id as uuid))'

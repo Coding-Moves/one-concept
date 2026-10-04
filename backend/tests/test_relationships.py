@@ -101,6 +101,20 @@ async def test_accepted_legacy_pairs_are_backfilled_in_both_directions(api, peop
     assert len((await api.get('/v1/me/relationships', headers=auth(b))).json()['items']) == 1
 
 
+async def test_relationship_list_uses_an_opaque_working_keyset_cursor(api, people, session):
+    a, b, c = people
+    await session.execute(text('''insert into profile_connections(source_user_id,target_user_id,created_at)
+        values (:a,:b,now()),(:a,:c,now()-interval '1 second')'''), {'a': a[0], 'b': b[0], 'c': c[0]})
+    await session.commit()
+    first = await api.get('/v1/me/relationships', headers=auth(a), params={'limit': 1})
+    assert first.status_code == 200
+    cursor = first.json()['next_cursor']
+    assert cursor and str(a[0]) not in cursor and str(b[0]) not in cursor
+    second = await api.get('/v1/me/relationships', headers=auth(a), params={'limit': 1, 'cursor': cursor})
+    assert second.status_code == 200, second.text
+    assert second.json()['items'][0]['id'] != first.json()['items'][0]['id']
+
+
 @pytest.mark.parametrize('path', ['/v1/me/relationships', '/v1/me/relationships/with/' + 'a' * 43])
 async def test_relationships_require_authentication(anon_client, path):
     assert (await anon_client.get(path)).status_code == 401

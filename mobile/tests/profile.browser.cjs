@@ -72,9 +72,12 @@ const server=http.createServer((req,res)=>{
    await expect(page.getByText('Amina',{exact:true})).toBeVisible();
    await expect(page.getByText('Learning timezone',{exact:true})).toHaveCount(1);
    const dailySwitch=page.getByRole('switch',{name:'Daily reminders',exact:true});
+   const weeklySwitch=page.getByRole('switch',{name:'Weekly quiz notifications',exact:true});
+   await expect(weeklySwitch).toBeDisabled();
    holdReminders=true;
    await dailySwitch.click();
    await expect(dailySwitch).toBeChecked();
+   await expect(weeklySwitch).toBeDisabled();
    await expect.poll(()=>!!releaseReminders).toBe(true);releaseReminders();holdReminders=false;
    await expect(page.getByText(/Could not save that reminder choice/)).toBeVisible();
    await expect(dailySwitch).not.toBeChecked();
@@ -82,8 +85,8 @@ const server=http.createServer((req,res)=>{
    await dailySwitch.click();
    await expect(dailySwitch).toBeChecked();
    await expect.poll(()=>!!releaseReminders).toBe(true);releaseReminders();holdReminders=false;
-   const weeklySwitch=page.getByRole('switch',{name:'Weekly quiz notifications',exact:true});
    await expect(weeklySwitch).not.toBeChecked();
+   await expect(weeklySwitch).toBeEnabled();
    failReminders=true;holdReminders=true;await weeklySwitch.click();
    await expect(weeklySwitch).toBeChecked();
    await expect.poll(()=>!!releaseReminders).toBe(true);releaseReminders();holdReminders=false;

@@ -315,7 +315,9 @@ export function ProfileScreen() {
           icon="help-circle-outline"
           tone="quiz"
           title="Weekly quiz alerts"
-          subtitle={!prefs.enabled
+          subtitle={pendingNotifications.daily
+            ? 'Finish saving Daily reminders before changing weekly quiz alerts.'
+            : !prefs.enabled
             ? 'Turn on Daily reminders first to enable weekly quiz alerts.'
             : prefs.weekly_quiz_enabled
               ? `On · once when a new quiz is ready at 9 AM (${progress.timezone ?? 'your learning timezone'}).`
@@ -323,9 +325,11 @@ export function ProfileScreen() {
           value={prefs.weekly_quiz_enabled ?? false}
           onValueChange={() => saveNotificationPrefs('weekly')}
           pending={pendingNotifications.weekly}
-          disabled={!prefs.enabled}
+          disabled={!prefs.enabled || pendingNotifications.daily}
           accessibilityLabel="Weekly quiz notifications"
-          accessibilityHint={prefs.enabled
+          accessibilityHint={pendingNotifications.daily
+            ? 'Unavailable while Daily reminders are saving.'
+            : prefs.enabled
             ? 'Turns future weekly quiz alerts on or off.'
             : 'Unavailable until Daily reminders are turned on.'}
         />

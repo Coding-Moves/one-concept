@@ -40,8 +40,8 @@ export function ProfilePublishReviewSheet({
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose} transparent>
-      <SafeAreaView style={[styles.backdrop, { backgroundColor: colors.background }]}> 
-        <View style={[styles.sheet, { backgroundColor: colors.background }]}> 
+      <SafeAreaView style={[styles.backdrop, { backgroundColor: colors.background }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.background }]}>
           <View style={styles.header}>
             <View style={[styles.icon, { backgroundColor: colors.primaryAccentSurface }]}>
               <Ionicons name="eye-outline" size={24} color={colors.primary} />

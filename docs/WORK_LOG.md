@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #321 dependency audit — in progress
+
+- Scope: reproduce the bot-reported mobile dependency audit against current `develop`, apply only Expo SDK 57-compatible dependency updates, and keep the audit meaningful. The backend audit reports no vulnerable dependencies.
+- Implemented `82c65b2`: updates the direct dependency set and lockfile to Expo's current SDK 57-compatible versions, including the available `brace-expansion` security patch. The dedicated PR targets `develop`.
+- Remaining audit finding: npm reports 17 high findings with no compatible fix; its suggested resolutions downgrade Expo 57 to Expo 44 and React Native 0.86 to 0.72. The existing audit workflow remains unchanged so those findings stay visible rather than being suppressed.
+- Validation: `npx expo install --check`, mobile TypeScript, and all 90 Node tests pass. [PR #350](https://github.com/Coding-Moves/one-concept/pull/350) targets `develop`. It addresses the safe dependency remediation but intentionally does not close #321 while the unresolved findings remain tracked.
+
 ### #346 learner UX flow — in progress
 
 - Scope: simplify the learner profile, public-sharing and connections journeys

@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### #353 conservative future-card refill — in progress
+
+- Scope: keep future curated supply off the request path while using durable Pacific-day per-topic and global provider allowances. This is separate from #352 legacy enrichment and retains private review/publication gates.
+- Planned commits: future-refill settings and quota storage, fair low-supply scheduler, observable supply status, regression coverage, and Railway activation/rollback guidance.
+
 ### #349 QR scanning and one-way Connect — in progress
 
 - Scope: replace the mutual-request path with safe directed connections that start only from an opaque public profile QR/link. Preserve accepted legacy pairs as two directed rows, enforce blocks and current sharing at every operation, and add QR-only camera scanning with a paste fallback. The dedicated PR targets `develop` and closes #349.

@@ -7,6 +7,26 @@ claims as completed work.
 
 ## Current status
 
+### #313 Google OAuth production branding — PR #341
+
+- Google Auth Platform blocks leaving External Testing until an app name,
+  support email, public homepage and privacy-policy URL are set. The current
+  review site's root is a sign-in page; its SPA `/privacy` fallback is not a
+  privacy policy. The separate learning-app `/privacy` page does not disclose
+  the Gmail reviewer sender and is on another host.
+- [PR #341](https://github.com/Coding-Moves/one-concept/pull/341) on
+  `codex/313-oauth-public-pages` adds static
+  `/about.html` and `/privacy.html` to the same review-site host, with an
+  accurate explanation of send-only Gmail OAuth. `1c3d233` adds the pages and
+  their stylesheet; the runbook records the exact future live URLs and
+  the domain-verification limitation. It references #313 but cannot close it:
+  publishing, a fresh token, Railway flag changes and first inbox receipt are
+  still operational acceptance steps.
+- Validation: Node 24 admin build/typecheck passed with public fixture config;
+  built pages and links were inspected, and desktop/phone browser renders were
+  checked. No live deploy or Gmail send occurred. The operator must not enter
+  the URLs in Google Cloud until the pages reach the `main` Netlify deploy.
+
 ### #329 empty-topic learner experience — ready for PR
 
 - This mobile chunk consumes the additive `daily_availability` contract from #330 only when the server explicitly returns `personalization_required`; older API deployments keep their current exhausted behavior.

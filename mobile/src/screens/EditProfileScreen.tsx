@@ -1,6 +1,8 @@
+import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { useEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
+import { ProfileAvatar, AVATAR_PRESETS, AvatarPreset } from '../components/ProfileAvatar';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
@@ -9,39 +11,50 @@ import { normalizeProfileName } from '../services/profileName';
 
 export function EditProfileScreen() {
   const navigation = useNavigation();
-  const { progress, updateDisplayName } = useProgress();
-  const { colors } = useTheme();
-  const online = useOnline();
+  const { progress, updateProfile, uploadAvatar, removeAvatar } = useProgress();
+  const { colors } = useTheme(); const online = useOnline();
   const [name, setName] = useState(progress.displayName ?? '');
-  const [saving, setSaving] = useState(false);
-  const [message, setMessage] = useState('');
-  const [saveSucceeded, setSaveSucceeded] = useState(false);
-  const busy = useRef(false);
-  const active = useRef(true);
+  const [bio, setBio] = useState(progress.bio ?? '');
+  const [saving, setSaving] = useState(false); const [message, setMessage] = useState('');
+  const busy = useRef(false); const active = useRef(true);
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
-  const save = async () => {
-    if (busy.current) return;
-    let normalized: string;
-    try { normalized = normalizeProfileName(name); }
-    catch (error) { setSaveSucceeded(false); setMessage((error as Error).message); return; }
-    busy.current = true; setSaving(true); setMessage(''); setSaveSucceeded(false);
-    try {
-      await updateDisplayName(normalized);
-      if (active.current) { setName(normalized); setSaveSucceeded(true); setMessage('Name saved. Your profile now uses this name.'); }
-    } catch {
-      if (active.current) { setSaveSucceeded(false); setMessage('Could not save your name. Check your connection and try again. Your text is still here.'); }
-    } finally {
-      busy.current = false;
-      if (active.current) setSaving(false);
-    }
+  useEffect(() => {
+    // Android can recreate the activity while the system picker is open.
+    // Recovering the pending result avoids silently losing the user's choice.
+    void ImagePicker.getPendingResultAsync().then(result => {
+      const asset = result && 'canceled' in result && !result.canceled ? result.assets[0] : null;
+      if (asset) void run(() => uploadAvatar(asset.uri, asset.mimeType || 'image/jpeg'), 'Profile photo saved.');
+    });
+  }, []);
+  const run = async (work: () => Promise<void>, success: string) => {
+    if (busy.current) return; busy.current = true; setSaving(true); setMessage('');
+    try { await work(); if (active.current) setMessage(success); }
+    catch { if (active.current) setMessage('Could not save your profile. Check your connection and try again.'); }
+    finally { busy.current = false; if (active.current) setSaving(false); }
   };
-  return <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24, gap: 20 }}>
+  const save = () => void run(async () => {
+    const displayName = normalizeProfileName(name); const normalizedBio = bio.trim().replace(/\s+/g, ' ');
+    if (normalizedBio.length > 160) throw new Error('bio too long');
+    await updateProfile({ displayName, bio: normalizedBio }); setName(displayName); setBio(normalizedBio);
+  }, 'Profile saved.');
+  const pick = async (camera: boolean) => {
+    const permission = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) { Alert.alert('Photo permission needed', 'Allow access in your phone settings to choose a profile photo.'); return; }
+    const result = camera ? await ImagePicker.launchCameraAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 }) : await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.85 });
+    if (result.canceled || !result.assets[0]) return;
+    await run(() => uploadAvatar(result.assets[0].uri, result.assets[0].mimeType || 'image/jpeg'), 'Profile photo saved.');
+  };
+  return <ScrollView keyboardShouldPersistTaps="handled" style={{ flex: 1, backgroundColor: colors.background }} contentContainerStyle={{ padding: 24, gap: 18 }}>
     <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.goBack()} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: colors.primary }}>← Back</Text></Pressable>
-    <ScreenHeader title="Edit profile" subtitle="Choose the name you prefer. Your email and sign-in details stay the same." />
-    <Text style={{ color: colors.text }}>Preferred name</Text>
-    <TextInput accessibilityLabel="Preferred name" value={name} onChangeText={setName} editable={!saving} autoCapitalize="words" autoCorrect={false} returnKeyType="done" onSubmitEditing={() => void save()} style={{ color: colors.text, backgroundColor: colors.surface, borderRadius: 16, padding: 16, fontSize: 18, minHeight: 52 }} />
-    {!online && <Text style={{ color: colors.textMuted }}>You need a connection to save. You can retry when you reconnect.</Text>}
-    <Pressable accessibilityRole="button" accessibilityState={{ disabled: saving, busy: saving }} disabled={saving} onPress={() => void save()} style={({ pressed }) => ({ minHeight: 48, backgroundColor: pressed ? colors.primaryPressed : colors.primary, padding: 16, borderRadius: 16, opacity: saving ? 0.6 : 1 })}><Text style={{ color: colors.onPrimary, textAlign: 'center', fontWeight: '700' }}>{saving ? 'Saving…' : 'Save name'}</Text></Pressable>
-    {message ? <View accessibilityLiveRegion="polite" accessibilityRole="alert" style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 12, borderRadius: 12, backgroundColor: saveSucceeded ? colors.surfaceSubtle : colors.surface }}><Text style={{ color: saveSucceeded ? colors.primary : colors.text, fontWeight: '700' }}>{saveSucceeded ? '✓' : '!'}</Text><Text style={{ flex: 1, color: colors.text }}>{message}</Text></View> : null}
+    <ScreenHeader title="Edit profile" subtitle="Your sign-in email stays private. Choose what feels like you." />
+    <View style={{ alignItems: 'center', gap: 10 }}><ProfileAvatar avatarRef={progress.avatarRef} avatarUrl={progress.avatarUrl} size={104} />
+      <View style={{ flexDirection: 'row', gap: 10 }}><Pressable onPress={() => void pick(false)} disabled={saving} style={{ padding: 12, borderRadius: 14, backgroundColor: colors.primary }}><Text style={{ color: colors.onPrimary, fontWeight: '700' }}>Choose photo</Text></Pressable><Pressable onPress={() => void pick(true)} disabled={saving} style={{ padding: 12, borderRadius: 14, backgroundColor: colors.surface }}><Text style={{ color: colors.primary, fontWeight: '700' }}>Take photo</Text></Pressable></View>
+      {progress.avatarRef ? <Pressable onPress={() => void run(removeAvatar, 'Profile photo removed.')} disabled={saving}><Text style={{ color: colors.textSecondary }}>Remove avatar</Text></Pressable> : null}
+    </View>
+    <Text style={{ color: colors.text, fontWeight: '700' }}>Or choose an avatar</Text><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>{AVATAR_PRESETS.map(([id]) => <Pressable key={id} accessibilityRole="button" accessibilityLabel={`Use ${id} avatar`} onPress={() => void run(() => updateProfile({ avatarPreset: id as AvatarPreset }), 'Avatar saved.')}><ProfileAvatar avatarRef={`preset:${id}`} size={54} /></Pressable>)}</View>
+    <Text style={{ color: colors.text }}>Preferred name</Text><TextInput accessibilityLabel="Preferred name" value={name} onChangeText={setName} editable={!saving} autoCapitalize="words" style={{ color: colors.text, backgroundColor: colors.surface, borderRadius: 16, padding: 16, fontSize: 18, minHeight: 52 }} />
+    <Text style={{ color: colors.text }}>Short bio <Text style={{ color: colors.textMuted }}>({bio.length}/160)</Text></Text><TextInput accessibilityLabel="Short bio" value={bio} onChangeText={setBio} editable={!saving} maxLength={160} multiline style={{ color: colors.text, backgroundColor: colors.surface, borderRadius: 16, padding: 16, minHeight: 84, textAlignVertical: 'top' }} placeholder="What are you learning?" placeholderTextColor={colors.textMuted} />
+    {!online && <Text style={{ color: colors.textMuted }}>Connect to save your profile.</Text>}<Pressable accessibilityRole="button" disabled={saving || !online} onPress={save} style={{ minHeight: 52, justifyContent: 'center', borderRadius: 16, backgroundColor: colors.primary, opacity: saving || !online ? 0.55 : 1 }}><Text style={{ color: colors.onPrimary, textAlign: 'center', fontWeight: '700' }}>{saving ? 'Saving…' : 'Save profile'}</Text></Pressable>
+    {message ? <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{message}</Text> : null}
   </ScrollView>;
 }

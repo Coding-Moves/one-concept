@@ -6,6 +6,8 @@ from sqlalchemy import text
 
 from app.schemas.profile_sharing import PublicAchievement, PublicProfile, SharingOut
 from app.services.streaks import compute_streaks
+from app.config import get_settings
+from app.services.profile_avatar import is_preset, signed_avatar_url
 
 
 async def sharing_row(db, user_id):
@@ -17,7 +19,7 @@ async def sharing_row(db, user_id):
 
 
 def sharing_output(row):
-    return SharingOut(enabled=row.enabled, show_name=row.show_name,
+    return SharingOut(enabled=row.enabled, show_name=row.show_name, show_avatar=row.show_avatar,
                       show_streak=row.show_streak, show_learning=row.show_learning,
                       achievement_codes=row.achievement_codes, version=row.version,
                       public_path=f'/p/{row.public_token}' if row.enabled else None)
@@ -35,7 +37,7 @@ async def save_sharing(db, user_id, body):
     # Revoked URLs never regain access when sharing is enabled again.
     token = secrets.token_urlsafe(32) if row.enabled and not body.enabled else row.public_token
     await db.execute(text('''update public.profile_sharing set enabled=:enabled,
-        show_name=:show_name,show_streak=:show_streak,show_learning=:show_learning,
+        show_name=:show_name,show_avatar=:show_avatar,show_streak=:show_streak,show_learning=:show_learning,
         achievement_codes=:codes,public_token=:token,version=version+1 where user_id=:uid'''),
         {**body.model_dump(exclude={'achievement_codes', 'version'}), 'uid': user_id,
          'codes': codes, 'token': token})
@@ -45,7 +47,7 @@ async def save_sharing(db, user_id, body):
 
 
 async def public_profile(db, token):
-    row = (await db.execute(text('''select s.*,p.display_name from public.profile_sharing s
+    row = (await db.execute(text('''select s.*,p.display_name,p.avatar_url from public.profile_sharing s
         join public.profiles p on p.id=s.user_id
         where s.public_token=:token and s.enabled for share of s'''), {'token': token})).first()
     if row is None:
@@ -54,6 +56,10 @@ async def public_profile(db, token):
     # Name sharing is explicit; no email or authentication row is queried.
     if row.show_name:
         result.display_name = row.display_name or 'Learner'
+    if row.show_avatar:
+        # Presets are non-identifying; a private photo gets only a short-lived URL.
+        result.avatar_ref = row.avatar_url if is_preset(row.avatar_url) else None
+        result.avatar_url = await signed_avatar_url(get_settings(), row.avatar_url)
     if row.show_streak or row.show_learning:
         stats = await compute_streaks(db, row.user_id)
         if row.show_streak:

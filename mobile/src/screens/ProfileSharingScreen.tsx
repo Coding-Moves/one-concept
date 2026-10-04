@@ -16,6 +16,7 @@ type Award = { code: string; name: string; earned_on: string | null };
 function reviewFields(settings: SharingSettings | null): PublicProfileFields {
   return {
     displayName: Boolean(settings?.show_name),
+    avatar: Boolean(settings?.show_avatar),
     streak: Boolean(settings?.show_streak),
     concepts: Boolean(settings?.show_learning),
     achievements: Boolean(settings?.achievement_codes.length),
@@ -176,6 +177,7 @@ export function ProfileSharingScreen() {
         <Text style={{ color: colors.textSecondary }}>These are independent choices, so you can share more than one.</Text>
       </View>
       {settings ? <>
+        <SettingRow icon="image-outline" tone="primary" title="Profile avatar" subtitle="Show your chosen avatar on your public profile." value={settings.show_avatar} onValueChange={value => updateDraft({ show_avatar: value })} accessibilityLabel="Share profile avatar" accessibilityHint="Includes or hides your avatar on your public profile." disabled={busy} />
         <SettingRow icon="person-outline" tone="primary" title="Display name" subtitle="Show the name people see on your profile." value={settings.show_name} onValueChange={value => updateDraft({ show_name: value })} accessibilityLabel="Share display name" accessibilityHint="Includes or hides your display name on your public profile." disabled={busy} />
         <SettingRow icon="flame-outline" tone="streak" title="Learning streak" subtitle="Show your current and longest learning streak." value={settings.show_streak} onValueChange={value => updateDraft({ show_streak: value })} accessibilityLabel="Share learning streak" accessibilityHint="Includes or hides your learning streak on your public profile." disabled={busy} />
         <SettingRow icon="library-outline" tone="saved" title="Concepts learned" subtitle="Show the number of concepts you have completed." value={settings.show_learning} onValueChange={value => updateDraft({ show_learning: value })} accessibilityLabel="Share concepts learned" accessibilityHint="Includes or hides your completed concept count on your public profile." disabled={busy} />

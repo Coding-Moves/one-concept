@@ -28,6 +28,7 @@ export type ProfileStackParamList = {
   EditProfile: undefined;
   ProfileSharing: undefined;
   Connections: undefined;
+  ScanProfile: undefined;
   Personalization: undefined;
   Saved: undefined;
   About: undefined;

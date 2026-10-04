@@ -1,6 +1,6 @@
 from datetime import date, time
 
-from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from sqlalchemy import ARRAY, Time, bindparam, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,8 @@ from app.services.selection import DailyResult, get_or_create_daily
 from app.services.state import load_state
 from app.services.streaks import compute_streaks
 from app.services.users import ensure_bootstrapped
+from app.config import Settings, get_settings
+from app.services.profile_avatar import delete_avatar, normalize_avatar, signed_avatar_url, upload_avatar
 
 router = APIRouter(prefix="/me", tags=["me"])
 
@@ -65,9 +67,12 @@ def _daily_availability(result: DailyResult) -> str:
     return "catalog_exhausted"
 
 
-def _to_state_out(state) -> StateOut:
+async def _to_state_out(state) -> StateOut:
     return StateOut(
         display_name=state.display_name,
+        bio=state.bio,
+        avatar_ref=state.avatar_ref,
+        avatar_url=await signed_avatar_url(get_settings(), state.avatar_ref),
         timezone=state.timezone,
         today=state.today,
         followed_topics=state.followed_topics,
@@ -114,7 +119,7 @@ async def get_state(
         await ensure_bootstrapped(db, user.id, user.email)
         await db.commit()
         state = await load_state(db, user.id, compact=compact)
-    out = _to_state_out(state)
+    out = await _to_state_out(state)
     # Fold today's concept in so the app needs one startup round trip (#102).
     # Same create-on-first-call behaviour as GET /v1/daily.
     result = await get_or_create_daily(db, user.id, allow_review=reviews)
@@ -169,7 +174,7 @@ async def put_topics(
     db: AsyncSession = Depends(get_db),
 ) -> StateOut:
     await set_followed_topics(db, user.id, body.topics)
-    return _to_state_out(await load_state(db, user.id, compact=compact))
+    return await _to_state_out(await load_state(db, user.id, compact=compact))
 
 
 @router.post("/push-token", status_code=status.HTTP_204_NO_CONTENT)
@@ -316,5 +321,48 @@ async def patch_profile(
             text("update public.profiles set display_name = :n where id = :uid"),
             {"n": body.display_name, "uid": user.id},
         )
+    if "bio" in body.model_fields_set:
+        await db.execute(text("update public.profiles set bio=:bio where id=:uid"), {"bio": body.bio, "uid": user.id})
+    if body.avatar_preset is not None:
+        old = await db.scalar(text("select avatar_url from public.profiles where id=:uid for update"), {"uid": user.id})
+        await db.execute(text("update public.profiles set avatar_url=:avatar where id=:uid"), {"avatar": f"preset:{body.avatar_preset}", "uid": user.id})
+        await delete_avatar(get_settings(), old)
     await db.commit()
-    return _to_state_out(await load_state(db, user.id, compact=compact))
+    return await _to_state_out(await load_state(db, user.id, compact=compact))
+
+
+@router.put("/avatar", response_model=StateOut)
+async def put_avatar(
+    request: Request,
+    compact: bool = False,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> StateOut:
+    """Accept one selected/captured photo and store a normalized private copy."""
+    if request.headers.get("content-type", "").split(";", 1)[0] not in {"image/jpeg", "image/png", "image/webp"}:
+        raise HTTPException(415, "Choose a JPEG, PNG, or WebP photo")
+    length = request.headers.get("content-length")
+    if length is not None and (not length.isdecimal() or int(length) > 5 * 1024 * 1024):
+        raise HTTPException(413, "Choose an image smaller than 5 MB")
+    normalized = normalize_avatar(await request.body())
+    old = await db.scalar(text("select avatar_url from public.profiles where id=:uid for update"), {"uid": user.id})
+    key = await upload_avatar(settings, user.id, normalized)
+    await db.execute(text("update public.profiles set avatar_url=:key where id=:uid"), {"key": key, "uid": user.id})
+    await db.commit()
+    await delete_avatar(settings, old)
+    return await _to_state_out(await load_state(db, user.id, compact=compact))
+
+
+@router.delete("/avatar", response_model=StateOut)
+async def delete_profile_avatar(
+    compact: bool = False,
+    user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    settings: Settings = Depends(get_settings),
+) -> StateOut:
+    old = await db.scalar(text("select avatar_url from public.profiles where id=:uid for update"), {"uid": user.id})
+    await db.execute(text("update public.profiles set avatar_url=null where id=:uid"), {"uid": user.id})
+    await db.commit()
+    await delete_avatar(settings, old)
+    return await _to_state_out(await load_state(db, user.id, compact=compact))

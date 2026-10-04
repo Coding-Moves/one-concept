@@ -4,6 +4,7 @@ from typing import Literal
 from pydantic import BaseModel, Field, field_validator
 
 from app.services.profile import normalize_display_name
+from app.services.profile_avatar import PRESETS, normalize_bio
 
 from app.schemas.daily import DailyOut, ReviewOut
 from app.schemas.subtopics import SubtopicCompletionOut
@@ -45,6 +46,9 @@ class SavedPageOut(BaseModel):
 
 class StateOut(BaseModel):
     display_name: str | None = None
+    bio: str | None = None
+    avatar_ref: str | None = None
+    avatar_url: str | None = None
     timezone: str
     today: date
     followed_topics: list[str]
@@ -81,6 +85,22 @@ class ProfileIn(BaseModel):
     @classmethod
     def valid_display_name(cls, value: str | None) -> str | None:
         return normalize_display_name(value) if value is not None else None
+
+    bio: str | None = Field(default=None, max_length=160)
+
+    @field_validator("bio")
+    @classmethod
+    def valid_bio(cls, value: str | None) -> str | None:
+        return normalize_bio(value)
+
+    avatar_preset: str | None = None
+
+    @field_validator("avatar_preset")
+    @classmethod
+    def valid_avatar_preset(cls, value: str | None) -> str | None:
+        if value is not None and value not in PRESETS:
+            raise ValueError("Unknown avatar preset")
+        return value
 
     # IANA zone name; owns every day boundary for this user.
     timezone: str | None = Field(default=None, max_length=64)

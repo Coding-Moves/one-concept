@@ -5,6 +5,7 @@ class SharingIn(BaseModel):
     model_config = ConfigDict(extra='forbid')
     enabled: bool = False
     show_name: bool = False
+    show_avatar: bool = False
     show_streak: bool = False
     show_learning: bool = False
     achievement_codes: list[str] = Field(default_factory=list, max_length=32)
@@ -22,6 +23,8 @@ class PublicAchievement(BaseModel):
 
 class PublicProfile(BaseModel):
     display_name: str | None = None
+    avatar_ref: str | None = None
+    avatar_url: str | None = None
     current_streak: int | None = None
     longest_streak: int | None = None
     concepts_learned: int | None = None

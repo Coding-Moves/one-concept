@@ -12,7 +12,7 @@ anon_client = test_api.anon_client
 
 async def test_private_default_and_selected_public_fields(client, session, user):
     settings = (await client.get('/v1/me/profile-sharing')).json()
-    assert settings == dict(enabled=False, show_name=False, show_streak=False,
+    assert settings == dict(enabled=False, show_name=False, show_avatar=False, show_streak=False,
                             show_learning=False, achievement_codes=[], version=0, public_path=None)
     await session.execute(text('update profiles set display_name=:name where id=:uid'),
                           {'uid': user, 'name': '<script>alert(1)</script>'})

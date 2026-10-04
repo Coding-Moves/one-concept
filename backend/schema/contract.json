@@ -38,7 +38,8 @@
     "0036_editorial_cancelled_leases.sql": "99405898aa81f1e2f54481d7c3343576c8039c8b64a7b93f33498e76ebed6394",
     "0037_editorial_review_deadlines.sql": "ab59eabee6d674c89836b394b53a514c114c577e2533081a19a0c16dc77831bb",
     "0038_editorial_notifications.sql": "7665a4b53d52b5707e6f0f8964bc5d9fc56e8980e7fc0b7e6ee6bba483caa717",
-    "0039_owner_reporting.sql": "0c2659c2a6e8df166a0801bed4da16188bd0c3b0412dfd2de1021223b495d2c0"
+    "0039_owner_reporting.sql": "0c2659c2a6e8df166a0801bed4da16188bd0c3b0412dfd2de1021223b495d2c0",
+    "0040_profile_avatar_bio.sql": "86c216aeeae0b0b81d7b2e0daa8708d56a870736322069ea0249a79b9fca2708"
   },
   "schema": {
     "columns": {
@@ -1440,6 +1441,12 @@
         "not_null": true,
         "type": "text"
       },
+      "profile_sharing.show_avatar": {
+        "default": "false",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
+      },
       "profile_sharing.show_learning": {
         "default": "false",
         "identity": "",
@@ -1471,6 +1478,12 @@
         "type": "integer"
       },
       "profiles.avatar_url": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "profiles.bio": {
         "default": null,
         "identity": "",
         "not_null": false,
@@ -2488,6 +2501,10 @@
       },
       "profile_sharing.profile_sharing_version_check": {
         "definition": "CHECK ((version >= 0))",
+        "validated": true
+      },
+      "profiles.profiles_bio_one_line": {
+        "definition": "CHECK (((bio IS NULL) OR (((char_length(bio) >= 1) AND (char_length(bio) <= 160)) AND (bio !~ '[\\n\\r\\t]'::text))))",
         "validated": true
       },
       "profiles.profiles_id_fkey": {

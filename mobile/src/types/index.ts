@@ -117,6 +117,11 @@ export interface SubtopicCompletion {
 export interface ProgressState {
   /** Server profile identity; never substitute an account identifier when absent. */
   displayName?: string | null;
+  bio?: string | null;
+  /** Private object reference or a vetted preset; never a device path. */
+  avatarRef?: string | null;
+  /** Short-lived URL, held in memory only when the API provides one. */
+  avatarUrl?: string | null;
   /** IANA timezone returned by the profile and used for local-time presentation. */
   timezone?: string;
   learned: LearnedRecord[];

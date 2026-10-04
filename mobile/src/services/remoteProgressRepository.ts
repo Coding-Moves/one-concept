@@ -27,6 +27,9 @@ async function queueRetry(mutation: QueuedMutation, error: unknown): Promise<voi
 
 interface StatePayload {
   display_name: string | null;
+  bio?: string | null;
+  avatar_ref?: string | null;
+  avatar_url?: string | null;
   timezone: string;
   today: string;
   followed_topics: string[];
@@ -54,6 +57,9 @@ interface StatePayload {
 function toProgressState(payload: StatePayload): ProgressState {
   return {
     displayName: payload.display_name,
+    bio: payload.bio ?? null,
+    avatarRef: payload.avatar_ref ?? null,
+    avatarUrl: payload.avatar_url ?? null,
     timezone: payload.timezone,
     learned: payload.learned.map((r) => ({
       conceptId: r.concept_slug,
@@ -124,7 +130,9 @@ export class RemoteProgressRepository implements ProgressRepository {
     this.cache = state;
     // Preserve the v1 disk format, using the same tested write fence as lesson
     // bodies. Sign-out waits for an in-flight write before removing account data.
-    await this.disk.set('v1', state, epoch).catch(() => {});
+    // A signed image URL is short-lived capability data. Keep it only in memory;
+    // disk cache stores the stable preset/object reference instead.
+    await this.disk.set('v1', { ...state, avatarUrl: undefined }, epoch).catch(() => {});
     return epoch === this.epoch ? state : EMPTY_PROGRESS;
   }
 
@@ -173,12 +181,23 @@ export class RemoteProgressRepository implements ProgressRepository {
     }
   }
 
-  async updateDisplayName(name: string, userId: string): Promise<ProgressState> {
+  async updateProfile(input: { displayName?: string; bio?: string; avatarPreset?: string }, userId: string): Promise<ProgressState> {
     const epoch = this.epoch;
-    const payload = await this.request<StatePayload>(epoch, '/v1/me?compact=true', {
-      method: 'PATCH', body: { display_name: name }, expectedUserId: userId,
-    });
+    const payload = await this.request<StatePayload>(epoch, '/v1/me?compact=true', { method: 'PATCH', body: { display_name: input.displayName, bio: input.bio, avatar_preset: input.avatarPreset }, expectedUserId: userId });
     if (epoch !== this.epoch) throw new ApiError(401, 'Account changed');
+    return this.fromState(payload, epoch);
+  }
+
+  async uploadAvatar(uri: string, mimeType: string, userId: string): Promise<ProgressState> {
+    const epoch = this.epoch;
+    const response = await fetch(uri); const body = await response.blob();
+    const payload = await this.request<StatePayload>(epoch, '/v1/me/avatar?compact=true', { method: 'PUT', rawBody: body, contentType: mimeType, expectedUserId: userId });
+    return this.fromState(payload, epoch);
+  }
+
+  async removeAvatar(userId: string): Promise<ProgressState> {
+    const epoch = this.epoch;
+    const payload = await this.request<StatePayload>(epoch, '/v1/me/avatar?compact=true', { method: 'DELETE', expectedUserId: userId });
     return this.fromState(payload, epoch);
   }
 

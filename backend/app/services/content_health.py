@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.services.pool import future_refill_state
+from app.services.review_capacity import review_load
 
 _FAILURE_CATEGORY = """case
   when last_error like '%slug%' then 'slug_collision'
@@ -75,22 +76,58 @@ async def health_report(session: AsyncSession) -> dict:
     future_usage = dict((await session.execute(text("""select topic_id,calls_used
       from public.future_refill_topic_daily_usage
       where budget_day=(statement_timestamp() at time zone 'America/Los_Angeles')::date"""))).all())
+    future_used = await session.scalar(
+        text(
+            "select coalesce((select calls_used from public.future_refill_daily_usage where budget_day=(statement_timestamp() at time zone 'America/Los_Angeles')::date),0)"
+        )
+    )
     topics = []
     conditions = set()
     for row in rows:
         topic = dict(row)
         requested, unread = await future_refill_state(session, row["topic_id"])
+        critical = unread <= settings.content_critical_watermark
+        urgent = settings.future_refill_urgent_enabled and critical
+        global_cap = (
+            settings.future_refill_urgent_daily_call_cap
+            if urgent
+            else settings.future_refill_daily_call_cap
+        )
+        topic_cap = (
+            settings.future_refill_urgent_topic_daily_cap
+            if urgent
+            else settings.future_refill_topic_daily_cap
+        )
+        topic_calls_used = future_usage.get(row["topic_id"], 0)
+        reviewer_load = await review_load(session, row["topic_id"])
+        if not requested:
+            blocked_reason = "no_active_low_supply_request"
+        elif unread > settings.content_low_watermark:
+            blocked_reason = "minimum_reader_inventory_above_watermark"
+        elif row["pending"] == 0:
+            blocked_reason = "no_curated_backlog"
+        elif reviewer_load >= settings.content_review_backlog_limit:
+            blocked_reason = "review_capacity_full"
+        elif topic_calls_used >= topic_cap:
+            blocked_reason = "topic_daily_allowance_reached"
+        elif future_used >= global_cap:
+            blocked_reason = "global_daily_allowance_reached"
+        else:
+            blocked_reason = None
         topic["unseen_for_experienced_reader"] = max(
             0, row["published"] - row["experienced_assigned"]
         )
         topic["future_refill"] = {
             "unread": unread,
             "requested": requested,
-            "topic_calls_used": future_usage.get(row["topic_id"], 0),
-            "normal_topic_cap": settings.future_refill_topic_daily_cap,
-            "critical": unread <= settings.content_critical_watermark,
-            "eligible": requested and unread <= settings.content_low_watermark
-                and row["pending"] > 0 and row["revisions_awaiting_review"] < settings.content_review_backlog_limit,
+            "mode": "urgent" if urgent else "normal",
+            "topic_calls_used": topic_calls_used,
+            "topic_daily_cap": topic_cap,
+            "review_load": reviewer_load,
+            "review_capacity": settings.content_review_backlog_limit,
+            "critical": critical,
+            "eligible": blocked_reason is None,
+            "blocked_reason": blocked_reason,
         }
         topic.pop("topic_id")
         # Conservative one lesson/subject/day. This is a stock estimate, not a
@@ -115,11 +152,6 @@ async def health_report(session: AsyncSession) -> dict:
     used = await session.scalar(
         text(
             "select coalesce((select calls_used from public.generation_daily_usage where budget_day=(statement_timestamp() at time zone 'America/Los_Angeles')::date),0)"
-        )
-    )
-    future_used = await session.scalar(
-        text(
-            "select coalesce((select calls_used from public.future_refill_daily_usage where budget_day=(statement_timestamp() at time zone 'America/Los_Angeles')::date),0)"
         )
     )
     worker = (

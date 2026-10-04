@@ -52,11 +52,13 @@ class UserState:
     saved_next_cursor: str | None = None
     assignment_slug: str | None = None
     display_name: str | None = None
+    bio: str | None = None
+    avatar_ref: str | None = None
 
 
 _STATE = text("""
     with prof as (
-        select display_name, timezone, (now() at time zone timezone)::date as today
+        select display_name, bio, avatar_url, timezone, (now() at time zone timezone)::date as today
           from public.profiles where id = :uid
     ),
     followed as (
@@ -163,6 +165,8 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID, *, compact: bool
 
     return UserState(
         display_name=row.display_name,
+        bio=row.bio,
+        avatar_ref=row.avatar_url,
         timezone=row.timezone,
         today=row.today,
         followed_topics=list(row.followed_topics),

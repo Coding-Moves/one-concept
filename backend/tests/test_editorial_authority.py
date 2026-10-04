@@ -15,7 +15,7 @@ from app.services.editorial_accounts import authorize, bootstrap_owner
 @pytest_asyncio.fixture
 async def editorial(session, user):
     await session.execute(
-        text("truncate public.editorial_memberships, public.editorial_account_events")
+        text("truncate public.editorial_legacy_batch_entries, public.editorial_legacy_batches, public.editorial_memberships, public.editorial_account_events")
     )
     await session.execute(
         text("update auth.users set email_confirmed_at=now() where id=:id"),
@@ -114,7 +114,12 @@ async def test_onboarding_allows_aal1_but_actions_require_mfa(session, editorial
 
 async def test_membership_and_audit_are_not_client_accessible(session, editorial):
     await session.execute(text("set local role authenticated"))
-    for table in ("editorial_memberships", "editorial_account_events"):
+    for table in (
+        "editorial_legacy_batches",
+        "editorial_legacy_batch_entries",
+        "editorial_memberships",
+        "editorial_account_events",
+    ):
         assert not await session.scalar(
             text("select has_table_privilege(current_user,:table,'SELECT')"),
             {"table": table},
@@ -128,7 +133,7 @@ async def test_membership_and_audit_are_not_client_accessible(session, editorial
 
 async def test_bootstrap_requires_confirmed_account(session, user):
     await session.execute(
-        text("truncate editorial_memberships, editorial_account_events")
+        text("truncate editorial_legacy_batch_entries, editorial_legacy_batches, editorial_memberships, editorial_account_events")
     )
     with pytest.raises(HTTPException) as exc:
         await bootstrap_owner(session, f"{user}@example.invalid", "Unconfirmed")

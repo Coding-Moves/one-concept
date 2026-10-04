@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #352 legacy complete-card enrichment — in progress
+
+- Scope: introduce a dedicated, resumable subject-at-a-time legacy enrichment pipeline. It snapshots eligible published lessons, generates private complete-card revisions, preserves old learner-facing content, and requires ordinary authenticated review and publication. It does not change future curated generation or learner progress rules.
+- Planned commits: durable batch/entry storage, owner-fenced batch API and worker claims, reviewer generation console, integration coverage, and a Railway runbook with temporary-key rotation.
+- Migration guard: `0042_legacy_enrichment_batches.sql` remains unapplied during development. `docs/LEGACY_ENRICHMENT_ROLLOUT.md` requires applying and recording it only in the completed release process after backup and RLS verification.
+
 ### #349 QR scanning and one-way Connect — in progress
 
 - Scope: replace the mutual-request path with safe directed connections that start only from an opaque public profile QR/link. Preserve accepted legacy pairs as two directed rows, enforce blocks and current sharing at every operation, and add QR-only camera scanning with a paste fallback. The dedicated PR targets `develop` and closes #349.

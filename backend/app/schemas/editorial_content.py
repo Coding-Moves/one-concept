@@ -86,6 +86,16 @@ class GenerationInput(Command):
     count: int = Field(ge=1, le=10, strict=True)
 
 
+class LegacyBatchInput(Command):
+    topic_id: UUID
+    name: str = Field(pattern=r"^[a-z0-9][a-z0-9-]{2,119}$")
+    quota_limit: int = Field(ge=1, le=500, strict=True)
+
+
+class LegacyBatchAction(VersionCommand):
+    action: Literal["pause", "resume", "cancel"]
+
+
 GenerationJobStatus = Literal[
     "pending", "generating", "failed", "ready_for_review", "cancelled", "superseded"
 ]

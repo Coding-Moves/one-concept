@@ -54,6 +54,7 @@ export function ProfileScreen() {
   const notificationQueue = useRef(Promise.resolve());
   const pendingFieldRevision = useRef({ daily: 0, weekly: 0 });
   const prefsRef = useRef<NotificationPrefs | null>(null);
+  const confirmedPrefsRef = useRef<NotificationPrefs | null>(null);
   const mounted = useRef(true);
   const [pendingNotifications, setPendingNotifications] = useState({ daily: false, weekly: false });
   const [deviceRegistrationPending, setDeviceRegistrationPending] = useState(false);
@@ -67,6 +68,10 @@ export function ProfileScreen() {
     prefsRef.current = next;
     setPrefs(next);
   }, []);
+  const setConfirmedPrefs = useCallback((next: NotificationPrefs) => {
+    confirmedPrefsRef.current = next;
+    setCurrentPrefs(next);
+  }, [setCurrentPrefs]);
   const [subtopics, setSubtopics] = useState<SubtopicProgress[]>([]);
   useEffect(() => {
     let active = true;
@@ -74,10 +79,10 @@ export function ProfileScreen() {
     // server answer replaces it when it arrives.
     const observedMutation = notificationMutation.current;
     getCachedNotificationPrefs(session!.user.id).then((p) => {
-      if (active && p && observedMutation === notificationMutation.current) setCurrentPrefs(prefsRef.current ?? p);
+      if (active && p && observedMutation === notificationMutation.current) setConfirmedPrefs(prefsRef.current ?? p);
     });
     getNotificationPrefs(session!.user.id)
-      .then((p) => active && observedMutation === notificationMutation.current && setCurrentPrefs(p))
+      .then((p) => active && observedMutation === notificationMutation.current && setConfirmedPrefs(p))
       .catch(() => { if (active) setReminderMessage('Could not refresh reminder settings. Check your connection and reload.'); });
     return () => {
       active = false;
@@ -136,13 +141,14 @@ export function ProfileScreen() {
       try {
         const confirmed = await putNotificationPrefs(next, userId);
         if (!mounted.current) return;
+        confirmedPrefsRef.current = confirmed;
         if (notificationMutation.current === revision) setCurrentPrefs(confirmed);
         setNotificationPending(field, revision, false);
         if (field === 'daily' && next.enabled && !previous.enabled && notificationMutation.current === revision && prefsRef.current?.enabled) void registerDevice(userId);
       } catch {
         if (!mounted.current) return;
         if (notificationMutation.current === revision) {
-          setCurrentPrefs(previous);
+          setCurrentPrefs(confirmedPrefsRef.current ?? previous);
           setReminderMessage('Could not save that reminder choice. The previous setting was restored; check your connection and try again.');
         }
         setNotificationPending(field, revision, false);

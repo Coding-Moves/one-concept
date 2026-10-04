@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.7 release preparation — PR #354
+
+- Scope: promote the reviewed `develop` work, including PR #351's editorial draft conflict and Markdown fixes, through the normal release process. `cfe4422` adds app version 1.10.7, a matching one-time What's New card, and a new native runtime; the production PR remains `develop` → `main`.
+- Expo SDK 57 package updates from PR #350 include native Expo modules, so the next release needs a new runtime and APK rather than an OTA-only update to the installed 1.10.1 runtime. No migrations appear in the current `main` → `develop` file diff. Live draft → email → changes → publish → learner acceptance for #263 is still unverified.
+- Validation: mobile TypeScript, all 90 Node tests, `npx expo install --check`, fixture-only Expo web export, and the phone/landscape What's New browser check in both themes passed. [PR #354](https://github.com/Coding-Moves/one-concept/pull/354) targets `develop`; the production release PR can open only after its merge and a final `main` diff check for both the version and card. Production merge, website deployment and mobile publication have not occurred.
+
 ### Editorial draft conflict recovery — in progress
 
 - Second review: `e0cb52b` makes an older revision show the current published lesson before its correction can be staged, including after Reload. `e3cedfb` keeps Markdown in short headings inline, and `042e634` reports Markdown accurately in editorial detail responses. All three fixes and regressions remain in PR #351.

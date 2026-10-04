@@ -13,7 +13,7 @@ claims as completed work.
 - Legacy corrections now start from the current concept body. Reload keeps entered fields and refreshes the staging token when that body is unchanged; if the live body changed, it requires explicit review before continuing. Curriculum conflicts display an actionable message without locking the form.
 - Implementation and browser regressions: `46571f2`.
 - Validation: admin TypeScript, 11 Vitest tests, and four affected Playwright cases pass. The complete workspace browser run passed 16 of 17 before the malformed-revision regression was corrected; that case and the three new cases passed on rerun. No production deployment or live draft staging has been verified.
-- Next: inspect the final diff, open a focused PR against `develop`, then release the site before asking the operator to retry the preserved production form.
+- [PR #351](https://github.com/Coding-Moves/one-concept/pull/351) targets `develop`; hosted checks are running. Next: review the final checks and merge only with the owner's PR-specific approval, then release the site. The operator must copy their current unsaved form before opening the new site build, because that tab still runs the old JavaScript.
 
 ### #346 learner UX flow — in progress
 

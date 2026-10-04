@@ -125,6 +125,10 @@ async def block_peer(db, actor, peer):
         raise HTTPException(400, 'You cannot block yourself')
     await db.execute(text('insert into connection_blocks(owner_id,target_id) values (:a,:b) on conflict(owner_id,target_id) do nothing'), {'a': actor, 'b': peer})
     await db.execute(text("update connections set state='removed',changed_at=now() where low_user=:low and high_user=:high and state in ('pending','accepted')"), {'low': min(actor, peer), 'high': max(actor, peer)})
+    # The directed system is introduced alongside this legacy request system.
+    # A safety block must clear both kinds of relationship immediately.
+    await db.execute(text('''delete from profile_connections where
+        (source_user_id=:actor and target_user_id=:peer) or (source_user_id=:peer and target_user_id=:actor)'''), {'actor': actor, 'peer': peer})
     await db.commit()
 
 

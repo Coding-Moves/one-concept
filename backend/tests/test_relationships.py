@@ -1,0 +1,113 @@
+"""Acceptance tests for directed QR/profile-link relationships."""
+import secrets
+import uuid
+
+import pytest
+import pytest_asyncio
+from fastapi import Request
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import text
+from sqlalchemy.exc import DBAPIError
+
+from app.db.session import get_db
+from app.deps import CurrentUser, get_current_user
+from app.main import app
+from tests import test_api
+
+anon_client = test_api.anon_client
+
+
+@pytest_asyncio.fixture
+async def people(session):
+    people = [(uuid.uuid4(), secrets.token_urlsafe(32)) for _ in range(3)]
+    for index, (uid, token) in enumerate(people):
+        await session.execute(text('insert into auth.users(id,email) values (:id,:email)'), {'id': uid, 'email': f'relationship{index}@example.invalid'})
+        await session.execute(text('insert into profile_sharing(user_id,public_token,enabled,show_name) values (:id,:token,true,true)'), {'id': uid, 'token': token})
+    await session.commit()
+    yield people
+    await session.execute(text('delete from auth.users where id=any(:ids)'), {'ids': [person[0] for person in people]})
+    await session.commit()
+
+
+@pytest_asyncio.fixture
+async def api(sessionmaker_for_test):
+    async def db():
+        async with sessionmaker_for_test() as session:
+            yield session
+
+    async def identity(request: Request):
+        return CurrentUser(id=uuid.UUID(request.headers['x-test-user']), email='relationship@example.invalid')
+
+    app.dependency_overrides[get_db] = db
+    app.dependency_overrides[get_current_user] = identity
+    async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test') as client:
+        yield client
+    app.dependency_overrides.clear()
+
+
+def auth(person):
+    return {'x-test-user': str(person[0])}
+
+
+def path(person):
+    return '/v1/me/relationships/with/' + person[1]
+
+
+async def test_connect_is_one_way_idempotent_and_private(api, people):
+    a, b, _ = people
+    connected = await api.post(path(b), headers=auth(a))
+    assert connected.status_code == 200, connected.text
+    assert connected.json()['state'] == 'connected'
+    assert (await api.post(path(b), headers=auth(a))).json() == connected.json()
+    own_list = await api.get('/v1/me/relationships', headers=auth(a))
+    assert len(own_list.json()['items']) == 1
+    assert str(b[0]) not in own_list.text and 'relationship1@example.invalid' not in own_list.text
+    assert (await api.get('/v1/me/relationships', headers=auth(b))).json()['items'] == []
+    status = await api.get(path(b), headers=auth(a))
+    assert status.json()['state'] == 'connected'
+
+
+async def test_disconnect_is_owner_fenced_and_survives_profile_revocation(api, people, session):
+    a, b, c = people
+    entry = (await api.post(path(b), headers=auth(a))).json()
+    await session.execute(text('update profile_sharing set enabled=false where user_id=:id'), {'id': b[0]})
+    await session.commit()
+    assert (await api.delete('/v1/me/relationships/' + entry['relationship_id'], headers=auth(c))).status_code == 204
+    assert len((await api.get('/v1/me/relationships', headers=auth(a))).json()['items']) == 1
+    assert (await api.delete('/v1/me/relationships/' + entry['relationship_id'], headers=auth(a))).status_code == 204
+    assert (await api.get('/v1/me/relationships', headers=auth(a))).json()['items'] == []
+
+
+async def test_private_self_and_blocks_have_the_same_unavailable_outcome(api, people):
+    a, b, _ = people
+    assert (await api.get(path(a), headers=auth(a))).json()['state'] == 'unavailable'
+    assert (await api.post(path(a), headers=auth(a))).status_code == 404
+    assert (await api.post(path(b) + '/block', headers=auth(a))).status_code == 204
+    assert (await api.get(path(b), headers=auth(a))).json()['state'] == 'unavailable'
+    assert (await api.post(path(b), headers=auth(a))).status_code == 404
+    assert (await api.post(path(a), headers=auth(b))).status_code == 404
+
+
+async def test_accepted_legacy_pairs_are_backfilled_in_both_directions(api, people, session):
+    a, b, _ = people
+    await session.execute(text('''insert into connections(low_user,high_user,initiator,state)
+        values (:low,:high,:low,'accepted')'''), {'low': min(a[0], b[0]), 'high': max(a[0], b[0])})
+    # A live migration cannot be replayed by this fixture. Model its completed
+    # backfill explicitly and assert the product contract from both accounts.
+    await session.execute(text('''insert into profile_connections(source_user_id,target_user_id)
+        values (:a,:b),(:b,:a)'''), {'a': a[0], 'b': b[0]})
+    await session.commit()
+    assert len((await api.get('/v1/me/relationships', headers=auth(a))).json()['items']) == 1
+    assert len((await api.get('/v1/me/relationships', headers=auth(b))).json()['items']) == 1
+
+
+@pytest.mark.parametrize('path', ['/v1/me/relationships', '/v1/me/relationships/with/' + 'a' * 43])
+async def test_relationships_require_authentication(anon_client, path):
+    assert (await anon_client.get(path)).status_code == 401
+
+
+async def test_profile_connections_are_not_available_to_client_database_roles(session):
+    await session.execute(text('set local role authenticated'))
+    with pytest.raises(DBAPIError):
+        await session.execute(text('select * from profile_connections'))
+    await session.rollback()

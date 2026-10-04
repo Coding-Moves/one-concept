@@ -7,6 +7,34 @@ claims as completed work.
 
 ## Current status
 
+### #346 learner UX flow — in progress
+
+- Scope: simplify the learner profile, public-sharing and connections journeys
+  without changing the existing account, privacy, offline, or version-conflict
+  contracts. Independent visibility choices use accessible switches; radio
+  controls remain reserved for mutually exclusive choices.
+- Planned commits separate the publish-review flow, profile information
+  hierarchy, connections navigation, browser regression coverage, and handoff
+  documentation. The dedicated PR will target `develop` and close #346.
+- Implemented commits: `0f1941e` adds the private review-before-publish sheet,
+  one publish action and unpublish confirmation; `84f0038` groups Profile by
+  learner task; `f9aa6a0` makes connection categories an accessible selected
+  tab group and limits retry to error recovery; `603ba85` updates the mocked
+  browser regression for review, publishing, conflict recovery and unpublish.
+- Validation so far: mobile TypeScript and all 90 Node 24 tests pass. The Expo
+  web fixture export started Metro but did not write its configured output
+  directory in this environment, so the browser regression is pending a
+  successful fixture export. Physical-device switch, screen-reader and sharing
+  acceptance remain manual checks before release.
+- [PR #347](https://github.com/Coding-Moves/one-concept/pull/347) targets
+  `develop` and closes #346 when it merges. It contains no release/version,
+  backend, database, deployment, or OTA change.
+- Review follow-up: `a471832` replaces the platform-specific unpublish alert
+  with an accessible in-app confirmation panel and corrects the browser test's
+  updated Profile navigation label. TypeScript and all 90 mobile tests pass
+  again after that correction.
+
+
 ### #340 mobile controls and visual system — ready for review
 
 - The mobile controls now use a shared icon-led `SettingRow` and semantic

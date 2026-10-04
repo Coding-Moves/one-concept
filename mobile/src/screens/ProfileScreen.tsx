@@ -178,18 +178,20 @@ export function ProfileScreen() {
         </View>
       </View>
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Profile & privacy</Text>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('EditProfile')} style={styles.rowCard}>
-        <Text style={styles.rowTitle}>Edit profile</Text>
+        <View><Text style={styles.rowTitle}>Edit profile</Text><Text style={styles.rowSubtitle}>Name and account details</Text></View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </Pressable>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('ProfileSharing')} style={styles.rowCard}>
-        <Text style={styles.rowTitle}>Public profile & sharing</Text>
+        <View><Text style={styles.rowTitle}>Public profile</Text><Text style={styles.rowSubtitle}>Choose what people can see</Text></View>
         <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
       </Pressable>
       <Pressable accessibilityRole="button" onPress={() => navigation.navigate('Connections')} style={styles.rowCard}>
-        <Text style={styles.rowTitle}>Connections</Text>
+        <View><Text style={styles.rowTitle}>Connections</Text><Text style={styles.rowSubtitle}>Requests and people you know</Text></View>
         <Ionicons name="people-outline" size={22} color={colors.primary} />
       </Pressable>
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Your learning</Text>
       <View style={styles.cardsRow}>
         <Surface style={styles.card}>
           <AnimatedFlame
@@ -211,6 +213,7 @@ export function ProfileScreen() {
 
       <AchievementPreview onPress={() => navigation.navigate('Achievements')} />
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Learning details</Text>
       <Pressable
         onPress={() => navigation.navigate('Analytics')}
         style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
@@ -243,6 +246,7 @@ export function ProfileScreen() {
         <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
       </Pressable> : null}
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Topics</Text>
       <Pressable
         onPress={() => navigation.navigate('Personalization')}
         style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
@@ -260,21 +264,7 @@ export function ProfileScreen() {
         <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
       </Pressable>
 
-      <Pressable
-        onPress={() => navigation.navigate('About')}
-        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
-        accessibilityRole="button"
-      >
-        <View style={styles.rowLeft}>
-          <Ionicons name="information-circle-outline" size={scaleIcon(20)} color={colors.text} />
-          <View>
-            <Text style={styles.rowTitle}>About</Text>
-            <Text style={styles.rowSubtitle}>Version, what this app is, and how it works</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
-      </Pressable>
-
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Preferences</Text>
       <SettingRow
         icon={mode === 'dark' ? 'moon-outline' : 'sunny-outline'}
         tone="achievement"
@@ -343,6 +333,7 @@ export function ProfileScreen() {
         <Text style={styles.rowTitle}>Retry device registration</Text>
       </Pressable> : null}
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Your library</Text>
       <Pressable
         onPress={() => navigation.navigate('Saved')}
         style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
@@ -357,6 +348,22 @@ export function ProfileScreen() {
                 ? 'Bookmark a concept to keep it for later'
                 : `${savedCount} saved · search and filter`}
             </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
+      </Pressable>
+
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Account & support</Text>
+      <Pressable
+        onPress={() => navigation.navigate('About')}
+        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+      >
+        <View style={styles.rowLeft}>
+          <Ionicons name="information-circle-outline" size={scaleIcon(20)} color={colors.text} />
+          <View>
+            <Text style={styles.rowTitle}>About</Text>
+            <Text style={styles.rowSubtitle}>Version, what this app is, and how it works</Text>
           </View>
         </View>
         <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
@@ -456,6 +463,14 @@ const createStyles = (colors: ThemeColors) =>
       fontSize: scaleFont(15),
       fontWeight: '600',
       color: colors.text,
+    },
+    sectionTitle: {
+      color: colors.textMuted,
+      fontSize: scaleFont(12),
+      fontWeight: '700',
+      letterSpacing: 0.8,
+      textTransform: 'uppercase',
+      marginTop: spacing.xs,
     },
     rowSubtitle: {
       fontSize: scaleFont(12),

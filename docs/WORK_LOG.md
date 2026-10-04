@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### #353 conservative future-card refill — in progress
+
+- Scope: keep future curated supply off the request path while using durable Pacific-day per-topic and global provider allowances. This is separate from #352 legacy enrichment and retains private review/publication gates.
+- Implemented: `973be01` adds separate Pacific-day global and per-topic refill allowance storage and conservative settings; `ec8c476` uses those allowances only for future curated backlog work, with low-supply demand, fair normal passes and an explicit disabled-by-default urgent pass; `ebba018` exposes topic eligibility and the isolated allowance in the protected health report.
+- Review follow-ups: `188a829` preserves the existing general-generation default and compatible prefetch budget handling. `fcb1ab1` makes the protected report use the worker's actual review-load decision and expose a concrete refill blocked reason; `55a47e3` clarifies that the older generic batch setting does not control the one-card-per-topic future policy. CI then found the compatibility case still limited legacy prefetch to one attempt; `c34308d` restores the old configurable batch only when the future-refill settings are absent.
+- Validation: Python compilation and Ruff passed. The focused PostgreSQL suites were invoked but skipped because no local test database was running. The previous GitHub run had one remaining legacy prefetch regression; its focused fix is pending the new remote CI run.
+- Migration guard: `0043_future_refill_daily_usage.sql` remains unapplied during development. `FUTURE_REFILL_ROLLOUT.md` requires applying and verifying it only during the completed release process.
+
 ### #352 legacy complete-card enrichment — in progress
 
 - Scope: introduce a dedicated, resumable subject-at-a-time legacy enrichment pipeline. It snapshots eligible published lessons, generates private complete-card revisions, preserves old learner-facing content, and requires ordinary authenticated review and publication. It does not change future curated generation or learner progress rules.

@@ -125,6 +125,18 @@ cleanup. Profile opens `AchievementsScreen`; shared badge/detail/celebration
 components render every category and a server-confirmed nearest milestone.
 See [ACHIEVEMENTS.md](ACHIEVEMENTS.md) for rollout and extension rules.
 
+## Conservative future-card refill (#353)
+
+`services/future_refill_budget.py` reserves Pacific-day global and per-topic
+allowance rows exclusively for curated future-card refill. `pool.py` gives each
+recorded low-supply topic one normal slot before any optional urgent second pass;
+`prefetch.py` schedules only one demand-triggered normal slot after the daily
+response commits. Editorial corrections and legacy enrichment retain their own
+generation paths and cannot consume this allowance. `content_health.py` reports
+per-topic low-supply eligibility and the separate budget. See
+[FUTURE_REFILL_ROLLOUT.md](FUTURE_REFILL_ROLLOUT.md) for release-only migration,
+Railway variables, verification and rollback.
+
 ## Future multilingual content (#265)
 
 `docs/multilingual-content/README.md` is the approved future-work design for

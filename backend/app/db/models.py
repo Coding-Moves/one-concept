@@ -316,6 +316,27 @@ class GenerationDailyUsage(Base):
     calls_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
+class FutureRefillDailyUsage(Base):
+    """Pacific-day provider reservations for future curated-card refill only."""
+
+    __tablename__ = "future_refill_daily_usage"
+
+    budget_day: Mapped[date] = mapped_column(Date, primary_key=True)
+    calls_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
+class FutureRefillTopicDailyUsage(Base):
+    """Per-topic refill reservations, isolated from all other Gemini jobs."""
+
+    __tablename__ = "future_refill_topic_daily_usage"
+
+    budget_day: Mapped[date] = mapped_column(Date, primary_key=True)
+    topic_id: Mapped[uuid.UUID] = mapped_column(
+        PgUUID(as_uuid=True), ForeignKey("topics.id", ondelete="CASCADE"), primary_key=True
+    )
+    calls_used: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+
+
 class AchievementDefinition(Base):
     """Mirror of 0016; metric evaluators belong to the server."""
 

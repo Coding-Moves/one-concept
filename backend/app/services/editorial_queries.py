@@ -206,7 +206,13 @@ async def revision_detail(db, rid):
     body = row["body"]
     fields = body if isinstance(body, dict) else {}
     result = await validation(db, body, source)
-    if row["base_version"] != source["content_version"]:
+    # Publishing advances the concept version, so a published revision's base
+    # version is expected to differ from the current version. Historical
+    # revisions remain readable even after a later publication or retirement.
+    if (
+        row["status"] not in ("published", "retired")
+        and row["base_version"] != source["content_version"]
+    ):
         result["valid"] = False
         result["errors"].append(
             {

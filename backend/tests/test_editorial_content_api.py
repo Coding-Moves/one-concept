@@ -73,6 +73,12 @@ async def test_queue_detail_comments_assignment_and_atomic_publication(
         result.json()["status"] == "published"
         and result.json()["published_version"] == 1
     )
+    published = await detail(api, rid)
+    assert published["status"] == "published"
+    assert published["base_version"] == 0
+    assert published["validation"]["valid"]
+    assert published["body"]["title"] == body["body"]["title"]
+    assert published["source_links"]
     replay = await api.client.post(
         f"{ROOT}/revisions/{rid}/actions", headers=api.headers(), json=payload
     )

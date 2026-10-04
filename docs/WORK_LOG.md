@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.7 production migration record — in progress
+
+- The release operator confirmed production application and RLS verification for migrations `0040_profile_avatar_bio.sql` through `0043_future_refill_daily_usage.sql` on 2026-10-04. `1294459` records those verified filenames in `backend/migrations/applied.txt`; this is an operator ledger, not a substitute for the protected target-schema check.
+- The focused ledger PR targets `develop`. Once merged, open the required `develop` → `main` release PR; its final diff already contains the v1.10.7 app version and matching one-time What’s New card.
+
 ### #353 conservative future-card refill — in progress
 
 - Scope: keep future curated supply off the request path while using durable Pacific-day per-topic and global provider allowances. This is separate from #352 legacy enrichment and retains private review/publication gates.

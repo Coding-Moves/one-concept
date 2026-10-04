@@ -76,6 +76,9 @@ interface RequestOptions {
   expectedUserId?: string;
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
   body?: unknown;
+  /** Raw body for a narrow authenticated upload; never queued or persisted. */
+  rawBody?: BodyInit;
+  contentType?: string;
   signal?: AbortSignal;
   /** A domain-specific invitation cooldown must not pause daily learning. */
   rateLimitScope?: 'request';
@@ -98,6 +101,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
   if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
   const headers: Record<string, string> = { Accept: 'application/json' };
   if (options.body !== undefined) headers['Content-Type'] = 'application/json';
+  if (options.contentType) headers['Content-Type'] = options.contentType;
   if (token) headers.Authorization = `Bearer ${token}`;
 
   let response: Response;
@@ -105,7 +109,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     response = await fetchWithTimeout(`${API_BASE_URL}${path}`, {
       method: options.method ?? 'GET',
       headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      body: options.rawBody ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
       signal: options.signal,
     });
   } catch (cause) {

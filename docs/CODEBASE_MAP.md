@@ -210,9 +210,9 @@ inside a root stack, with a concept-detail modal above them.
 | `AnalyticsScreen.tsx` | Profile-linked, server-confirmed concepts, reviews, activity, quizzes, topics, learning paths and achievements with empty/recovery states. |
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, icon-marked accessible answer selection, result feedback and reattempts. |
 | `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, icon-marked accessible answer selection, retries, and prior-score history. |
-| `ProfileScreen.tsx` | Account, learning-path progress, clear reminder prerequisites, immediate per-control queued reminder writes, theme, sign-out, and links to profile subpages. |
+| `ProfileScreen.tsx` | Task-grouped account hub: profile/privacy, learning, topics, preferences, library and support. It keeps clear reminder prerequisites and immediate per-control queued reminder writes. |
 | `EditProfileScreen.tsx` | Preferred-name editing; confirmed, account-fenced Progress state update. |
-| `ProfileSharingScreen.tsx` / `PublicProfileLink.tsx` | Opt-in field choices using shared icon-led controls, native share/local QR and uncached incoming public-profile view. |
+| `ProfileSharingScreen.tsx` / `ProfilePublishReviewSheet.tsx` / `PublicProfileLink.tsx` | Opt-in, independently selected sharing fields, a private review-before-publish step, explicit unpublish confirmation, native share/local QR, and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
 | `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |

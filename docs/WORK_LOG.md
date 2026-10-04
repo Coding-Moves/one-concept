@@ -16,6 +16,16 @@ claims as completed work.
 - Planned commits separate the publish-review flow, profile information
   hierarchy, connections navigation, browser regression coverage, and handoff
   documentation. The dedicated PR will target `develop` and close #346.
+- Implemented commits: `0f1941e` adds the private review-before-publish sheet,
+  one publish action and unpublish confirmation; `84f0038` groups Profile by
+  learner task; `f9aa6a0` makes connection categories an accessible selected
+  tab group and limits retry to error recovery; `603ba85` updates the mocked
+  browser regression for review, publishing, conflict recovery and unpublish.
+- Validation so far: mobile TypeScript and all 90 Node 24 tests pass. The Expo
+  web fixture export started Metro but did not write its configured output
+  directory in this environment, so the browser regression is pending a
+  successful fixture export. Physical-device switch, screen-reader and sharing
+  acceptance remain manual checks before release.
 
 
 ### #340 mobile controls and visual system — ready for review

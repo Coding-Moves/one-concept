@@ -14,6 +14,7 @@ export interface SharingSettings {
 }
 export interface PublicProfile {
   display_name?: string;
+  avatar_ref?: string;
   avatar_url?: string;
   current_streak?: number;
   longest_streak?: number;

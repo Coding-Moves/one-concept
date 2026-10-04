@@ -23,6 +23,7 @@ class PublicAchievement(BaseModel):
 
 class PublicProfile(BaseModel):
     display_name: str | None = None
+    avatar_ref: str | None = None
     avatar_url: str | None = None
     current_streak: int | None = None
     longest_streak: int | None = None

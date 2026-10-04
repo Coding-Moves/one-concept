@@ -28,7 +28,7 @@ export function ShareProfileSheet({ value, busy, onClose, onShare }: {
       {value && <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
           <Text style={[styles.brand, { color: colors.primary }]}>ONE CONCEPT</Text>
-          <ProfileAvatar avatarUrl={value.profile.avatar_url} size={72} />
+          <ProfileAvatar avatarRef={value.profile.avatar_ref} avatarUrl={value.profile.avatar_url} size={72} />
           <Text style={[styles.name, { color: colors.text }]}>{value.profile.display_name || 'One Concept learner'}</Text>
           <Text style={[styles.copy, { color: colors.textSecondary }]}>One concept. A little more understanding.</Text>
           <View style={styles.highlights}>

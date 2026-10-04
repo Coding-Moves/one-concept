@@ -7,7 +7,7 @@ from sqlalchemy import text
 from app.schemas.profile_sharing import PublicAchievement, PublicProfile, SharingOut
 from app.services.streaks import compute_streaks
 from app.config import get_settings
-from app.services.profile_avatar import signed_avatar_url
+from app.services.profile_avatar import is_preset, signed_avatar_url
 
 
 async def sharing_row(db, user_id):
@@ -57,6 +57,8 @@ async def public_profile(db, token):
     if row.show_name:
         result.display_name = row.display_name or 'Learner'
     if row.show_avatar:
+        # Presets are non-identifying; a private photo gets only a short-lived URL.
+        result.avatar_ref = row.avatar_url if is_preset(row.avatar_url) else None
         result.avatar_url = await signed_avatar_url(get_settings(), row.avatar_url)
     if row.show_streak or row.show_learning:
         stats = await compute_streaks(db, row.user_id)

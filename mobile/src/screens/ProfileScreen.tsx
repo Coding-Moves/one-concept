@@ -264,22 +264,6 @@ export function ProfileScreen() {
         <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
       </Pressable>
 
-      <Text accessibilityRole="header" style={styles.sectionTitle}>Support</Text>
-      <Pressable
-        onPress={() => navigation.navigate('About')}
-        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
-        accessibilityRole="button"
-      >
-        <View style={styles.rowLeft}>
-          <Ionicons name="information-circle-outline" size={scaleIcon(20)} color={colors.text} />
-          <View>
-            <Text style={styles.rowTitle}>About</Text>
-            <Text style={styles.rowSubtitle}>Version, what this app is, and how it works</Text>
-          </View>
-        </View>
-        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
-      </Pressable>
-
       <Text accessibilityRole="header" style={styles.sectionTitle}>Preferences</Text>
       <SettingRow
         icon={mode === 'dark' ? 'moon-outline' : 'sunny-outline'}
@@ -349,6 +333,7 @@ export function ProfileScreen() {
         <Text style={styles.rowTitle}>Retry device registration</Text>
       </Pressable> : null}
 
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Your library</Text>
       <Pressable
         onPress={() => navigation.navigate('Saved')}
         style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
@@ -363,6 +348,22 @@ export function ProfileScreen() {
                 ? 'Bookmark a concept to keep it for later'
                 : `${savedCount} saved · search and filter`}
             </Text>
+          </View>
+        </View>
+        <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />
+      </Pressable>
+
+      <Text accessibilityRole="header" style={styles.sectionTitle}>Account & support</Text>
+      <Pressable
+        onPress={() => navigation.navigate('About')}
+        style={({ pressed }) => [styles.rowCard, pressed && styles.rowPressed]}
+        accessibilityRole="button"
+      >
+        <View style={styles.rowLeft}>
+          <Ionicons name="information-circle-outline" size={scaleIcon(20)} color={colors.text} />
+          <View>
+            <Text style={styles.rowTitle}>About</Text>
+            <Text style={styles.rowSubtitle}>Version, what this app is, and how it works</Text>
           </View>
         </View>
         <Ionicons name="chevron-forward" size={scaleIcon(20)} color={colors.textMuted} />

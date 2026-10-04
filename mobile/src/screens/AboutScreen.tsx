@@ -17,6 +17,7 @@ const HOW_IT_WORKS = [
 ];
 
 const GITHUB_ORG = 'https://github.com/Coding-Moves';
+const REVIEW_INFO_URL = 'https://coding-moves-one-concept-review.netlify.app/about.html';
 const PORTFOLIO_URL = 'https://muawiya-contact.github.io/muawiya-portfolio/';
 const ISSUES_URL = 'https://github.com/Coding-Moves/one-concept/issues/new';
 const FEEDBACK_EMAIL = 'contactmuawia@gmail.com';
@@ -88,6 +89,16 @@ export function AboutScreen() {
             <Text style={styles.itemText}>{line}</Text>
           </View>
         ))}
+        <Pressable
+          onPress={() => openURL(REVIEW_INFO_URL, REVIEW_INFO_URL)}
+          style={({ pressed }) => [styles.actionRow, pressed && styles.pressed]}
+          accessibilityRole="link"
+          accessibilityLabel="Learn how lessons are reviewed"
+        >
+          <Ionicons name="reader-outline" size={scaleIcon(18)} color={colors.primary} style={styles.itemIcon} />
+          <Text style={styles.actionText}>How lessons are reviewed</Text>
+          <Ionicons name="chevron-forward" size={scaleIcon(18)} color={colors.textMuted} />
+        </Pressable>
       </View>
 
       <Text style={styles.sectionTitle}>Feedback &amp; support</Text>

@@ -30,6 +30,15 @@ function safeLink(value: string | undefined) {
   } catch { return null; }
 }
 
+/** Spoken labels should contain the readable answer, not Markdown punctuation. */
+export function markdownPlainText(value: string) {
+  const tokens = parser.parseInline(value || '', {});
+  function readable(items: MdToken[]): string {
+    return items.map(token => token.children ? readable(token.children) : token.type === 'softbreak' || token.type === 'hardbreak' ? ' ' : token.content).join('');
+  }
+  return readable(tokens);
+}
+
 /** Native Text renderer for lesson Markdown; HTML and remote Markdown images never render. */
 export function MarkdownText({ value, style, inline = false, interactiveLinks = true }: { value: string; style?: StyleProp<TextStyle>; inline?: boolean; interactiveLinks?: boolean }) {
   const { colors } = useTheme();

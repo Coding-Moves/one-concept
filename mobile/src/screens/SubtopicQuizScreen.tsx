@@ -5,7 +5,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from
 import { PrimaryButton } from '../components/PrimaryButton';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { Surface } from '../components/Surface';
-import { MarkdownText } from '../components/MarkdownText';
+import { MarkdownText, markdownPlainText } from '../components/MarkdownText';
 import { UnavailableState } from '../components/UnavailableState';
 import { useAuth } from '../context/AuthContext';
 import { useOnline } from '../context/ConnectivityContext';
@@ -102,7 +102,7 @@ export function SubtopicQuizScreen() {
               const correct = result?.correct_index === index;
               const wrong = !!result && selected && !result.correct;
               const icon = correct ? 'checkmark' : wrong ? 'close' : selected ? 'ellipse' : 'ellipse-outline';
-              return <Pressable key={`${question.id}-${index}`} disabled={!!attempt} accessibilityRole="radio" accessibilityState={{ checked: selected, disabled: !!attempt }} accessibilityLabel={option} accessibilityHint={attempt ? (correct ? 'Correct answer.' : wrong ? 'Your selected answer was incorrect.' : 'Answer was not selected.') : 'Select this answer.'} onPress={() => choose(question.id, index)} style={[styles.option, selected && styles.selected, correct && styles.correct, wrong && styles.wrong]}>
+              return <Pressable key={`${question.id}-${index}`} disabled={!!attempt} accessibilityRole="radio" accessibilityState={{ checked: selected, disabled: !!attempt }} accessibilityLabel={markdownPlainText(option)} accessibilityHint={attempt ? (correct ? 'Correct answer.' : wrong ? 'Your selected answer was incorrect.' : 'Answer was not selected.') : 'Select this answer.'} onPress={() => choose(question.id, index)} style={[styles.option, selected && styles.selected, correct && styles.correct, wrong && styles.wrong]}>
                 <View style={[styles.radioMarker, selected && styles.radioMarkerSelected, correct && styles.radioMarkerCorrect, wrong && styles.radioMarkerWrong]}>
                   <Ionicons name={icon} size={scaleFont(16)} color={correct ? colors.success : wrong ? colors.danger : selected ? colors.quizAccent : colors.textMuted} />
                 </View>

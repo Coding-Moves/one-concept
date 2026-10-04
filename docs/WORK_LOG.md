@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.8 release repair — in progress
+
+- The v1.10.7 Release workflow completed its protected schema check and production/preview OTA publications, then correctly stopped before tag creation because tag `v1.10.7` already existed at `38489a21`. It did not dispatch the APK build. The published v1.10.7 OTAs do not reach an older 1.10.1 native runtime.
+- `247abf7` prepares v1.10.8 with a new native runtime and matching one-time What’s New card. It is required because the current release contains Camera and Image Picker native configuration absent from the old v1.10.7 tag. Mobile typecheck and exact version/card verification passed.
+- After this preparation PR is merged into `develop`, open a new `develop` → `main` v1.10.8 release PR, verify the deployed SHA, then run the guarded Release workflow once. Do not rerun v1.10.7.
+
 ### v1.10.7 production migration record — in progress
 
 - The release operator confirmed production application and RLS verification for migrations `0040_profile_avatar_bio.sql` through `0043_future_refill_daily_usage.sql` on 2026-10-04. `1294459` records those verified filenames in `backend/migrations/applied.txt`; this is an operator ledger, not a substitute for the protected target-schema check.

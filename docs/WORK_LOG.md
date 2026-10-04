@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### Review-site direct-route stability — in progress
+
+- Release PR #366 exposed a flaky legacy-review browser test: direct navigation could race ahead of the authenticated reviewer workspace. `65746f8` waits for the ready workspace before both direct legacy-review navigations, preserving the test's stale-version coverage without changing product behavior.
+- Local browser execution is blocked by missing checked-out `react-markdown` and `remark-gfm` packages; PR CI performs the authoritative clean install and browser validation.
+
 ### v1.10.8 release repair — in progress
 
 - The v1.10.7 Release workflow completed its protected schema check and production/preview OTA publications, then correctly stopped before tag creation because tag `v1.10.7` already existed at `38489a21`. It did not dispatch the APK build. The published v1.10.7 OTAs do not reach an older 1.10.1 native runtime.

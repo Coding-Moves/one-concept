@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### Editorial draft conflict recovery — in progress
+
+- Scope: preserve a manually completed correction when staging returns a stale lesson token, and distinguish that case from a curriculum conflict that the reviewer can correct in place. The live lesson remains unchanged until a draft passes review.
+- Legacy corrections now start from the current concept body. Reload keeps entered fields and refreshes the staging token when that body is unchanged; if the live body changed, it requires explicit review before continuing. Curriculum conflicts display an actionable message without locking the form.
+- Implementation and browser regressions: `46571f2`.
+- Validation: admin TypeScript, 11 Vitest tests, and four affected Playwright cases pass. The complete workspace browser run passed 16 of 17 before the malformed-revision regression was corrected; that case and the three new cases passed on rerun. No production deployment or live draft staging has been verified.
+- Next: inspect the final diff, open a focused PR against `develop`, then release the site before asking the operator to retry the preserved production form.
+
 ### #346 learner UX flow — in progress
 
 - Scope: simplify the learner profile, public-sharing and connections journeys

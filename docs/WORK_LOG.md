@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #263 published revision display — ready for review
+
+- Production rehearsal published Blue-Green Deployment revision `74ff49eb` as content version 1. Its detail page then showed raw JSON and a stale-base warning because publication correctly advanced the concept beyond the revision's base version.
+- `6fc79e5` excludes published and retired revisions from the stale action gate while preserving it for open review work. The detail page can render the complete historical package again once the backend deploys.
+- Validation: 22 PostgreSQL-backed editorial content API tests passed, including the new publish-then-read regression. The live page remains unchanged until this fix reaches `main` and Railway. Email delivery, AI correction and learner-device visibility for #263 remain to be verified.
+
 ### v1.10.7 release preparation — PR #354
 
 - Scope: promote the reviewed `develop` work, including PR #351's editorial draft conflict and Markdown fixes, through the normal release process. `cfe4422` adds app version 1.10.7, a matching one-time What's New card, and a new native runtime; the production PR remains `develop` → `main`.

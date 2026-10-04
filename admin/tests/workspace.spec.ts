@@ -449,6 +449,37 @@ test("a changed live lesson requires review before rebasing a preserved correcti
   await page.getByRole("button", { name: "Continue from latest version" }).click();
   await expect(page.getByRole("button", { name: "Save as new draft" })).toBeEnabled();
 });
+test("a revision correction refreshes the concept token and shows changed live content", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await openLesson(page);
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Explanation", { exact: true }).fill(
+    "Keep this reviewer correction while another editor changes the published lesson.",
+  );
+  await page.getByLabel("Review note or comment").fill(
+    "Reconcile the correction with the changed published version.",
+  );
+  state.body = { ...state.body, summary: "Another editor updated the currently published lesson." };
+  state.token = "b".repeat(64);
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Current live lesson" })).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Current live lesson" }).locator("..").getByText(
+      "Another editor updated the currently published lesson.",
+    ),
+  ).toBeVisible();
+  await page.getByRole("button", { name: "Edit", exact: true }).click();
+  await expect(page.getByLabel("Explanation", { exact: true })).toHaveValue(/Keep this reviewer correction/);
+  await page.getByRole("button", { name: "Continue from latest version" }).click();
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+  expect(state.commands.at(-1).expected_token).toBe("b".repeat(64));
+});
 test("a curriculum conflict explains the issue without locking the editor", async ({
   page,
   context,

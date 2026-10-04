@@ -47,6 +47,7 @@ export function Review({
     [stageToken, setStageToken] = useState(""),
     [editBaseBody, setEditBaseBody] = useState(""),
     [editNeedsReview, setEditNeedsReview] = useState(false),
+    [latestConcept, setLatestConcept] = useState<Detail | null>(null),
     [members, setMembers] = useState<Member[]>([]),
     [assignee, setAssignee] = useState(""),
     [due, setDue] = useState("");
@@ -209,6 +210,7 @@ export function Review({
       setStageToken(concept.token);
       setEditBaseBody(JSON.stringify(concept.body));
       setEditNeedsReview(false);
+      setLatestConcept(null);
       setEdit({
         ...editableLesson(revision ? detail!.body : concept.body),
         subtopic_slug: concept.body.subtopic_slug,
@@ -221,14 +223,25 @@ export function Review({
   async function reload() {
     const latest = await load();
     if (!latest) return;
+    let concept = latest;
+    if (edit && revision) {
+      try {
+        concept = await api.request<Detail>(`/concepts/${cid}`);
+      } catch (e) {
+        setError(message(e));
+        return;
+      }
+    }
     op.reset();
-    if (!edit || revision) return;
-    if (JSON.stringify(latest.body) === editBaseBody) {
-      setStageToken(latest.token);
+    if (!edit) return;
+    if (JSON.stringify(concept.body) === editBaseBody) {
+      setStageToken(concept.token);
       setEditNeedsReview(false);
+      setLatestConcept(null);
       setNotice("Latest lesson loaded. Your correction is still here.");
     } else {
       setEditNeedsReview(true);
+      setLatestConcept(concept);
       setTab("lesson");
       setNotice(
         "The live lesson changed. Compare it with your preserved correction before continuing.",
@@ -306,21 +319,35 @@ export function Review({
           submitting.
         </Notice>
       )}
-      {editNeedsReview && detail && (
+      {editNeedsReview && latestConcept && (
         <Notice error>
           The live lesson changed while you edited. Your correction is
-          preserved. Review the latest Lesson and your Edit, then{" "}
+          preserved. Compare the current live lesson below with your Edit, then{" "}
           <button
             onClick={() => {
-              setStageToken(detail.token);
-              setEditBaseBody(JSON.stringify(detail.body));
+              setStageToken(latestConcept.token);
+              setEditBaseBody(JSON.stringify(latestConcept.body));
               setEditNeedsReview(false);
+              setLatestConcept(null);
               setTab("edit");
             }}
           >
             Continue from latest version
           </button>
         </Notice>
+      )}
+      {editNeedsReview && latestConcept && (
+        <section className="card">
+          <h2>Current live lesson</h2>
+          {latestConcept.body ? (
+            <LessonView
+              body={latestConcept.body}
+              links={latestConcept.source_links}
+            />
+          ) : (
+            <Value value={latestConcept.body} />
+          )}
+        </section>
       )}
       {op.pending && (
         <Notice>

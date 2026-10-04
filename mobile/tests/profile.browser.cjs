@@ -99,6 +99,17 @@ const server=http.createServer((req,res)=>{
    assert.equal(remindersEnabled,false);assert.equal(weeklyEnabled,true);
    await dailySwitch.click();
    await expect(weeklySwitch).toBeEnabled();await expect(weeklySwitch).toBeChecked();
+   // Two failed queued daily writes must recover the server-confirmed state,
+   // rather than the optimistic value captured by the second tap.
+   failReminders=true;holdReminders=true;releaseReminders=undefined;
+   await dailySwitch.click();
+   await expect(dailySwitch).not.toBeChecked();
+   await expect.poll(()=>!!releaseReminders).toBe(true);
+   await dailySwitch.click();
+   await expect(dailySwitch).toBeChecked();
+   releaseReminders();holdReminders=false;
+   await expect(dailySwitch).toBeChecked();
+   failReminders=false;
    await page.getByText('Public profile & sharing',{exact:true}).click();
    await expect(page.getByText('Sharing is off',{exact:true})).toBeVisible();
    await page.getByRole('switch',{name:'Display name: Amina',exact:true}).check();

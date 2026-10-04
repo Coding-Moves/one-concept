@@ -1,6 +1,6 @@
 import { useNavigation } from '@react-navigation/native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, AppState, Pressable, ScrollView, Share, Text, View } from 'react-native';
+import { AppState, Pressable, ScrollView, Share, Text, View } from 'react-native';
 import { ProfilePublishReviewSheet, PublicProfileFields } from '../components/ProfilePublishReviewSheet';
 import { ShareProfileSheet } from '../components/ShareProfileSheet';
 import { ScreenHeader } from '../components/ScreenHeader';
@@ -35,6 +35,7 @@ export function ProfileSharingScreen() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [reviewing, setReviewing] = useState(false);
+  const [confirmingTurnOff, setConfirmingTurnOff] = useState(false);
   const [preview, setPreview] = useState<{ url: string; profile: PublicProfile } | null>(null);
   const active = useRef(true);
   const pending = useRef(false);
@@ -86,6 +87,7 @@ export function ProfileSharingScreen() {
         setSaved(result);
         setDraft(result);
         setReviewing(false);
+        setConfirmingTurnOff(false);
         setMessage(enabled ? 'Your public profile is live. You can share its link whenever you like.' : 'Sharing is off. Your previous public link no longer works.');
       }
     } catch {
@@ -136,14 +138,6 @@ export function ProfileSharingScreen() {
       setMessage('Unpublished changes discarded.');
     }
   };
-  const turnOff = () => Alert.alert(
-    'Turn off public profile?',
-    'Your public link will stop working. Your private learning data stays in your account.',
-    [
-      { text: 'Keep sharing', style: 'cancel' },
-      { text: 'Turn off', style: 'destructive', onPress: () => void persist(false) },
-    ],
-  );
   const action = (label: string, onPress: () => void, primary = false, disabled = busy || !online) => (
     <Pressable
       key={label}
@@ -195,7 +189,12 @@ export function ProfileSharingScreen() {
         {action('Discard changes', discardDraft)}
       </View> : saved?.enabled ? <View style={{ gap: 10 }}>
         {action('Share profile', () => void openShare(), true)}
-        {action('Turn off sharing', turnOff)}
+        {confirmingTurnOff ? <View accessibilityRole="alert" style={{ gap: 10, padding: 14, borderRadius: 14, backgroundColor: colors.dangerSurface }}>
+          <Text style={{ color: colors.text, fontWeight: '700' }}>Turn off public profile?</Text>
+          <Text style={{ color: colors.textSecondary }}>Your public link will stop working. Your private learning data stays in your account.</Text>
+          {action('Confirm turn off sharing', () => void persist(false))}
+          {action('Keep sharing', () => setConfirmingTurnOff(false))}
+        </View> : action('Turn off sharing', () => setConfirmingTurnOff(true))}
       </View> : <View style={{ gap: 10 }}>
         {action('Preview before publishing', () => setReviewing(true), true)}
       </View>}

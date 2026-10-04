@@ -113,7 +113,7 @@ const server=http.createServer((req,res)=>{
    releaseReminders();holdReminders=false;
    await expect(dailySwitch).toBeChecked();
    failReminders=false;
-   await page.getByText('Public profile & sharing',{exact:true}).click();
+   await page.getByText('Public profile',{exact:true}).click();
    await expect(page.getByText('Your profile is private',{exact:true})).toBeVisible();
    await page.getByRole('switch',{name:'Share display name',exact:true}).check();
    await page.getByRole('button',{name:'Preview before publishing'}).click();
@@ -139,8 +139,9 @@ const server=http.createServer((req,res)=>{
    conflict=false;
    await page.getByRole('button',{name:'Discard changes'}).click();
    await expect(page.getByRole('switch',{name:'Share concepts learned'})).not.toBeChecked();
-   page.once('dialog',dialog=>dialog.accept());
    await page.getByRole('button',{name:'Turn off sharing'}).click();
+   await expect(page.getByText('Turn off public profile?',{exact:true})).toBeVisible();
+   await page.getByRole('button',{name:'Confirm turn off sharing'}).click();
    await expect(page.getByText('Your profile is private',{exact:true})).toBeVisible();
    await expect(qr).toHaveCount(0);assert.equal(sharing.public_path,null);
    await page.evaluate(()=>document.querySelectorAll('div,span').forEach(el=>{

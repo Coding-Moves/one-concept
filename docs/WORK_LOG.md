@@ -7,6 +7,23 @@ claims as completed work.
 
 ## Current status
 
+### #313 public review pages — v1.10.6 release preparation
+
+- PR #341 merged into `develop` at `9783fde`; its public About and privacy pages
+  are not yet on Netlify production, which deploys `main`.
+- `bba1b0d` adds an About-screen link to the public explanation of lesson
+  review. `1372669` prepares app version 1.10.6 and its matching one-time What's
+  New card. Native runtime 1.10.1 is unchanged; this is a JavaScript/site update.
+- Validation: Node 24 TypeScript and all 90 mobile unit tests passed; fixture
+  Expo web export passed. The What's New browser check passed in both themes
+  across phone/landscape sizes, including dismissal after offline restart.
+  Profile → About showed the new link on a 390px screen with no browser errors.
+  The live destination and physical-device tap are unverified until deployment.
+- The release-preparation PR targets `develop`. After its merge, verify the
+  final `develop` → `main` diff contains both the version bump and card before
+  opening the production release PR. No OAuth publishing, Gmail send, mobile
+  OTA, production merge, or issue closure occurred in this chunk.
+
 ### #313 Google OAuth production branding — PR #341
 
 - Google Auth Platform blocks leaving External Testing until an app name,

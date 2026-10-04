@@ -9,11 +9,12 @@ claims as completed work.
 
 ### Editorial draft conflict recovery — in progress
 
-- Scope: preserve a manually completed correction when staging returns a stale lesson token, and distinguish that case from a curriculum conflict that the reviewer can correct in place. The live lesson remains unchanged until a draft passes review.
+- Scope: preserve a manually completed correction when staging returns a stale lesson token, distinguish that case from a curriculum conflict, and make reviewer-authored Markdown display consistently on the website and in the mobile lesson/quiz experience. The live lesson remains unchanged until a draft passes review.
 - Legacy corrections now start from the current concept body. Reload keeps entered fields and refreshes the staging token when that body is unchanged; if the live body changed, it requires explicit review before continuing. Curriculum conflicts display an actionable message without locking the form.
 - Implementation and browser regressions: `46571f2`.
-- Validation: admin TypeScript, 11 Vitest tests, and four affected Playwright cases pass. The complete workspace browser run passed 16 of 17 before the malformed-revision regression was corrected; that case and the three new cases passed on rerun. No production deployment or live draft staging has been verified.
-- [PR #351](https://github.com/Coding-Moves/one-concept/pull/351) targets `develop`; hosted checks are running. Next: review the final checks and merge only with the owner's PR-specific approval, then release the site. The operator must copy their current unsaved form before opening the new site build, because that tab still runs the old JavaScript.
+- Follow-up review found that revision editing did not refresh the current concept token after a conflict. Commit `0964474` fixes that path and adds a browser regression. `b4de9ae` adds safe website Markdown and an editor preview; `376f263` renders the same lesson and quiz writing on mobile without a native module. Identifiers, URLs, and settings remain plain inputs. Embedded Markdown images and raw HTML do not load or execute.
+- Validation: admin build/typecheck, 11 Vitest tests and all 36 Playwright tests pass. Mobile TypeScript, all 90 Node tests, `npx expo install --check`, Expo web export, and local mobile learning UI in both themes pass. The mobile dependency audit retains the existing 17 high findings from #321; this change did not increase that count. No production deployment or live draft staging has been verified.
+- [PR #351](https://github.com/Coding-Moves/one-concept/pull/351) targets `develop`; review its hosted checks before requesting PR-specific merge approval. The operator must copy their current unsaved form before opening the new site build, because that tab still runs the old JavaScript. A mobile release or OTA publication is separate from merging this PR.
 ### #321 dependency audit — in progress
 
 - Scope: reproduce the bot-reported mobile dependency audit against current `develop`, apply only Expo SDK 57-compatible dependency updates, and keep the audit meaningful. The backend audit reports no vulnerable dependencies.

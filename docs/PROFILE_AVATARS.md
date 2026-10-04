@@ -13,7 +13,7 @@ Public-profile sharing remains private by default. The dedicated **Profile avata
 Before merging and deploying the feature:
 
 1. Apply migration `0040_profile_avatar_bio.sql` through the normal migration process. Do not add it to `backend/migrations/applied.txt` until production confirms it.
-2. Confirm the `profile-avatars` bucket is private and its 256 KiB limit and JPEG/PNG/WebP allowlist are present.
+2. In Supabase Storage, create `profile-avatars` as a **private** bucket with a 256 KiB file limit and JPEG/PNG/WebP allowlist. Storage buckets are managed by Supabase Storage, not the application PostgreSQL migration runner.
 3. Confirm Railway has `SUPABASE_SERVICE_ROLE_KEY`; it remains backend-only and must never be copied to Expo variables.
 4. Build and install a new Android/iOS binary. `expo-image-picker` and its camera/photo permission messages are native configuration, so an OTA alone cannot enable photo selection on existing installs.
 5. On a staging account, test each preset, denied library/camera permission, cancellation, an oversized/invalid image, photo replacement/removal, sign-out during upload, and public-avatar sharing on/off from another browser.

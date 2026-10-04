@@ -13,13 +13,7 @@ alter table public.profiles
 alter table public.profile_sharing
   add column if not exists show_avatar boolean not null default false;
 
--- This bucket is private. The authenticated API normalizes and writes avatars
--- with its service credential; mobile clients never receive that credential.
-insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('profile-avatars', 'profile-avatars', false, 262144,
-        array['image/jpeg', 'image/png', 'image/webp'])
-on conflict (id) do update
-  set public = false,
-      file_size_limit = excluded.file_size_limit,
-      allowed_mime_types = excluded.allowed_mime_types;
+-- The private `profile-avatars` Storage bucket is created through Supabase's
+-- Storage dashboard during rollout; see docs/PROFILE_AVATARS.md. It is not a
+-- PostgreSQL relation and therefore cannot be managed by this migration suite.
 commit;

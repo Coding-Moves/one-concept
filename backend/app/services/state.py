@@ -133,6 +133,8 @@ _STATE = text("""
     runs as (select grp, count(*)::int as len, max(d) as ends_on from grouped group by grp)
     select
       prof.display_name,
+      prof.bio,
+      prof.avatar_url,
       prof.timezone,
       prof.today,
       followed.v      as followed_topics,

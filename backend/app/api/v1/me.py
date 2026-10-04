@@ -342,6 +342,9 @@ async def put_avatar(
     """Accept one selected/captured photo and store a normalized private copy."""
     if request.headers.get("content-type", "").split(";", 1)[0] not in {"image/jpeg", "image/png", "image/webp"}:
         raise HTTPException(415, "Choose a JPEG, PNG, or WebP photo")
+    length = request.headers.get("content-length")
+    if length is not None and (not length.isdecimal() or int(length) > 5 * 1024 * 1024):
+        raise HTTPException(413, "Choose an image smaller than 5 MB")
     normalized = normalize_avatar(await request.body())
     old = await db.scalar(text("select avatar_url from public.profiles where id=:uid for update"), {"uid": user.id})
     key = await upload_avatar(settings, user.id, normalized)

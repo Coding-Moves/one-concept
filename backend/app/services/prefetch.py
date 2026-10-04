@@ -18,7 +18,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.db.session import SessionLocal
 from app.services.generation import RateLimitedError
-from app.services.generation_budget import GenerationBusy
+from app.services.generation_budget import GenerationBudgetExhausted, GenerationBusy
 from app.services.future_refill_budget import FutureRefillBudgetExhausted
 from app.services.pool import generate_one
 from app.services.supply import target_for
@@ -115,6 +115,11 @@ async def _run(topic_id: uuid.UUID) -> None:
                         "prefetch for topic %s stopped: future refill daily allowance reached",
                         topic_id,
                     )
+                    break
+                except GenerationBudgetExhausted:
+                    # Compatibility path for older callers/tests that do not
+                    # provide the future-refill settings document yet.
+                    log.info("prefetch for topic %s stopped: daily call cap reached", topic_id)
                     break
                 except RateLimitedError:
                     log.info("prefetch for topic %s stopped: rate limited", topic_id)

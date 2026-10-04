@@ -17,6 +17,12 @@ async def empty_future_refill_budget(session):
     await session.execute(text("delete from public.future_refill_topic_daily_usage"))
     await session.execute(text("delete from public.future_refill_daily_usage"))
     await session.commit()
+    yield
+    await session.rollback()
+    await session.execute(text("delete from public.future_refill_topic_daily_usage"))
+    await session.execute(text("delete from public.future_refill_daily_usage"))
+    await session.execute(text("delete from public.topics where slug like 'refill-%'"))
+    await session.commit()
 
 
 async def _topic(session):

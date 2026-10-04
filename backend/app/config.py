@@ -55,7 +55,7 @@ class Settings(BaseSettings):
     content_review_backlog_limit: int = Field(default=25, ge=1, le=250)
     # Future curated refill is deliberately conservative and uses an
     # allowance separate from editorial corrections and legacy enrichment.
-    content_generation_batch: int = Field(default=1, ge=1, le=25)
+    content_generation_batch: int = Field(default=5, ge=1, le=25)
     future_refill_daily_call_cap: int = Field(default=5, ge=0, le=100)
     future_refill_topic_daily_cap: int = Field(default=1, ge=1, le=10)
     future_refill_urgent_enabled: bool = False

@@ -18,7 +18,8 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.db.session import SessionLocal
 from app.services.generation import RateLimitedError
-from app.services.generation_budget import GenerationBudgetExhausted, GenerationBusy
+from app.services.generation_budget import GenerationBusy
+from app.services.future_refill_budget import FutureRefillBudgetExhausted
 from app.services.pool import generate_one
 from app.services.supply import target_for
 
@@ -75,7 +76,9 @@ async def _run(topic_id: uuid.UUID) -> None:
         # Its own session: the request's session is closed the moment the
         # response returns, long before this finishes.
         async with SessionLocal() as session:
-            for _ in range(settings.content_generation_batch):
+            # A demand-triggered run receives one normal allowance only. Urgent
+            # escalation belongs to the scheduled, fair worker policy.
+            for _ in range(1):
                 # Re-check against a shared target each iteration so a prefetch
                 # in another process (its lessons land in the same catalog) can
                 # satisfy the topic and let this one stop early — bounding the
@@ -87,6 +90,7 @@ async def _run(topic_id: uuid.UUID) -> None:
                 if published is not None and published >= target:
                     break
                 try:
+                    future_cap = getattr(settings, "future_refill_daily_call_cap", None)
                     concept_id = await generate_one(
                         session,
                         settings.gemini_api_key,
@@ -94,6 +98,11 @@ async def _run(topic_id: uuid.UUID) -> None:
                         topic_id,
                         call_cap=settings.generation_daily_call_cap,
                         supply_target=target,
+                        future_refill=future_cap is not None,
+                        future_refill_global_cap=future_cap,
+                        future_refill_topic_cap=getattr(
+                            settings, "future_refill_topic_daily_cap", None
+                        ),
                     )
                 except GenerationBusy:
                     log.info(
@@ -101,9 +110,9 @@ async def _run(topic_id: uuid.UUID) -> None:
                         topic_id,
                     )
                     break
-                except GenerationBudgetExhausted:
+                except FutureRefillBudgetExhausted:
                     log.info(
-                        "prefetch for topic %s stopped: daily call cap reached",
+                        "prefetch for topic %s stopped: future refill daily allowance reached",
                         topic_id,
                     )
                     break

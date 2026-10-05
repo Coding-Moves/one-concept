@@ -3,6 +3,7 @@ import { ApiError, apiRequest, apiRetryDelay } from '../api/client';
 import type { Category, DailyPayload, ReviewPayload, ProgressState, SubtopicCompletion } from '../types';
 import { todayKey } from './dates';
 import { cacheSavedConcepts, conceptCache } from './conceptApi';
+import { bookmarkVersions } from './savedConceptSync';
 import { toConcept } from './dailyApi';
 import { withPendingProgress, withCompletedReview, withRejectedReview } from './pendingProgress';
 import { clearQueue, dequeue, enqueue, keyOf, pending, readyToReplay, recordFailure, type QueuedMutation } from './mutationQueue';
@@ -42,6 +43,8 @@ interface StatePayload {
   }[];
   likes: string[];
   bookmarks: string[];
+  /** One published content version per bookmark, in bookmarks order. */
+  bookmark_versions?: number[];
   saved?: { concept_slug: string; title?: string; topic_name?: string; like_count?: number }[];
   learned_before_window?: Record<string, number> | null;
   saved_next_cursor?: string | null;
@@ -148,7 +151,11 @@ export class RemoteProgressRepository implements ProgressRepository {
       await conceptCache.set(concept.id, concept, contentEpoch).catch(() => {});
     }
     if (epoch !== this.epoch) return EMPTY_PROGRESS;
-    void cacheSavedConcepts(state.bookmarks, contentEpoch);
+    void cacheSavedConcepts(
+      state.bookmarks,
+      contentEpoch,
+      bookmarkVersions(payload.bookmarks, payload.bookmark_versions),
+    );
     return this.remember(state, epoch);
   }
 

@@ -106,6 +106,7 @@ export async function fixture(
     commands: [] as any[],
     jobs: [] as any[],
     member,
+    members: [member],
   };
   let version = 1;
   const receipts = new Map<string, object>();
@@ -259,7 +260,7 @@ export async function fixture(
       return fulfill(
         route,
         method === "GET"
-          ? { items: [state.member], next_cursor: null }
+          ? { items: state.members, next_cursor: null }
           : state.member,
         method === "GET" ? 200 : 201,
       );
@@ -324,6 +325,10 @@ export async function fixture(
       if (body.action === "approved" || body.action === "approve_and_publish") {
         state.status = body.action === "approved" ? "approved" : "published";
         state.approvedBy = "Amina Khan";
+        if (body.action === "approve_and_publish") state.contentVersion++;
+      } else if (body.action === "publish") {
+        state.status = "published";
+        state.contentVersion++;
       } else if (
         body.action === "changes_requested" ||
         body.action === "rejected"
@@ -364,7 +369,7 @@ export async function fixture(
           ? "pending"
           : state.status,
         token: state.token,
-        published_version: state.status === "published" ? 1 : null,
+        published_version: state.status === "published" ? state.contentVersion : null,
       };
       receipts.set(body.request_id, result);
       if (state.uncertain) {

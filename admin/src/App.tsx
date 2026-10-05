@@ -133,7 +133,7 @@ export function App({
     const pop = () => {
       if (
         dirty.current &&
-        !confirm("Leave this page and discard unsent feedback?")
+        !confirm("Leave this page and discard unsaved review changes?")
       ) {
         history.pushState(null, "", url.current);
         return;
@@ -152,7 +152,7 @@ export function App({
   function navigate(next: Route) {
     if (
       dirty.current &&
-      !confirm("Leave this page and discard unsent feedback?")
+      !confirm("Leave this page and discard unsaved review changes?")
     )
       return;
     dirty.current = false;
@@ -167,7 +167,10 @@ export function App({
     window.scrollTo(0, 0);
   }
   async function signOut() {
-    if (dirty.current && !confirm("Sign out and discard unsent feedback?"))
+    if (
+      dirty.current &&
+      !confirm("Sign out and discard unsaved review changes?")
+    )
       return;
     setError("");
     api.setToken(null, true);
@@ -205,6 +208,7 @@ export function App({
       </>
     );
   const can = (cap: string) => !!me?.member.capabilities.includes(cap as never);
+  const canReadLessons = can("review") || can("approve") || can("publish");
   const nav = [
     ...(can("manage_reviewers") ? [["owner", "Owner dashboard", "◈"]] : []),
     ["queue", "Review queue", "▤"],
@@ -325,7 +329,7 @@ export function App({
                 can("request_generation") &&
                 can("review") ? (
                 <Generation api={api} navigate={navigate} />
-              ) : current.view === "review" && current.id && can("review") ? (
+              ) : current.view === "review" && current.id && canReadLessons ? (
                 <Review
                   key={current.kind + current.id}
                   api={api}
@@ -337,7 +341,7 @@ export function App({
                     dirty.current = value;
                   }}
                 />
-              ) : can("review") ? (
+              ) : canReadLessons ? (
                 <Queue
                   key={current.view}
                   api={api}
@@ -347,7 +351,7 @@ export function App({
                 />
               ) : (
                 <Notice>
-                  Your account has no review permission. Contact the workspace
+                  Your account has no lesson access. Contact the workspace
                   owner.
                 </Notice>
               )}

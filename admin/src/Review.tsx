@@ -175,9 +175,17 @@ export function Review({
     };
   }, [api, cid, detail]);
   useEffect(() => {
-    setDirty(!!note || !!edit || !!op.pending);
+    setDirty(
+      !!note ||
+        !!edit ||
+        !!op.pending ||
+        (!!detail &&
+          (assignee !== (detail.assigned_to || "") ||
+            due !==
+              (detail.review_due_at ? localTime(detail.review_due_at) : ""))),
+    );
     return () => setDirty(false);
-  }, [note, edit, op.pending]);
+  }, [note, edit, op.pending, detail, assignee, due]);
   if (!detail)
     return (
       <section className="card">
@@ -401,7 +409,11 @@ export function Review({
               )
             ) : tab === "changes" ? (
               <>
-                <h2>Changes from the current lesson</h2>
+                <h2>
+                  {detail.status === "published" || detail.status === "retired"
+                    ? "Changes from the original lesson"
+                    : "Changes from the current lesson"}
+                </h2>
                 <p>
                   Compare every changed field, including practice questions and
                   references.
@@ -621,7 +633,7 @@ export function Review({
                   Publish approved revision
                 </button>
               )}
-              {revision && detail.status === "draft" && (
+              {revision && detail.status === "draft" && can("review") && (
                 <button
                   className="primary"
                   disabled={decisionBlocked || !noted}
@@ -630,7 +642,7 @@ export function Review({
                   Submit for review
                 </button>
               )}
-              {revision && detail.status === "pending_review" && (
+              {revision && detail.status === "pending_review" && can("review") && (
                 <>
                   <button
                     disabled={decisionBlocked || !noted}
@@ -647,14 +659,14 @@ export function Review({
                   </button>
                 </>
               )}
-              {
+              {can("review") && (
                 <button
                   disabled={decisionBlocked || !noted}
                   onClick={() => act("comment")}
                 >
                   Add comment
                 </button>
-              }
+              )}
               {!revision &&
                 kind === "legacy" &&
                 detail.unchanged_legacy &&
@@ -675,6 +687,7 @@ export function Review({
                 )}
               {revision &&
                 detail.status === "changes_requested" &&
+                can("review") &&
                 can("request_generation") && (
                   <button
                     disabled={decisionBlocked || !noted}
@@ -689,12 +702,14 @@ export function Review({
                     Request AI correction
                   </button>
                 )}
-              <button
-                disabled={decisionBlocked}
-                onClick={() => void beginEdit()}
-              >
-                Prepare manual correction
-              </button>
+              {can("review") && (
+                <button
+                  disabled={decisionBlocked}
+                  onClick={() => void beginEdit()}
+                >
+                  Prepare manual correction
+                </button>
+              )}
             </div>
             {(detail.status === "approved" ||
               detail.status === "published") && (
@@ -719,9 +734,7 @@ export function Review({
                         (m) =>
                           m.status === "active" &&
                           m.approved_name &&
-                          m.capabilities.some(
-                            (c) => c === "review" || c === "approve",
-                          ),
+                          m.capabilities.includes("review"),
                       )
                       .map((m) => (
                         <option key={m.user_id} value={m.user_id}>

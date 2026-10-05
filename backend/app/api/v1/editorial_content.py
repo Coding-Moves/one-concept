@@ -25,6 +25,7 @@ from app.services import editorial_workflow as workflow
 router = APIRouter(
     prefix="/editorial", tags=["editorial content"], route_class=PrivateRoute
 )
+READ_CAPABILITIES = ("review", "approve", "publish")
 
 
 @router.get("/queue")
@@ -42,7 +43,7 @@ async def queue(
     cursor: UUID | None = None,
     limit: int = Query(25, ge=1, le=100),
 ):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.queue(
         db,
         kind,
@@ -65,13 +66,13 @@ async def taxonomy(
     cursor: UUID | None = None,
     limit: int = Query(100, ge=1, le=100),
 ):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.taxonomy(db, cursor, limit)
 
 
 @router.get("/revisions/{rid}")
 async def revision(rid: UUID, user: User, db: DB, settings: Config):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     try:
         return await queries.revision_detail(db, rid)
     except ValueError:
@@ -80,7 +81,7 @@ async def revision(rid: UUID, user: User, db: DB, settings: Config):
 
 @router.get("/concepts/{cid}")
 async def concept(cid: UUID, user: User, db: DB, settings: Config):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.concept_detail(db, cid)
 
 
@@ -93,7 +94,7 @@ async def history(
     cursor: UUID | None = None,
     limit: int = Query(25, ge=1, le=100),
 ):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.history(db, cid, cursor, limit)
 
 
@@ -106,7 +107,7 @@ async def timeline(
     cursor: str | None = Query(None, max_length=256),
     limit: int = Query(25, ge=1, le=100),
 ):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.timeline(db, cid, cursor, limit)
 
 

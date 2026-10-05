@@ -55,6 +55,8 @@ class StateOut(BaseModel):
     learned: list[LearnedOut]
     likes: list[str]
     bookmarks: list[str]
+    # Same order as bookmarks; lets clients refresh only stale offline bodies.
+    bookmark_versions: list[int] = Field(default_factory=list)
     saved: list[SavedConceptOut] = Field(default_factory=list)
     stats: StreakOut
     # Present for compact clients. Counts exclude the embedded recent window,

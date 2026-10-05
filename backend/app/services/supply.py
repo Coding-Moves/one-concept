@@ -69,11 +69,13 @@ async def plan_active_readers(session: AsyncSession) -> None:
         from active a join public.user_topics ut on ut.user_id=a.user_id
         join public.topics t on t.id=ut.topic_id and t.is_active
         left join lateral (
-          select count(*) as n from public.daily_assignments da
-          join public.concepts c on c.id=da.concept_id
-          join public.subtopics s on s.id=c.subtopic_id and s.is_active
-          where da.user_id=a.user_id and c.topic_id=ut.topic_id and c.status='published'
+          select count(*)::int as published,
+            count(*) filter (where exists(select 1 from public.daily_assignments da
+              where da.user_id=a.user_id and da.concept_id=c.id))::int as n
+          from public.concepts c join public.subtopics s on s.id=c.subtopic_id and s.is_active
+          where c.topic_id=ut.topic_id and c.status='published'
         ) seen on true group by ut.topic_id
+        having coalesce(min(seen.published-seen.n),0)<=:low
       )
       insert into public.content_supply_targets(topic_id,target_count,expires_at)
       select topic_id,target,now()+make_interval(days=>:days) from demand
@@ -84,6 +86,7 @@ async def plan_active_readers(session: AsyncSession) -> None:
         {
             "days": settings.content_active_days,
             "reserve": settings.content_reserve_per_topic,
+            "low": settings.content_low_watermark,
         },
     )
     await session.commit()

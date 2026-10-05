@@ -18,7 +18,7 @@ module.exports = {
     name: 'One Concept',
     slug: 'one-concept',
     owner: 'coding-moves',
-    version: '1.10.7',
+    version: '1.10.8',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
@@ -37,7 +37,7 @@ module.exports = {
       predictiveBackGestureEnabled: false,
     },
     // Updated Expo native packages require a new APK before this runtime receives updates.
-    runtimeVersion: '1.10.7',
+    runtimeVersion: '1.10.8',
     updates: {
       checkAutomatically: 'ON_LOAD',
       fallbackToCacheTimeout: 0,
@@ -46,7 +46,7 @@ module.exports = {
     web: {
       favicon: './assets/favicon.png',
     },
-    plugins: ['expo-font', 'expo-secure-store', 'expo-splash-screen', ['expo-image-picker', { photosPermission: 'Allow One Concept to choose a profile photo.', cameraPermission: 'Allow One Concept to take a profile photo.', microphonePermission: false }]],
+    plugins: ['expo-font', 'expo-secure-store', 'expo-splash-screen', ['expo-camera', { cameraPermission: 'Allow One Concept to scan a profile QR code.', microphonePermission: false, recordAudioAndroid: false, barcodeScannerEnabled: true }], ['expo-image-picker', { photosPermission: 'Allow One Concept to choose a profile photo.', cameraPermission: 'Allow One Concept to take a profile photo.', microphonePermission: false }]],
     extra: {
       eas: {
         projectId: '2ce53ebe-f549-4a33-affc-a50d8e80b483',

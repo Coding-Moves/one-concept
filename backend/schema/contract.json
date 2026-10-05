@@ -39,7 +39,10 @@
     "0037_editorial_review_deadlines.sql": "ab59eabee6d674c89836b394b53a514c114c577e2533081a19a0c16dc77831bb",
     "0038_editorial_notifications.sql": "7665a4b53d52b5707e6f0f8964bc5d9fc56e8980e7fc0b7e6ee6bba483caa717",
     "0039_owner_reporting.sql": "0c2659c2a6e8df166a0801bed4da16188bd0c3b0412dfd2de1021223b495d2c0",
-    "0040_profile_avatar_bio.sql": "86c216aeeae0b0b81d7b2e0daa8708d56a870736322069ea0249a79b9fca2708"
+    "0040_profile_avatar_bio.sql": "86c216aeeae0b0b81d7b2e0daa8708d56a870736322069ea0249a79b9fca2708",
+    "0041_directed_profile_connections.sql": "240efb2583ec82cb1fe1077bf7a10b006413a204262d6caf26d0ab01dd76571c",
+    "0042_legacy_enrichment_batches.sql": "04a951903b6e0189d4faace67b4dfb0859d7d48ecb5832e78d99accfb1d81db0",
+    "0043_future_refill_daily_usage.sql": "0f50e876b4d5b07e1902792d611ccf6df6553d78e88aa590ceaced28240b856b"
   },
   "schema": {
     "columns": {
@@ -985,6 +988,156 @@
         "not_null": true,
         "type": "timestamp with time zone"
       },
+      "editorial_legacy_batch_entries.attempts": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_legacy_batch_entries.base_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_legacy_batch_entries.batch_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_legacy_batch_entries.claim_token": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_legacy_batch_entries.claimed_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_batch_entries.concept_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_legacy_batch_entries.created_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_batch_entries.failure_code": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "text"
+      },
+      "editorial_legacy_batch_entries.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_legacy_batch_entries.result_revision_id": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "uuid"
+      },
+      "editorial_legacy_batch_entries.source_body": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "jsonb"
+      },
+      "editorial_legacy_batch_entries.status": {
+        "default": "'queued'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_legacy_batch_entries.updated_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_batches.created_at": {
+        "default": "clock_timestamp()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_batches.discovered_count": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_legacy_batches.finished_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_batches.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_legacy_batches.model": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_legacy_batches.name": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_legacy_batches.prompt_version": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_legacy_batches.quota_limit": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "editorial_legacy_batches.requested_by": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "editorial_legacy_batches.started_at": {
+        "default": null,
+        "identity": "",
+        "not_null": false,
+        "type": "timestamp with time zone"
+      },
+      "editorial_legacy_batches.status": {
+        "default": "'queued'::text",
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "editorial_legacy_batches.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
       "editorial_legacy_versions.concept_id": {
         "default": null,
         "identity": "",
@@ -1345,6 +1498,36 @@
         "not_null": false,
         "type": "uuid"
       },
+      "future_refill_daily_usage.budget_day": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "future_refill_daily_usage.calls_used": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "future_refill_topic_daily_usage.budget_day": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "date"
+      },
+      "future_refill_topic_daily_usage.calls_used": {
+        "default": "0",
+        "identity": "",
+        "not_null": true,
+        "type": "integer"
+      },
+      "future_refill_topic_daily_usage.topic_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
       "generation_daily_usage.budget_day": {
         "default": null,
         "identity": "",
@@ -1422,6 +1605,30 @@
         "identity": "",
         "not_null": true,
         "type": "text"
+      },
+      "profile_connections.created_at": {
+        "default": "now()",
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "profile_connections.id": {
+        "default": "gen_random_uuid()",
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profile_connections.source_user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "profile_connections.target_user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
       },
       "profile_sharing.achievement_codes": {
         "default": "'{}'::text[]",
@@ -2287,6 +2494,86 @@
         "definition": "CHECK ((((claim_token IS NULL) = (claimed_at IS NULL)) AND ((status <> 'generating'::text) OR (claim_token IS NOT NULL)) AND ((claim_token IS NULL) OR (status = ANY (ARRAY['generating'::text, 'cancelled'::text])))))",
         "validated": true
       },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_attempts_check": {
+        "definition": "CHECK (((attempts >= 0) AND (attempts <= 3)))",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_base_version_check": {
+        "definition": "CHECK ((base_version > 0))",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_batch_id_concept_id_key": {
+        "definition": "UNIQUE (batch_id, concept_id)",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_batch_id_fkey": {
+        "definition": "FOREIGN KEY (batch_id) REFERENCES public.editorial_legacy_batches(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_check": {
+        "definition": "CHECK (((status = 'generating'::text) = ((claim_token IS NOT NULL) AND (claimed_at IS NOT NULL))))",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_check1": {
+        "definition": "CHECK (((status = ANY (ARRAY['ready_for_review'::text, 'published'::text])) = (result_revision_id IS NOT NULL)))",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_concept_id_fkey": {
+        "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_result_revision_id_fkey": {
+        "definition": "FOREIGN KEY (result_revision_id) REFERENCES public.concept_revisions(id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_result_revision_id_key": {
+        "definition": "UNIQUE (result_revision_id)",
+        "validated": true
+      },
+      "editorial_legacy_batch_entries.editorial_legacy_batch_entries_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['queued'::text, 'generating'::text, 'ready_for_review'::text, 'blocked'::text, 'failed'::text, 'published'::text, 'skipped'::text])))",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_check": {
+        "definition": "CHECK ((((status = ANY (ARRAY['running'::text, 'paused'::text, 'completed'::text, 'failed'::text, 'cancelled'::text])) = (started_at IS NOT NULL)) OR (status = 'queued'::text)))",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_discovered_count_check": {
+        "definition": "CHECK ((discovered_count >= 0))",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_name_check": {
+        "definition": "CHECK ((name ~ '^[a-z0-9][a-z0-9-]{2,119}$'::text))",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_name_key": {
+        "definition": "UNIQUE (name)",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_pkey": {
+        "definition": "PRIMARY KEY (id)",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_quota_limit_check": {
+        "definition": "CHECK ((quota_limit >= 0))",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_requested_by_fkey": {
+        "definition": "FOREIGN KEY (requested_by) REFERENCES public.editorial_memberships(user_id) ON DELETE RESTRICT",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_status_check": {
+        "definition": "CHECK ((status = ANY (ARRAY['queued'::text, 'running'::text, 'paused'::text, 'completed'::text, 'failed'::text, 'cancelled'::text])))",
+        "validated": true
+      },
+      "editorial_legacy_batches.editorial_legacy_batches_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
+        "validated": true
+      },
       "editorial_legacy_versions.editorial_legacy_versions_concept_id_fkey": {
         "definition": "FOREIGN KEY (concept_id) REFERENCES public.concepts(id) ON DELETE RESTRICT",
         "validated": true
@@ -2443,6 +2730,26 @@
         "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE RESTRICT",
         "validated": true
       },
+      "future_refill_daily_usage.future_refill_daily_usage_calls_used_check": {
+        "definition": "CHECK ((calls_used >= 0))",
+        "validated": true
+      },
+      "future_refill_daily_usage.future_refill_daily_usage_pkey": {
+        "definition": "PRIMARY KEY (budget_day)",
+        "validated": true
+      },
+      "future_refill_topic_daily_usage.future_refill_topic_daily_usage_calls_used_check": {
+        "definition": "CHECK ((calls_used >= 0))",
+        "validated": true
+      },
+      "future_refill_topic_daily_usage.future_refill_topic_daily_usage_pkey": {
+        "definition": "PRIMARY KEY (budget_day, topic_id)",
+        "validated": true
+      },
+      "future_refill_topic_daily_usage.future_refill_topic_daily_usage_topic_id_fkey": {
+        "definition": "FOREIGN KEY (topic_id) REFERENCES public.topics(id) ON DELETE CASCADE",
+        "validated": true
+      },
       "generation_daily_usage.generation_daily_usage_calls_used_check": {
         "definition": "CHECK ((calls_used >= 0))",
         "validated": true
@@ -2477,6 +2784,26 @@
       },
       "owner_operation_events.owner_operation_events_severity_check": {
         "definition": "CHECK ((severity = ANY (ARRAY['info'::text, 'error'::text])))",
+        "validated": true
+      },
+      "profile_connections.profile_connections_check": {
+        "definition": "CHECK ((source_user_id <> target_user_id))",
+        "validated": true
+      },
+      "profile_connections.profile_connections_id_key": {
+        "definition": "UNIQUE (id)",
+        "validated": true
+      },
+      "profile_connections.profile_connections_pkey": {
+        "definition": "PRIMARY KEY (source_user_id, target_user_id)",
+        "validated": true
+      },
+      "profile_connections.profile_connections_source_user_id_fkey": {
+        "definition": "FOREIGN KEY (source_user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
+        "validated": true
+      },
+      "profile_connections.profile_connections_target_user_id_fkey": {
+        "definition": "FOREIGN KEY (target_user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
       },
       "profile_sharing.profile_sharing_achievement_codes_check": {
@@ -3037,6 +3364,46 @@
         "ready": true,
         "valid": true
       },
+      "editorial_legacy_active_concept": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_active_concept ON public.editorial_legacy_batch_entries USING btree (concept_id) WHERE (status = ANY (ARRAY['queued'::text, 'generating'::text, 'ready_for_review'::text]))",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_legacy_batch_entries_batch_id_concept_id_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_batch_entries_batch_id_concept_id_key ON public.editorial_legacy_batch_entries USING btree (batch_id, concept_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_legacy_batch_entries_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_batch_entries_pkey ON public.editorial_legacy_batch_entries USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_legacy_batch_entries_result_revision_id_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_batch_entries_result_revision_id_key ON public.editorial_legacy_batch_entries USING btree (result_revision_id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_legacy_batch_queue": {
+        "definition": "CREATE INDEX editorial_legacy_batch_queue ON public.editorial_legacy_batch_entries USING btree (batch_id, status, created_at)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_legacy_batches_name_key": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_batches_name_key ON public.editorial_legacy_batches USING btree (name)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_legacy_batches_pkey": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_batches_pkey ON public.editorial_legacy_batches USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "editorial_legacy_one_active_topic": {
+        "definition": "CREATE UNIQUE INDEX editorial_legacy_one_active_topic ON public.editorial_legacy_batches USING btree (topic_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text, 'paused'::text]))",
+        "ready": true,
+        "valid": true
+      },
       "editorial_legacy_versions_pkey": {
         "definition": "CREATE UNIQUE INDEX editorial_legacy_versions_pkey ON public.editorial_legacy_versions USING btree (concept_id, content_version)",
         "ready": true,
@@ -3117,6 +3484,16 @@
         "ready": true,
         "valid": true
       },
+      "future_refill_daily_usage_pkey": {
+        "definition": "CREATE UNIQUE INDEX future_refill_daily_usage_pkey ON public.future_refill_daily_usage USING btree (budget_day)",
+        "ready": true,
+        "valid": true
+      },
+      "future_refill_topic_daily_usage_pkey": {
+        "definition": "CREATE UNIQUE INDEX future_refill_topic_daily_usage_pkey ON public.future_refill_topic_daily_usage USING btree (budget_day, topic_id)",
+        "ready": true,
+        "valid": true
+      },
       "generation_daily_usage_pkey": {
         "definition": "CREATE UNIQUE INDEX generation_daily_usage_pkey ON public.generation_daily_usage USING btree (budget_day)",
         "ready": true,
@@ -3189,6 +3566,21 @@
       },
       "owner_workflow_time": {
         "definition": "CREATE INDEX owner_workflow_time ON public.editorial_workflow_events USING btree (created_at, id)",
+        "ready": true,
+        "valid": true
+      },
+      "profile_connections_id_key": {
+        "definition": "CREATE UNIQUE INDEX profile_connections_id_key ON public.profile_connections USING btree (id)",
+        "ready": true,
+        "valid": true
+      },
+      "profile_connections_pkey": {
+        "definition": "CREATE UNIQUE INDEX profile_connections_pkey ON public.profile_connections USING btree (source_user_id, target_user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "profile_connections_source_created": {
+        "definition": "CREATE INDEX profile_connections_source_created ON public.profile_connections USING btree (source_user_id, created_at DESC, target_user_id)",
         "ready": true,
         "valid": true
       },
@@ -3561,6 +3953,12 @@
       "editorial_generation_jobs": {
         "rls": true
       },
+      "editorial_legacy_batch_entries": {
+        "rls": true
+      },
+      "editorial_legacy_batches": {
+        "rls": true
+      },
       "editorial_legacy_versions": {
         "rls": true
       },
@@ -3585,6 +3983,12 @@
       "editorial_workflow_events": {
         "rls": true
       },
+      "future_refill_daily_usage": {
+        "rls": true
+      },
+      "future_refill_topic_daily_usage": {
+        "rls": true
+      },
       "generation_daily_usage": {
         "rls": true
       },
@@ -3592,6 +3996,9 @@
         "rls": true
       },
       "owner_operation_events": {
+        "rls": true
+      },
+      "profile_connections": {
         "rls": true
       },
       "profile_sharing": {

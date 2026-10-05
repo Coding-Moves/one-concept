@@ -20,6 +20,42 @@ claims as completed work.
 - Validation: 22 PostgreSQL-backed editorial content API tests passed, including the new publish-then-read regression. The live page remains unchanged until this fix reaches `main` and Railway. Email delivery, AI correction and learner-device visibility for #263 remain to be verified.
 - [PR #357](https://github.com/Coding-Moves/one-concept/pull/357) targets `develop`. It must be reviewed and separately released before the production page changes; no merge or production deployment occurred in this chunk.
 
+### Review-site direct-route stability — in progress
+
+- Release PR #366 exposed a flaky legacy-review browser test: direct navigation could race ahead of the authenticated reviewer workspace. `65746f8` waits for the ready workspace before both direct legacy-review navigations, preserving the test's stale-version coverage without changing product behavior.
+- Local browser execution is blocked by missing checked-out `react-markdown` and `remark-gfm` packages; PR CI performs the authoritative clean install and browser validation.
+
+### v1.10.8 release repair — in progress
+
+- The v1.10.7 Release workflow completed its protected schema check and production/preview OTA publications, then correctly stopped before tag creation because tag `v1.10.7` already existed at `38489a21`. It did not dispatch the APK build. The published v1.10.7 OTAs do not reach an older 1.10.1 native runtime.
+- `247abf7` prepares v1.10.8 with a new native runtime and matching one-time What’s New card. It is required because the current release contains Camera and Image Picker native configuration absent from the old v1.10.7 tag. Mobile typecheck and exact version/card verification passed.
+- After this preparation PR is merged into `develop`, open a new `develop` → `main` v1.10.8 release PR, verify the deployed SHA, then run the guarded Release workflow once. Do not rerun v1.10.7.
+
+### v1.10.7 production migration record — in progress
+
+- The release operator confirmed production application and RLS verification for migrations `0040_profile_avatar_bio.sql` through `0043_future_refill_daily_usage.sql` on 2026-10-04. `1294459` records those verified filenames in `backend/migrations/applied.txt`; this is an operator ledger, not a substitute for the protected target-schema check.
+- The focused ledger PR targets `develop`. Once merged, open the required `develop` → `main` release PR; its final diff already contains the v1.10.7 app version and matching one-time What’s New card.
+
+### #353 conservative future-card refill — in progress
+
+- Scope: keep future curated supply off the request path while using durable Pacific-day per-topic and global provider allowances. This is separate from #352 legacy enrichment and retains private review/publication gates.
+- Implemented: `973be01` adds separate Pacific-day global and per-topic refill allowance storage and conservative settings; `ec8c476` uses those allowances only for future curated backlog work, with low-supply demand, fair normal passes and an explicit disabled-by-default urgent pass; `ebba018` exposes topic eligibility and the isolated allowance in the protected health report.
+- Review follow-ups: `188a829` preserves the existing general-generation default and compatible prefetch budget handling. `fcb1ab1` makes the protected report use the worker's actual review-load decision and expose a concrete refill blocked reason; `55a47e3` clarifies that the older generic batch setting does not control the one-card-per-topic future policy. CI then found the compatibility case still limited legacy prefetch to one attempt; `c34308d` restores the old configurable batch only when the future-refill settings are absent.
+- Validation: Python compilation and Ruff passed. The focused PostgreSQL suites were invoked but skipped because no local test database was running. The previous GitHub run had one remaining legacy prefetch regression; its focused fix is pending the new remote CI run.
+- Migration guard: `0043_future_refill_daily_usage.sql` remains unapplied during development. `FUTURE_REFILL_ROLLOUT.md` requires applying and verifying it only during the completed release process.
+
+### #352 legacy complete-card enrichment — in progress
+
+- Scope: introduce a dedicated, resumable subject-at-a-time legacy enrichment pipeline. It snapshots eligible published lessons, generates private complete-card revisions, preserves old learner-facing content, and requires ordinary authenticated review and publication. It does not change future curated generation or learner progress rules.
+- Planned commits: durable batch/entry storage, owner-fenced batch API and worker claims, reviewer generation console, integration coverage, and a Railway runbook with temporary-key rotation.
+- Migration guard: `0042_legacy_enrichment_batches.sql` remains unapplied during development. `docs/LEGACY_ENRICHMENT_ROLLOUT.md` requires applying and recording it only in the completed release process after backup and RLS verification.
+
+### #349 QR scanning and one-way Connect — in progress
+
+- Scope: replace the mutual-request path with safe directed connections that start only from an opaque public profile QR/link. Preserve accepted legacy pairs as two directed rows, enforce blocks and current sharing at every operation, and add QR-only camera scanning with a paste fallback. The dedicated PR targets `develop` and closes #349.
+- Implemented: `cd9e752` adds the additive directed storage and two-way backfill of accepted legacy pairs; `92a0973` adds authenticated owner-fenced relationship APIs, privacy/block enforcement and PostgreSQL coverage; `60adf23` adds the mobile Connect/Disconnect/Block controls and one-way list; `ce22365` adds the QR-only scanner and SDK 57 camera configuration. Existing invitation routes remain for compatibility while the mobile client uses the new directed APIs.
+- Validation: PostgreSQL relationship/schema-contract tests passed against a disposable local database; mobile TypeScript and Expo dependency check pass. The Node suite has one pre-existing `publicConfig.test.mjs` stderr assertion failure; its remaining 89 tests pass. A fresh Android/iOS build is required because `expo-camera` is native.
+
 ### #348 private avatar and concise bio — in progress
 
 - Scope: add an optional, account-fenced learner bio and private avatar, with built-in avatar choices, library selection and camera capture. The implementation preserves the existing `profiles.avatar_url` reference, keeps public sharing opt-in, and adds no login/onboarding requirement.

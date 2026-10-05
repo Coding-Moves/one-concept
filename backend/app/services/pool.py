@@ -16,6 +16,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import get_settings
 from app.services.generation import GenerationError, RateLimitedError, generate_concept
+from app.services.future_refill_budget import (
+    FutureRefillBudgetExhausted,
+    reserve_future_refill_call,
+)
 from app.services.generation_budget import (
     GenerationBudgetExhausted,
     GenerationBusy,
@@ -157,6 +161,40 @@ class TopUpResult:
     skipped_reason: str | None = None
 
 
+_FUTURE_REFILL_DEMAND = text("""
+    with active as (
+      select distinct user_id from public.daily_assignments
+       where assigned_at>=now()-make_interval(days=>:days)
+      union
+      select user_id from public.daily_reviews
+       where assigned_at>=now()-make_interval(days=>:days)
+    )
+    select
+      exists(select 1 from public.content_supply_targets s
+        where s.topic_id=:topic_id and s.expires_at>now()) as requested,
+      coalesce((
+        select min((select count(*) from public.concepts c
+          join public.subtopics s on s.id=c.subtopic_id and s.is_active
+          where c.topic_id=:topic_id and c.status='published'
+            and not exists(select 1 from public.daily_assignments a
+              where a.user_id=active.user_id and a.concept_id=c.id)))::int
+        from active join public.user_topics ut on ut.user_id=active.user_id
+        where ut.topic_id=:topic_id
+      ), 0)::int as unread
+""")
+
+
+async def future_refill_state(session: AsyncSession, topic_id: uuid.UUID) -> tuple[bool, int]:
+    """Return durable low-supply demand and the lowest active learner inventory."""
+    row = (
+        await session.execute(
+            _FUTURE_REFILL_DEMAND,
+            {"topic_id": topic_id, "days": get_settings().content_active_days},
+        )
+    ).one()
+    return bool(row.requested), row.unread
+
+
 async def generate_one(
     session: AsyncSession,
     api_key: str,
@@ -165,6 +203,9 @@ async def generate_one(
     *,
     call_cap: int | None = None,
     supply_target: int | None = None,
+    future_refill: bool = False,
+    future_refill_global_cap: int | None = None,
+    future_refill_topic_cap: int | None = None,
 ) -> uuid.UUID | None:
     """Claim a title and daily budget together, then generate outside the transaction."""
     cap = get_settings().generation_daily_call_cap if call_cap is None else call_cap
@@ -190,7 +231,17 @@ async def generate_one(
                 return None
         claimed = (await session.execute(_CLAIM, {"topic_id": topic_id})).first()
         if claimed is not None:
-            await reserve_generation_call(session, cap)
+            if future_refill:
+                if future_refill_global_cap is None or future_refill_topic_cap is None:
+                    raise ValueError("future refill caps are required")
+                await reserve_future_refill_call(
+                    session,
+                    claimed.topic_id,
+                    global_cap=future_refill_global_cap,
+                    topic_cap=future_refill_topic_cap,
+                )
+            else:
+                await reserve_generation_call(session, cap)
             await check_generation_capacity(session)
             # The shared quota lock serializes all provider claimers. Include
             # this claim in the load, then roll back it and quota if full.
@@ -301,6 +352,70 @@ async def generate_one(
     return concept_id
 
 
+async def _future_refill_top_up(
+    session: AsyncSession,
+    *,
+    api_key: str,
+    model: str,
+    minimum_per_topic: int,
+    pace_seconds: float,
+) -> TopUpResult:
+    """Give each low topic one fair normal slot, then an optional urgent slot."""
+    settings = get_settings()
+    generated = failed = 0
+    topics = (await session.execute(_POOL_COUNTS)).all()
+    passes = [(False, settings.future_refill_daily_call_cap, settings.future_refill_topic_daily_cap)]
+    if settings.future_refill_urgent_enabled:
+        passes.append((True, settings.future_refill_urgent_daily_call_cap,
+                       settings.future_refill_urgent_topic_daily_cap))
+
+    for urgent, global_cap, topic_cap in passes:
+        for topic in topics:
+            requested, unread = await future_refill_state(session, topic.id)
+            threshold = (
+                settings.content_critical_watermark
+                if urgent
+                else settings.content_low_watermark
+            )
+            if not requested or unread > threshold:
+                continue
+            target = await target_for(session, topic.id, minimum_per_topic)
+            if topic.published >= target or not topic.pending:
+                continue
+            if await slots_available(session, topic.id) <= 0:
+                log.info("future refill for topic %s skipped: review capacity full", topic.slug)
+                continue
+            try:
+                concept_id = await generate_one(
+                    session,
+                    api_key,
+                    model,
+                    topic.id,
+                    supply_target=target,
+                    future_refill=True,
+                    future_refill_global_cap=global_cap,
+                    future_refill_topic_cap=topic_cap,
+                )
+            except FutureRefillBudgetExhausted as exc:
+                if exc.scope == "global":
+                    log.info("future refill stopped: global daily allowance reached")
+                    return TopUpResult(generated, failed, "future refill daily allowance reached")
+                log.info("future refill for topic %s skipped: topic allowance reached", topic.slug)
+                continue
+            except GenerationBusy:
+                return TopUpResult(generated, failed, "generation capacity busy")
+            except RateLimitedError:
+                log.warning("future refill stopped: provider rate limited")
+                return TopUpResult(generated, failed, "rate limited")
+            if concept_id is None:
+                failed += 1
+            else:
+                generated += 1
+            if pace_seconds:
+                await asyncio.sleep(pace_seconds)
+    return TopUpResult(generated, failed)
+
+
 async def top_up(
     session: AsyncSession,
     *,
@@ -310,8 +425,9 @@ async def top_up(
     minimum_per_topic: int,
     call_cap: int,
     pace_seconds: float = 0.0,
+    future_refill: bool = False,
 ) -> TopUpResult:
-    """Refill toward the inventory target without exceeding review capacity."""
+    """Refill curated future-card supply without exceeding review capacity."""
     if not enabled:
         return TopUpResult(0, 0, "generation disabled")
     if not api_key:
@@ -325,6 +441,15 @@ async def top_up(
     await session.commit()
     if reaped:
         log.warning("reclaimed %s stale 'generating' backlog rows", len(reaped))
+
+    if future_refill:
+        return await _future_refill_top_up(
+            session,
+            api_key=api_key,
+            model=model,
+            minimum_per_topic=minimum_per_topic,
+            pace_seconds=pace_seconds,
+        )
 
     generated = failed = 0
     backoff = BACKOFF_START_SECONDS

@@ -511,6 +511,9 @@ test("a stale draft keeps its correction and refreshes the version on reload", a
 }) => {
   const state = await fixture(context);
   await login(page);
+  await expect(
+    page.getByRole("heading", { name: "A little care. Better learning." }),
+  ).toBeVisible();
   await page.goto(`/?view=review&kind=legacy&id=${cid}`);
   await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
   await page.getByRole("button", { name: "Prepare manual correction" }).click();
@@ -535,6 +538,9 @@ test("a changed live lesson requires review before rebasing a preserved correcti
 }) => {
   const state = await fixture(context);
   await login(page);
+  await expect(
+    page.getByRole("heading", { name: "A little care. Better learning." }),
+  ).toBeVisible();
   await page.goto(`/?view=review&kind=legacy&id=${cid}`);
   await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
   await page.getByRole("button", { name: "Prepare manual correction" }).click();

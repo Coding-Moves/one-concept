@@ -15,12 +15,14 @@ from app.schemas.editorial_content import (
     RevisionAction,
     RevisionStatus,
     StageInput,
+    LegacyBatchInput, LegacyBatchAction,
 )
 from app.services.editorial_accounts import authorize
 from app.services import editorial_generation as generation_jobs
 from app.services.editorial_generation_status import generation_status
 from app.services import editorial_queries as queries
 from app.services import editorial_workflow as workflow
+from app.services import legacy_enrichment
 
 router = APIRouter(
     prefix="/editorial", tags=["editorial content"], route_class=PrivateRoute
@@ -242,3 +244,19 @@ async def cancel_generation(
 async def generation_supply(tid: UUID, user: User, db: DB, settings: Config):
     await authorize(db, user, settings, "review")
     return await generation_status(db, tid, settings)
+
+
+@router.get('/legacy-enrichment-batches')
+async def legacy_batches(user: User, db: DB, settings: Config, topic_id: UUID | None = None):
+    await authorize(db, user, settings, 'review')
+    return {'items': await legacy_enrichment.list_batches(db, topic_id)}
+
+
+@router.post('/legacy-enrichment-batches', status_code=201)
+async def create_legacy_batch(body: LegacyBatchInput, user: User, db: DB, settings: Config):
+    return await execute(db, legacy_enrichment.create(db, user, settings, body))
+
+
+@router.post('/legacy-enrichment-batches/{batch_id}/actions')
+async def legacy_batch_action(batch_id: UUID, body: LegacyBatchAction, user: User, db: DB, settings: Config):
+    return await execute(db, legacy_enrichment.action(db, user, settings, batch_id, body))

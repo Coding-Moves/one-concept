@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AppState, Linking, Modal, Pressable, ScrollView, Text } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { ConnectionControls } from './ConnectionControls';
+import { RelationshipControls } from './RelationshipControls';
 import { onPublicProfileOpen } from '../services/publicProfileNavigation';
 import { useTheme } from '../context/ThemeContext';
 import { getPublicProfile, profileTokenFromLink, PublicProfile } from '../services/profileSharing';
@@ -50,7 +50,7 @@ export function PublicProfileLink() {
           {profile.achievements.map((a, i) => <Text key={i} style={{ color: colors.text }}>{a.name} — {a.description}</Text>)}
           {!profile.achievements.length && profile.current_streak === undefined && profile.concepts_learned === undefined && <Text style={{ color: colors.textMuted }}>No learning highlights have been shared.</Text>}
           <Text style={{ color: colors.textMuted }}>Shared with One Concept</Text>
-          {token && <ConnectionControls token={token} />}
+          {token && <RelationshipControls token={token} />}
         </> : <Text style={{ color: colors.text }}>Loading public profile…</Text>}
       </ScrollView>
     </SafeAreaView>

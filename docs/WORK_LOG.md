@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.9 release preparation — in progress
+
+- The owner requested a production release PR before starting one manually selected Software Engineering existing-card batch per day. PR #369 is still open against `develop`, so its reviewed-card workflow must land before the `develop` → `main` release PR can include it.
+- [PR #370](https://github.com/Coding-Moves/one-concept/pull/370) prepares the release on `develop`. `976655d` bumps `expo.version` to 1.10.9 and adds the matching one-time What's New card for card information, reviewer attribution, and complete reviewed lessons. This is a JavaScript-only release; the native `runtimeVersion` stays 1.10.8. Mobile typecheck and `git diff --check` passed. Production deployment, paid Gemini calls, and approval of existing lessons have not occurred.
+
 ### #359 final website and learner synchronization audit — PR #357 updated
 
 - Continued open PR #357 on `codex/263-published-review-detail`. `3a5ff37` lets a successful lesson-detail reload clear a stale conflict even if the separate timeline/history request fails; the warning remains visible. `cb15420` prevents a delayed old detail response from replacing a newer corrected lesson in the mobile saved cache. `a84cdc8` adds a two-session browser regression for owner assignment, reviewer comment, owner history, publication, and reviewer visibility.

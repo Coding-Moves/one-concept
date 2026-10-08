@@ -72,6 +72,29 @@ Keep `FUTURE_REFILL_ENABLED=false` throughout the backfill. A provider failure
 or rate limit never publishes a lesson; attempts and errors are visible in the
 batch. A missing grounded source blocks the entry for human inspection.
 
+The owner site's lesson rows show a short failure code after a worker run.
+`source_missing` means Google supplied no safe grounded web link; do not publish
+the generated text as sourced. `package_invalid` or `safety_blocked` means the
+private draft cannot be staged; use a manual correction or investigate the
+provider configuration. `response_truncated`, `response_invalid_json`,
+`response_missing_text`, `content_invalid`, `provider_transport`, and
+`provider_http_error` are retryable response/provider failures. Each still
+consumes a call, and an entry becomes **Failed** after three attempts. Railway
+logs include only the entry ID and safe code, not lesson text or credentials.
+Old batches retain their original generic codes; this diagnostic change does
+not retroactively identify their exact failure.
+
+After reviewing the ready drafts, choose a new subject batch only for lessons
+that remain eligible. A terminal batch cannot resume, and a new batch makes
+new paid calls. Its quota must still cover every eligible lesson. For a pilot,
+temporarily set `LEGACY_ENRICHMENT_BATCH_SIZE=1` on the worker, run it once,
+then pause the batch and inspect the resulting code before resuming a full
+worker pass. This limits legacy enrichment to one call; the same worker runs
+pending AI correction jobs first, so check their separate budget too. Keep
+`FUTURE_REFILL_ENABLED=false`,
+and never interpret a worker's successful exit as proof that every card is
+ready for review.
+
 After all subjects are reviewed, turn off `LEGACY_ENRICHMENT_ENABLED`, rotate
 or remove any temporary Gemini key, and verify the final values on every
 generation-capable service. Future refill has its own controlled rollout in

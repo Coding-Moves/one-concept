@@ -20,6 +20,11 @@ PROMPT_VERSION = "legacy-complete-card-v2-grounded"
 class LegacyValidationError(GenerationError):
     """This candidate needs a human/source fix, not another paid retry."""
 
+
+class LegacyConfigurationError(GenerationError):
+    """The provider rejected the request or project permissions."""
+
+
 _SCHEMA = {
     "type": "object",
     "properties": {
@@ -127,7 +132,9 @@ async def generate_legacy_card(
         "the server collects references from grounding metadata. Return only the JSON schema.\n"
         + json.dumps({"topic": topic, "subtopic": subtopic,
                       "title": source["title"], "old_summary": source.get("summary"),
-                      "old_example": source.get("example")}, ensure_ascii=False)
+                      "old_example": source.get("example"),
+                      "old_flashcard": source.get("flashcard"),
+                      "old_questions": source.get("mcqs")}, ensure_ascii=False)
     )
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -145,6 +152,8 @@ async def generate_legacy_card(
         raise GenerationError("Gemini transport failed") from exc
     if response.status_code == 429:
         raise RateLimitedError(_retry_after_seconds(response))
+    if response.status_code in (400, 401, 403):
+        raise LegacyConfigurationError(f"Gemini rejected the request (HTTP {response.status_code})")
     if response.status_code >= 400:
         raise GenerationError(f"Gemini returned HTTP {response.status_code}")
     try:

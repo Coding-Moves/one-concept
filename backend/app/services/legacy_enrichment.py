@@ -36,13 +36,24 @@ async def get_batch(db, batch_id, *, lock=False):
 async def eligible_lessons(db, topic_id):
     return (await db.execute(text('''select c.id,c.content_version,jsonb_build_object(
       'title',c.title,'summary',c.summary,'example',c.example,'curriculum',c.curriculum,
+      'flashcard',c.flashcard,'mcqs',c.mcqs,
       'topic_id',c.topic_id,'subtopic_id',c.subtopic_id,'subtopic_slug',s.slug) as body
       from concepts c join subtopics s on s.id=c.subtopic_id where c.topic_id=:topic
       and c.status='published' and s.is_active
-      and not exists(select 1 from editorial_publications p
+      and (not exists(select 1 from editorial_publications p
         where p.concept_id=c.id and p.content_version=c.content_version)
+        or length(btrim(coalesce(c.curriculum->>'objective','')))=0
+        or c.curriculum->'difficulty' is null
+        or case when jsonb_typeof(c.curriculum->'references')='array'
+           then jsonb_array_length(c.curriculum->'references')=0 else true end
+        or length(btrim(coalesce(c.flashcard->>'front','')))=0
+        or length(btrim(coalesce(c.flashcard->>'back','')))=0
+        or case when jsonb_typeof(c.mcqs)='array'
+           then jsonb_array_length(c.mcqs)<>3 else true end)
       and not exists(select 1 from concept_revisions r where r.concept_id=c.id
         and r.status in ('draft','generating','validation_failed','pending_review','changes_requested','approved'))
+      and not exists(select 1 from editorial_legacy_batch_entries e
+        where e.concept_id=c.id and e.status='ready_for_review')
       order by c.created_at,c.id'''), {'topic': topic_id})).mappings().all()
 
 

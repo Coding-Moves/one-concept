@@ -115,6 +115,14 @@ async def test_batch_stages_private_complete_revision_without_changing_learner_c
     assert after == before
     assert generator.await_count == 1
     assert await worker.run_one(session, api.settings) == 'empty'
+    submitted, _ = await content.act(api, entry['result_revision_id'], 'submit')
+    assert submitted.status_code == 200, submitted.text
+    rejected, _ = await content.act(api, entry['result_revision_id'], 'rejected')
+    assert rejected.status_code == 200, rejected.text
+    eligibility = await api.client.get(
+        f"{ROOT}/legacy-enrichment-eligibility/{current['topic_id']}",
+        headers=api.headers())
+    assert eligibility.json()['eligible_count'] == 0
 
 
 async def test_pausing_fences_a_claimed_result(api, session, batch):
@@ -141,3 +149,18 @@ async def test_pausing_fences_a_claimed_result(api, session, batch):
     assert await worker.finish(session, api.settings, claimed, body=complete) == 'queued'
     assert await session.scalar(text("""select count(*) from concept_revisions
       where concept_id=:id and status='draft'"""), {'id': concept_id}) == 0
+
+
+async def test_provider_permission_error_blocks_without_retrying(api, session, batch, monkeypatch):
+    from app.services.legacy_generation import LegacyConfigurationError
+
+    current, _, _ = batch
+    generator = AsyncMock(side_effect=LegacyConfigurationError('provider permission'))
+    monkeypatch.setattr(worker, 'generate_legacy_card', generator)
+    assert await worker.run_batch(session, api.settings) == {'provider_configuration': 1}
+    result = await api.client.get(
+        f"{ROOT}/legacy-enrichment-batches/{current['id']}/entries",
+        headers=api.headers())
+    assert result.json()['items'][0]['status'] == 'blocked'
+    assert result.json()['items'][0]['failure_code'] == 'provider_configuration'
+    assert generator.await_count == 1

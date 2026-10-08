@@ -16,7 +16,11 @@ from app.services.generation_budget import (
     check_generation_capacity,
     reserve_generation_call,
 )
-from app.services.legacy_generation import LegacyValidationError, generate_legacy_card
+from app.services.legacy_generation import (
+    LegacyConfigurationError,
+    LegacyValidationError,
+    generate_legacy_card,
+)
 from app.services.publication import LessonBody, stage_revision
 from app.services.review_capacity import review_load
 
@@ -123,7 +127,7 @@ async def finish(db, settings, entry, *, body=None, failure=None):
         elif not await editorial_generation.requester_active(db, row):
             state, code = 'skipped', 'requester_inactive'
         elif failure:
-            state = ('blocked' if failure == 'validation_failed' else
+            state = ('blocked' if failure in {'validation_failed', 'provider_configuration'} else
                      'failed' if row['attempts'] >= 3 else 'queued')
             code = failure
         else:
@@ -188,6 +192,9 @@ async def run_one(db, settings):
         return 'rate_limited' if result in {'queued', 'failed'} else result
     except LegacyValidationError:
         return await finish(db, settings, entry, failure='validation_failed')
+    except LegacyConfigurationError:
+        result = await finish(db, settings, entry, failure='provider_configuration')
+        return 'provider_configuration' if result == 'blocked' else result
     except GenerationError:
         return await finish(db, settings, entry, failure='provider_or_source_error')
     return await finish(db, settings, entry, body=body)
@@ -202,7 +209,8 @@ async def run_batch(db, settings):
         outcomes[state] = outcomes.get(state, 0) + 1
         if state in {'empty', 'disabled', 'key_missing', 'quota_exhausted',
                      'capacity_busy', 'review_capacity_full', 'rate_limited',
-                     'requester_inactive', 'batch_quota_exhausted'}:
+                     'requester_inactive', 'batch_quota_exhausted',
+                     'provider_configuration'}:
             break
     if outcomes.get('ready_for_review'):
         log.info('legacy enrichment prepared %s private drafts', outcomes['ready_for_review'])

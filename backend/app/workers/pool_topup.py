@@ -14,6 +14,7 @@ from app.config import get_settings
 from app.db.session import SessionLocal, engine
 from app.services.pool import top_up
 from app.services.editorial_generation import run_batch
+from app.services.legacy_enrichment_worker import run_batch as run_legacy_batch
 from app.services.supply import plan_active_readers
 
 
@@ -33,6 +34,8 @@ async def run() -> None:
         try:
             revisions = await run_batch(session, settings)
             logging.info("revision jobs: %s", revisions)
+            legacy = await run_legacy_batch(session, settings)
+            logging.info("legacy enrichment: %s", legacy)
             await plan_active_readers(session)
             result = await top_up(
                 session,
@@ -59,10 +62,13 @@ async def run() -> None:
             {
                 "outcome": result.skipped_reason or "completed",
                 "generated": result.generated
-                + revisions.get("ready_for_review", 0),
+                + revisions.get("ready_for_review", 0)
+                + legacy.get("ready_for_review", 0),
                 "failed": result.failed
                 + revisions.get("failed", 0)
-                + revisions.get("pending", 0),
+                + revisions.get("pending", 0)
+                + legacy.get("failed", 0)
+                + legacy.get("blocked", 0),
             },
         )
         await session.commit()

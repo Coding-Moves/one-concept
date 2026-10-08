@@ -100,8 +100,10 @@ def grounded_references(candidate: dict) -> list[dict]:
 
 def build_body(source: dict, payload: dict, candidate: dict, model: str) -> LessonBody:
     title = source["title"]
+    if not isinstance(payload.get("summary"), str) or not isinstance(payload.get("example"), str):
+        raise LegacyRetryableError("content_invalid")
     try:
-        validate(payload, title)
+        summary, example = validate(payload, title)
     except GenerationError as exc:
         raise LegacyRetryableError("content_invalid") from exc
     references = grounded_references(candidate)
@@ -112,8 +114,8 @@ def build_body(source: dict, payload: dict, candidate: dict, model: str) -> Less
     try:
         return LessonBody.model_validate({
             "title": title,
-            "summary": payload["summary"],
-            "example": payload["example"],
+            "summary": summary,
+            "example": example,
             "subtopic_slug": source["subtopic_slug"],
             "curriculum": {
                 "objective": payload["objective"],

@@ -58,6 +58,27 @@ def test_grounded_candidate_requires_real_safe_source():
         build_body(source, generated_payload(), {'groundingMetadata': None}, 'gemini-3.1-flash-lite')
 
 
+@pytest.mark.parametrize(('field', 'value'), [
+    ('summary', 42), ('example', ['not lesson text']),
+])
+def test_malformed_lesson_text_is_retryable_not_a_worker_crash(field, value):
+    payload = generated_payload() | {field: value}
+    source = {'title': 'A Practical Mechanism', 'subtopic_slug': 'foundations'}
+    with pytest.raises(LegacyRetryableError) as caught:
+        build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
+    assert caught.value.failure_code == 'content_invalid'
+
+
+def test_complete_card_uses_validated_trimmed_text():
+    payload = generated_payload()
+    payload['summary'] = '  ' + payload['summary'] + '  '
+    payload['example'] = '  ' + payload['example'] + '  '
+    source = {'title': 'A Practical Mechanism', 'subtopic_slug': 'foundations'}
+    body = build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
+    assert body.summary == payload['summary'].strip()
+    assert body.example == payload['example'].strip()
+
+
 def test_gemini_response_skips_thought_parts_and_joins_text():
     encoded = legacy_generation.json.dumps(generated_payload())
     body = {'candidates': [{**grounded_candidate(), 'finishReason': 'STOP',

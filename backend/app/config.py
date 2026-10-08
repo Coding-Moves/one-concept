@@ -49,7 +49,10 @@ class Settings(BaseSettings):
     # process legacy batches. Operators enable each workload deliberately.
     future_refill_enabled: bool = False
     legacy_enrichment_enabled: bool = False
-    legacy_enrichment_batch_size: int = Field(default=3, ge=1, le=10)
+    # A daily cron pass can prepare one 25-card subject, including up to three
+    # bounded attempts per card. The owner's batch quota and shared daily cap
+    # can lower this further; no batch starts without an explicit owner action.
+    legacy_enrichment_batch_size: int = Field(default=75, ge=1, le=75)
     min_pool_per_topic: int = Field(default=25, ge=0)
     content_reserve_per_topic: int = Field(default=60, ge=1, le=365)
     # A learner nearing the end of a topic only schedules background work.

@@ -128,7 +128,10 @@ and verify TOTP to reach `aal2`, and confirm that an ordinary signed-in learner
 cannot read the review queue or owner reports. An owner with `manage_reviewers`
 can invite each reviewer through **Reviewers**, approve their registered name,
 and grant only the needed capabilities (`review`, plus `approve`/`publish` where
-appropriate). Reviewers use individual accounts and MFA; no GitHub or database
+appropriate). Assignment requires `review`; a separate `approve`-only or
+`publish`-only member can still read the private lesson and shared queue needed
+for that decision, with the same approved-name and MFA checks. Reviewers use
+individual accounts and MFA; no GitHub or database
 console access is required. Set their timezone in **Settings**.
 
 Test the website on its actual HTTPS origin: root/callback/review deep links,
@@ -200,7 +203,45 @@ failures and quota usage. Avoid a retrospective assignment blast.
   check root/callback before re-enabling delivery.
 
 Record the live Netlify origin, deployed `main` commit, API/reminders commit and
-status, owner/reviewer acceptance and first real email result in #313 without
-posting private account data or tokens. #281 remains open until its broader
-end-to-end acceptance is complete. Future staging, if added under #255, must
+status, owner/reviewer acceptance and first real email result in #359 without
+posting private account data or tokens. The original direct rollout was tracked
+in #281 and #313; #359 tracks the remaining integration acceptance. Future
+staging, if added under #255, must
 use a separate API, Auth project, database and test-recipient allowlist.
+
+## #359 production integration rehearsal
+
+The local PostgreSQL, browser, and mobile checks exercise behavior with test
+identities and mocked external providers. They do not establish that the live
+site, Gmail inbox, AI worker, and installed phone are synchronized. After this
+change is released to `main`, record the following evidence in #359 without
+email addresses, tokens, lesson text, or database URLs:
+
+1. Confirm Netlify's published deploy and Railway's `api`, `reminders`, and
+   `pool-topup` deployments all show the intended `main` commit and healthy or
+   completed status. Check the API `/health` endpoint. The site polls queues;
+   allow one refresh cycle or use **Refresh** before judging a missing result.
+2. As owner, assign one structurally valid private draft to an approved
+   `review`-capable second account. Confirm that account sees **Pending review**
+   after signing in with its own MFA. Check the owner's Notifications status and
+   the recipient inbox for the actual assignment message; Gmail acceptance alone
+   is not inbox receipt. Do not treat an approve-only account as an assignee.
+3. From the second account, request a concrete change. As owner, inspect the
+   recorded feedback, request an AI correction if applicable, and confirm a new
+   private revision appears with the corrected complete package. A manual
+   correction can exercise the review path when AI is disabled, but does not
+   verify the worker or provider.
+4. Review and approve the corrected revision, then publish it with an authorized
+   account. Confirm the shared Published library lists the exact lesson and the
+   published detail still shows a structured Lesson, Changes, and History view.
+   Reopen that historical revision after a later correction or retirement when
+   available; it must remain readable without a stale action warning.
+5. On an eligible learner account, refresh Today or the lesson detail online.
+   Confirm the expected content version and reviewer attribution. If the lesson
+   is saved, sync while online, then reopen it offline to verify the corrected
+   version was cached. An existing daily assignment keeps its identity; the
+   learner does not receive an extra assignment because of publication.
+
+If any step fails, record the failed step and the public status/error code in
+#359, leave the issue open, and address the defect before claiming completion.
+Do not publish a knowingly invalid draft merely to complete the rehearsal.

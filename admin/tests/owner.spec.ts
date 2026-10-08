@@ -104,8 +104,10 @@ for (const theme of ["light", "dark"]) {
       fullPage: true,
     });
     await expect(
-      page.getByText("Generation (API configuration)", { exact: true }),
+      page.getByText("Gemini master switch (API configuration)", { exact: true }),
     ).toBeVisible();
+    await expect(page.getByText("New lessons (API configuration)", { exact: true })).toBeVisible();
+    await expect(page.getByText("Existing-lesson enrichment (API configuration)", { exact: true })).toBeVisible();
     await expect(
       page.getByText(/worker settings can differ and are not read here/),
     ).toBeVisible();

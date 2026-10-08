@@ -68,6 +68,7 @@ async def test_demand_ignores_retired_inventory_and_reports_saved_target(
         )
     await session.commit()
     api.settings.generation_enabled = True
+    api.settings.future_refill_enabled = True
     payload = dict(
         request_id=str(uuid4()), topic_id=str(topic), count=1, note=content.NOTE
     )
@@ -116,6 +117,7 @@ async def test_full_review_queue_blocks_demand_and_retirement_releases_capacity(
     )
     await session.commit()
     api.settings.generation_enabled = True
+    api.settings.future_refill_enabled = True
     api.settings.content_review_backlog_limit = 1
     payload = dict(
         request_id=str(uuid4()), topic_id=str(topic), count=10, note=content.NOTE
@@ -159,6 +161,7 @@ async def test_empty_curriculum_surfaces_planning_without_inventing_work(
     )
     await session.commit()
     api.settings.generation_enabled = True
+    api.settings.future_refill_enabled = True
     response = await api.client.post(
         f"{content.ROOT}/generation-requests",
         headers=api.headers(),
@@ -192,6 +195,7 @@ async def test_spent_pending_curriculum_is_not_eligible_manual_demand(
     )
     await session.commit()
     api.settings.generation_enabled = True
+    api.settings.future_refill_enabled = True
     response = await api.client.post(
         f"{content.ROOT}/generation-requests",
         headers=api.headers(),

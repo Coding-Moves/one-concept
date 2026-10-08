@@ -44,7 +44,10 @@ publish/reject commands fail closed. See [editorial-provenance.md](editorial-pro
 `api/v1/editorial_content.py` exposes #276 queues, details, history/timeline and
 versioned actions. `editorial_queries.py` builds private read models;
 `editorial_workflow.py` owns authenticated commands, request receipts and workflow
-audit. Migration 0034 adds private workflow evidence/assignment metadata. The
+audit. Published and retired revision details compare their immutable base
+snapshot with the reviewed body; `review`, `approve`, or `publish` permits
+MFA-gated reading, while assignments require an active `review` member.
+Migration 0034 adds private workflow evidence/assignment metadata. The
 operator client `python -m app.workers.editorial_review` uses those same HTTP
 gates. See [editorial-api.md](editorial-api.md) for permissions, retry semantics
 and rollout. The `admin/` website (#278) consumes these APIs; mobile attribution (#280) projects exact-version evidence through learner reads;
@@ -73,9 +76,16 @@ The existing `workers/pool_topup.py` runs a bounded revision batch before refill
 same SQL statement as a published lesson. `schemas/daily.py` adds nullable
 `ConceptOut.review`; detail, daily selection and folded state/review paths use it.
 `mobile/src/services/conceptMapping.ts` shares version validation across detail,
-daily and cached reads. `components/ReviewAttribution.tsx` renders borderless credit only in
-`ConceptDetailScreen`, below the card opened from History/Saved. Today/review
-cards and legacy/mismatched metadata have no label.
+daily and cached reads. `components/ReviewAttribution.tsx` renders borderless
+credit in `ConceptDetailScreen` and below the Today lesson card. Legacy and
+mismatched-version metadata have no label.
+`components/CardInformation.tsx` supplies the shared card's three-dot metadata
+sheet on Today and saved/history detail, using that same exact-version check.
+`services/state.py` and `schemas/me.py` expose `bookmark_versions` aligned with
+all saved slugs in `/v1/me/state`, including compact responses.
+`mobile/src/services/savedConceptSync.ts` uses these versions to replace only
+outdated offline saved bodies after an authenticated state refresh, with an
+account epoch fence and conservative fallback for older API responses.
 See [editorial-provenance.md](editorial-provenance.md#learner-attribution-280)
 for compatibility, historical offline semantics and rollout.
 
@@ -87,6 +97,10 @@ registered identity. `Queue.tsx` supplies topic/status/deadline filtering and
 shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete
 packages, diffs, history, comments, checklist decisions and safe corrections.
 `Team.tsx` manages owner-only membership; `Generation.tsx` requests bounded work.
+`LegacyEnrichment.tsx` previews eligible existing lessons and controls one
+subject batch at a time. `services/legacy_generation.py` builds a grounded
+complete-card candidate and `legacy_enrichment_worker.py` stages it privately
+through the scheduled `pool_topup.py` run; only a later human approval publishes.
 `MarkdownText.tsx` safely renders lesson writing and `LessonEditor` shows a live
 preview; identifiers and configuration fields remain plain text.
 `api.ts` and `useCommand.ts` preserve exact operation retries and stale-token

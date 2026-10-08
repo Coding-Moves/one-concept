@@ -47,7 +47,7 @@ async def authorize(
     db: AsyncSession,
     user: CurrentUser,
     settings: Settings,
-    capability: Capability | None = None,
+    capability: Capability | tuple[Capability, ...] | None = None,
     *,
     mutation: bool = False,
 ) -> Member:
@@ -63,7 +63,9 @@ async def authorize(
 
 
 async def _authorize_current(
-    db: AsyncSession, user: CurrentUser, capability: Capability | None
+    db: AsyncSession,
+    user: CurrentUser,
+    capability: Capability | tuple[Capability, ...] | None,
 ) -> Member:
     try:
         session_id = UUID(user.session_id or "")
@@ -87,7 +89,8 @@ async def _authorize_current(
     if member.status != "active":
         raise HTTPException(403, "Editorial access is unavailable")
     if capability is not None:
-        if capability not in member.capabilities:
+        allowed = (capability,) if isinstance(capability, str) else capability
+        if not any(item in member.capabilities for item in allowed):
             raise HTTPException(403, "Editorial permission required")
         if member.approved_name is None:
             raise HTTPException(403, "Complete profile setup and obtain name approval")

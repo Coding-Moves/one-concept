@@ -45,6 +45,14 @@ class Settings(BaseSettings):
     gemini_api_key: str = ""
     gemini_model: str = "gemini-3.1-flash-lite"
     generation_enabled: bool = False
+    # The master switch never implies permission to refill future lessons or
+    # process legacy batches. Operators enable each workload deliberately.
+    future_refill_enabled: bool = False
+    legacy_enrichment_enabled: bool = False
+    # A daily cron pass can prepare one 25-card subject, including up to three
+    # bounded attempts per card. The owner's batch quota and shared daily cap
+    # can lower this further; no batch starts without an explicit owner action.
+    legacy_enrichment_batch_size: int = Field(default=75, ge=1, le=75)
     min_pool_per_topic: int = Field(default=25, ge=0)
     content_reserve_per_topic: int = Field(default=60, ge=1, le=365)
     # A learner nearing the end of a topic only schedules background work.

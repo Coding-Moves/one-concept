@@ -204,7 +204,7 @@ async def revision_action(db, actor, settings, rid, command):
             if (
                 assignee.status != "active"
                 or assignee.approved_name is None
-                or not set(assignee.capabilities).intersection({"review", "approve"})
+                or "review" not in assignee.capabilities
             ):
                 raise ValueError("Choose an active, approved reviewer")
         await db.execute(
@@ -345,8 +345,8 @@ async def request_generation(db, actor, settings, command):
     fingerprint, old = await receipt(db, actor, command, "generation")
     if old is not None:
         return old
-    if not settings.generation_enabled:
-        raise HTTPException(409, "Generation is disabled; no demand was recorded")
+    if not settings.generation_enabled or not settings.future_refill_enabled:
+        raise HTTPException(409, "Future lesson generation is paused; no demand was recorded")
     if not await db.scalar(
         text("select exists(select 1 from topics where id=:id and is_active)"),
         {"id": command.topic_id},

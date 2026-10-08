@@ -42,6 +42,9 @@ class UserState:
     learned: list[LearnedRecord]
     likes: list[str]
     bookmarks: list[str]
+    # Parallel to bookmarks so compact state can signal corrected publications
+    # without duplicating every slug or downloading every saved lesson.
+    bookmark_versions: list[int]
     # Saved concepts WITH their titles/topics, so the Profile can render the
     # saved list without the bundled demo catalog (which only covers a signed-out
     # user's 20 concepts). `bookmarks` stays as bare slugs for membership counts.
@@ -97,7 +100,10 @@ _STATE = text("""
     interactions as (
         select
           coalesce(json_agg(c.slug) filter (where i.liked_at is not null), '[]'::json) as likes,
-          coalesce(json_agg(c.slug) filter (where i.saved_at is not null), '[]'::json) as saves
+          coalesce(json_agg(c.slug order by c.slug)
+                   filter (where i.saved_at is not null), '[]'::json) as saves,
+          coalesce(json_agg(c.content_version order by c.slug)
+                   filter (where i.saved_at is not null), '[]'::json) as save_versions
           from public.concept_interactions i
           join public.concepts c on c.id = i.concept_id and c.status='published'
          where i.user_id = :uid
@@ -143,6 +149,7 @@ _STATE = text("""
                '{}'::json) as learned_before_window,
       interactions.likes,
       interactions.saves,
+      interactions.save_versions,
       saved.v         as saved,
       (select slug from assignment) as assignment_slug,
       coalesce((select len from runs
@@ -184,6 +191,7 @@ async def load_state(session: AsyncSession, user_id: uuid.UUID, *, compact: bool
         ],
         likes=list(row.likes),
         bookmarks=list(row.saves),
+        bookmark_versions=list(row.save_versions),
         saved=[
             SavedConcept(
                 concept_slug=s["slug"],

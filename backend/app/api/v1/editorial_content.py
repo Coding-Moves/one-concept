@@ -27,6 +27,7 @@ from app.services import legacy_enrichment
 router = APIRouter(
     prefix="/editorial", tags=["editorial content"], route_class=PrivateRoute
 )
+READ_CAPABILITIES = ("review", "approve", "publish")
 
 
 @router.get("/queue")
@@ -44,7 +45,7 @@ async def queue(
     cursor: UUID | None = None,
     limit: int = Query(25, ge=1, le=100),
 ):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.queue(
         db,
         kind,
@@ -67,13 +68,13 @@ async def taxonomy(
     cursor: UUID | None = None,
     limit: int = Query(100, ge=1, le=100),
 ):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.taxonomy(db, cursor, limit)
 
 
 @router.get("/revisions/{rid}")
 async def revision(rid: UUID, user: User, db: DB, settings: Config):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     try:
         return await queries.revision_detail(db, rid)
     except ValueError:
@@ -82,7 +83,7 @@ async def revision(rid: UUID, user: User, db: DB, settings: Config):
 
 @router.get("/concepts/{cid}")
 async def concept(cid: UUID, user: User, db: DB, settings: Config):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.concept_detail(db, cid)
 
 
@@ -95,7 +96,7 @@ async def history(
     cursor: UUID | None = None,
     limit: int = Query(25, ge=1, le=100),
 ):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.history(db, cid, cursor, limit)
 
 
@@ -108,7 +109,7 @@ async def timeline(
     cursor: str | None = Query(None, max_length=256),
     limit: int = Query(25, ge=1, le=100),
 ):
-    await authorize(db, user, settings, "review")
+    await authorize(db, user, settings, READ_CAPABILITIES)
     return await queries.timeline(db, cid, cursor, limit)
 
 
@@ -251,6 +252,12 @@ async def legacy_batches(user: User, db: DB, settings: Config, topic_id: UUID | 
     return {'items': await legacy_enrichment.list_batches(db, topic_id)}
 
 
+@router.get('/legacy-enrichment-eligibility/{topic_id}')
+async def legacy_eligibility(topic_id: UUID, user: User, db: DB, settings: Config):
+    await authorize(db, user, settings, 'request_generation')
+    return await legacy_enrichment.eligibility(db, topic_id, settings)
+
+
 @router.post('/legacy-enrichment-batches', status_code=201)
 async def create_legacy_batch(body: LegacyBatchInput, user: User, db: DB, settings: Config):
     return await execute(db, legacy_enrichment.create(db, user, settings, body))
@@ -259,3 +266,9 @@ async def create_legacy_batch(body: LegacyBatchInput, user: User, db: DB, settin
 @router.post('/legacy-enrichment-batches/{batch_id}/actions')
 async def legacy_batch_action(batch_id: UUID, body: LegacyBatchAction, user: User, db: DB, settings: Config):
     return await execute(db, legacy_enrichment.action(db, user, settings, batch_id, body))
+
+
+@router.get('/legacy-enrichment-batches/{batch_id}/entries')
+async def legacy_batch_entries(batch_id: UUID, user: User, db: DB, settings: Config):
+    await authorize(db, user, settings, 'review')
+    return {'items': await legacy_enrichment.list_entries(db, batch_id)}

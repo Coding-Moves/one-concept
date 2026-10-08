@@ -6,18 +6,14 @@ approves the exact version.
 
 ## Release procedure
 
-Do this only after the implementation PR is merged into `develop` and the
-release PR is ready to deploy. Migration `0043_future_refill_daily_usage.sql`
-is not recorded in `backend/migrations/applied.txt` until it has been applied
-and verified in production.
+Migration `0043_future_refill_daily_usage.sql` is already recorded as applied
+in production. Do not reapply or edit it. Enable future refill only after a
+separate release and operator review of the existing-lesson backfill.
 
-1. Take the normal production database backup.
-2. Apply the pending production migrations, including `0043`.
-3. Verify both `future_refill_daily_usage` tables have RLS enabled and neither
-   `anon` nor `authenticated` can read or write them.
-4. Only after that verification, record `0043` in `backend/migrations/applied.txt`
-   in the release follow-up.
-5. Deploy the API and every generation-capable Railway worker with the same
+1. Verify the deployed API and worker revisions match the release commit.
+2. Verify the existing `future_refill_daily_usage` tables still have RLS enabled
+   and neither `anon` nor `authenticated` can read or write them.
+3. Deploy the API and every generation-capable Railway worker with the same
    variables. Keep `GEMINI_API_KEY` in Railway Variables only.
 
 ## Initial Railway values
@@ -28,6 +24,8 @@ other service that runs future refill:
 ```text
 GEMINI_MODEL=gemini-3.1-flash-lite
 GENERATION_ENABLED=false
+FUTURE_REFILL_ENABLED=false
+LEGACY_ENRICHMENT_ENABLED=false
 CONTENT_LOW_WATERMARK=10
 CONTENT_CRITICAL_WATERMARK=3
 FUTURE_REFILL_DAILY_CALL_CAP=5
@@ -37,15 +35,20 @@ FUTURE_REFILL_URGENT_DAILY_CALL_CAP=10
 FUTURE_REFILL_URGENT_TOPIC_DAILY_CAP=2
 ```
 
-`GENERATION_ENABLED=false` and `FUTURE_REFILL_DAILY_CALL_CAP=0` are independent
+`GENERATION_ENABLED=false`, `FUTURE_REFILL_ENABLED=false`, and
+`FUTURE_REFILL_DAILY_CALL_CAP=0` are independent
 immediate stops. The future-refill worker creates one lesson per eligible topic
 per normal day regardless of the older `CONTENT_GENERATION_BATCH` setting; do
 not lower that general legacy/correction setting for this rollout. Do not enable
 urgent mode during the first rollout.
+`FUTURE_REFILL_ENABLED=false` also blocks owner requests for new planned drafts
+while existing published lessons are being enriched; AI corrections and the
+separately enabled legacy batch remain private review paths.
 
 ## First-day verification
 
-After deployment, enable generation for one day and use the protected operations
+After deployment, enable `GENERATION_ENABLED=true` and
+`FUTURE_REFILL_ENABLED=true` for one day and use the protected operations
 report to confirm:
 
 - no more than five future-refill calls were reserved;
@@ -65,7 +68,7 @@ Enable urgent mode only after reviewing a full day of quota and reviewer-load
 evidence. It allows a critical topic (three unread cards or fewer) a second call
 that day, under the separate ten-call global ceiling.
 
-To pause safely, set `GENERATION_ENABLED=false` or
+To pause safely, set `FUTURE_REFILL_ENABLED=false`, `GENERATION_ENABLED=false`, or
 `FUTURE_REFILL_DAILY_CALL_CAP=0` on every generation-capable Railway service and
 redeploy or restart them. Existing published lessons and private drafts remain
 unchanged.

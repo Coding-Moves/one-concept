@@ -73,6 +73,14 @@ async def test_queue_detail_comments_assignment_and_atomic_publication(
         result.json()["status"] == "published"
         and result.json()["published_version"] == 1
     )
+    published = await detail(api, rid)
+    assert published["status"] == "published"
+    assert published["base_version"] == 0
+    assert published["validation"]["valid"]
+    assert published["body"]["title"] == body["body"]["title"]
+    assert published["source_body"] == body["source_body"]
+    assert published["diff"] == body["diff"]
+    assert published["source_links"]
     replay = await api.client.post(
         f"{ROOT}/revisions/{rid}/actions", headers=api.headers(), json=payload
     )
@@ -197,6 +205,155 @@ async def test_role_checks_forged_identity_and_separate_publication(
             f"{ROOT}/revisions/{rid}/actions", headers=api.headers(), json=payload
         )
     ).status_code == 401
+
+
+@pytest.mark.parametrize("capability", ["approve", "publish"])
+async def test_decision_roles_can_read_private_work_with_mfa(
+    api, session, draft, capability
+):
+    rid = await rid_for(session, draft[1])
+    await session.execute(
+        text("update editorial_memberships set capabilities=:caps where user_id=:id"),
+        {"caps": [capability], "id": api.owner.id},
+    )
+    await session.commit()
+    for path in (f"{ROOT}/queue", f"{ROOT}/revisions/{rid}"):
+        allowed = await api.client.get(path, headers=api.headers())
+        assert allowed.status_code == 200, allowed.text
+        denied = await api.client.get(path, headers=api.headers(aal="aal1"))
+        assert denied.status_code == 403
+    denied = await api.client.get(f"{ROOT}/activity", headers=api.headers())
+    assert denied.status_code == 403
+
+
+async def test_assignment_requires_readable_reviewer_and_publication_reaches_learner(
+    api, session, draft
+):
+    rid = await rid_for(session, draft[1])
+    approver_id, approver_session, _ = await test_editorial_api.enroll(
+        api, session, ["approve"]
+    )
+    await test_editorial_api.profile_and_approve(api, approver_id, approver_session)
+    rejected, _ = await act(api, rid, "assign", assignee_id=str(approver_id))
+    assert rejected.status_code == 409
+    assert (
+        await session.scalar(
+            text("select assigned_to from concept_revisions where id=:id"), {"id": rid}
+        )
+        is None
+    )
+
+    reviewer_id, reviewer_session, _ = await test_editorial_api.enroll(
+        api, session, ["review", "approve"]
+    )
+    await test_editorial_api.profile_and_approve(
+        api, reviewer_id, reviewer_session, name="Second Reviewer"
+    )
+    assigned, _ = await act(api, rid, "assign", assignee_id=str(reviewer_id))
+    assert assigned.status_code == 200, assigned.text
+    assert (
+        await session.scalar(
+            text(
+                "select count(*) from editorial_notification_outbox where revision_id=:id"
+            ),
+            {"id": rid},
+        )
+        == 1
+    )
+    reviewer_headers = api.headers(reviewer_id, reviewer_session)
+    reviewer_detail = await api.client.get(
+        f"{ROOT}/revisions/{rid}", headers=reviewer_headers
+    )
+    assert reviewer_detail.status_code == 200, reviewer_detail.text
+    pending = await api.client.post(
+        f"{ROOT}/revisions/{rid}/actions",
+        headers=reviewer_headers,
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": reviewer_detail.json()["token"],
+            "action": "submit",
+            "note": NOTE,
+        },
+    )
+    assert pending.status_code == 200, pending.text
+    learner_id, learner_session, _ = await test_editorial_api.auth_account(session)
+    before = await api.client.get(
+        f"/v1/concepts/{draft[0]}", headers=api.headers(learner_id, learner_session)
+    )
+    assert before.status_code == 404
+    changes = await api.client.post(
+        f"{ROOT}/revisions/{rid}/actions",
+        headers=reviewer_headers,
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": pending.json()["token"],
+            "action": "changes_requested",
+            "note": "Clarify the worked example before publication.",
+        },
+    )
+    assert changes.status_code == 200, changes.text
+    concept = (
+        await api.client.get(f"{ROOT}/concepts/{draft[1]}", headers=api.headers())
+    ).json()
+    corrected_body = (await detail(api, rid))["body"] | {
+        "example": "A worked example with the requested clarification. " * 4,
+    }
+    staged = await api.client.post(
+        f"{ROOT}/concepts/{draft[1]}/revisions",
+        headers=api.headers(),
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": concept["token"],
+            "note": "Applied the reviewer's requested clarification.",
+            "body": corrected_body,
+        },
+    )
+    assert staged.status_code == 201, staged.text
+    corrected_id = staged.json()["revision_id"]
+    assert corrected_id != str(rid)
+    assert (await act(api, corrected_id, "assign", assignee_id=str(reviewer_id)))[
+        0
+    ].status_code == 200
+    corrected_detail = await api.client.get(
+        f"{ROOT}/revisions/{corrected_id}", headers=reviewer_headers
+    )
+    assert corrected_detail.status_code == 200, corrected_detail.text
+    corrected_pending = await api.client.post(
+        f"{ROOT}/revisions/{corrected_id}/actions",
+        headers=reviewer_headers,
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": corrected_detail.json()["token"],
+            "action": "submit",
+            "note": NOTE,
+        },
+    )
+    assert corrected_pending.status_code == 200, corrected_pending.text
+    approved = await api.client.post(
+        f"{ROOT}/revisions/{corrected_id}/actions",
+        headers=reviewer_headers,
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": corrected_pending.json()["token"],
+            "action": "approved",
+            "note": NOTE,
+            "quality": review(),
+        },
+    )
+    assert approved.status_code == 200, approved.text
+    unpublished = await api.client.get(
+        f"/v1/concepts/{draft[0]}", headers=api.headers(learner_id, learner_session)
+    )
+    assert unpublished.status_code == 404
+    published, _ = await act(api, corrected_id, "publish", approved.json()["token"])
+    assert published.status_code == 200, published.text
+    learner = await api.client.get(
+        f"/v1/concepts/{draft[0]}", headers=api.headers(learner_id, learner_session)
+    )
+    assert learner.status_code == 200, learner.text
+    assert learner.json()["content_version"] == 1
+    assert learner.json()["example"] == corrected_body["example"].strip()
+    assert learner.json()["review"]["name"] == "Second Reviewer"
 
 
 @pytest.mark.parametrize("damage", ["duplicate", "prerequisite", "taxonomy"])
@@ -403,6 +560,13 @@ async def test_published_correction_is_invisible_until_approval(api, session, dr
     assert (await act(api, new, "approve_and_publish"))[0].json()[
         "published_version"
     ] == 2
+    historical = await detail(api, rid)
+    assert historical["source_body"]["summary"].strip() == old
+    assert historical["body"]["summary"].strip() == old
+    assert historical["validation"]["valid"]
+    corrected = await detail(api, new)
+    assert corrected["source_body"]["summary"] == old
+    assert any(item["field"] == "summary" for item in corrected["diff"])
     assert (
         await session.scalar(
             text("select summary from concepts where id=:id"), {"id": draft[1]}
@@ -425,6 +589,83 @@ async def test_published_correction_is_invisible_until_approval(api, session, dr
     assert (
         await get_or_create_daily(session, api.owner.id)
     ).concept.id == daily.concept.id
+
+
+async def test_published_detail_survives_content_retirement(api, session, draft):
+    rid = await rid_for(session, draft[1])
+    before = await detail(api, rid)
+    await act(api, rid, "submit")
+    assert (await act(api, rid, "approve_and_publish"))[0].status_code == 200
+    published = await detail(api, rid)
+    concept = (
+        await api.client.get(f"{ROOT}/concepts/{draft[1]}", headers=api.headers())
+    ).json()
+    retired = await api.client.post(
+        f"{ROOT}/concepts/{draft[1]}/actions",
+        headers=api.headers(),
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": concept["token"],
+            "action": "retire",
+            "note": NOTE,
+        },
+    )
+    assert retired.status_code == 200, retired.text
+    historical = await detail(api, rid)
+    assert (
+        historical["source_body"] == before["source_body"] == published["source_body"]
+    )
+    assert historical["diff"] == published["diff"]
+    assert historical["validation"]["valid"]
+    assert all(
+        error["field"] != "base_version" for error in historical["validation"]["errors"]
+    )
+
+
+async def test_captured_legacy_revision_has_structured_historical_detail(
+    api, session, draft
+):
+    rid = await rid_for(session, draft[1])
+    original = (await detail(api, rid))["body"]
+    await session.execute(
+        text("""update concepts set status='published',content_version=1,
+          flashcard=cast(:flashcard as jsonb),mcqs=cast(:mcqs as jsonb)
+          where id=:id"""),
+        {
+            "id": draft[1],
+            "flashcard": json.dumps(original["learning_package"]["flashcard"]),
+            "mcqs": json.dumps(original["learning_package"]["mcqs"]),
+        },
+    )
+    await session.commit()
+    concept = (
+        await api.client.get(f"{ROOT}/concepts/{draft[1]}", headers=api.headers())
+    ).json()
+    correction = original | {"summary": "A revised and approved lesson summary. " * 5}
+    staged = await api.client.post(
+        f"{ROOT}/concepts/{draft[1]}/revisions",
+        headers=api.headers(),
+        json={
+            "request_id": str(uuid4()),
+            "expected_token": concept["token"],
+            "note": NOTE,
+            "body": correction,
+        },
+    )
+    assert staged.status_code == 201, staged.text
+    replacement = staged.json()["revision_id"]
+    await act(api, replacement, "submit")
+    published, _ = await act(api, replacement, "approve_and_publish")
+    assert published.status_code == 200, published.text
+    captured_id = await session.scalar(
+        text("""select id from concept_revisions where concept_id=:id
+          and status='published' and id<>:replacement"""),
+        {"id": draft[1], "replacement": replacement},
+    )
+    captured = await detail(api, captured_id)
+    assert captured["validation"]["valid"]
+    assert captured["body"]["learning_package"] == original["learning_package"]
+    assert "flashcard" not in captured["body"]
 
 
 @pytest.mark.parametrize("duplicate", [False, True])
@@ -558,6 +799,11 @@ async def test_generation_demand_is_bounded_coalesced_audited_and_kill_switched(
     )
     assert response.status_code == 409
     api.settings.generation_enabled = True
+    response = await api.client.post(
+        f"{ROOT}/generation-requests", headers=api.headers(), json=payload
+    )
+    assert response.status_code == 409 and "Future lesson generation is paused" in response.text
+    api.settings.future_refill_enabled = True
     response = await api.client.post(
         f"{ROOT}/generation-requests", headers=api.headers(), json=payload
     )

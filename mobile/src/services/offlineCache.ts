@@ -38,6 +38,25 @@ export class OfflineCache<T> {
     });
   }
 
+  /** Check and write under the same serialized cache operation. A separate
+   * get()/set() pair can let a late download replace newer stored content. */
+  setIf(id: string, value: T, shouldReplace: (current: T | null) => boolean, epoch = this.epoch): Promise<void> {
+    const raw = JSON.stringify(value);
+    return this.write(async () => {
+      if (epoch !== this.epoch) return;
+      let current: T | null = null;
+      try {
+        const stored = await this.storage.getItem(this.prefix + id);
+        if (stored) current = JSON.parse(stored) as T;
+      } catch {
+        // A corrupt entry has no usable version; a good download replaces it.
+      }
+      if (epoch === this.epoch && shouldReplace(current)) {
+        await this.storage.setItem(this.prefix + id, raw);
+      }
+    });
+  }
+
   remove(id: string, epoch = this.epoch): Promise<void> {
     return this.write(async () => {
       if (epoch === this.epoch) await this.storage.multiRemove([this.prefix + id]);

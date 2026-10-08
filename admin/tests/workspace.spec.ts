@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { fixture, login, openLesson, checkAll, rid, cid } from "./fixture";
+import { fixture, login, openLesson, checkAll, rid, cid, tid } from "./fixture";
 test("topic filtering, full package, comments and atomic publication", async ({
   page,
   context,
@@ -44,6 +44,127 @@ test("topic filtering, full package, comments and atomic publication", async ({
   await expect(
     page.getByText("Approved by Amina Khan", { exact: false }),
   ).toBeVisible();
+});
+test("a published revision remains a structured, readable history entry", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await openLesson(page);
+  await checkAll(page);
+  await page.getByRole("button", { name: "Approve and publish" }).click();
+  await expect(page.getByText("Published successfully", { exact: false })).toBeVisible();
+  expect(state.contentVersion).toBeGreaterThan(state.baseVersion);
+  await page.getByRole("button", { name: "Published", exact: true }).click();
+  await openLesson(page);
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await page.getByRole("button", { name: /Revision #/ }).click();
+  await expect(page.getByText("BASE VERSION 1", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Lesson", exact: true }).click();
+  await expect(page.locator(".lesson-document")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Worked example" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Question 3" })).toBeVisible();
+  await expect(page.locator(".document-card pre.plain-value")).toHaveCount(0);
+  await expect(page.getByText("Revision is stale", { exact: false })).toHaveCount(0);
+  await page.getByRole("button", { name: "Changes", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Changes from the original lesson" })).toBeVisible();
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "Comments & decisions" })).toBeVisible();
+  await expect(page.getByText("Published", { exact: true }).last()).toBeVisible();
+});
+test("approval and publication roles can complete their separate handoff", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context, { caps: ["approve"] });
+  await login(page);
+  await openLesson(page);
+  await expect(page.getByRole("button", { name: "Approve revision" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add comment" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Prepare manual correction" })).toHaveCount(0);
+  await checkAll(page);
+  await page.getByRole("button", { name: "Approve revision" }).click();
+  await expect(page.getByText("Approved for the whole team", { exact: false })).toBeVisible();
+  expect(state.status).toBe("approved");
+});
+test("publication-only access opens the approved queue and publishes", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context, { caps: ["publish"] });
+  state.status = "approved";
+  state.approvedBy = "Amina Khan";
+  await login(page);
+  await page.getByRole("button", { name: "Approved", exact: true }).click();
+  await openLesson(page);
+  await expect(page.getByRole("button", { name: "Publish approved revision" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add comment" })).toHaveCount(0);
+  await page.getByLabel("Review note or comment").fill("Publishing the already approved revision.");
+  await page.getByRole("button", { name: "Publish approved revision" }).click();
+  await expect(page.getByText("Published successfully", { exact: false })).toBeVisible();
+  expect(state.status).toBe("published");
+});
+test("owner and reviewer sessions see one assignment, comment and publication", async ({
+  page,
+  context,
+  browser,
+}) => {
+  const state = await fixture(context);
+  const reviewerId = "00000000-0000-4000-8000-000000000002";
+  const reviewerEmail = "second-reviewer@example.test";
+  state.members.push({
+    ...state.member,
+    user_id: reviewerId,
+    invited_email: reviewerEmail,
+    approved_name: "Second Reviewer",
+    requested_name: "Second Reviewer",
+    capabilities: ["review"],
+  });
+  await login(page);
+  await openLesson(page);
+  await page.getByLabel("Assign to", { exact: true }).selectOption(reviewerId);
+  await page.getByLabel("Review note or comment").fill(
+    "Please review the whole lesson and its reference.",
+  );
+  await page.getByRole("button", { name: "Save assignment" }).click();
+  await expect(page.getByText("Assignment saved.")).toBeVisible();
+  expect(state.assignedTo).toBe(reviewerId);
+
+  const reviewerContext = await browser.newContext();
+  try {
+    await fixture(reviewerContext, {
+      caps: ["review"],
+      userId: reviewerId,
+      email: reviewerEmail,
+      name: "Second Reviewer",
+      shared: state,
+    });
+    const reviewerPage = await reviewerContext.newPage();
+    await login(reviewerPage, reviewerEmail);
+    await openLesson(reviewerPage);
+    await expect(reviewerPage.getByRole("button", { name: "Save assignment" })).toHaveCount(0);
+    await reviewerPage.getByLabel("Review note or comment").fill(
+      "The example and all three questions match the reference.",
+    );
+    await reviewerPage.getByRole("button", { name: "Add comment" }).click();
+    await expect(reviewerPage.getByText("Comment saved.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Reload", exact: true }).click();
+    await page.getByRole("button", { name: "History", exact: true }).click();
+    await expect(page.getByText("The example and all three questions match the reference.")).toBeVisible();
+    await checkAll(page);
+    await page.getByRole("button", { name: "Approve and publish" }).click();
+    await expect(page.getByText("Published successfully", { exact: false })).toBeVisible();
+
+    await reviewerPage.getByRole("button", { name: "Reload", exact: true }).click();
+    await expect(reviewerPage.getByText("Published", { exact: true }).first()).toBeVisible();
+    await reviewerPage.getByRole("button", { name: "Lesson", exact: true }).click();
+    await expect(reviewerPage.getByRole("heading", { name: "Question 3" })).toBeVisible();
+    expect(state.contentVersion).toBe(2);
+  } finally {
+    await reviewerContext.close();
+  }
 });
 test("second tab cannot repeat a shared approval; feedback survives conflict", async ({
   page,
@@ -312,6 +433,84 @@ test("owner assigns a deadline, invites a reviewer and requests bounded drafts",
   expect(state.commands.at(-1).count).toBe(2);
   expect(state.commands.at(-1)).not.toHaveProperty("expected_token");
 });
+test("owner prepares and starts a private legacy subject batch", async ({ page, context }) => {
+  await fixture(context);
+  const batchId = "50000000-0000-4000-8000-000000000001";
+  let batch: Record<string, unknown> | null = null;
+  const actions: string[] = [];
+  await page.route("**/v1/editorial/legacy-**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    const body = request.method() === "POST" ? request.postDataJSON() : null;
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: { "access-control-allow-origin": "*" } });
+      return;
+    }
+    let result: unknown;
+    if (path.includes("eligibility")) {
+      result = { eligible_count: 1, active_batch_id: batch ? batchId : null, configured: true };
+    } else if (path.endsWith("/entries")) {
+      result = { items: [{ id: "entry", concept_id: cid, title: "Database Migrations",
+        status: actions.length ? "ready_for_review" : "queued",
+        attempts: actions.length ? 1 : 0, failure_code: null,
+        result_revision_id: actions.length ? rid : null }] };
+    } else if (request.method() === "POST" && path.endsWith("/actions")) {
+      actions.push(body.action);
+      batch = { ...batch, status: "running", token: "next-token" };
+      result = batch;
+    } else if (request.method() === "POST") {
+      expect(body.topic_id).toBe(tid);
+      expect(body.quota_limit).toBe(3);
+      batch = { id: batchId, topic_id: tid, name: body.name, status: "queued",
+        discovered_count: 1, quota_limit: 3, token: "initial-token", counts: { queued: 1 } };
+      result = batch;
+    } else {
+      result = { items: batch ? [batch] : [] };
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(result),
+      headers: { "access-control-allow-origin": "*" } });
+  });
+  await login(page);
+  await page.getByRole("button", { name: "AI requests", exact: true }).click();
+  await page.getByLabel("Existing subject").selectOption(tid);
+  await expect(page.getByText("1 published lessons eligible", { exact: false })).toBeVisible();
+  await page.getByLabel("Maximum Gemini calls for this batch").fill("3");
+  await page.getByLabel("Reason for this batch").fill("Complete the existing subject for human review.");
+  await page.getByRole("button", { name: "Prepare subject batch" }).click();
+  await expect(page.getByText("Batch prepared.", { exact: false })).toBeVisible();
+  await page.getByLabel("Reason for batch action").fill("Begin the first bounded provider run.");
+  await page.getByRole("button", { name: "Start / resume" }).click();
+  await expect(page.getByText("Batch started.", { exact: true })).toBeVisible();
+  expect(actions).toEqual(["resume"]);
+  await page.getByRole("button", { name: "Review draft" }).click();
+  await expect(page.getByRole("heading", { name: "Database Migrations", level: 1 })).toBeVisible();
+});
+test("assignment changes warn before navigation and exclude non-reviewers", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  state.members.push({
+    ...state.member,
+    user_id: "00000000-0000-4000-8000-000000000002",
+    approved_name: "Approval Only",
+    capabilities: ["approve"],
+  });
+  await login(page);
+  await openLesson(page);
+  const assignee = page.getByLabel("Assign to", { exact: true });
+  await expect(assignee.locator("option", { hasText: "Approval Only" })).toHaveCount(0);
+  await assignee.selectOption({ label: "Amina Khan" });
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(assignee).toHaveValue(state.member.user_id);
+  await assignee.selectOption("");
+  const due = page.getByLabel("Review due (your local time)");
+  await due.fill("2030-10-12T10:30");
+  page.once("dialog", (dialog) => dialog.dismiss());
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(due).toHaveValue("2030-10-12T10:30");
+});
 test("invitation callback clears URL credentials and allows private password setup", async ({
   page,
   context,
@@ -425,6 +624,9 @@ test("a stale draft keeps its correction and refreshes the version on reload", a
 }) => {
   const state = await fixture(context);
   await login(page);
+  await expect(
+    page.getByRole("heading", { name: "A little care. Better learning." }),
+  ).toBeVisible();
   await page.goto(`/?view=review&kind=legacy&id=${cid}`);
   await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
   await page.getByRole("button", { name: "Prepare manual correction" }).click();
@@ -449,6 +651,9 @@ test("a changed live lesson requires review before rebasing a preserved correcti
 }) => {
   const state = await fixture(context);
   await login(page);
+  await expect(
+    page.getByRole("heading", { name: "A little care. Better learning." }),
+  ).toBeVisible();
   await page.goto(`/?view=review&kind=legacy&id=${cid}`);
   await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
   await page.getByRole("button", { name: "Prepare manual correction" }).click();

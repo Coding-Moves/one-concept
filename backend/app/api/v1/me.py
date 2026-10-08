@@ -83,6 +83,7 @@ async def _to_state_out(state) -> StateOut:
         ],
         likes=state.likes,
         bookmarks=state.bookmarks,
+        bookmark_versions=state.bookmark_versions,
         saved=[
             SavedConceptOut(concept_slug=s.concept_slug, title=s.title,
                             topic_name=s.topic_name, like_count=s.like_count)

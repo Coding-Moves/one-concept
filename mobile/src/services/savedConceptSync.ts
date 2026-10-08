@@ -22,6 +22,20 @@ function contentVersion(concept: Concept | null): number {
     ? version : 0;
 }
 
+/** A detail response may have started before a saved-content refresh. Return
+ * the newer body if that refresh finished while the detail request was in flight. */
+export async function keepNewestConcept(
+  cache: OfflineCache<Concept>,
+  slug: string,
+  concept: Concept,
+  epoch = cache.epoch,
+): Promise<Concept> {
+  await cache.setIf(slug, concept, current =>
+    contentVersion(current) <= contentVersion(concept), epoch).catch(() => {});
+  const stored = await cache.get(slug, epoch);
+  return stored && contentVersion(stored) > contentVersion(concept) ? stored : concept;
+}
+
 /** Revalidate missing or older saved bodies. Without bookmark_versions from an
  * older API, refresh every saved body so a correction cannot stay hidden. */
 export async function refreshSavedConcepts(

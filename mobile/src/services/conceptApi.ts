@@ -3,7 +3,7 @@ import { ApiError, apiRequest, getConnectivity } from '../api/client';
 import { Concept, DailyPayload } from '../types';
 import { OfflineCache } from './offlineCache';
 import { mapConcept, normalizeCachedConcept } from './conceptMapping';
-import { refreshSavedConcepts } from './savedConceptSync';
+import { keepNewestConcept, refreshSavedConcepts } from './savedConceptSync';
 
 export const conceptCache = new OfflineCache<Concept>(AsyncStorage, 'one-concept/concepts/v1/');
 
@@ -41,9 +41,9 @@ export async function fetchConcept(
   }
   try {
     const concept = await downloadConcept(slug);
-    await conceptCache.set(slug, concept, epoch).catch(() => {});
+    const latest = await keepNewestConcept(conceptCache, slug, concept, epoch);
     if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
-    return concept;
+    return normalizeCachedConcept(latest);
   } catch (error) {
     if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
     if (isConceptUnavailable(error)) {

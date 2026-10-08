@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { OfflineCache } from '../src/services/offlineCache.ts';
-import { bookmarkVersions, refreshSavedConcepts } from '../src/services/savedConceptSync.ts';
+import { bookmarkVersions, keepNewestConcept, refreshSavedConcepts } from '../src/services/savedConceptSync.ts';
 
 function makeCache() {
   const rows = new Map();
@@ -98,6 +98,19 @@ test('a late saved download cannot replace a newer detail copy', async () => {
   finish(lesson(1, 'Older download'));
   await sync;
   assert.deepEqual(await cache.get('saved'), lesson(3, 'Newer detail body'));
+});
+
+test('a late detail response cannot replace a corrected saved copy', async () => {
+  const cache = makeCache();
+  await cache.set('saved', lesson(1, 'Original body'));
+  let release;
+  const response = new Promise(resolve => { release = resolve; });
+  const detail = response.then(concept => keepNewestConcept(cache, 'saved', concept));
+  await refreshSavedConcepts(['saved'], cache, async () => lesson(2, 'Corrected body'),
+    () => true, cache.epoch, bookmarkVersions(['saved'], [2]));
+  release(lesson(1, 'Delayed original body'));
+  assert.deepEqual(await detail, lesson(2, 'Corrected body'));
+  assert.deepEqual(await cache.get('saved'), lesson(2, 'Corrected body'));
 });
 
 test('an old-account download cannot overwrite the next account after sign-out', async () => {

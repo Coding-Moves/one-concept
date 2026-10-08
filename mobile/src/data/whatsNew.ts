@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.9',
+    highlights: [
+      'Open Card information from the three-dot menu to see a lesson’s topic, version, and verified reviewer.',
+      'See who checked your daily lesson and when, with the same details available for saved lessons.',
+      'Practice with a flashcard and three questions as more existing lessons receive a complete human review.',
+    ],
+  },
+  {
     version: '1.10.8',
     highlights: [
       'Add a profile photo, choose a built-in avatar, and write a short bio that stays under your control.',

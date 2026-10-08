@@ -7,6 +7,10 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.9 release preparation — in progress
+
+- The owner requested a production release PR before starting one manually selected Software Engineering existing-card batch per day. PR #369 is still open against `develop`, so its reviewed-card workflow must land before the `develop` → `main` release PR can include it.
+- [PR #370](https://github.com/Coding-Moves/one-concept/pull/370) prepares the release on `develop`. `976655d` bumps `expo.version` to 1.10.9 and adds the matching one-time What's New card for card information, reviewer attribution, and complete reviewed lessons. This is a JavaScript-only release; the native `runtimeVersion` stays 1.10.8. Mobile typecheck, `git diff --check`, and all three hosted PR checks passed. PRs #369 and #370 remain open pending their PR-specific merge choices; the `develop` → `main` release PR cannot include their work until both land. Production deployment, paid Gemini calls, and approval of existing lessons have not occurred.
 ### #368 existing-card rehearsal and reviewer credit — PR #369 open
 
 - Daily subject preparation follow-up: the owner will manually start one subject batch each day and use a paid Gemini key for one week. `a90a47b` expands only the legacy worker's per-run allowance from 3 to 75 calls (25 cards × up to 3 attempts); `64c6f02` clarifies the matching owner-site budget. The rollout explains the daily cron, shared call cap, review capacity, and blocked/rate-limited follow-up. The related PostgreSQL suites **41 passed**, the reviewer-site fixture production build/typecheck passed, Ruff `F,E9` and `git diff --check` passed. All three hosted PR checks passed on `a84f103`. Review/publication remain human actions; actual Railway cron settings and live paid-provider results are not yet verified.

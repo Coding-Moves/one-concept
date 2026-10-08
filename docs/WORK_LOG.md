@@ -10,7 +10,7 @@ claims as completed work.
 ### v1.10.10 release preparation — PR #374
 
 - Scope: release merged [PR #373](https://github.com/Coding-Moves/one-concept/pull/373)'s legacy-enrichment worker recovery from `develop` to production after the normal release gates. Before preparation, the `main` → `develop` diff contained only backend worker code, tests, and operator guidance; no database migration or native module changed.
-- `711c31f` bumps the app to 1.10.10 and adds its matching one-time learner-facing What's New card. Native runtime stays 1.10.8. Mobile TypeScript typecheck, exact version/card/runtime check, and `git diff --check` passed. [PR #374](https://github.com/Coding-Moves/one-concept/pull/374) targets `develop`; its hosted checks and owner merge remain pending.
+- `711c31f` bumps the app to 1.10.10 and adds its matching one-time learner-facing What's New card. Native runtime stays 1.10.8. Mobile TypeScript typecheck, exact version/card/runtime check, and `git diff --check` passed. [PR #374](https://github.com/Coding-Moves/one-concept/pull/374) targets `develop`; all three hosted checks passed on `2715a03`. Owner merge remains pending.
 - After #374 merges, recheck the final `develop` → `main` diff for the version and card, then open the production release PR. Production merge and mobile publication remain separate. After deployment, run one paid Gemini call, inspect its diagnostic/entry result, and only then resume the remaining Software Engineering entries. The remaining cards are not yet prepared or published.
 
 ### Legacy enrichment recovery — in progress

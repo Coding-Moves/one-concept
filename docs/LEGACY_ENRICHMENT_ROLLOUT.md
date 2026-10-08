@@ -89,7 +89,9 @@ that remain eligible. A terminal batch cannot resume, and a new batch makes
 new paid calls. Its quota must still cover every eligible lesson. For a pilot,
 temporarily set `LEGACY_ENRICHMENT_BATCH_SIZE=1` on the worker, run it once,
 then pause the batch and inspect the resulting code before resuming a full
-worker pass. Keep `FUTURE_REFILL_ENABLED=false`,
+worker pass. This limits legacy enrichment to one call; the same worker runs
+pending AI correction jobs first, so check their separate budget too. Keep
+`FUTURE_REFILL_ENABLED=false`,
 and never interpret a worker's successful exit as proof that every card is
 ready for review.
 

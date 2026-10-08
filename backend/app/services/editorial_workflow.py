@@ -345,8 +345,8 @@ async def request_generation(db, actor, settings, command):
     fingerprint, old = await receipt(db, actor, command, "generation")
     if old is not None:
         return old
-    if not settings.generation_enabled:
-        raise HTTPException(409, "Generation is disabled; no demand was recorded")
+    if not settings.generation_enabled or not settings.future_refill_enabled:
+        raise HTTPException(409, "Future lesson generation is paused; no demand was recorded")
     if not await db.scalar(
         text("select exists(select 1 from topics where id=:id and is_active)"),
         {"id": command.topic_id},

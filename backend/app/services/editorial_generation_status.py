@@ -53,6 +53,6 @@ async def generation_status(db, tid, settings):
         and not counts["pending"]
         and not counts["generating"]
         and counts["published"] + counts["drafts"] < target,
-        "generation_enabled": settings.generation_enabled,
+        "generation_enabled": settings.generation_enabled and settings.future_refill_enabled,
         "provider_configured": bool(settings.gemini_api_key),
     }

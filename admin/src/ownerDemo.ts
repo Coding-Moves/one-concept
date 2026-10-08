@@ -72,6 +72,8 @@ export const demoOperations: Operations = {
   database: "reachable",
   telemetry_enabled: true,
   generation_enabled: true,
+  future_refill_enabled: false,
+  legacy_enrichment_enabled: true,
   email_enabled: false,
   workers: [
     {

@@ -67,6 +67,7 @@ async def test_experienced_reader_refills_a_full_topic(
 ):
     settings = get_settings()
     monkeypatch.setattr(settings, "generation_enabled", True)
+    monkeypatch.setattr(settings, "future_refill_enabled", True)
     monkeypatch.setattr(settings, "gemini_api_key", "fixture-key")
     monkeypatch.setattr(prefetch, "SessionLocal", sessionmaker_for_test)
 

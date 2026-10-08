@@ -802,6 +802,11 @@ async def test_generation_demand_is_bounded_coalesced_audited_and_kill_switched(
     response = await api.client.post(
         f"{ROOT}/generation-requests", headers=api.headers(), json=payload
     )
+    assert response.status_code == 409 and "Future lesson generation is paused" in response.text
+    api.settings.future_refill_enabled = True
+    response = await api.client.post(
+        f"{ROOT}/generation-requests", headers=api.headers(), json=payload
+    )
     assert response.status_code == 202, response.text
     assert (
         response.json()["status"] == "demand_recorded"

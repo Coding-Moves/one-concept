@@ -451,7 +451,9 @@ test("owner prepares and starts a private legacy subject batch", async ({ page, 
       result = { eligible_count: 1, active_batch_id: batch ? batchId : null, configured: true };
     } else if (path.endsWith("/entries")) {
       result = { items: [{ id: "entry", concept_id: cid, title: "Database Migrations",
-        status: "queued", attempts: 0, failure_code: null, result_revision_id: null }] };
+        status: actions.length ? "ready_for_review" : "queued",
+        attempts: actions.length ? 1 : 0, failure_code: null,
+        result_revision_id: actions.length ? rid : null }] };
     } else if (request.method() === "POST" && path.endsWith("/actions")) {
       actions.push(body.action);
       batch = { ...batch, status: "running", token: "next-token" };
@@ -480,6 +482,8 @@ test("owner prepares and starts a private legacy subject batch", async ({ page, 
   await page.getByRole("button", { name: "Start / resume" }).click();
   await expect(page.getByText("Batch started.", { exact: true })).toBeVisible();
   expect(actions).toEqual(["resume"]);
+  await page.getByRole("button", { name: "Review draft" }).click();
+  await expect(page.getByRole("heading", { name: "Database Migrations", level: 1 })).toBeVisible();
 });
 test("assignment changes warn before navigation and exclude non-reviewers", async ({
   page,

@@ -6,6 +6,7 @@ import type { Job, Page, Supply, Taxon } from "./types";
 import { label, shortId } from "./types";
 import { allPages, Badge, Field, Notice, useResource } from "./ui";
 import { useCommand } from "./useCommand";
+import { LegacyEnrichment } from "./LegacyEnrichment";
 export function Generation({
   api,
   navigate,
@@ -19,6 +20,7 @@ export function Generation({
     [note, setNote] = useState(""),
     [notice, setNotice] = useState(""),
     [refresh, setRefresh] = useState(0),
+    [futureReady, setFutureReady] = useState(false),
     [cursor, setCursor] = useState("");
   useEffect(() => {
     let active = true;
@@ -76,6 +78,7 @@ export function Generation({
             value={topic}
             onChange={(e) => {
               setTopic(e.target.value);
+              setFutureReady(false);
               setCursor("");
             }}
           >
@@ -87,7 +90,7 @@ export function Generation({
             ))}
           </select>
         </Field>
-        {topic && <SupplyView api={api} topic={topic} refresh={refresh} />}
+        {topic && <SupplyView api={api} topic={topic} refresh={refresh} onStatus={setFutureReady} />}
         <Field title="Requested drafts">
           <input
             type="number"
@@ -108,6 +111,7 @@ export function Generation({
           className="primary"
           disabled={
             !topic ||
+            !futureReady ||
             note.trim().length < 10 ||
             count < 1 ||
             count > 10 ||
@@ -130,6 +134,7 @@ export function Generation({
           Request drafts
         </button>
       </section>
+      <LegacyEnrichment api={api} topics={topics} navigate={navigate} />
       <section className="card">
         <div className="heading-row">
           <h2>AI correction requests</h2>
@@ -185,16 +190,21 @@ function SupplyView({
   api,
   topic,
   refresh,
+  onStatus,
 }: {
   api: Api;
   topic: string;
   refresh: number;
+  onStatus: (ready: boolean) => void;
 }) {
   const { data, error } = useResource<Supply>(
     api,
     "/generation-supply/" + topic,
     refresh,
   );
+  useEffect(() => {
+    onStatus(!!data?.generation_enabled && !!data?.provider_configured && !error);
+  }, [data, error, onStatus]);
   return error ? (
     <Notice error>{error}</Notice>
   ) : data ? (

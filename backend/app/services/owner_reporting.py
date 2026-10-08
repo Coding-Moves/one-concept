@@ -203,6 +203,8 @@ async def operations(db, settings):
         "database": "reachable",
         "telemetry_enabled": settings.owner_telemetry_enabled,
         "generation_enabled": settings.generation_enabled,
+        "future_refill_enabled": settings.generation_enabled and settings.future_refill_enabled,
+        "legacy_enrichment_enabled": settings.generation_enabled and settings.legacy_enrichment_enabled,
         "email_enabled": settings.editorial_email_enabled,
         "workers": workers,
         "revision_jobs": jobs,

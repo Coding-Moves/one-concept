@@ -100,7 +100,9 @@ async def health_report(session: AsyncSession) -> dict:
         )
         topic_calls_used = future_usage.get(row["topic_id"], 0)
         reviewer_load = await review_load(session, row["topic_id"])
-        if not requested:
+        if not settings.future_refill_enabled:
+            blocked_reason = "future_refill_disabled"
+        elif not requested:
             blocked_reason = "no_active_low_supply_request"
         elif unread > settings.content_low_watermark:
             blocked_reason = "minimum_reader_inventory_above_watermark"

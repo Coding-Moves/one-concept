@@ -80,7 +80,8 @@ def test_complete_card_uses_validated_trimmed_text():
 
 
 def test_gemini_response_skips_thought_parts_and_joins_text():
-    encoded = legacy_generation.json.dumps(generated_payload())
+    encoded = ('Searched the official documentation and checked the definition.\n'
+               'BEGIN_CARD_JSON\n' + legacy_generation.json.dumps(generated_payload()))
     body = {'candidates': [{**grounded_candidate(), 'finishReason': 'STOP',
         'content': {'parts': [{'thought': True, 'text': 'private reasoning'},
                               {'text': encoded[:60]}, {'text': encoded[60:]}]}}]}
@@ -94,6 +95,12 @@ def test_gemini_response_skips_thought_parts_and_joins_text():
     ({'candidates': [{'finishReason': 'SAFETY'}]}, LegacyValidationError, 'safety_blocked'),
     ({'promptFeedback': {'blockReason': 'SAFETY'}}, LegacyValidationError, 'safety_blocked'),
     ({'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'text': '{'}]}}]},
+     LegacyRetryableError, 'response_missing_card_marker'),
+    ({'candidates': [{'finishReason': 'STOP', 'content': {'parts': [
+        {'text': 'Grounded note\nBEGIN_CARD_JSON\n{'}]}}]},
+     LegacyRetryableError, 'response_invalid_json'),
+    ({'candidates': [{'finishReason': 'STOP', 'content': {'parts': [
+        {'text': 'Grounded note\nBEGIN_CARD_JSON\n{} trailing text'}]}}]},
      LegacyRetryableError, 'response_invalid_json'),
     ({'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'thought': True,
                                                                     'text': 'hidden'}]}}]},
@@ -120,7 +127,8 @@ async def test_legacy_generation_parses_complete_grounded_response(monkeypatch):
             return httpx.Response(200, json={'candidates': [{**grounded_candidate(),
                 'finishReason': 'STOP', 'content': {'parts': [
                     {'thought': True, 'text': 'discard'},
-                    {'text': legacy_generation.json.dumps(generated_payload())}]}}]})
+                    {'text': 'Grounded research note.\nBEGIN_CARD_JSON\n'
+                             + legacy_generation.json.dumps(generated_payload())}]}}]})
 
     monkeypatch.setattr(legacy_generation.httpx, 'AsyncClient', lambda **_: Client())
     result = await generate_legacy_card(
@@ -130,6 +138,10 @@ async def test_legacy_generation_parses_complete_grounded_response(monkeypatch):
     )
     assert len(result.learning_package.mcqs) == 3
     assert calls[0][1]['generationConfig']['maxOutputTokens'] == 4096
+    assert 'responseMimeType' not in calls[0][1]['generationConfig']
+    assert 'responseSchema' not in calls[0][1]['generationConfig']
+    assert calls[0][1]['tools'] == [{'googleSearch': {}}]
+    assert 'BEGIN_CARD_JSON' in calls[0][1]['contents'][0]['parts'][0]['text']
     assert calls[0][2]['x-goog-api-key'] == 'fixture-key'
 
 

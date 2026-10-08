@@ -3,6 +3,7 @@ import { ApiError, apiRequest, getConnectivity } from '../api/client';
 import { Concept, DailyPayload } from '../types';
 import { OfflineCache } from './offlineCache';
 import { mapConcept, normalizeCachedConcept } from './conceptMapping';
+import { keepNewestConcept, refreshSavedConcepts } from './savedConceptSync';
 
 export const conceptCache = new OfflineCache<Concept>(AsyncStorage, 'one-concept/concepts/v1/');
 
@@ -40,9 +41,9 @@ export async function fetchConcept(
   }
   try {
     const concept = await downloadConcept(slug);
-    await conceptCache.set(slug, concept, epoch).catch(() => {});
+    const latest = await keepNewestConcept(conceptCache, slug, concept, epoch);
     if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
-    return concept;
+    return normalizeCachedConcept(latest);
   } catch (error) {
     if (epoch !== conceptCache.epoch) throw new ApiError(401, 'Account changed');
     if (isConceptUnavailable(error)) {
@@ -55,22 +56,12 @@ export async function fetchConcept(
   }
 }
 
-/** Download every missing saved lesson with bounded concurrency. Individual
- * entries avoid one large AsyncStorage row; already-downloaded lessons stay. */
-export async function cacheSavedConcepts(slugs: string[], epoch = conceptCache.epoch): Promise<void> {
-  const remaining = [...new Set(slugs)];
-  let cursor = 0;
-  const worker = async () => {
-    while (cursor < remaining.length && epoch === conceptCache.epoch && getConnectivity()) {
-      const slug = remaining[cursor++];
-      if (await conceptCache.get(slug, epoch)) continue;
-      if (epoch !== conceptCache.epoch) return;
-      try {
-        await conceptCache.set(slug, await downloadConcept(slug), epoch);
-      } catch {
-        // Missing downloads retry on the next successful state load/reconnect.
-      }
-    }
-  };
-  await Promise.all(Array.from({ length: Math.min(3, remaining.length) }, worker));
+/** Revalidate only missing or older saved lessons when the server supplies
+ * versions, and conservatively refresh on an older server. */
+export async function cacheSavedConcepts(
+  slugs: string[],
+  epoch = conceptCache.epoch,
+  versions: ReadonlyMap<string, number> | null = null,
+): Promise<void> {
+  await refreshSavedConcepts(slugs, conceptCache, downloadConcept, getConnectivity, epoch, versions);
 }

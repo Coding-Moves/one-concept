@@ -204,7 +204,7 @@ async def revision_action(db, actor, settings, rid, command):
             if (
                 assignee.status != "active"
                 or assignee.approved_name is None
-                or not set(assignee.capabilities).intersection({"review", "approve"})
+                or "review" not in assignee.capabilities
             ):
                 raise ValueError("Choose an active, approved reviewer")
         await db.execute(

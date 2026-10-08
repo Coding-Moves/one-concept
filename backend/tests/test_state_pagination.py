@@ -55,10 +55,32 @@ async def test_compact_state_bounds_details_without_losing_totals(collection_cli
     assert len(before["learned"]) == len(before["saved"]) == 365
     assert len(after["learned"]) == len(after["saved"]) == 50
     assert len(after["likes"]) == len(after["bookmarks"]) == 365
+    assert len(after["bookmark_versions"]) == len(after["bookmarks"]) == 365
+    assert dict(zip(after["bookmarks"], after["bookmark_versions"])) == dict(
+        zip(before["bookmarks"], before["bookmark_versions"])
+    )
     assert after["stats"] == before["stats"] == {"current": 365, "longest": 365, "total_learned": 365, "total_reviews": 0}
     assert after["learned_before_window"] == {"Computer Science": 315}
     assert after["history_next_cursor"] and after["saved_next_cursor"]
     assert len(compact.content) < len(legacy.content) / 2
+
+
+async def test_compact_state_exposes_current_version_for_every_saved_lesson(
+    collection_client, session,
+):
+    before = (await collection_client.get('/v1/me/state?compact=true')).json()
+    target = before['bookmarks'][-1]
+    old_version = before['bookmark_versions'][-1]
+    await session.execute(text('''
+        update public.concepts set content_version = content_version + 1
+         where slug = :slug
+    '''), {'slug': target})
+    await session.commit()
+
+    after = (await collection_client.get('/v1/me/state?compact=true')).json()
+    versions = dict(zip(after['bookmarks'], after['bookmark_versions']))
+    assert len(versions) == len(after['bookmarks']) == 365
+    assert versions[target] == old_version + 1
 
 
 async def test_pages_cover_history_and_tied_saves(collection_client):

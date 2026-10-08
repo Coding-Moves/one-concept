@@ -138,6 +138,65 @@ def package(row):
     } | {"learning_package": {"flashcard": row["flashcard"], "mcqs": row["mcqs"]}}
 
 
+def package_snapshot(snapshot, subtopic_slug):
+    if snapshot is None:
+        return None
+    return {
+        key: snapshot.get(key)
+        for key in (
+            "title",
+            "summary",
+            "example",
+            "curriculum",
+            "model",
+            "prompt_version",
+        )
+    } | {
+        "subtopic_slug": subtopic_slug,
+        "learning_package": {
+            "flashcard": snapshot.get("flashcard"),
+            "mcqs": snapshot.get("mcqs"),
+        },
+    }
+
+
+def displayed_revision_body(raw, historical):
+    # Older captured publications predate the nested learning-package shape.
+    # Normalize the read model without changing the immutable revision body.
+    if (
+        historical
+        and isinstance(raw, dict)
+        and "learning_package" not in raw
+        and "flashcard" in raw
+        and "mcqs" in raw
+    ):
+        return {
+            key: value for key, value in raw.items() if key not in ("flashcard", "mcqs")
+        } | {"learning_package": {"flashcard": raw["flashcard"], "mcqs": raw["mcqs"]}}
+    return raw
+
+
+async def revision_base(db, row):
+    """Return the immutable concept snapshot matching a closed revision's base."""
+    return await db.scalar(
+        text("""select coalesce(
+          (select e.source_snapshot from editorial_revision_events e
+           where e.revision_id=:rid and e.base_version=:version
+             and e.source_snapshot->>'content_version'=:version_text
+           order by (e.action='approved') desc,e.created_at,e.id limit 1),
+          (select p.snapshot from editorial_publications p
+           where p.concept_id=:cid and p.content_version=:version),
+          (select l.snapshot from editorial_legacy_versions l
+           where l.concept_id=:cid and l.content_version=:version))"""),
+        {
+            "rid": row["id"],
+            "cid": row["concept_id"],
+            "version": row["base_version"],
+            "version_text": str(row["base_version"]),
+        },
+    )
+
+
 async def validation(db, raw, source):
     errors = []
     try:
@@ -202,11 +261,45 @@ def source_links(raw):
 async def revision_detail(db, rid):
     row = await revisions.revision(db, rid, lock=False)
     source = await workflow.concept(db, row["concept_id"])
-    before = package(source)
-    body = row["body"]
+    historical = row["status"] in ("published", "retired")
+    base = await revision_base(db, row) if historical else None
+    historical_subtopic = (
+        row["body"].get("subtopic_slug", row["subtopic_slug"])
+        if isinstance(row["body"], dict)
+        else row["subtopic_slug"]
+    )
+    before = (
+        package_snapshot(base, historical_subtopic) if historical else package(source)
+    )
+    body = displayed_revision_body(row["body"], historical)
     fields = body if isinstance(body, dict) else {}
-    result = await validation(db, body, source)
-    if row["base_version"] != source["content_version"]:
+    if historical:
+        try:
+            LessonBody.model_validate(body)
+            result = {
+                "valid": True,
+                "errors": [],
+                "human_review_required": True,
+                "checklist_version": 1,
+            }
+        except ValidationError as exc:
+            result = {
+                "valid": False,
+                "errors": [
+                    {"field": ".".join(map(str, e["loc"])), "message": e["msg"]}
+                    for e in exc.errors(
+                        include_input=False, include_context=False, include_url=False
+                    )
+                ],
+                "human_review_required": True,
+                "checklist_version": 1,
+            }
+    else:
+        result = await validation(db, body, source)
+    # Publishing advances the concept version, so a published revision's base
+    # version is expected to differ from the current version. Historical
+    # revisions remain readable even after a later publication or retirement.
+    if not historical and row["base_version"] != source["content_version"]:
         result["valid"] = False
         result["errors"].append(
             {
@@ -229,12 +322,14 @@ async def revision_detail(db, rid):
         ),
         "token": workflow.revision_token(row),
         "body": body,
-        "source_status": source["status"],
+        "source_status": ("published" if row["base_version"] else "draft")
+        if historical
+        else source["status"],
         "source_body": before,
         "diff": [
             {"field": key, "before": before.get(key), "after": fields.get(key)}
-            for key in sorted(set(before) | set(fields))
-            if before.get(key) != fields.get(key)
+            for key in sorted(set(before or {}) | set(fields))
+            if before is not None and before.get(key) != fields.get(key)
         ],
         "validation": result,
         "source_links": source_links(body),

@@ -7,6 +7,26 @@ claims as completed work.
 
 ## Current status
 
+### #359 final website and learner synchronization audit — PR #357 updated
+
+- Continued open PR #357 on `codex/263-published-review-detail`. `3a5ff37` lets a successful lesson-detail reload clear a stale conflict even if the separate timeline/history request fails; the warning remains visible. `cb15420` prevents a delayed old detail response from replacing a newer corrected lesson in the mobile saved cache. `a84cdc8` adds a two-session browser regression for owner assignment, reviewer comment, owner history, publication, and reviewer visibility.
+- Edge checks: reviewer-site production build with public test values, 11 unit tests, and **43 browser tests passed**. Full backend suite against disposable PostgreSQL: **548 passed**. Mobile typecheck and 7 focused saved-content sync tests passed. Full mobile Node suite: **95 passed, one pre-existing `publicConfig.test.mjs` stderr assertion failed** in this local runtime. `git diff --check` passed. Public fixtures and disposable PostgreSQL were used, not production accounts.
+- Live authenticated owner/reviewer actions, real Gmail inbox receipt, AI correction, matching Netlify/Railway deployed revisions, and an eligible phone's corrected offline saved card remain production acceptance checks after release. Keep #359 open through those checks; merging into `develop` does not update production.
+
+### #359 editorial-to-learner integration — PR #357 ready for review
+
+- The owner and reviewer workspaces are role-based views of one Netlify site, backed by the same API and database. Production rehearsal published Blue-Green Deployment but exposed a historical revision detail failure. [Issue #359](https://github.com/Coding-Moves/one-concept/issues/359) holds the combined correctness and live-acceptance scope; [PR #357](https://github.com/Coding-Moves/one-concept/pull/357) targets `develop` without a production release.
+- `189664a` restores immutable historical Lesson/Changes data after publication or retirement, lets MFA-verified approval/publication roles read their work, requires a `review`-capable assignee, and tests separate owner/reviewer/learner identities through change request, correction, approval and publication. `a0ad563` aligns the website roles, assignment choices, unsaved-change guard and browser regressions. `28aa11c` adds aligned saved-content versions to learner state; `e592d5f` refreshes only stale saved bodies, preserving offline/account-switch safety. The branch includes latest `develop` through merge `b75125d`.
+- Validation: full backend PostgreSQL suite **548 passed**; website production build, 11 unit tests and **41 browser tests passed**; mobile typecheck and 11 focused saved/cache tests passed. Full mobile Node suite: **95 passed, one pre-existing `publicConfig.test.mjs` stderr assertion failed** in this local runtime. `git diff --check` passed. The latest fetched production `main` is `9551717` (v1.10.8); public Netlify sign-in/About/Privacy/callback routes load, Railway `/health` reports database reachable, and unauthenticated editorial and learner reads return 401.
+- Live authenticated owner/reviewer actions, real Gmail inbox receipt, AI correction, matching Netlify/Railway deployment SHAs, and an eligible phone's corrected offline saved card remain unverified. The runbook in `EDITORIAL_ROLLOUT.md` lists the rehearsal. Keep #359 open through those checks; a `develop` merge alone will not update the live services or installed mobile app.
+
+### #263 published revision display — initial fix in #357
+
+- Production rehearsal published Blue-Green Deployment revision `74ff49eb` as content version 1. Its detail page then showed raw JSON and a stale-base warning because publication correctly advanced the concept beyond the revision's base version.
+- `6fc79e5` excludes published and retired revisions from the stale action gate while preserving it for open review work. Further historical validation and diff fixes are tracked in #359 above.
+- Validation: 22 PostgreSQL-backed editorial content API tests passed, including the new publish-then-read regression. The live page remains unchanged until this fix reaches `main` and Railway. Email delivery, AI correction and learner-device visibility for #263 remain to be verified.
+- [PR #357](https://github.com/Coding-Moves/one-concept/pull/357) targets `develop`. It must be reviewed and separately released before the production page changes; no merge or production deployment occurred in this chunk.
+
 ### Review-site direct-route stability — in progress
 
 - Release PR #366 exposed a flaky legacy-review browser test: direct navigation could race ahead of the authenticated reviewer workspace. `65746f8` waits for the ready workspace before both direct legacy-review navigations, preserving the test's stale-version coverage without changing product behavior.

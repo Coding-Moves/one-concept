@@ -69,29 +69,32 @@ export function Review({
   async function load(): Promise<Detail | null> {
     const seq = ++sequence.current;
     setError("");
+    let d: Detail;
     try {
-      const d = await api.request<Detail>(path);
-      if (seq !== sequence.current) return null;
-      setDetail(d);
-      current.current = d;
-      setStale(false);
-      setChecks({});
-      setSensitive("");
-      setAssignee(d.assigned_to || "");
-      setDue(d.review_due_at ? localTime(d.review_due_at) : "");
-      const concept = d.concept_id || id;
-      const [ev, hs] = await Promise.all([
-        api.request<Page<Event>>(`/concepts/${concept}/timeline`),
-        api.request<Page<Revision>>(`/concepts/${concept}/revisions`),
-      ]);
-      if (seq !== sequence.current) return null;
-      setEvents(ev);
-      setHistory(hs);
-      return d;
+      d = await api.request<Detail>(path);
     } catch (e) {
       if (seq === sequence.current) setError(message(e));
       return null;
     }
+    if (seq !== sequence.current) return null;
+    setDetail(d);
+    current.current = d;
+    setStale(false);
+    setChecks({});
+    setSensitive("");
+    setAssignee(d.assigned_to || "");
+    setDue(d.review_due_at ? localTime(d.review_due_at) : "");
+    const concept = d.concept_id || id;
+    const [ev, hs] = await Promise.allSettled([
+      api.request<Page<Event>>(`/concepts/${concept}/timeline`),
+      api.request<Page<Revision>>(`/concepts/${concept}/revisions`),
+    ]);
+    if (seq !== sequence.current) return null;
+    if (ev.status === "fulfilled") setEvents(ev.value);
+    if (hs.status === "fulfilled") setHistory(hs.value);
+    if (ev.status === "rejected" || hs.status === "rejected")
+      setError("Lesson loaded, but its history could not refresh. Reload to try again.");
+    return d;
   }
   const op = useCommand(api, async (result, submitted) => {
     setNote("");
@@ -175,9 +178,17 @@ export function Review({
     };
   }, [api, cid, detail]);
   useEffect(() => {
-    setDirty(!!note || !!edit || !!op.pending);
+    setDirty(
+      !!note ||
+        !!edit ||
+        !!op.pending ||
+        (!!detail &&
+          (assignee !== (detail.assigned_to || "") ||
+            due !==
+              (detail.review_due_at ? localTime(detail.review_due_at) : ""))),
+    );
     return () => setDirty(false);
-  }, [note, edit, op.pending]);
+  }, [note, edit, op.pending, detail, assignee, due]);
   if (!detail)
     return (
       <section className="card">
@@ -401,7 +412,11 @@ export function Review({
               )
             ) : tab === "changes" ? (
               <>
-                <h2>Changes from the current lesson</h2>
+                <h2>
+                  {detail.status === "published" || detail.status === "retired"
+                    ? "Changes from the original lesson"
+                    : "Changes from the current lesson"}
+                </h2>
                 <p>
                   Compare every changed field, including practice questions and
                   references.
@@ -621,7 +636,7 @@ export function Review({
                   Publish approved revision
                 </button>
               )}
-              {revision && detail.status === "draft" && (
+              {revision && detail.status === "draft" && can("review") && (
                 <button
                   className="primary"
                   disabled={decisionBlocked || !noted}
@@ -630,7 +645,7 @@ export function Review({
                   Submit for review
                 </button>
               )}
-              {revision && detail.status === "pending_review" && (
+              {revision && detail.status === "pending_review" && can("review") && (
                 <>
                   <button
                     disabled={decisionBlocked || !noted}
@@ -647,14 +662,14 @@ export function Review({
                   </button>
                 </>
               )}
-              {
+              {can("review") && (
                 <button
                   disabled={decisionBlocked || !noted}
                   onClick={() => act("comment")}
                 >
                   Add comment
                 </button>
-              }
+              )}
               {!revision &&
                 kind === "legacy" &&
                 detail.unchanged_legacy &&
@@ -675,6 +690,7 @@ export function Review({
                 )}
               {revision &&
                 detail.status === "changes_requested" &&
+                can("review") &&
                 can("request_generation") && (
                   <button
                     disabled={decisionBlocked || !noted}
@@ -689,12 +705,14 @@ export function Review({
                     Request AI correction
                   </button>
                 )}
-              <button
-                disabled={decisionBlocked}
-                onClick={() => void beginEdit()}
-              >
-                Prepare manual correction
-              </button>
+              {can("review") && (
+                <button
+                  disabled={decisionBlocked}
+                  onClick={() => void beginEdit()}
+                >
+                  Prepare manual correction
+                </button>
+              )}
             </div>
             {(detail.status === "approved" ||
               detail.status === "published") && (
@@ -719,9 +737,7 @@ export function Review({
                         (m) =>
                           m.status === "active" &&
                           m.approved_name &&
-                          m.capabilities.some(
-                            (c) => c === "review" || c === "approve",
-                          ),
+                          m.capabilities.includes("review"),
                       )
                       .map((m) => (
                         <option key={m.user_id} value={m.user_id}>

@@ -162,7 +162,7 @@ def test_negative_daily_cap_is_rejected():
 
 @pytest.fixture
 def prefetch_config(monkeypatch, sessionmaker_for_test):
-    config = SimpleNamespace(generation_enabled=True, generation_on_demand=True,
+    config = SimpleNamespace(generation_enabled=True, future_refill_enabled=True, generation_on_demand=True,
                              gemini_api_key="test", gemini_model="test", generation_daily_call_cap=2,
                              content_generation_batch=5)
     monkeypatch.setattr(prefetch, "get_settings", lambda: config)
@@ -204,7 +204,7 @@ async def test_prefetch_and_worker_compete_for_the_same_last_slots(topic, genera
     assert generator.await_count == await calls_used(session) == 2
 
 
-@pytest.mark.parametrize("disabled", ["generation_enabled", "generation_on_demand", "gemini_api_key"])
+@pytest.mark.parametrize("disabled", ["generation_enabled", "future_refill_enabled", "generation_on_demand", "gemini_api_key"])
 async def test_prefetch_preserves_generation_switches(topic, generator, session, prefetch_config, disabled):
     setattr(prefetch_config, disabled, "" if disabled == "gemini_api_key" else False)
     await run_prefetch(topic)

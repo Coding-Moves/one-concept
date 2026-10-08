@@ -27,8 +27,8 @@ async def create(db, actor, settings, command):
     fingerprint, old = await workflow.receipt(db, actor, command, f'legacy-batch:{command.name}')
     if old is not None:
         return old
-    if not settings.generation_enabled or not settings.gemini_api_key:
-        raise HTTPException(409, 'Generation is paused or not configured')
+    if not settings.generation_enabled or not settings.legacy_enrichment_enabled or not settings.gemini_api_key:
+        raise HTTPException(409, 'Legacy enrichment is paused or not configured')
     topic = await db.scalar(text('select id from topics where id=:id and is_active for update'), {'id': command.topic_id})
     if topic is None:
         raise ValueError('Choose an active subject')

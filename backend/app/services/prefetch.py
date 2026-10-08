@@ -58,6 +58,7 @@ def request_prefetch(topic_id: uuid.UUID) -> None:
     if not (
         settings.generation_on_demand
         and settings.generation_enabled
+        and getattr(settings, "future_refill_enabled", True)
         and settings.gemini_api_key
     ):
         return

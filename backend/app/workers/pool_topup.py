@@ -38,7 +38,7 @@ async def run() -> None:
                 session,
                 api_key=settings.gemini_api_key,
                 model=settings.gemini_model,
-                enabled=settings.generation_enabled,
+                enabled=settings.generation_enabled and settings.future_refill_enabled,
                 minimum_per_topic=settings.min_pool_per_topic,
                 call_cap=settings.generation_daily_call_cap,
                 pace_seconds=settings.generation_pace_seconds,

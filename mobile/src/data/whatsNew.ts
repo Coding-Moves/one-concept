@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.10',
+    highlights: [
+      'More existing lessons can receive a reviewed flashcard and three practice questions before their updates reach your feed.',
+    ],
+  },
+  {
     version: '1.10.9',
     highlights: [
       'Open Card information from the three-dot menu to see a lesson’s topic, version, and verified reviewer.',

@@ -497,8 +497,16 @@ function OperationsPanel({
                   <dd>{words(data.database)}</dd>
                 </div>
                 <div>
-                  <dt>Generation (API configuration)</dt>
+                  <dt>Gemini master switch (API configuration)</dt>
                   <dd>{data.generation_enabled ? "Enabled" : "Disabled"}</dd>
+                </div>
+                <div>
+                  <dt>New lessons (API configuration)</dt>
+                  <dd>{data.future_refill_enabled === undefined ? "Unknown" : data.future_refill_enabled ? "Enabled" : "Paused"}</dd>
+                </div>
+                <div>
+                  <dt>Existing-lesson enrichment (API configuration)</dt>
+                  <dd>{data.legacy_enrichment_enabled === undefined ? "Unknown" : data.legacy_enrichment_enabled ? "Enabled" : "Paused"}</dd>
                 </div>
                 <div>
                   <dt>Reviewer email (API configuration)</dt>

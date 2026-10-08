@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### Legacy enrichment recovery — in progress
+
+- The first live Software Engineering batch prepared 5 of 25 private drafts; 6 entries were blocked and 14 failed after the bounded calls. Four drafts were approved, and one was sent for AI correction. The earlier worker saved generic failure codes, so the exact provider responses for those 20 entries cannot be reconstructed from the owner site. No further paid batch or production change is part of this repair.
+- `5a2fb8d` parses all non-thought Gemini text parts, rejects incomplete/safety-stopped responses explicitly, allows a larger bounded output for a complete card, and saves safe failure codes and entry IDs for the next run. The operator guidance and handoff log are a separate documentation commit.
+- Validation: 16 focused backend tests passed against disposable PostgreSQL 16; Ruff `F,E9` passed. The live provider behavior and recovery of the remaining 20 lessons require a later release and a small paid pilot. Existing generic failure codes will not be rewritten.
+
 ### v1.10.9 release preparation — in progress
 
 - The owner requested a production release PR before starting one manually selected Software Engineering existing-card batch per day. PR #369 is still open against `develop`, so its reviewed-card workflow must land before the `develop` → `main` release PR can include it.

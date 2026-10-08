@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #368 existing-card rehearsal and reviewer credit — feature PR in preparation
+
+- After PR #357 merged into `develop`, the owner requested one further PR before release: show exact-version reviewer credit on the Today card, prepare existing published lessons as complete private Gemini drafts by subject, and keep new-card refill paused until old cards are reviewed. [Issue #368](https://github.com/Coding-Moves/one-concept/issues/368) tracks code and later live acceptance. This work does not change production variables, call Gemini, publish content, or release the app.
+- `7e82d9c` adds Today reviewer credit. `bb5e673` separates legacy and future generation switches. `b813a9c` adds a bounded, source-grounded legacy worker, owner API, private revision staging, claim fencing, and PostgreSQL regressions. `a92d085` adds owner batch controls and a browser regression. Follow-up work gates manual future requests, reports both workload switches, handles provider-permission failures, and documents the production rehearsal.
+- Validation: full backend PostgreSQL suite **553 passed**; final legacy worker/eligibility suite **4 passed**. Website fixture production build, 11 unit tests, **44 browser tests**, and final owner-to-review browser check passed. Mobile typecheck, reviewer-attribution unit test, fixture Expo web export, and light/dark mobile-web visual flow passed. Ruff `F,E9` and `git diff --check` passed. A live paid-tier Gemini search-grounding call, real owner/reviewer approval, Netlify/Railway deployment match, and phone visibility are not yet verified. Search grounding requires a paid Gemini project; verify billing before the private smoke batch. The legacy staging gate does not create new concept IDs for learners who exhausted a subject.
+
 ### #359 final website and learner synchronization audit — PR #357 updated
 
 - Continued open PR #357 on `codex/263-published-review-detail`. `3a5ff37` lets a successful lesson-detail reload clear a stale conflict even if the separate timeline/history request fails; the warning remains visible. `cb15420` prevents a delayed old detail response from replacing a newer corrected lesson in the mobile saved cache. `a84cdc8` adds a two-session browser regression for owner assignment, reviewer comment, owner history, publication, and reviewer visibility.

@@ -1,39 +1,65 @@
-# Legacy enrichment rollout (#352)
+# Complete existing lessons, one subject at a time
 
-Legacy enrichment prepares complete private revisions for existing published
-lessons. It does not change what learners see until an authenticated reviewer
-approves and publishes an individual revision.
+Migration `0042_legacy_enrichment_batches.sql` is already recorded as applied
+in production. Do not reapply or edit it. The new worker and owner controls use
+those existing tables. This change needs a normal `develop` → `main` release
+after its feature PR is reviewed; merging the feature PR into `develop` alone
+does not deploy the live website, API, or worker.
 
-## Release-only database migration
+## Safe first run
 
-**Do not apply `0042_legacy_enrichment_batches.sql` while developing or testing
-this pull request.** Apply it only as part of the release PR that contains the
-completed #352 implementation, after the normal staging verification.
+1. Keep `FUTURE_REFILL_ENABLED=false` on the API and `pool-topup`. This prevents
+   new lesson generation while the existing library is being reviewed.
+2. Configure a Gemini 3 model and `GEMINI_API_KEY` privately in Railway Variables
+   for both `api` and `pool-topup`. Do not put the key in GitHub, Netlify, mobile,
+   an issue, a screenshot, or chat. Google's search grounding is unavailable
+   on the Gemini free tier and can incur search-query charges on a paid project;
+   verify billing and quotas before use. An ungrounded result is blocked rather
+   than published with invented references.
+3. Set `GENERATION_ENABLED=true` and `LEGACY_ENRICHMENT_ENABLED=true` on both
+   services. Start with `LEGACY_ENRICHMENT_BATCH_SIZE=1` and a conservative
+   `GENERATION_DAILY_CALL_CAP`. The shared cap includes other generation jobs.
+4. In the owner website, open **AI requests → Complete existing published
+   lessons**. Select one subject and inspect its eligible count. Set a maximum
+   Gemini-call budget that covers at least that count; retries consume the same
+   budget. Enter an audit reason and prepare the batch. Preparing makes no
+   provider call. Press **Start / resume** when ready.
+5. After the scheduled `pool-topup` run, refresh the batch. Inspect every
+   result in the review queue, open its sources, and check the complete
+   explanation, example, flashcard, and three answers. Assign a reviewer and
+   publish each revision only after a human decision. Blocked/failed entries
+   remain visible for manual correction or a later batch.
+6. In the learner app, confirm a published revised lesson displays the exact
+   reviewer credit and current body. A prepared draft must not change the
+   learner card. Use another account to check reviewer permissions and assignment
+   notifications. Check the backend deployment commit and Netlify production
+   branch before treating this as a live test.
 
-The release operator must:
+The batch snapshots only eligible published lessons in one subject. A complete
+current version with a publication record is excluded. An incomplete card is
+eligible even if it was previously attested, so older missing flashcards or
+questions are not skipped. Lessons with an active draft or an already prepared
+legacy revision are excluded. A rejected prepared
+revision stays in review history; use a manual correction rather than silently
+replacing that decision with another generated batch. Only one batch can be
+active across subjects. A batch is private
+work, not a release or automatic publication. Completion of old lesson bodies
+does **not** create new concept IDs: a learner who exhausted Software
+Engineering may still receive a card from another followed or eligible subject
+until separately reviewed new Software Engineering lessons are published.
 
-1. Verify the final release PR includes migration `0042`, its matching
-   `backend/schema/contract.json` update, and no edit to an already-applied
-   migration.
-2. Back up the production database using the existing release backup procedure.
-3. Apply the migration once with the production migration connection, in order
-   after all preceding migrations.
-4. Verify the migration transaction succeeded, the two `editorial_legacy_*`
-   tables have RLS enabled, and client database roles cannot read either table.
-5. Only after that verification, add `0042_legacy_enrichment_batches.sql` to
-   `backend/migrations/applied.txt` in the release follow-up commit.
-6. Deploy the matching API and workers, keep legacy enrichment paused, and run a
-   small private batch before enabling a full subject.
+## Pause, failures, and cost
 
-A failed migration or verification means the release stops. Do not mark the
-migration as applied, enable generation, or create a legacy batch until it is
-repaired and verified.
+Use **Pause** in the owner website to stop new claims. A result in flight is
+fenced from staging until resumed; **Cancel** skips outstanding entries while
+retaining already prepared private drafts. Alternatively set
+`LEGACY_ENRICHMENT_ENABLED=false` on API and worker and redeploy/restart both.
+Keep `FUTURE_REFILL_ENABLED=false` throughout the backfill. A provider failure
+or rate limit never publishes a lesson; attempts and errors are visible in the
+batch. A missing grounded source blocks the entry for human inspection.
 
-## Generation-key operations
-
-Use `GEMINI_API_KEY` and `GEMINI_MODEL` only in Railway service variables for
-the API and generation workers. Never put a key in the mobile app, repository,
-GitHub workflow output, issue, or screenshot. After the five-subject backfill,
-rotate back to the normal key or remove the temporary key, pause legacy
-processing, and verify every generation-capable Railway service has the final
-intended values.
+After all subjects are reviewed, turn off `LEGACY_ENRICHMENT_ENABLED`, rotate
+or remove any temporary Gemini key, and verify the final values on every
+generation-capable service. Future refill has its own controlled rollout in
+`docs/FUTURE_REFILL_ROLLOUT.md`; do not enable it merely because legacy review
+is complete.

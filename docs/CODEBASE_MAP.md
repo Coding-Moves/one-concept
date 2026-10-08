@@ -76,9 +76,9 @@ The existing `workers/pool_topup.py` runs a bounded revision batch before refill
 same SQL statement as a published lesson. `schemas/daily.py` adds nullable
 `ConceptOut.review`; detail, daily selection and folded state/review paths use it.
 `mobile/src/services/conceptMapping.ts` shares version validation across detail,
-daily and cached reads. `components/ReviewAttribution.tsx` renders borderless credit only in
-`ConceptDetailScreen`, below the card opened from History/Saved. Today/review
-cards and legacy/mismatched metadata have no label.
+daily and cached reads. `components/ReviewAttribution.tsx` renders borderless
+credit in `ConceptDetailScreen` and below the Today lesson card. Legacy and
+mismatched-version metadata have no label.
 `services/state.py` and `schemas/me.py` expose `bookmark_versions` aligned with
 all saved slugs in `/v1/me/state`, including compact responses.
 `mobile/src/services/savedConceptSync.ts` uses these versions to replace only
@@ -95,6 +95,10 @@ registered identity. `Queue.tsx` supplies topic/status/deadline filtering and
 shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete
 packages, diffs, history, comments, checklist decisions and safe corrections.
 `Team.tsx` manages owner-only membership; `Generation.tsx` requests bounded work.
+`LegacyEnrichment.tsx` previews eligible existing lessons and controls one
+subject batch at a time. `services/legacy_generation.py` builds a grounded
+complete-card candidate and `legacy_enrichment_worker.py` stages it privately
+through the scheduled `pool_topup.py` run; only a later human approval publishes.
 `MarkdownText.tsx` safely renders lesson writing and `LessonEditor` shows a live
 preview; identifiers and configuration fields remain plain text.
 `api.ts` and `useCommand.ts` preserve exact operation retries and stale-token

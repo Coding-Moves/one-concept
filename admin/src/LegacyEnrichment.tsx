@@ -118,7 +118,7 @@ export function LegacyEnrichment({
       <Field title="Maximum Gemini calls for this batch">
         <input type="number" min={1} max={500} value={quota} onChange={(event) => setQuota(Number(event.target.value))} />
       </Field>
-      <p>Allow at least one call per eligible lesson. Retries count against this limit; no lesson is published automatically.</p>
+      <p>Allow at least one call per eligible lesson. For 25 lessons, a budget of 75 allows three attempts each in one daily worker run. Provider failures or a full review queue can leave cards unfinished; nothing is published automatically.</p>
       <Field title="Reason for this batch">
         <textarea maxLength={4000} value={note} onChange={(event) => setNote(event.target.value)} />
       </Field>

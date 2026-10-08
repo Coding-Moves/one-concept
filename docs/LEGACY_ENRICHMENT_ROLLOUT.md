@@ -17,14 +17,28 @@ does not deploy the live website, API, or worker.
    verify billing and quotas before use. An ungrounded result is blocked rather
    than published with invented references.
 3. Set `GENERATION_ENABLED=true` and `LEGACY_ENRICHMENT_ENABLED=true` on both
-   services. Start with `LEGACY_ENRICHMENT_BATCH_SIZE=1` and a conservative
-   `GENERATION_DAILY_CALL_CAP`. The shared cap includes other generation jobs.
+   services. For the owner's one-subject-per-day run, confirm the `pool-topup`
+   service uses the daily cron and `LEGACY_ENRICHMENT_BATCH_SIZE=75` (or has no
+   override, so the 75-attempt default applies). This permits 25 cards with up
+   to three attempts each in one scheduled run; it does not promise 25 valid
+   results. Set the shared `GENERATION_DAILY_CALL_CAP` on both services high
+   enough for the chosen batch budget and other generation jobs, and check the
+   paid project's rate and spending limits before starting. Keep
+   `FUTURE_REFILL_ENABLED=false` so those calls are not used for new cards.
 4. In the owner website, open **AI requests → Complete existing published
    lessons**. Select one subject and inspect its eligible count. Set a maximum
-   Gemini-call budget that covers at least that count; retries consume the same
-   budget. Enter an audit reason and prepare the batch. Preparing makes no
-   provider call. Press **Start / resume** when ready.
-5. After the scheduled `pool-topup` run, refresh the batch. Inspect every
+   Gemini-call budget that covers at least that count (75 allows all three
+   attempts for each of 25 cards); retries consume the same budget. Confirm
+   the subject has enough free review capacity, then enter an audit reason and
+   prepare the batch. Preparing makes no provider call. Press **Start / resume**
+   before that day's scheduled worker run. Select the next subject yourself on
+   the next day, after the current batch reaches a terminal state.
+5. After the scheduled `pool-topup` run, refresh the batch and count entries
+   marked **Ready for review**. If fewer than the eligible count are ready,
+   inspect blocked/failed entries, the daily call budget, review capacity, and
+   Railway's worker logs before deciding whether to run the worker again that
+   day. A provider rate limit can stop a pass early; do not assume completion
+   merely because the cron job exited. Inspect every
    result in the review queue, open its sources, and check the complete
    explanation, example, flashcard, and three answers. Assign a reviewer and
    publish each revision only after a human decision. Blocked/failed entries

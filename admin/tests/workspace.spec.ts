@@ -105,6 +105,67 @@ test("publication-only access opens the approved queue and publishes", async ({
   await expect(page.getByText("Published successfully", { exact: false })).toBeVisible();
   expect(state.status).toBe("published");
 });
+test("owner and reviewer sessions see one assignment, comment and publication", async ({
+  page,
+  context,
+  browser,
+}) => {
+  const state = await fixture(context);
+  const reviewerId = "00000000-0000-4000-8000-000000000002";
+  const reviewerEmail = "second-reviewer@example.test";
+  state.members.push({
+    ...state.member,
+    user_id: reviewerId,
+    invited_email: reviewerEmail,
+    approved_name: "Second Reviewer",
+    requested_name: "Second Reviewer",
+    capabilities: ["review"],
+  });
+  await login(page);
+  await openLesson(page);
+  await page.getByLabel("Assign to", { exact: true }).selectOption(reviewerId);
+  await page.getByLabel("Review note or comment").fill(
+    "Please review the whole lesson and its reference.",
+  );
+  await page.getByRole("button", { name: "Save assignment" }).click();
+  await expect(page.getByText("Assignment saved.")).toBeVisible();
+  expect(state.assignedTo).toBe(reviewerId);
+
+  const reviewerContext = await browser.newContext();
+  try {
+    await fixture(reviewerContext, {
+      caps: ["review"],
+      userId: reviewerId,
+      email: reviewerEmail,
+      name: "Second Reviewer",
+      shared: state,
+    });
+    const reviewerPage = await reviewerContext.newPage();
+    await login(reviewerPage, reviewerEmail);
+    await openLesson(reviewerPage);
+    await expect(reviewerPage.getByRole("button", { name: "Save assignment" })).toHaveCount(0);
+    await reviewerPage.getByLabel("Review note or comment").fill(
+      "The example and all three questions match the reference.",
+    );
+    await reviewerPage.getByRole("button", { name: "Add comment" }).click();
+    await expect(reviewerPage.getByText("Comment saved.")).toBeVisible();
+
+    await page.getByRole("button", { name: "Reload", exact: true }).click();
+    await page.getByRole("button", { name: "History", exact: true }).click();
+    await expect(page.getByText("The example and all three questions match the reference.")).toBeVisible();
+    await checkAll(page);
+    await page.getByRole("button", { name: "Approve and publish" }).click();
+    await expect(page.getByText("Published successfully", { exact: false })).toBeVisible();
+
+    await reviewerPage.getByRole("button", { name: "Reload", exact: true }).click();
+    await expect(reviewerPage.getByText("Published", { exact: true }).first()).toBeVisible();
+    await reviewerPage.getByRole("button", { name: "Lesson", exact: true }).click();
+    await expect(reviewerPage.getByRole("heading", { name: "Question 3" })).toBeVisible();
+    expect(state.contentVersion).toBe(2);
+  } finally {
+    await reviewerContext.close();
+  }
+});
 test("second tab cannot repeat a shared approval; feedback survives conflict", async ({
   page,
   context,

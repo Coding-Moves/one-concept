@@ -70,11 +70,15 @@ export async function fixture(
     mfa?: boolean;
     enrollment?: boolean;
     onboarding?: boolean;
+    userId?: string;
+    email?: string;
+    name?: string;
+    shared?: unknown;
   } = {},
 ) {
   const member = {
-    user_id: uid,
-    invited_email: "reviewer@example.test",
+    user_id: options.userId || uid,
+    invited_email: options.email || "reviewer@example.test",
     status: "active",
     capabilities: options.caps || [
       "review",
@@ -83,19 +87,22 @@ export async function fixture(
       "manage_reviewers",
       "request_generation",
     ],
-    requested_name: options.onboarding ? null : "Amina Khan",
-    approved_name: options.onboarding ? null : "Amina Khan",
+    requested_name: options.onboarding ? null : (options.name || "Amina Khan"),
+    approved_name: options.onboarding ? null : (options.name || "Amina Khan"),
     version: 1,
   };
-  const state = {
+  const freshState = {
     status: "pending_review",
     token: "a".repeat(64),
+    commandVersion: 1,
     body: structuredClone(lesson),
     liveBody: null as typeof lesson | null,
     baseVersion: 1,
     contentVersion: 1,
     events: [] as object[],
     approvedBy: null as string | null,
+    assignedTo: null as string | null,
+    reviewDueAt: null as string | null,
     expired: false,
     denied: false,
     uncertain: false,
@@ -108,11 +115,12 @@ export async function fixture(
     member,
     members: [member],
   };
-  let version = 1;
+  const state = (options.shared as typeof freshState | undefined) ?? freshState;
+  const actorMember = options.shared ? member : state.member;
   const receipts = new Map<string, object>();
   const user = {
-    id: uid,
-    email: member.invited_email,
+    id: actorMember.user_id,
+    email: actorMember.invited_email,
     aud: "authenticated",
     role: "authenticated",
     created_at: new Date().toISOString(),
@@ -135,7 +143,7 @@ export async function fixture(
       [
         { alg: "HS256" },
         {
-          sub: uid,
+          sub: actorMember.user_id,
           aud: "authenticated",
           exp: Math.floor(Date.now() / 1000) + 3600,
           iat: Math.floor(Date.now() / 1000),
@@ -209,8 +217,8 @@ export async function fixture(
       token: state.token,
       body: state.invalid ? null : state.body,
       source_body: { ...lesson, summary: "Previous explanation." },
-      assigned_to: null,
-      review_due_at: null,
+      assigned_to: state.assignedTo,
+      review_due_at: state.reviewDueAt,
       approved_by: state.approvedBy,
       diff: [
         {
@@ -229,18 +237,18 @@ export async function fixture(
     };
     if (path === "/me")
       return fulfill(route, {
-        member: state.member,
-        onboarding_required: !state.member.requested_name,
+        member: actorMember,
+        onboarding_required: !actorMember.requested_name,
         name_approval_pending:
-          state.member.requested_name !== state.member.approved_name,
+          actorMember.requested_name !== actorMember.approved_name,
         mfa_required: state.mfa,
       });
     if (path === "/me/profile") {
-      Object.assign(state.member, {
+      Object.assign(actorMember, {
         requested_name: body.registered_name,
         version: 2,
       });
-      return fulfill(route, state.member);
+      return fulfill(route, actorMember);
     }
     if (path === "/taxonomy")
       return fulfill(route, {
@@ -261,7 +269,7 @@ export async function fixture(
         route,
         method === "GET"
           ? { items: state.members, next_cursor: null }
-          : state.member,
+          : actorMember,
         method === "GET" ? 200 : 201,
       );
     if (path === "/queue") {
@@ -324,11 +332,14 @@ export async function fixture(
         return fulfill(route, { detail: { code: "stale_revision" } }, 409);
       if (body.action === "approved" || body.action === "approve_and_publish") {
         state.status = body.action === "approved" ? "approved" : "published";
-        state.approvedBy = "Amina Khan";
+        state.approvedBy = actorMember.approved_name;
         if (body.action === "approve_and_publish") state.contentVersion++;
       } else if (body.action === "publish") {
         state.status = "published";
         state.contentVersion++;
+      } else if (body.action === "assign") {
+        state.assignedTo = body.assignee_id || null;
+        state.reviewDueAt = body.review_due_at || null;
       } else if (
         body.action === "changes_requested" ||
         body.action === "rejected"
@@ -352,10 +363,10 @@ export async function fixture(
             failure_code: null,
           },
         ];
-      state.token = (++version).toString(16).padStart(64, "0");
+      state.token = (++state.commandVersion).toString(16).padStart(64, "0");
       state.events.push({
-        id: String(version),
-        registered_name: "Amina Khan",
+        id: String(state.commandVersion),
+        registered_name: actorMember.approved_name,
         action: body.action || "staged",
         note: body.note,
         created_at: new Date().toISOString(),
@@ -409,9 +420,9 @@ export async function fixture(
   });
   return state;
 }
-export async function login(page: Page) {
+export async function login(page: Page, email = "reviewer@example.test") {
   await page.goto("/");
-  await page.getByLabel("Email address").fill("reviewer@example.test");
+  await page.getByLabel("Email address").fill(email);
   await page
     .getByLabel("Password", { exact: true })
     .fill("private-fixture-password");

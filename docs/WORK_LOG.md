@@ -7,6 +7,20 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.10 release preparation — PR #374
+
+- Scope: release merged [PR #373](https://github.com/Coding-Moves/one-concept/pull/373)'s legacy-enrichment worker recovery from `develop` to production after the normal release gates. Before preparation, the `main` → `develop` diff contained only backend worker code, tests, and operator guidance; no database migration or native module changed.
+- `711c31f` bumps the app to 1.10.10 and adds its matching one-time learner-facing What's New card. Native runtime stays 1.10.8. Mobile TypeScript typecheck, exact version/card/runtime check, and `git diff --check` passed. [PR #374](https://github.com/Coding-Moves/one-concept/pull/374) targets `develop`; all three hosted checks passed on `2715a03`. Owner merge remains pending.
+- After #374 merges, recheck the final `develop` → `main` diff for the version and card, then open the production release PR. Production merge and mobile publication remain separate. After deployment, run one paid Gemini call, inspect its diagnostic/entry result, and only then resume the remaining Software Engineering entries. The remaining cards are not yet prepared or published.
+
+### Legacy enrichment recovery — in progress
+
+- The first live Software Engineering batch prepared 5 of 25 private drafts; 6 entries were blocked and 14 failed after the bounded calls. Four drafts were approved, and one was sent for AI correction. The earlier worker saved generic failure codes, so the exact provider responses for those 20 entries cannot be reconstructed from the owner site. No further paid batch or production change is part of this repair.
+- `5a2fb8d` parses all non-thought Gemini text parts, rejects incomplete/safety-stopped responses explicitly, allows a larger bounded output for a complete card, and saves safe failure codes and entry IDs for the next run. The operator guidance and handoff log are a separate documentation commit.
+- Validation: 16 focused backend tests passed against disposable PostgreSQL 16; Ruff `F,E9` passed. The full backend run reached 509 passing tests without a failure, then stalled near 89% and was interrupted after 10 minutes; hosted PR CI is needed for an authoritative full-suite result. The live provider behavior and recovery of the remaining 20 lessons require a later release and a one-call paid pilot. Existing generic failure codes will not be rewritten.
+- [PR #373](https://github.com/Coding-Moves/one-concept/pull/373) targets `develop`; all three hosted checks passed on `3bce361`. It references open issue #368 without closing it. Merging this feature PR will not deploy production. After a separate release and healthy worker deployment, use a one-legacy-call pilot, inspect the new failure code, and only then resume the remaining subject entries. The worker may also run queued AI corrections first.
+- Second review found a malformed numeric/list summary or example could raise outside the classified provider errors and strand a worker claim. `01d0712` classifies those fields as retryable `content_invalid` and stores the validated trimmed text. The focused disposable-PostgreSQL suite passes **19 tests**; Ruff `F,E9` and `git diff --check` pass. All three hosted checks passed on the follow-up head `33d7bc8`.
+
 ### v1.10.9 release preparation — in progress
 
 - The owner requested a production release PR before starting one manually selected Software Engineering existing-card batch per day. PR #369 is still open against `develop`, so its reviewed-card workflow must land before the `develop` → `main` release PR can include it.

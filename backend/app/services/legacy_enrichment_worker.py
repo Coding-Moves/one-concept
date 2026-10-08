@@ -18,6 +18,7 @@ from app.services.generation_budget import (
 )
 from app.services.legacy_generation import (
     LegacyConfigurationError,
+    LegacyRetryableError,
     LegacyValidationError,
     generate_legacy_card,
 )
@@ -145,7 +146,9 @@ async def finish(db, settings, entry, *, body=None, failure=None):
         elif not await editorial_generation.requester_active(db, row):
             state, code = 'skipped', 'requester_inactive'
         elif failure:
-            state = ('blocked' if failure in {'validation_failed', 'provider_configuration'} else
+            state = ('blocked' if failure in {'validation_failed', 'package_invalid',
+                                               'source_missing', 'safety_blocked',
+                                               'provider_configuration'} else
                      'failed' if row['attempts'] >= 3 else 'queued')
             code = failure
         else:
@@ -208,12 +211,18 @@ async def run_one(db, settings):
     except RateLimitedError:
         result = await finish(db, settings, entry, failure='rate_limited')
         return 'rate_limited' if result in {'queued', 'failed'} else result
-    except LegacyValidationError:
-        return await finish(db, settings, entry, failure='validation_failed')
+    except LegacyValidationError as exc:
+        log.warning('legacy enrichment blocked entry=%s code=%s', entry['id'], exc.failure_code)
+        return await finish(db, settings, entry, failure=exc.failure_code)
     except LegacyConfigurationError:
+        log.warning('legacy enrichment provider configuration blocked entry=%s', entry['id'])
         result = await finish(db, settings, entry, failure='provider_configuration')
         return 'provider_configuration' if result == 'blocked' else result
+    except LegacyRetryableError as exc:
+        log.warning('legacy enrichment retryable entry=%s code=%s', entry['id'], exc.failure_code)
+        return await finish(db, settings, entry, failure=exc.failure_code)
     except GenerationError:
+        log.warning('legacy enrichment unexpected provider response entry=%s', entry['id'])
         return await finish(db, settings, entry, failure='provider_or_source_error')
     return await finish(db, settings, entry, body=body)
 

@@ -6,17 +6,20 @@ import { useReducedMotion } from '../hooks/useReducedMotion';
 import { scaleFont, radius, spacing, ThemeColors } from '../theme';
 import { Concept } from '../types';
 import { CategoryChip } from './CategoryChip';
+import { CardInformation } from './CardInformation';
 import { Surface } from './Surface';
 import { MarkdownText } from './MarkdownText';
 
 const FLIP_DURATION_MS = 280;
 
-function Front({ concept }: { concept: Concept }) {
+function Front({ concept, hasFlashcard }: { concept: Concept; hasFlashcard: boolean }) {
   const { colors } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   return <>
-    <CategoryChip category={concept.category} />
-    <MarkdownText value={concept.title} style={styles.title} inline />
+    <View style={[styles.categoryRow, hasFlashcard && styles.categoryRowWithFlip]}>
+      <CategoryChip category={concept.category} />
+    </View>
+    <MarkdownText value={concept.title} style={[styles.title, hasFlashcard && styles.titleWithFlip]} inline />
     <MarkdownText value={concept.summary} style={styles.summary} />
     {concept.example ? <View style={styles.exampleBox}>
       <Text style={styles.exampleLabel}>Example</Text>
@@ -67,7 +70,10 @@ export function ConceptCard({ concept }: { concept: Concept }) {
     }).start();
   };
 
-  if (!hasFlashcard) return <Surface style={styles.card}><Front concept={concept} /></Surface>;
+  if (!hasFlashcard) return <Surface style={styles.card}>
+    <Front concept={concept} hasFlashcard={false} />
+    <CardInformation concept={concept} />
+  </Surface>;
 
   const frontRotate = flip.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '180deg'] });
   const backRotate = flip.interpolate({ inputRange: [0, 1], outputRange: ['180deg', '360deg'] });
@@ -85,23 +91,27 @@ export function ConceptCard({ concept }: { concept: Concept }) {
       style={[styles.face, { transform: [{ perspective: 900 }, { rotateY: frontRotate }] }]}
       accessible={!showingAnswer}
       accessibilityLabel="Showing daily lesson"
-    ><Front concept={concept} /></Animated.View>
+    ><Front concept={concept} hasFlashcard /></Animated.View>
     <Animated.View
       style={[styles.face, styles.backFace, { transform: [{ perspective: 900 }, { rotateY: backRotate }] }]}
       accessible={showingAnswer}
       accessibilityLabel="Showing recall answer"
     ><ScrollView style={styles.backScroll} nestedScrollEnabled><Recall concept={concept} /></ScrollView></Animated.View>
+    <CardInformation concept={concept} />
   </Surface>;
 }
 
 const createStyles = (colors: ThemeColors) => StyleSheet.create({
-  card: { borderRadius: radius.xl, gap: spacing.md },
+  card: { borderRadius: radius.xl, gap: spacing.md, position: 'relative' },
   flashcard: { minHeight: 340, position: 'relative' },
   face: { gap: spacing.md, backfaceVisibility: 'hidden' },
   backFace: { position: 'absolute', left: spacing.lg, right: spacing.lg, top: spacing.lg, bottom: spacing.lg },
   backScroll: { flex: 1 },
-  flipControl: { position: 'absolute', zIndex: 2, right: spacing.md, top: spacing.md, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surfaceSubtle, alignItems: 'center', justifyContent: 'center' },
+  flipControl: { position: 'absolute', zIndex: 2, right: spacing.md + 52, top: spacing.md, width: 44, height: 44, borderRadius: radius.pill, backgroundColor: colors.surfaceSubtle, alignItems: 'center', justifyContent: 'center' },
+  categoryRow: { paddingRight: 48 },
+  categoryRowWithFlip: { paddingRight: 100 },
   title: { fontSize: scaleFont(24), lineHeight: scaleFont(30), fontFamily: 'SpaceGrotesk_700Bold', color: colors.text, paddingRight: 48 },
+  titleWithFlip: { paddingRight: 100 },
   summary: { fontSize: scaleFont(16), lineHeight: scaleFont(26), color: colors.textSecondary },
   exampleBox: { backgroundColor: colors.surfaceSubtle, borderRadius: radius.md, padding: spacing.md, gap: spacing.xs },
   exampleLabel: { fontSize: scaleFont(11), fontWeight: '700', letterSpacing: 1.2, textTransform: 'uppercase', color: colors.categoryChipText },

@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #359 final website and learner synchronization audit — PR #357 updated
+
+- Continued open PR #357 on `codex/263-published-review-detail`. `3a5ff37` lets a successful lesson-detail reload clear a stale conflict even if the separate timeline/history request fails; the warning remains visible. `cb15420` prevents a delayed old detail response from replacing a newer corrected lesson in the mobile saved cache. `a84cdc8` adds a two-session browser regression for owner assignment, reviewer comment, owner history, publication, and reviewer visibility.
+- Edge checks: reviewer-site production build with public test values, 11 unit tests, and **43 browser tests passed**. Full backend suite against disposable PostgreSQL: **548 passed**. Mobile typecheck and 7 focused saved-content sync tests passed. Full mobile Node suite: **95 passed, one pre-existing `publicConfig.test.mjs` stderr assertion failed** in this local runtime. `git diff --check` passed. Public fixtures and disposable PostgreSQL were used, not production accounts.
+- Live authenticated owner/reviewer actions, real Gmail inbox receipt, AI correction, matching Netlify/Railway deployed revisions, and an eligible phone's corrected offline saved card remain production acceptance checks after release. Keep #359 open through those checks; merging into `develop` does not update production.
+
 ### #359 editorial-to-learner integration — PR #357 ready for review
 
 - The owner and reviewer workspaces are role-based views of one Netlify site, backed by the same API and database. Production rehearsal published Blue-Green Deployment but exposed a historical revision detail failure. [Issue #359](https://github.com/Coding-Moves/one-concept/issues/359) holds the combined correctness and live-acceptance scope; [PR #357](https://github.com/Coding-Moves/one-concept/pull/357) targets `develop` without a production release.

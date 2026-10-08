@@ -77,12 +77,19 @@ The owner site's lesson rows show a short failure code after a worker run.
 the generated text as sourced. `package_invalid` or `safety_blocked` means the
 private draft cannot be staged; use a manual correction or investigate the
 provider configuration. `response_truncated`, `response_invalid_json`,
-`response_missing_text`, `content_invalid`, `provider_transport`, and
+`response_missing_card_marker`, `response_missing_text`, `content_invalid`,
+`provider_transport`, and
 `provider_http_error` are retryable response/provider failures. Each still
 consumes a call, and an entry becomes **Failed** after three attempts. Railway
 logs include only the entry ID and safe code, not lesson text or credentials.
 Old batches retain their original generic codes; this diagnostic change does
 not retroactively identify their exact failure.
+
+The worker asks Gemini to search and produce a short research note before a
+marked JSON card. The note is discarded; only the card and safe links from
+Google's grounding metadata enter a private revision. If a one-call pilot
+returns `source_missing` after the grounded prompt update, pause again and
+inspect the provider behavior before spending the rest of the batch budget.
 
 After reviewing the ready drafts, choose a new subject batch only for lessons
 that remain eligible. A terminal batch cannot resume, and a new batch makes

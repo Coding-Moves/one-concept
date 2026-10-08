@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### Legacy grounded-card recovery — in progress
+
+- Production diagnosis on 2026-10-08: the first 25-card Software Engineering batch ended with 3 published, 2 ready, 14 failed, and 6 blocked. A replacement batch `#066794E6` was paused after one paid REST pilot returned `source_missing`; its other 19 entries remain queued. A separate pending AI correction became ready for human review. `pool-topup` currently has a temporary service-level `LEGACY_ENRICHMENT_BATCH_SIZE=1` override. No remaining lesson was published by this recovery work.
+- In the production Gemini project, an exact full-card trial using Google Search plus JSON MIME/schema returned no grounding metadata, while a searched prose note followed by a marked JSON card returned a complete three-question card and grounding chunks. `3d33fa2` changes only the legacy request/parser to that format and retains the hard source requirement. All 21 focused backend tests pass against disposable PostgreSQL 16; Ruff `F,E9` and `git diff --check` pass. Production behavior still needs a one-call worker canary after release.
+- Next: open the feature PR to `develop`, verify hosted checks, release to `main` with the required version/card, confirm API and worker deployment, then resume the paused batch for one paid call. Expand the worker limit only if that canary stages a valid private draft. The review-capacity limit and human decisions can prevent all subjects from becoming ready at once.
+
 ### v1.10.10 release preparation — PR #374
 
 - Scope: release merged [PR #373](https://github.com/Coding-Moves/one-concept/pull/373)'s legacy-enrichment worker recovery from `develop` to production after the normal release gates. Before preparation, the `main` → `develop` diff contained only backend worker code, tests, and operator guidance; no database migration or native module changed.

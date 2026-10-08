@@ -10,7 +10,7 @@ claims as completed work.
 ### v1.10.9 release preparation — in progress
 
 - The owner requested a production release PR before starting one manually selected Software Engineering existing-card batch per day. PR #369 is still open against `develop`, so its reviewed-card workflow must land before the `develop` → `main` release PR can include it.
-- [PR #370](https://github.com/Coding-Moves/one-concept/pull/370) prepares the release on `develop`. `976655d` bumps `expo.version` to 1.10.9 and adds the matching one-time What's New card for card information, reviewer attribution, and complete reviewed lessons. This is a JavaScript-only release; the native `runtimeVersion` stays 1.10.8. Mobile typecheck and `git diff --check` passed. Production deployment, paid Gemini calls, and approval of existing lessons have not occurred.
+- [PR #370](https://github.com/Coding-Moves/one-concept/pull/370) prepares the release on `develop`. `976655d` bumps `expo.version` to 1.10.9 and adds the matching one-time What's New card for card information, reviewer attribution, and complete reviewed lessons. This is a JavaScript-only release; the native `runtimeVersion` stays 1.10.8. Mobile typecheck, `git diff --check`, and all three hosted PR checks passed. PRs #369 and #370 remain open pending their PR-specific merge choices; the `develop` → `main` release PR cannot include their work until both land. Production deployment, paid Gemini calls, and approval of existing lessons have not occurred.
 
 ### #359 final website and learner synchronization audit — PR #357 updated
 

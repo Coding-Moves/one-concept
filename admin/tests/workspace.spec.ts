@@ -1,5 +1,5 @@
 import { test, expect } from "@playwright/test";
-import { fixture, login, openLesson, checkAll, rid, cid } from "./fixture";
+import { fixture, login, openLesson, checkAll, rid, cid, tid } from "./fixture";
 test("topic filtering, full package, comments and atomic publication", async ({
   page,
   context,
@@ -432,6 +432,54 @@ test("owner assigns a deadline, invites a reviewer and requests bounded drafts",
   ).toBeVisible();
   expect(state.commands.at(-1).count).toBe(2);
   expect(state.commands.at(-1)).not.toHaveProperty("expected_token");
+});
+test("owner prepares and starts a private legacy subject batch", async ({ page, context }) => {
+  await fixture(context);
+  const batchId = "50000000-0000-4000-8000-000000000001";
+  let batch: Record<string, unknown> | null = null;
+  const actions: string[] = [];
+  await page.route("**/v1/editorial/legacy-**", async (route) => {
+    const request = route.request();
+    const path = new URL(request.url()).pathname;
+    const body = request.method() === "POST" ? request.postDataJSON() : null;
+    if (request.method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: { "access-control-allow-origin": "*" } });
+      return;
+    }
+    let result: unknown;
+    if (path.includes("eligibility")) {
+      result = { eligible_count: 1, active_batch_id: batch ? batchId : null, configured: true };
+    } else if (path.endsWith("/entries")) {
+      result = { items: [{ id: "entry", concept_id: cid, title: "Database Migrations",
+        status: "queued", attempts: 0, failure_code: null, result_revision_id: null }] };
+    } else if (request.method() === "POST" && path.endsWith("/actions")) {
+      actions.push(body.action);
+      batch = { ...batch, status: "running", token: "next-token" };
+      result = batch;
+    } else if (request.method() === "POST") {
+      expect(body.topic_id).toBe(tid);
+      expect(body.quota_limit).toBe(3);
+      batch = { id: batchId, topic_id: tid, name: body.name, status: "queued",
+        discovered_count: 1, quota_limit: 3, token: "initial-token", counts: { queued: 1 } };
+      result = batch;
+    } else {
+      result = { items: batch ? [batch] : [] };
+    }
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(result),
+      headers: { "access-control-allow-origin": "*" } });
+  });
+  await login(page);
+  await page.getByRole("button", { name: "AI requests", exact: true }).click();
+  await page.getByLabel("Existing subject").selectOption(tid);
+  await expect(page.getByText("1 published lessons eligible", { exact: false })).toBeVisible();
+  await page.getByLabel("Maximum Gemini calls for this batch").fill("3");
+  await page.getByLabel("Reason for this batch").fill("Complete the existing subject for human review.");
+  await page.getByRole("button", { name: "Prepare subject batch" }).click();
+  await expect(page.getByText("Batch prepared.", { exact: false })).toBeVisible();
+  await page.getByLabel("Reason for batch action").fill("Begin the first bounded provider run.");
+  await page.getByRole("button", { name: "Start / resume" }).click();
+  await expect(page.getByText("Batch started.", { exact: true })).toBeVisible();
+  expect(actions).toEqual(["resume"]);
 });
 test("assignment changes warn before navigation and exclude non-reviewers", async ({
   page,

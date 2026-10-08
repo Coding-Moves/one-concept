@@ -3,11 +3,16 @@
 from uuid import uuid4
 from unittest.mock import AsyncMock
 
+import httpx
 import pytest
 from sqlalchemy import text
 
 from app.services import legacy_enrichment_worker as worker
-from app.services.legacy_generation import LegacyValidationError, build_body
+from app.services import legacy_generation
+from app.services.legacy_generation import (
+    LegacyConfigurationError, LegacyRetryableError, LegacyValidationError,
+    _candidate_payload, build_body, generate_legacy_card,
+)
 from app.services.publication import LessonBody
 from tests import test_editorial_content_api as content
 
@@ -51,6 +56,79 @@ def test_grounded_candidate_requires_real_safe_source():
         build_body(source, generated_payload(), {'groundingMetadata': {'groundingChunks': []}}, 'gemini-3.1-flash-lite')
     with pytest.raises(LegacyValidationError, match='grounded'):
         build_body(source, generated_payload(), {'groundingMetadata': None}, 'gemini-3.1-flash-lite')
+
+
+def test_gemini_response_skips_thought_parts_and_joins_text():
+    encoded = legacy_generation.json.dumps(generated_payload())
+    body = {'candidates': [{**grounded_candidate(), 'finishReason': 'STOP',
+        'content': {'parts': [{'thought': True, 'text': 'private reasoning'},
+                              {'text': encoded[:60]}, {'text': encoded[60:]}]}}]}
+    payload, candidate = _candidate_payload(body)
+    assert payload == generated_payload()
+    assert candidate['groundingMetadata'] == grounded_candidate()['groundingMetadata']
+
+
+@pytest.mark.parametrize(('response', 'error', 'code'), [
+    ({'candidates': [{'finishReason': 'MAX_TOKENS'}]}, LegacyRetryableError, 'response_truncated'),
+    ({'candidates': [{'finishReason': 'SAFETY'}]}, LegacyValidationError, 'safety_blocked'),
+    ({'promptFeedback': {'blockReason': 'SAFETY'}}, LegacyValidationError, 'safety_blocked'),
+    ({'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'text': '{'}]}}]},
+     LegacyRetryableError, 'response_invalid_json'),
+    ({'candidates': [{'finishReason': 'STOP', 'content': {'parts': [{'thought': True,
+                                                                    'text': 'hidden'}]}}]},
+     LegacyRetryableError, 'response_missing_text'),
+])
+def test_gemini_response_failure_codes_are_safe(response, error, code):
+    with pytest.raises(error) as caught:
+        _candidate_payload(response)
+    assert caught.value.failure_code == code
+
+
+async def test_legacy_generation_parses_complete_grounded_response(monkeypatch):
+    calls = []
+
+    class Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            pass
+
+        async def post(self, url, json, headers):
+            calls.append((url, json, headers))
+            return httpx.Response(200, json={'candidates': [{**grounded_candidate(),
+                'finishReason': 'STOP', 'content': {'parts': [
+                    {'thought': True, 'text': 'discard'},
+                    {'text': legacy_generation.json.dumps(generated_payload())}]}}]})
+
+    monkeypatch.setattr(legacy_generation.httpx, 'AsyncClient', lambda **_: Client())
+    result = await generate_legacy_card(
+        source={'title': 'A Practical Mechanism', 'subtopic_slug': 'foundations'},
+        topic='Systems', subtopic='Foundations', api_key='fixture-key',
+        model='gemini-3.1-flash-lite',
+    )
+    assert len(result.learning_package.mcqs) == 3
+    assert calls[0][1]['generationConfig']['maxOutputTokens'] == 4096
+    assert calls[0][2]['x-goog-api-key'] == 'fixture-key'
+
+
+async def test_legacy_generation_treats_unknown_model_as_configuration_error(monkeypatch):
+    class Client:
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_):
+            pass
+
+        async def post(self, *_args, **_kwargs):
+            return httpx.Response(404)
+
+    monkeypatch.setattr(legacy_generation.httpx, 'AsyncClient', lambda **_: Client())
+    with pytest.raises(LegacyConfigurationError, match='404'):
+        await generate_legacy_card(
+            source={'title': 'A Practical Mechanism'}, topic='Systems',
+            subtopic='Foundations', api_key='fixture-key', model='missing-model',
+        )
 
 
 @pytest.fixture
@@ -204,3 +282,22 @@ async def test_provider_permission_error_blocks_without_retrying(api, session, b
     assert result.json()['items'][0]['status'] == 'blocked'
     assert result.json()['items'][0]['failure_code'] == 'provider_configuration'
     assert generator.await_count == 1
+
+
+@pytest.mark.parametrize(('error', 'expected_status', 'expected_code'), [
+    (LegacyValidationError('no grounded source links', 'source_missing'), 'blocked', 'source_missing'),
+    (LegacyRetryableError('response_truncated'), 'queued', 'response_truncated'),
+])
+async def test_specific_failure_codes_preserve_review_gate(
+    api, session, batch, monkeypatch, error, expected_status, expected_code
+):
+    current, _, _ = batch
+    monkeypatch.setattr(worker, 'generate_legacy_card', AsyncMock(side_effect=error))
+    assert await worker.run_one(session, api.settings) == expected_status
+    result = await api.client.get(
+        f"{ROOT}/legacy-enrichment-batches/{current['id']}/entries",
+        headers=api.headers())
+    entry = result.json()['items'][0]
+    assert entry['status'] == expected_status
+    assert entry['failure_code'] == expected_code
+    assert entry['result_revision_id'] is None

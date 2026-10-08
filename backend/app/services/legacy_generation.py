@@ -20,9 +20,21 @@ PROMPT_VERSION = "legacy-complete-card-v2-grounded"
 class LegacyValidationError(GenerationError):
     """This candidate needs a human/source fix, not another paid retry."""
 
+    def __init__(self, message: str, code: str = "validation_failed"):
+        super().__init__(message)
+        self.failure_code = code
+
 
 class LegacyConfigurationError(GenerationError):
     """The provider rejected the request or project permissions."""
+
+
+class LegacyRetryableError(GenerationError):
+    """A safe diagnostic for a provider response worth retrying."""
+
+    def __init__(self, code: str):
+        super().__init__(code)
+        self.failure_code = code
 
 
 _SCHEMA = {
@@ -88,10 +100,13 @@ def grounded_references(candidate: dict) -> list[dict]:
 
 def build_body(source: dict, payload: dict, candidate: dict, model: str) -> LessonBody:
     title = source["title"]
-    validate(payload, title)
+    try:
+        validate(payload, title)
+    except GenerationError as exc:
+        raise LegacyRetryableError("content_invalid") from exc
     references = grounded_references(candidate)
     if not references:
-        raise LegacyValidationError("no grounded source links")
+        raise LegacyValidationError("no grounded source links", "source_missing")
     curriculum = source.get("curriculum") or {}
     prerequisites = curriculum.get("prerequisites", []) if isinstance(curriculum, dict) else []
     try:
@@ -114,7 +129,47 @@ def build_body(source: dict, payload: dict, candidate: dict, model: str) -> Less
             "prompt_version": PROMPT_VERSION,
         })
     except (KeyError, ValueError) as exc:
-        raise LegacyValidationError("invalid complete-card package") from exc
+        raise LegacyValidationError("invalid complete-card package", "package_invalid") from exc
+
+
+def _candidate_payload(response_body: object) -> tuple[dict, dict]:
+    """Read every non-thought text part; never accept an unfinished response."""
+    if not isinstance(response_body, dict):
+        raise LegacyRetryableError("response_invalid")
+    candidates = response_body.get("candidates")
+    if not isinstance(candidates, list) or not candidates:
+        feedback = response_body.get("promptFeedback")
+        if isinstance(feedback, dict) and feedback.get("blockReason"):
+            raise LegacyValidationError("Gemini blocked the prompt", "safety_blocked")
+        raise LegacyRetryableError("response_missing_candidate")
+    candidate = candidates[0]
+    if not isinstance(candidate, dict):
+        raise LegacyRetryableError("response_invalid")
+    finish = candidate.get("finishReason")
+    if finish is not None and not isinstance(finish, str):
+        raise LegacyRetryableError("response_invalid")
+    if finish == "MAX_TOKENS":
+        raise LegacyRetryableError("response_truncated")
+    if finish in {"SAFETY", "RECITATION", "BLOCKLIST", "PROHIBITED_CONTENT", "SPII"}:
+        raise LegacyValidationError("Gemini blocked the response", "safety_blocked")
+    if finish and finish != "STOP":
+        raise LegacyRetryableError("response_incomplete")
+    content = candidate.get("content")
+    parts = content.get("parts") if isinstance(content, dict) else None
+    if not isinstance(parts, list):
+        raise LegacyRetryableError("response_missing_text")
+    text_parts = [part["text"] for part in parts
+                  if isinstance(part, dict) and not part.get("thought")
+                  and isinstance(part.get("text"), str)]
+    if not text_parts:
+        raise LegacyRetryableError("response_missing_text")
+    try:
+        payload = json.loads("".join(text_parts))
+    except ValueError as exc:
+        raise LegacyRetryableError("response_invalid_json") from exc
+    if not isinstance(payload, dict):
+        raise LegacyRetryableError("response_invalid_json")
+    return payload, candidate
 
 
 async def generate_legacy_card(
@@ -139,7 +194,7 @@ async def generate_legacy_card(
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
         "tools": [{"googleSearch": {}}],
-        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 1800,
+        "generationConfig": {"temperature": 0.3, "maxOutputTokens": 4096,
                              "responseMimeType": "application/json", "responseSchema": _SCHEMA},
     }
     try:
@@ -149,17 +204,15 @@ async def generate_legacy_card(
                 json=body, headers={"x-goog-api-key": api_key},
             )
     except httpx.HTTPError as exc:
-        raise GenerationError("Gemini transport failed") from exc
+        raise LegacyRetryableError("provider_transport") from exc
     if response.status_code == 429:
         raise RateLimitedError(_retry_after_seconds(response))
-    if response.status_code in (400, 401, 403):
+    if response.status_code in (400, 401, 403, 404):
         raise LegacyConfigurationError(f"Gemini rejected the request (HTTP {response.status_code})")
     if response.status_code >= 400:
-        raise GenerationError(f"Gemini returned HTTP {response.status_code}")
+        raise LegacyRetryableError("provider_http_error")
     try:
-        candidate = response.json()["candidates"][0]
-        content = candidate["content"]["parts"][0]["text"]
-        payload = json.loads(content)
+        payload, candidate = _candidate_payload(response.json())
         return build_body(source, payload, candidate, model)
-    except (KeyError, IndexError, TypeError, ValueError) as exc:
-        raise GenerationError("Gemini returned an invalid complete-card response") from exc
+    except ValueError as exc:
+        raise LegacyRetryableError("response_invalid_json") from exc

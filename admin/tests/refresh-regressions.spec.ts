@@ -57,3 +57,40 @@ test("a temporary access-refresh outage preserves the reviewer feedback", async 
     page.getByText("Database Migrations", { exact: true }),
   ).toHaveCount(0);
 });
+
+test("a history outage does not keep a refreshed review blocked", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  await login(page);
+  await openLesson(page);
+  await page.getByLabel("Review note or comment").fill(
+    "Please verify this lesson against the listed source.",
+  );
+  state.conflict = true;
+  await page.getByRole("button", { name: "Add comment" }).click();
+  await expect(page.getByText("Another decision or edit may have changed this lesson.", {
+    exact: false,
+  })).toBeVisible();
+
+  state.conflict = false;
+  await context.route("**/v1/editorial/concepts/*/timeline", (route) =>
+    route.fulfill({
+      status: 503,
+      json: { detail: "Temporary history outage" },
+      headers: { "access-control-allow-origin": "*" },
+    }),
+  );
+  await page.getByRole("button", { name: "Reload", exact: true }).click();
+  await expect(page.getByText("Lesson loaded, but its history could not refresh.", {
+    exact: false,
+  })).toBeVisible();
+  await expect(page.getByText("Another decision or edit may have changed this lesson.", {
+    exact: false,
+  })).toHaveCount(0);
+  await expect(page.getByLabel("Review note or comment")).toHaveValue(
+    "Please verify this lesson against the listed source.",
+  );
+  await expect(page.getByRole("button", { name: "Add comment" })).toBeEnabled();
+});

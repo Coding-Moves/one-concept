@@ -69,29 +69,32 @@ export function Review({
   async function load(): Promise<Detail | null> {
     const seq = ++sequence.current;
     setError("");
+    let d: Detail;
     try {
-      const d = await api.request<Detail>(path);
-      if (seq !== sequence.current) return null;
-      setDetail(d);
-      current.current = d;
-      setStale(false);
-      setChecks({});
-      setSensitive("");
-      setAssignee(d.assigned_to || "");
-      setDue(d.review_due_at ? localTime(d.review_due_at) : "");
-      const concept = d.concept_id || id;
-      const [ev, hs] = await Promise.all([
-        api.request<Page<Event>>(`/concepts/${concept}/timeline`),
-        api.request<Page<Revision>>(`/concepts/${concept}/revisions`),
-      ]);
-      if (seq !== sequence.current) return null;
-      setEvents(ev);
-      setHistory(hs);
-      return d;
+      d = await api.request<Detail>(path);
     } catch (e) {
       if (seq === sequence.current) setError(message(e));
       return null;
     }
+    if (seq !== sequence.current) return null;
+    setDetail(d);
+    current.current = d;
+    setStale(false);
+    setChecks({});
+    setSensitive("");
+    setAssignee(d.assigned_to || "");
+    setDue(d.review_due_at ? localTime(d.review_due_at) : "");
+    const concept = d.concept_id || id;
+    const [ev, hs] = await Promise.allSettled([
+      api.request<Page<Event>>(`/concepts/${concept}/timeline`),
+      api.request<Page<Revision>>(`/concepts/${concept}/revisions`),
+    ]);
+    if (seq !== sequence.current) return null;
+    if (ev.status === "fulfilled") setEvents(ev.value);
+    if (hs.status === "fulfilled") setHistory(hs.value);
+    if (ev.status === "rejected" || hs.status === "rejected")
+      setError("Lesson loaded, but its history could not refresh. Reload to try again.");
+    return d;
   }
   const op = useCommand(api, async (result, submitted) => {
     setNote("");

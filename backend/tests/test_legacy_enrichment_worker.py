@@ -151,6 +151,46 @@ async def test_pausing_fences_a_claimed_result(api, session, batch):
       where concept_id=:id and status='draft'"""), {'id': concept_id}) == 0
 
 
+async def test_last_reserved_call_finishes_before_batch_quota_is_decided(api, session, batch):
+    current, _, _ = batch
+    await session.execute(text("""update editorial_legacy_batches set quota_limit=1
+      where id=:id"""), {'id': current['id']})
+    await session.commit()
+
+    claimed, state = await worker.claim(session, api.settings)
+    assert state == 'generating'
+    waiting, state = await worker.claim(session, api.settings)
+    assert waiting is None and state == 'in_progress'
+    assert await session.scalar(text("""select status from editorial_legacy_batches
+      where id=:id"""), {'id': current['id']}) == 'running'
+
+    complete = build_body(
+        claimed['source_body'], generated_payload(), grounded_candidate(),
+        'gemini-3.1-flash-lite',
+    )
+    assert await worker.finish(session, api.settings, claimed, body=complete) == 'ready_for_review'
+    assert await session.scalar(text("""select status from editorial_legacy_batches
+      where id=:id"""), {'id': current['id']}) == 'completed'
+    assert await worker.run_one(session, api.settings) == 'empty'
+
+
+async def test_exhausted_batch_fails_after_its_last_call_fails(api, session, batch):
+    current, _, _ = batch
+    await session.execute(text("""update editorial_legacy_batches set quota_limit=1
+      where id=:id"""), {'id': current['id']})
+    await session.commit()
+
+    claimed, state = await worker.claim(session, api.settings)
+    assert state == 'generating'
+    assert await worker.finish(session, api.settings, claimed, failure='provider_or_source_error') == 'queued'
+    waiting, state = await worker.claim(session, api.settings)
+    assert waiting is None and state == 'batch_quota_exhausted'
+    assert await session.scalar(text("""select status from editorial_legacy_batches
+      where id=:id"""), {'id': current['id']}) == 'failed'
+    assert await session.scalar(text("""select status from editorial_legacy_batch_entries
+      where batch_id=:id"""), {'id': current['id']}) == 'skipped'
+
+
 async def test_provider_permission_error_blocks_without_retrying(api, session, batch, monkeypatch):
     from app.services.legacy_generation import LegacyConfigurationError
 

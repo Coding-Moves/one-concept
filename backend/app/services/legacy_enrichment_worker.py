@@ -64,6 +64,21 @@ async def claim(db, settings):
         used = await db.scalar(text("""select coalesce(sum(attempts),0)::int
           from editorial_legacy_batch_entries where batch_id=:id"""), {'id': batch['id']})
         if used >= batch['quota_limit']:
+            # A reserved call may still finish successfully. Do not fail its
+            # batch or discard its private draft before that claim settles.
+            in_flight = await db.scalar(text("""select exists(select 1
+              from editorial_legacy_batch_entries where batch_id=:id
+              and status='generating')"""), {'id': batch['id']})
+            if in_flight:
+                await db.commit()
+                return None, 'in_progress'
+            queued = await db.scalar(text("""select exists(select 1
+              from editorial_legacy_batch_entries where batch_id=:id
+              and status='queued')"""), {'id': batch['id']})
+            if not queued:
+                await _finish_batch_if_empty(db, batch['id'])
+                await db.commit()
+                return None, 'empty'
             await db.execute(text("""update editorial_legacy_batches
               set status='failed',finished_at=clock_timestamp() where id=:id"""), {'id': batch['id']})
             await db.execute(text("""update editorial_legacy_batch_entries set status='skipped',
@@ -71,9 +86,6 @@ async def claim(db, settings):
               where batch_id=:id and status='queued'"""), {'id': batch['id']})
             await db.commit()
             return None, 'batch_quota_exhausted'
-        if await review_load(db, batch['topic_id']) >= settings.content_review_backlog_limit:
-            await db.commit()
-            return None, 'review_capacity_full'
         entry = (await db.execute(text("""select e.*,c.slug,c.content_version,c.status as concept_status,
           t.name as topic_name,s.name as subtopic_name
           from editorial_legacy_batch_entries e
@@ -85,8 +97,14 @@ async def claim(db, settings):
           {'id': batch['id']})).mappings().first()
         if entry is None:
             await _finish_batch_if_empty(db, batch['id'])
+            in_flight = await db.scalar(text("""select exists(select 1
+              from editorial_legacy_batch_entries where batch_id=:id
+              and status='generating')"""), {'id': batch['id']})
             await db.commit()
-            return None, 'empty'
+            return None, 'in_progress' if in_flight else 'empty'
+        if await review_load(db, batch['topic_id']) >= settings.content_review_backlog_limit:
+            await db.commit()
+            return None, 'review_capacity_full'
         if (entry['concept_status'] != 'published' or
                 entry['content_version'] != entry['base_version'] or
                 await db.scalar(text("""select exists(select 1 from concept_revisions
@@ -122,7 +140,7 @@ async def finish(db, settings, entry, *, body=None, failure=None):
             await db.commit()
             return 'superseded'
         if row['batch_status'] != 'running' or not settings.generation_enabled or not settings.legacy_enrichment_enabled:
-            state = 'skipped' if row['batch_status'] == 'cancelled' else 'queued'
+            state = 'skipped' if row['batch_status'] in {'cancelled', 'failed', 'completed'} else 'queued'
             code = 'batch_stopped'
         elif not await editorial_generation.requester_active(db, row):
             state, code = 'skipped', 'requester_inactive'
@@ -207,7 +225,7 @@ async def run_batch(db, settings):
             await asyncio.sleep(settings.generation_pace_seconds)
         state = await run_one(db, settings)
         outcomes[state] = outcomes.get(state, 0) + 1
-        if state in {'empty', 'disabled', 'key_missing', 'quota_exhausted',
+        if state in {'empty', 'in_progress', 'disabled', 'key_missing', 'quota_exhausted',
                      'capacity_busy', 'review_capacity_full', 'rate_limited',
                      'requester_inactive', 'batch_quota_exhausted',
                      'provider_configuration'}:

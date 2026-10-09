@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.13',
+    highlights: [
+      'More lessons from the existing library can become complete cards with reviewed explanations, a flashcard, and three practice questions.',
+    ],
+  },
+  {
     version: '1.10.12',
     highlights: [
       'More existing lessons can gain a human-reviewed flashcard and three practice questions, giving you more ways to practice what you learn.',

@@ -58,15 +58,20 @@ def test_grounded_candidate_requires_real_safe_source():
         build_body(source, generated_payload(), {'groundingMetadata': None}, 'gemini-3.1-flash-lite')
 
 
-@pytest.mark.parametrize(('field', 'value'), [
-    ('summary', 42), ('example', ['not lesson text']),
+@pytest.mark.parametrize(('field', 'value', 'expected_code'), [
+    ('summary', 42, 'content_invalid'),
+    ('example', ['not lesson text'], 'content_invalid'),
+    ('summary', 'Too short.', 'summary_length'),
+    ('summary', 'A crucial mechanism that should be explained without filler. ' * 2,
+     'summary_style'),
+    ('example', '', 'content_empty'),
 ])
-def test_malformed_lesson_text_is_retryable_not_a_worker_crash(field, value):
+def test_malformed_lesson_text_is_retryable_not_a_worker_crash(field, value, expected_code):
     payload = generated_payload() | {field: value}
     source = {'title': 'A Practical Mechanism', 'subtopic_slug': 'foundations'}
     with pytest.raises(LegacyRetryableError) as caught:
         build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
-    assert caught.value.failure_code == 'content_invalid'
+    assert caught.value.failure_code == expected_code
 
 
 def test_complete_card_uses_validated_trimmed_text():
@@ -137,11 +142,16 @@ async def test_legacy_generation_parses_complete_grounded_response(monkeypatch):
         model='gemini-3.1-flash-lite',
     )
     assert len(result.learning_package.mcqs) == 3
+    assert result.prompt_version == 'legacy-complete-card-v4-quality-guided'
     assert calls[0][1]['generationConfig']['maxOutputTokens'] == 4096
     assert 'responseMimeType' not in calls[0][1]['generationConfig']
     assert 'responseSchema' not in calls[0][1]['generationConfig']
     assert calls[0][1]['tools'] == [{'googleSearch': {}}]
-    assert 'BEGIN_CARD_JSON' in calls[0][1]['contents'][0]['parts'][0]['text']
+    prompt = calls[0][1]['contents'][0]['parts'][0]['text']
+    assert 'BEGIN_CARD_JSON' in prompt
+    assert 'summary (string, 100-420 characters; aim for 150-300)' in prompt
+    assert 'example (string, 40-300 characters; aim for 70-200)' in prompt
+    assert "Do not use code fences or filler phrases such as 'crucial'" in prompt
     assert calls[0][2]['x-goog-api-key'] == 'fixture-key'
 
 

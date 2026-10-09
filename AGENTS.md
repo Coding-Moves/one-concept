@@ -41,6 +41,19 @@ requires the exact Expo SDK 57 documentation before writing mobile code.
 
 ## Branches and PRs
 
+- Temporary owner authorization (2026-10-09): For the bounded effort to prepare
+  complete private revisions of the 125 lessons already published across the
+  existing subjects, the working agent may merge its own directly related fix,
+  release-preparation, and `develop` → `main` release PRs without requesting
+  separate confirmation for each PR. This exception ends when every one of
+  those lessons has reached **ready for human review** or has already been
+  reviewed and published, or when the owner revokes it. Before every merge,
+  verify the `Muawiya-contact` GitHub identity, inspect the exact PR diff and
+  scope, and confirm required checks pass. Follow the normal release gates;
+  do not use this exception to bypass source validation, independent review
+  requirements, human lesson approval/publication, or security protections.
+  Unrelated PRs, PR closures, branch deletion, and destructive history changes
+  still require their usual specific confirmation.
 - Inspect the current branch and working tree before making changes. Preserve
   existing work and do not silently continue an unrelated old branch.
 - Team feature/fix PRs target `develop`, as documented in [RELEASING.md](RELEASING.md).

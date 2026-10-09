@@ -92,6 +92,9 @@ for compatibility, historical offline semantics and rollout.
 ## Editorial website (#278)
 
 `admin/src/App.tsx` owns session fencing, capability gates and navigation.
+`main.tsx` supplies the current Supabase session to `api.ts` before private
+requests; the API client refreshes an idle token and fences account changes and
+late denials without discarding recoverable review work.
 `Auth.tsx` handles invitation/recovery, password and MFA; `Settings.tsx` handles
 registered identity. `Queue.tsx` supplies topic/status/deadline filtering and
 shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete

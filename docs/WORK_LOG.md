@@ -12,6 +12,7 @@ claims as completed work.
 - Scope: keep a refreshable owner/reviewer session usable after a browser tab has been idle, while retaining account-switch and revoked-authority fences. This is a focused website fix for the 125-card review effort; it does not extend a genuinely expired or revoked session.
 - The client now obtains the current Supabase session before private API requests, sends the refreshed access token, and ignores a late denial from an older token. Temporary refresh errors preserve unsent work for retry. Account identity is checked before the request so one account's data cannot appear under another.
 - Validation: admin typecheck, 17 unit tests, fixture production build, all 44 browser tests, and `git diff --check` passed. Production behavior remains unverified until merge and deployment.
+- Final review found that a 403 capability denial could prevent the same signed-in account from using Refresh account access after permission was restored. `941245c` preserves only that account identity while clearing private state; the focused browser regression, repeated typecheck and 17 unit tests passed. Hosted CI will validate the combined head.
 
 ### Legacy complete-card validation follow-up — in progress
 

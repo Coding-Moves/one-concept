@@ -156,7 +156,8 @@ def build_prompt(
 
 
 def validate(
-    payload: dict, title: str, *, example_max: int = EXAMPLE_MAX
+    payload: dict, title: str, *, summary_max: int = SUMMARY_MAX,
+    example_max: int = EXAMPLE_MAX,
 ) -> tuple[str, str]:
     """Reject anything that would embarrass us in front of a user.
 
@@ -171,8 +172,8 @@ def validate(
 
     if not summary or not example:
         raise GenerationError("summary or example was empty")
-    if not (SUMMARY_MIN <= len(summary) <= SUMMARY_MAX):
-        raise GenerationError(f"summary length {len(summary)} outside {SUMMARY_MIN}-{SUMMARY_MAX}")
+    if not (SUMMARY_MIN <= len(summary) <= summary_max):
+        raise GenerationError(f"summary length {len(summary)} outside {SUMMARY_MIN}-{summary_max}")
     if not (EXAMPLE_MIN <= len(example) <= example_max):
         raise GenerationError(f"example length {len(example)} outside {EXAMPLE_MIN}-{example_max}")
 

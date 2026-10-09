@@ -99,6 +99,21 @@ def test_legacy_example_uses_published_card_length_limit():
     assert caught.value.failure_code == 'example_length'
 
 
+def test_legacy_summary_uses_published_card_length_limit():
+    source = {'title': 'A Practical Mechanism', 'subtopic_slug': 'foundations'}
+    payload = generated_payload() | {'summary': 'A useful specific explanation. ' * 16}
+    assert 420 < len(payload['summary']) <= 600
+    body = build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
+    assert body.summary == payload['summary'].strip()
+    with pytest.raises(GenerationError, match='summary length'):
+        validate(payload, source['title'])
+
+    payload['summary'] = 'A' * 601
+    with pytest.raises(LegacyRetryableError) as caught:
+        build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
+    assert caught.value.failure_code == 'summary_length'
+
+
 def test_gemini_response_skips_thought_parts_and_joins_text():
     encoded = ('Searched the official documentation and checked the definition.\n'
                'BEGIN_CARD_JSON\n' + legacy_generation.json.dumps(generated_payload()))
@@ -164,7 +179,7 @@ async def test_legacy_generation_parses_complete_grounded_response(monkeypatch):
     assert calls[0][1]['tools'] == [{'googleSearch': {}}]
     prompt = calls[0][1]['contents'][0]['parts'][0]['text']
     assert 'BEGIN_CARD_JSON' in prompt
-    assert 'summary (string, 100-420 characters; aim for 150-300)' in prompt
+    assert 'summary (string, 100-600 characters; aim for 150-300)' in prompt
     assert 'example (string, 40-500 characters; aim for 70-200)' in prompt
     assert "Do not use code fences or filler phrases such as 'crucial'" in prompt
     assert calls[0][2]['x-goog-api-key'] == 'fixture-key'

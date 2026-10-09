@@ -12,7 +12,7 @@ claims as completed work.
 - Outcome: prepare complete private revisions for all 125 existing published lessons; human reviewers retain approval and publication. This chunk fixes the legacy-only example-length mismatch without changing new-lesson generation or source checks.
 - Live owner-site evidence: Software Engineering has 24 of 25 lessons ready for review or published; Message Queues alone exhausted three attempts with `example_length`. Linux & Systems batch `#ED025056` has 18 ready and 7 queued. The Railway browser session expired before the next on-demand run; its daily scheduled worker remains configured. Other subjects have not started.
 - `8657d72` lets `generation.validate` accept an optional maximum. The legacy path uses the published `LessonBody` maximum of 500 characters and asks Gemini for the same, while ordinary generation keeps its 300-character maximum. A regression covers both limits and rejects 501 characters. No source or human-review gate changes.
-- Local validation: 18 focused tests passed; 7 database tests skipped because disposable PostgreSQL was unavailable. Ruff `F,E9` and `git diff --check` passed. Production rollout and the remaining subject batches are pending.
+- Validation: all 25 focused tests passed against disposable PostgreSQL 16, Ruff `F,E9` and `git diff --check` passed. [PR #394](https://github.com/Coding-Moves/one-concept/pull/394) targets `develop`; hosted checks and production rollout are pending. The remaining subject batches are pending.
 
 ### Editorial owner session recovery — merged into develop
 

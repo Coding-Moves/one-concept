@@ -9,6 +9,7 @@ from sqlalchemy import text
 
 from app.services import legacy_enrichment_worker as worker
 from app.services import legacy_generation
+from app.services.generation import GenerationError, validate
 from app.services.legacy_generation import (
     LegacyConfigurationError, LegacyRetryableError, LegacyValidationError,
     _candidate_payload, build_body, generate_legacy_card,
@@ -84,6 +85,35 @@ def test_complete_card_uses_validated_trimmed_text():
     assert body.example == payload['example'].strip()
 
 
+def test_legacy_example_uses_published_card_length_limit():
+    source = {'title': 'A Practical Mechanism', 'subtopic_slug': 'foundations'}
+    payload = generated_payload() | {'example': 'A' * 400}
+    body = build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
+    assert len(body.example) == 400
+    with pytest.raises(GenerationError, match='example length'):
+        validate(payload, source['title'])
+
+    payload['example'] = 'A' * 501
+    with pytest.raises(LegacyRetryableError) as caught:
+        build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
+    assert caught.value.failure_code == 'example_length'
+
+
+def test_legacy_summary_uses_published_card_length_limit():
+    source = {'title': 'A Practical Mechanism', 'subtopic_slug': 'foundations'}
+    payload = generated_payload() | {'summary': 'A useful specific explanation. ' * 16}
+    assert 420 < len(payload['summary']) <= 600
+    body = build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
+    assert body.summary == payload['summary'].strip()
+    with pytest.raises(GenerationError, match='summary length'):
+        validate(payload, source['title'])
+
+    payload['summary'] = 'A' * 601
+    with pytest.raises(LegacyRetryableError) as caught:
+        build_body(source, payload, grounded_candidate(), 'gemini-3.1-flash-lite')
+    assert caught.value.failure_code == 'summary_length'
+
+
 def test_gemini_response_skips_thought_parts_and_joins_text():
     encoded = ('Searched the official documentation and checked the definition.\n'
                'BEGIN_CARD_JSON\n' + legacy_generation.json.dumps(generated_payload()))
@@ -142,15 +172,15 @@ async def test_legacy_generation_parses_complete_grounded_response(monkeypatch):
         model='gemini-3.1-flash-lite',
     )
     assert len(result.learning_package.mcqs) == 3
-    assert result.prompt_version == 'legacy-complete-card-v4-quality-guided'
+    assert result.prompt_version == legacy_generation.PROMPT_VERSION
     assert calls[0][1]['generationConfig']['maxOutputTokens'] == 4096
     assert 'responseMimeType' not in calls[0][1]['generationConfig']
     assert 'responseSchema' not in calls[0][1]['generationConfig']
     assert calls[0][1]['tools'] == [{'googleSearch': {}}]
     prompt = calls[0][1]['contents'][0]['parts'][0]['text']
     assert 'BEGIN_CARD_JSON' in prompt
-    assert 'summary (string, 100-420 characters; aim for 150-300)' in prompt
-    assert 'example (string, 40-300 characters; aim for 70-200)' in prompt
+    assert 'summary (string, 100-600 characters; aim for 150-300)' in prompt
+    assert 'example (string, 40-500 characters; aim for 70-200)' in prompt
     assert "Do not use code fences or filler phrases such as 'crucial'" in prompt
     assert calls[0][2]['x-goog-api-key'] == 'fixture-key'
 

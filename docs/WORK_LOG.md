@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Existing-card completion, 2026-10-09 — in progress
+
+- Outcome: prepare complete private revisions for all 125 existing published lessons; human reviewers retain approval and publication. This chunk aligns legacy-only summary and example length checks with the published lesson schema without changing new-lesson generation or source checks.
+- Live owner-site evidence: Software Engineering has 24 of 25 lessons ready for review or published; Message Queues alone exhausted three attempts with `example_length`. Linux & Systems batch `#ED025056` has 18 ready and 7 queued. The Railway browser session expired before the next on-demand run; its daily scheduled worker remains configured. Other subjects have not started.
+- `8657d72` lets `generation.validate` accept an optional worked-example maximum; `fd641d0` does the same for summaries. The legacy path uses published `LessonBody` limits of 500 and 600 characters while ordinary generation retains 300 and 420. Boundary regressions reject over-limit content. No source or human-review gate changes.
+- Validation: all 26 focused tests passed against disposable PostgreSQL 16, Ruff `F,E9` and `git diff --check` passed. [PR #394](https://github.com/Coding-Moves/one-concept/pull/394) targets `develop`; hosted checks and production rollout are pending. The remaining subject batches are pending.
+
 ### Editorial owner session recovery — merged into develop
 
 - Scope: keep a refreshable owner/reviewer session usable after a browser tab has been idle, while retaining account-switch and revoked-authority fences. This is a focused website fix for the 125-card review effort; it does not extend a genuinely expired or revoked session.

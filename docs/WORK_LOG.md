@@ -7,13 +7,20 @@ claims as completed work.
 
 ## Current status
 
+### Editorial owner session recovery — in progress
+
+- Scope: keep a refreshable owner/reviewer session usable after a browser tab has been idle, while retaining account-switch and revoked-authority fences. This is a focused website fix for the 125-card review effort; it does not extend a genuinely expired or revoked session.
+- The client now obtains the current Supabase session before private API requests, sends the refreshed access token, and ignores a late denial from an older token. Temporary refresh errors preserve unsent work for retry. Account identity is checked before the request so one account's data cannot appear under another.
+- Validation: admin typecheck, 17 unit tests, fixture production build, all 44 browser tests, and `git diff --check` passed. Production behavior remains unverified until merge and deployment.
+- Final review found that a 403 capability denial could prevent the same signed-in account from using Refresh account access after permission was restored. `941245c` preserves only that account identity while clearing private state; the focused browser regression, repeated typecheck and 17 unit tests passed. Hosted CI will validate the combined head.
+
 ### Legacy complete-card validation follow-up — in progress
 
-- The owner authorized a temporary exception to per-PR merge confirmation solely for preparing complete private revisions of the 125 existing lessons. `bddf3a7` records the bounded exception in `AGENTS.md`; [PR #381](https://github.com/Coding-Moves/one-concept/pull/381) targets `develop`. Identity, checks, release gates, and human review/publication remain required. The exception ends when all 125 are ready for human review or already reviewed/published, or on revocation.
+- The owner authorized a temporary exception to per-PR merge confirmation solely for preparing complete private revisions of the 125 existing lessons. `bddf3a7` records the bounded exception in `AGENTS.md`; [PR #381](https://github.com/Coding-Moves/one-concept/pull/381) merged into `develop` as `8baa62b` after all three hosted checks passed and the owner specifically approved that merge. Identity, checks, release gates, and human review/publication remain required. The exception ends when all 125 are ready for human review or already reviewed/published, or on revocation.
 - Release [PR #379](https://github.com/Coding-Moves/one-concept/pull/379) merged as `ef411d5`; Railway `api`, `reminders`, and `pool-topup` run that SHA, `/health` reports a reachable database, and the guarded v1.10.11 release workflow passed its production-schema, OTA, and tag steps. This release did not publish any lesson automatically.
 - Live Software Engineering batch `#066794E6` is paused after a bounded run. Its second paid canary produced a structurally valid Database Indexes draft, then the larger pass saved 14 private drafts but left 4 entries failed with repeated `content_invalid`, 1 blocked for a missing source, and 1 queued. The worker completed after the pause. Existing drafts are preserved for human review; no failed item was silently published. The worker's service-level `LEGACY_ENRICHMENT_BATCH_SIZE` is 60; do not resume this batch before the fix is deployed.
 - `fde0f30` aligns the legacy Gemini prompt with the actual summary/example quality limits and prohibited filler, records content-free validation reason codes, and adds regressions. Focused tests against disposable PostgreSQL 16: **24 passed**. Ruff `F,E9` and `git diff --check` passed. Hosted CI and a new one-call production pilot remain pending; this fix has not reached production.
-- [PR #380](https://github.com/Coding-Moves/one-concept/pull/380) targets `develop` with this focused fix; hosted checks and a PR-specific merge decision are pending. A separate production release would then be needed. A retry can stage the one queued card; failed or blocked entries need a new eligible batch after this one ends. The 25-draft review-capacity limit and human decisions may prevent all five subjects from being ready at once.
+- [PR #380](https://github.com/Coding-Moves/one-concept/pull/380) passed all three hosted checks and merged into `develop` as `ada17b6`; its production release and one-call paid pilot remain pending. A retry can stage the one queued card; failed or blocked entries need a new eligible batch after this one ends. The 25-draft review-capacity limit and human decisions may prevent all five subjects from being ready at once.
 
 ### Legacy grounded-card recovery — in progress
 

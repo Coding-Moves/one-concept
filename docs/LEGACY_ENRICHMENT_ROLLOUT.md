@@ -78,12 +78,15 @@ the generated text as sourced. `package_invalid` or `safety_blocked` means the
 private draft cannot be staged; use a manual correction or investigate the
 provider configuration. `response_truncated`, `response_invalid_json`,
 `response_missing_card_marker`, `response_missing_text`, `content_invalid`,
-`provider_transport`, and
+`summary_length`, `example_length`, `summary_style`, `code_fence`,
+`example_repeats`, `content_empty`, `provider_transport`, and
 `provider_http_error` are retryable response/provider failures. Each still
 consumes a call, and an entry becomes **Failed** after three attempts. Railway
 logs include only the entry ID and safe code, not lesson text or credentials.
-Old batches retain their original generic codes; this diagnostic change does
-not retroactively identify their exact failure.
+The more specific text-quality codes distinguish a short/long response from
+boilerplate, code fences, repeated examples, or empty text; they do not reveal
+the lesson content. Old batches retain their original generic codes; this
+diagnostic change does not retroactively identify their exact failure.
 
 The worker asks Gemini to search and produce a short research note before a
 marked JSON card. The note is discarded; only the card and safe links from

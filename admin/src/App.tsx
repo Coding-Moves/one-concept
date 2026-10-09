@@ -77,7 +77,7 @@ export function App({
       const changed = id !== account.current || event === "SIGNED_OUT";
       account.current = id;
       sessionRef.current = next;
-      api.setToken(next?.access_token || null, changed);
+      api.setToken(next?.access_token || null, changed, id);
       setSession(next);
       setReady(true);
       if (changed) {
@@ -89,7 +89,11 @@ export function App({
       if (event === "PASSWORD_RECOVERY") setSetup(true);
     });
     api.onDenied = (status) => {
-      api.setToken(null, true);
+      api.setToken(
+        null,
+        true,
+        status === 401 ? null : sessionRef.current?.user.id || null,
+      );
       setMe(null);
       dirty.current = false;
       setEpoch((n) => n + 1);
@@ -173,7 +177,7 @@ export function App({
     )
       return;
     setError("");
-    api.setToken(null, true);
+    api.setToken(null, true, null);
     sessionRef.current = null;
     setMe(null);
     setSession(null);
@@ -299,7 +303,6 @@ export function App({
               <Notice error>{error}</Notice>
               <button
                 onClick={() => {
-                  api.setToken(session.access_token);
                   void reloadMe();
                 }}
               >

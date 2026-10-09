@@ -47,7 +47,13 @@ async function start() {
     root.render(
       <App
         auth={auth}
-        api={new Api(config.apiUrl)}
+        api={new Api(config.apiUrl, async () => {
+          const { data, error } = await auth.auth.getSession();
+          if (error) throw error;
+          return data.session
+            ? { token: data.session.access_token, userId: data.session.user.id }
+            : null;
+        })}
         environment={config.environment}
         passwordSetup={callback && !initialError}
         initialError={initialError}

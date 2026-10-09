@@ -89,7 +89,11 @@ export function App({
       if (event === "PASSWORD_RECOVERY") setSetup(true);
     });
     api.onDenied = (status) => {
-      api.setToken(null, true, null);
+      api.setToken(
+        null,
+        true,
+        status === 401 ? null : sessionRef.current?.user.id || null,
+      );
       setMe(null);
       dirty.current = false;
       setEpoch((n) => n + 1);

@@ -314,6 +314,22 @@ test("denied access reveals no queue and recovery stays generic", async ({
     page.getByText("If this address can recover an account", { exact: false }),
   ).toBeVisible();
 });
+test("account access can recover after a temporary permission denial", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context);
+  state.denied = true;
+  await login(page);
+  await expect(
+    page.getByRole("heading", { name: "Workspace unavailable" }),
+  ).toBeVisible();
+  state.denied = false;
+  await page.getByRole("button", { name: "Refresh account access" }).click();
+  await expect(
+    page.getByRole("heading", { name: "A little care. Better learning." }),
+  ).toBeVisible();
+});
 test("onboarding form waits for name approval", async ({ page, context }) => {
   await fixture(context, { onboarding: true });
   await login(page);

@@ -16,6 +16,7 @@ from app.config import Settings
 
 BUCKET = "profile-avatars"
 MAX_BYTES = 262_144
+MAX_PIXELS = 25_000_000
 PRESETS = {"aurora", "comet", "forest", "ocean", "sunset", "violet"}
 
 
@@ -43,6 +44,8 @@ def normalize_avatar(data: bytes) -> bytes:
         raise HTTPException(413, "Choose an image smaller than 5 MB")
     try:
         with Image.open(io.BytesIO(data)) as source:
+            if source.width * source.height > MAX_PIXELS:
+                raise HTTPException(422, "Choose a photo with fewer than 25 million pixels")
             source.verify()
         with Image.open(io.BytesIO(data)) as source:
             image = ImageOps.exif_transpose(source).convert("RGB")

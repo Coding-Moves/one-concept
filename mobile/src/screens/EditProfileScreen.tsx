@@ -16,7 +16,7 @@ function photoSaveError(error: unknown): string {
   if (error instanceof ApiError) {
     if (error.status === 0) return 'No connection. Connect and try saving your photo again.';
     if (error.status === 413) return 'Choose a photo smaller than 5 MB.';
-    if (error.status === 415 || error.status === 422) return 'This photo could not be used. Choose a JPEG, PNG, or WebP image.';
+    if (error.status === 415 || error.status === 422) return 'This photo could not be used. Try a smaller JPEG, PNG, or WebP image.';
     if (error.status === 503) return 'Photo saving is unavailable right now. Try again later or choose a built-in avatar.';
     if (error.status === 401) return 'Your account changed. Open Edit profile again to choose a photo.';
   }

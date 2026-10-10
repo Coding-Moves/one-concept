@@ -94,7 +94,7 @@ async def _authorize_current(
             raise HTTPException(403, "Editorial permission required")
         if member.approved_name is None:
             raise HTTPException(403, "Complete profile setup and obtain name approval")
-        if user.aal != "aal2":
+        if member.require_mfa and user.aal != "aal2":
             raise HTTPException(403, "Complete MFA verification for editorial actions")
     return member
 

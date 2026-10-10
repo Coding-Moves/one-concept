@@ -81,6 +81,7 @@ class TokenClaims:
     expires_at: int
     session_id: str | None = None
     aal: str = "aal1"
+    mfa_verified_at: int | None = None
 
 
 async def verify_token(token: str, jwks: JwksCache, issuer: str) -> TokenClaims:
@@ -117,10 +118,18 @@ async def verify_token(token: str, jwks: JwksCache, issuer: str) -> TokenClaims:
     if not subject:
         raise unauthorized("Token has no subject")
 
+    methods = payload.get("amr")
+    mfa_times = []
+    if isinstance(methods, list):
+        for item in methods:
+            if (isinstance(item, dict) and item.get("method") == "totp"
+                    and type(item.get("timestamp")) is int):
+                mfa_times.append(item["timestamp"])
     return TokenClaims(
         user_id=str(subject),
         email=payload.get("email"),
         expires_at=int(payload["exp"]),
         session_id=payload.get("session_id") if isinstance(payload.get("session_id"), str) else None,
         aal=payload.get("aal") if payload.get("aal") in ("aal1", "aal2") else "aal1",
+        mfa_verified_at=max(mfa_times, default=None),
     )

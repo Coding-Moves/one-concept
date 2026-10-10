@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Repeat unfinished daily lessons — PR open
+
+- Outcome: carry the exact unfinished lesson in a followed subject onto later local days until Learned. Follow changes take effect on the next assignment day. Once followed lessons are learned, Today offers a review from a followed subject or waits for publication. Completed dates stay fixed.
+- Scope: [lesson issue #397](https://github.com/Coding-Moves/one-concept/issues/397) and [foreground issue #398](https://github.com/Coding-Moves/one-concept/issues/398) share branch `codex/repeat-unlearned-lessons` and [PR #399](https://github.com/Coding-Moves/one-concept/pull/399) into `develop`. The existing release branch and its uncommitted work remain untouched.
+- `7da20e0` carries unfinished assignment rows, keeps selection and reviews within follows, aligns the compact state pointer, and adds database/API regressions. `d1d24de` refreshes account progress and topics on foreground return/reconnect without dropping queued actions. `e9532a7` updates the yearlong simulation to verify activity stays within follows.
+- Validation: 93 focused backend tests and the complete 580-test backend suite passed against disposable PostgreSQL 16; mobile typecheck and all 97 mobile tests passed; targeted Ruff `F,E9` and `git diff --check` passed. The published PR diff was reviewed; hosted checks are pending. A physical-device foreground check and production rollout remain unverified.
+
 ### Existing-card completion, 2026-10-09 — in progress
 
 - Outcome: prepare complete private revisions for all 125 existing published lessons; human reviewers retain approval and publication. This chunk aligns legacy-only summary and example length checks with the published lesson schema without changing new-lesson generation or source checks.

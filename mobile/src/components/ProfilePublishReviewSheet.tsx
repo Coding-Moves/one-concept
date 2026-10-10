@@ -6,6 +6,7 @@ import { useTheme } from '../context/ThemeContext';
 export type PublicProfileFields = {
   displayName: boolean;
   avatar?: boolean;
+  bio: boolean;
   streak: boolean;
   concepts: boolean;
   achievements: boolean;
@@ -14,6 +15,7 @@ export type PublicProfileFields = {
 const fieldLabels: Record<keyof PublicProfileFields, string> = {
   displayName: 'Your display name',
   avatar: 'Your profile avatar',
+  bio: 'Your short bio',
   streak: 'Your learning streak',
   concepts: 'Concepts learned',
   achievements: 'Earned achievements',
@@ -23,6 +25,7 @@ const fieldLabels: Record<keyof PublicProfileFields, string> = {
 export function ProfilePublishReviewSheet({
   visible,
   fields,
+  bioText,
   busy,
   title,
   confirmLabel,
@@ -31,6 +34,7 @@ export function ProfilePublishReviewSheet({
 }: {
   visible: boolean;
   fields: PublicProfileFields;
+  bioText?: string | null;
   busy: boolean;
   title: string;
   confirmLabel: string;
@@ -65,7 +69,10 @@ export function ProfilePublishReviewSheet({
             {selected.length ? selected.map(field => (
               <View key={field} style={[styles.field, { backgroundColor: colors.surface }]}>
                 <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <Text style={[styles.fieldText, { color: colors.text }]}>{fieldLabels[field]}</Text>
+                <View style={{ flex: 1, gap: 4 }}>
+                  <Text style={[styles.fieldText, { color: colors.text }]}>{fieldLabels[field]}</Text>
+                  {field === 'bio' && bioText ? <Text style={{ color: colors.textSecondary, lineHeight: 20 }}>{bioText}</Text> : null}
+                </View>
               </View>
             )) : <Text style={[styles.empty, { color: colors.textSecondary }]}>Choose at least one item before publishing your profile.</Text>}
             <Pressable

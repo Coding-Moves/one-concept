@@ -35,6 +35,22 @@ service. Returning from background clears the displayed QR, and incoming profile
 views reload public data. Visitors do not send authentication tokens or persist
 public profile data in offline caches.
 
+## Short bio extension
+
+The owner sees the saved short bio under their name on Profile. Migration
+`0044_public_profile_bio_choice.sql` adds a separate `show_bio` choice, off by
+default. The saved bio remains in the existing private `profiles.bio` column.
+The public JSON and browser page include it only while the profile is enabled,
+the bio is nonempty, and the owner has published that choice. Browser rendering
+escapes the bio. Clearing it or turning off the choice removes it from future
+public reads. The mobile publish review shows the actual bio text before saving
+the choice, and visitor views release their modal when closed.
+
+Apply 0044 with the normal reviewed migration process before deploying the
+matching API or mobile client. Verify the schema contract on staging. Do not
+mark the migration applied in `backend/migrations/applied.txt` until production
+application is confirmed.
+
 ## Timezone and reminders
 
 Migration 0029 preserves every existing account's timezone. A new profile may

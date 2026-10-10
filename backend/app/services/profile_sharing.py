@@ -19,7 +19,7 @@ async def sharing_row(db, user_id):
 
 
 def sharing_output(row):
-    return SharingOut(enabled=row.enabled, show_name=row.show_name, show_avatar=row.show_avatar,
+    return SharingOut(enabled=row.enabled, show_name=row.show_name, show_avatar=row.show_avatar, show_bio=row.show_bio,
                       show_streak=row.show_streak, show_learning=row.show_learning,
                       achievement_codes=row.achievement_codes, version=row.version,
                       public_path=f'/p/{row.public_token}' if row.enabled else None)
@@ -37,7 +37,7 @@ async def save_sharing(db, user_id, body):
     # Revoked URLs never regain access when sharing is enabled again.
     token = secrets.token_urlsafe(32) if row.enabled and not body.enabled else row.public_token
     await db.execute(text('''update public.profile_sharing set enabled=:enabled,
-        show_name=:show_name,show_avatar=:show_avatar,show_streak=:show_streak,show_learning=:show_learning,
+        show_name=:show_name,show_avatar=:show_avatar,show_bio=:show_bio,show_streak=:show_streak,show_learning=:show_learning,
         achievement_codes=:codes,public_token=:token,version=version+1 where user_id=:uid'''),
         {**body.model_dump(exclude={'achievement_codes', 'version'}), 'uid': user_id,
          'codes': codes, 'token': token})
@@ -47,7 +47,7 @@ async def save_sharing(db, user_id, body):
 
 
 async def public_profile(db, token):
-    row = (await db.execute(text('''select s.*,p.display_name,p.avatar_url from public.profile_sharing s
+    row = (await db.execute(text('''select s.*,p.display_name,p.bio,p.avatar_url from public.profile_sharing s
         join public.profiles p on p.id=s.user_id
         where s.public_token=:token and s.enabled for share of s'''), {'token': token})).first()
     if row is None:
@@ -56,6 +56,8 @@ async def public_profile(db, token):
     # Name sharing is explicit; no email or authentication row is queried.
     if row.show_name:
         result.display_name = row.display_name or 'Learner'
+    if row.show_bio:
+        result.bio = row.bio
     if row.show_avatar:
         # Presets are non-identifying; a private photo gets only a short-lived URL.
         result.avatar_ref = row.avatar_url if is_preset(row.avatar_url) else None

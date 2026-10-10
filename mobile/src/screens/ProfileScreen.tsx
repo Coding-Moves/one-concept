@@ -172,6 +172,7 @@ export function ProfileScreen() {
           <Text style={styles.name}>
             {progress.displayName?.trim() || (email ? email.split('@')[0] : 'Learner')}
           </Text>
+          {progress.bio ? <Text style={styles.bio}>{progress.bio}</Text> : null}
           <Text style={styles.subtitle}>
             {email ?? 'Signed out'}
           </Text>
@@ -417,6 +418,11 @@ const createStyles = (colors: ThemeColors) =>
       ...typography.title,
       fontSize: scaleFont(24),
       color: colors.text,
+    },
+    bio: {
+      fontSize: scaleFont(14),
+      lineHeight: scaleFont(20),
+      color: colors.textSecondary,
     },
     subtitle: {
       fontSize: scaleFont(12),

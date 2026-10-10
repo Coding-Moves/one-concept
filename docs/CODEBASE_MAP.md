@@ -571,7 +571,10 @@ the implementation or older documentation:
 public JSON/browser reads. `services/profile_sharing.py` owns row locking, version
 checks, earned-achievement filtering and revocable random tokens. Migration 0028
 adds the backend-only sharing table; 0029 preserves stored timezones during phone
-initialization. `mobile/src/services/profileSharing.ts` owns link parsing, local QR
+initialization; 0044 adds the default-off public bio choice. The owner Profile
+reads the saved bio from progress; `ProfileSharingScreen.tsx` and
+`ProfilePublishReviewSheet.tsx` review its public choice, while `PublicProfileLink.tsx`
+shows only the anonymous allowlist. `mobile/src/services/profileSharing.ts` owns link parsing, local QR
 and anonymous visitor requests. See [profile-sharing.md](profile-sharing.md) for
 privacy guarantees, migration order and phone acceptance checks.
 

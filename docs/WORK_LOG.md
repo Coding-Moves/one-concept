@@ -7,6 +7,15 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.14 release preparation — 2026-10-10
+
+- Scope: prepare the next release on `codex/v1-10-14-release-prep` from current `develop` with app version 1.10.14 and its one-time What's New card. Keep native runtime 1.10.8 because this release adds no native package or app-config change. Open a focused PR into `develop`; the production release remains a separate `develop` → `main` PR.
+- Card highlights will cover repeating an unfinished daily lesson until Learned, refreshing Today when the app resumes, and the profile photo, bio, sharing, and connection improvements now in `develop`. Validate the exact version/card match and mobile TypeScript.
+- Release gates: authenticator PR #411 merged into `develop` as `619f1f0`. Migrations 0044 (public bio choice) and 0045 (authenticator choice) are absent from the verified production-applied ledger. Do not mark them applied without actual production verification; the release runbook requires migration application before opening the release PR.
+- Commits: `95e317d` records scope; `32f7bd4` bumps the marketing version and adds the matching three-highlight card; `5d902af` integrates merged #411 without rewriting either history. No native runtime or package change was made in this chunk.
+- Validation: clean Node 24 locked install, mobile typecheck, exact version/card/runtime check, and `git diff --check` passed. The full local mobile suite had one failing existing `publicConfig.test.mjs` stderr assertion; all other cases passed. Hosted mobile, backend, and website checks passed. The existing version-keyed dismissal flow was inspected and reused.
+- [Preparation PR #412](https://github.com/Coding-Moves/one-concept/pull/412) targets `develop`; all three hosted checks passed on `a156963`. The production release PR will wait for #412 to merge and for the two pending production migrations to be verified and recorded.
+
 ### Optional authenticator for the editorial website — 2026-10-10, PR #411 open
 
 - Scope: one PR into `develop` for a per-account owner/reviewer Settings switch. Existing editorial accounts continue to require an authenticator by default. Turning it off requires a fresh verified TOTP challenge; turning it on restores MFA gating for that account. Supabase factors remain enrolled.

@@ -274,20 +274,26 @@ export function ProgressProvider({ children, repository: override }: Props) {
 
   // Retry shares the mutation chain, so a refresh cannot overwrite a later tap.
   const refresh = useCallback(() => apply(null, () => repository.load()), [apply, repository]);
+  const confirmProfileWrite = useCallback(async (work: () => Promise<ProgressState>) => {
+    const epoch = accountEpoch.current;
+    let failure: unknown;
+    let failed = false;
+    await apply(null, async () => { try { return await work(); } catch (error) { failure = error; failed = true; throw error; } });
+    if (epoch !== accountEpoch.current) throw new Error('Account changed');
+    if (failed) throw failure;
+  }, [apply]);
   const updateProfile = useCallback(async (input: { displayName?: string; bio?: string; avatarPreset?: string }) => {
     if (!userId || !repository.updateProfile) throw new Error('Sign in to edit your profile');
-    let failure: unknown;
-    await apply(null, async () => { try { return await repository.updateProfile!(input, userId); } catch (error) { failure = error; throw error; } });
-    if (failure) throw failure;
-  }, [apply, repository, userId]);
+    await confirmProfileWrite(() => repository.updateProfile!(input, userId));
+  }, [confirmProfileWrite, repository, userId]);
   const uploadAvatar = useCallback(async (uri: string, mimeType: string) => {
     if (!userId || !repository.uploadAvatar) throw new Error('Sign in to add a photo');
-    await apply(null, () => repository.uploadAvatar!(uri, mimeType, userId));
-  }, [apply, repository, userId]);
+    await confirmProfileWrite(() => repository.uploadAvatar!(uri, mimeType, userId));
+  }, [confirmProfileWrite, repository, userId]);
   const removeAvatar = useCallback(async () => {
     if (!userId || !repository.removeAvatar) throw new Error('Sign in to remove a photo');
-    await apply(null, () => repository.removeAvatar!(userId));
-  }, [apply, repository, userId]);
+    await confirmProfileWrite(() => repository.removeAvatar!(userId));
+  }, [confirmProfileWrite, repository, userId]);
   const retrySync = useCallback(() => apply(null, async () => {
     await retryPaused();
     return repository.flushQueue?.() ?? null;

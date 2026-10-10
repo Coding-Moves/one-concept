@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Saved bio visibility and public choice — 2026-10-10, in progress
+
+- Scope: [#402](https://github.com/Coding-Moves/one-concept/issues/402) on `codex/402-profile-bio` gives the owner a visible saved bio and adds a separate, default-off public bio choice. The anonymous API, in-app visitor view, and browser page must show it only after explicit publication. This is separate from the photo PR and the later shared-profile, sharing-settings, and Connections issues.
+- Intended commits: additive migration and backend allowlist with regression coverage; mobile owner and visitor display with review choice; documentation and validation handoff. The existing bio column and 160-character limit remain in place.
+- `571e20f` adds the default-off migration, server allowlist, escaped browser bio, and privacy tests; `bb6ad61` shows the saved bio on the owner Profile; `1c3c823` adds the sharing switch, publish review, and public preview; `6913e3c` shows the visitor bio and unmounts its modal on close so it cannot trap focus over Edit profile; `5ac803f` records the migration in the schema contract.
+- Validation: eight profile-sharing PostgreSQL tests and the schema contract test passed against disposable PostgreSQL 16; mobile typecheck, three sharing unit tests, Expo web export, the 320px owner/review/visitor/clear browser flow, and `git diff --check` passed. The full local mobile suite passed 96 of 97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local Node runtime. Physical-device editing, sign-out/account-switch display, and production migration remain unverified.
+
 ### Editorial review handoff and first future-refill plan — 2026-10-10
 
 - Scope: one PR into `develop` for automatic private correction requests after a reviewer's change request, the published/manual review-page regressions, symbolic MCQ option validation, and a curated five-subject launch backlog for future refill. No lesson is auto-approved or published.

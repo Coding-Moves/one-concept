@@ -17,10 +17,10 @@ claims as completed work.
 
 ### Shared-profile visitor card — 2026-10-10, PR #409 open
 
-- Scope: [#403](https://github.com/Coding-Moves/one-concept/issues/403) on `codex/403-shared-profile`, stacked on bio PR #407 because both change the visitor view. Browser and app visitors see a responsive card built solely from the anonymous public allowlist, with Connect near identity in the app. The browser link opens the app to connect.
+- Scope: [#403](https://github.com/Coding-Moves/one-concept/issues/403) on `codex/403-shared-profile`, based on bio PR #407 because both change the visitor view. Browser and app visitors see a responsive card built solely from the anonymous public allowlist, with Connect near identity in the app. The browser link opens the app to connect.
 - `6144529` replaces the plain browser text with an escaped, no-script card, scoped photo origin in CSP, and focused rendering tests. `717e1bc` adds the in-app visitor card and Connect flow. Visual review prompted `5a70444` to replace ambiguous browser glyphs with vector icons.
 - Validation: ten focused backend tests passed against disposable PostgreSQL 16; Ruff F/E9, mobile typecheck, web export, the 320px visitor/Connect browser flow, and `git diff --check` passed. The full local mobile suite passed 96/97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local Node runtime. Physical Android/iOS deep links and signed storage photos remain manual release acceptance.
-- [PR #409](https://github.com/Coding-Moves/one-concept/pull/409) is stacked on #407 so its diff contains only the visitor-card change. The published diff is mergeable and was reviewed against #403 with no remaining code finding. GitHub's PR quality workflow runs only for `develop` or `main` targets, so this stacked PR has no hosted checks until #407 merges and the base is changed to `develop`. Issue #403 stays open for device acceptance.
+- [PR #409](https://github.com/Coding-Moves/one-concept/pull/409) targets `develop` so hosted checks run. Its current diff includes #407's commits; merge #407 first so the remaining diff is the visitor-card chunk. The published change was reviewed against #403 with no remaining code finding. Issue #403 stays open for device acceptance.
 
 ### Saved bio visibility and public choice — 2026-10-10, PR #407 open
 

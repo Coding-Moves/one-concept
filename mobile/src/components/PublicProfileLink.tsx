@@ -26,6 +26,7 @@ export function PublicProfileLink() {
     return () => { active = false; listener.remove(); stopOpening(); };
   }, []);
   useEffect(() => {
+    if (!token) { setProfile(null); return; }
     let current = true;
     const load = () => {
       setProfile(null); setError(false);
@@ -39,12 +40,16 @@ export function PublicProfileLink() {
     });
     return () => { current = false; subscription.remove(); };
   }, [token, attempt]);
-  return <Modal visible={Boolean(token)} onRequestClose={() => setToken(null)} animationType="slide">
+  const close = () => { setToken(null); setProfile(null); setError(false); };
+  // Unmount the portal on close so its focus trap cannot cover account screens.
+  if (!token) return null;
+  return <Modal visible onRequestClose={close} animationType="slide">
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>
       <ScrollView contentContainerStyle={{ padding: 24, gap: 20 }}>
-        <Pressable accessibilityRole="button" onPress={() => setToken(null)} style={{ minHeight: 44 }}><Text style={{ color: colors.primary }}>Close profile</Text></Pressable>
+        <Pressable accessibilityRole="button" onPress={close} style={{ minHeight: 44 }}><Text style={{ color: colors.primary }}>Close profile</Text></Pressable>
         {error ? <><Text style={{ color: colors.text }}>This profile is unavailable or your connection could not be reached.</Text><Pressable accessibilityRole="button" onPress={() => setAttempt(n => n + 1)} style={{ minHeight: 44 }}><Text style={{ color: colors.primary }}>Retry</Text></Pressable></> : profile ? <>
           <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>{profile.display_name || 'One Concept learner'}</Text>
+          {profile.bio ? <Text style={{ color: colors.textSecondary, fontSize: 16, lineHeight: 24 }}>{profile.bio}</Text> : null}
           {profile.current_streak !== undefined && <Text style={{ color: colors.text }}>Current streak: {profile.current_streak} days · Longest: {profile.longest_streak} days</Text>}
           {profile.concepts_learned !== undefined && <Text style={{ color: colors.text }}>{profile.concepts_learned} concepts learned</Text>}
           {profile.achievements.map((a, i) => <Text key={i} style={{ color: colors.text }}>{a.name} — {a.description}</Text>)}

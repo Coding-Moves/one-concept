@@ -11,6 +11,7 @@ from app.config import get_settings
 from app.services.profile_avatar import is_preset, is_object_key, signed_avatar_url
 
 CONNECT_LIMIT = 40
+AVATAR_LOOKUP_TIMEOUT_SECONDS = 3
 
 
 def unavailable():
@@ -156,7 +157,18 @@ async def list_relationships(db, actor, cursor, limit):
         return RelationshipEntry(id=row.id, display_name=row.display_name,
                                  public_path=row.public_path, avatar_ref=avatar_ref, avatar_url=avatar_url)
 
-    items = await asyncio.gather(*(entry(row) for row in rows[:limit]))
+    try:
+        items = await asyncio.wait_for(
+            asyncio.gather(*(entry(row) for row in rows[:limit])),
+            timeout=AVATAR_LOOKUP_TIMEOUT_SECONDS,
+        )
+    except TimeoutError:
+        # Storage must not turn the private Connections list into a slow or
+        # unavailable page. Presets still render; photos can load next time.
+        items = [RelationshipEntry(
+            id=row.id, display_name=row.display_name, public_path=row.public_path,
+            avatar_ref=row.shared_avatar if is_preset(row.shared_avatar) else None,
+        ) for row in rows[:limit]]
     next_cursor = None
     if len(rows) > limit:
         last = rows[limit - 1]

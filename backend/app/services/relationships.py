@@ -1,10 +1,14 @@
 """Directed profile connections with a deliberately small public surface."""
+import asyncio
 from datetime import datetime
 
+import httpx
 from fastapi import HTTPException
 from sqlalchemy import text
 
 from app.schemas.relationships import RelationshipEntry, RelationshipPage, RelationshipStatus
+from app.config import get_settings
+from app.services.profile_avatar import is_preset, is_object_key, signed_avatar_url
 
 CONNECT_LIMIT = 40
 
@@ -93,6 +97,21 @@ async def block(db, actor, token):
     await db.commit()
 
 
+async def block_relationship(db, actor, relationship_id):
+    """An owner can block someone already in their list even after link revocation."""
+    peer = await db.scalar(text('''select target_user_id from profile_connections
+        where id=:id and source_user_id=:actor for update'''), {'id': relationship_id, 'actor': actor})
+    if peer is None:
+        return
+    await lock_people(db, actor, peer)
+    await db.execute(text('''insert into connection_blocks(owner_id,target_id) values (:actor,:peer)
+        on conflict(owner_id,target_id) do nothing'''), {'actor': actor, 'peer': peer})
+    await db.execute(text('''delete from profile_connections where
+        (source_user_id=:actor and target_user_id=:peer) or (source_user_id=:peer and target_user_id=:actor)'''),
+        {'actor': actor, 'peer': peer})
+    await db.commit()
+
+
 async def list_relationships(db, actor, cursor, limit):
     params = {'actor': actor, 'limit': limit + 1, 'created': None, 'id': None}
     predicate = ''
@@ -108,7 +127,8 @@ async def list_relationships(db, actor, cursor, limit):
             raise HTTPException(422, 'Invalid cursor')
     rows = (await db.execute(text(f'''select r.id, r.created_at,
         case when s.enabled and s.show_name then coalesce(p.display_name, 'One Concept learner') else 'Private learner' end as display_name,
-        case when s.enabled then '/p/' || s.public_token else null end as public_path
+        case when s.enabled then '/p/' || s.public_token else null end as public_path,
+        case when s.enabled and s.show_avatar then p.avatar_url else null end as shared_avatar
         from profile_connections r
         join profiles p on p.id=r.target_user_id
         left join profile_sharing s on s.user_id=p.id
@@ -117,7 +137,22 @@ async def list_relationships(db, actor, cursor, limit):
             (b.owner_id=:actor and b.target_id=r.target_user_id) or
             (b.owner_id=r.target_user_id and b.target_id=:actor))
         order by r.created_at desc, r.id desc limit :limit'''), params)).all()
-    items = [RelationshipEntry(id=row.id, display_name=row.display_name, public_path=row.public_path) for row in rows[:limit]]
+    semaphore = asyncio.Semaphore(6)
+
+    async def entry(row):
+        avatar_ref = row.shared_avatar if is_preset(row.shared_avatar) else None
+        avatar_url = None
+        if is_object_key(row.shared_avatar):
+            try:
+                async with semaphore:
+                    avatar_url = await signed_avatar_url(get_settings(), row.shared_avatar)
+            except httpx.RequestError:
+                # A transient Storage failure must not hide the owned list.
+                avatar_url = None
+        return RelationshipEntry(id=row.id, display_name=row.display_name,
+                                 public_path=row.public_path, avatar_ref=avatar_ref, avatar_url=avatar_url)
+
+    items = await asyncio.gather(*(entry(row) for row in rows[:limit]))
     next_cursor = None
     if len(rows) > limit:
         last = rows[limit - 1]

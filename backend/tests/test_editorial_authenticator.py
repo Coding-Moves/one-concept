@@ -63,3 +63,17 @@ async def test_reviewer_can_change_only_their_own_authenticator_choice(api, sess
     assert (await api.client.get("/v1/editorial/queue", headers=api.headers(uid, sid, "aal1"))).status_code == 200
     owner = (await api.client.get("/v1/editorial/me", headers=api.headers())).json()["member"]
     assert owner["require_mfa"] is True
+
+
+async def test_revoked_or_spoofed_authenticator_change_is_rejected(api, session):
+    uid, sid, member = await enroll(api, session)
+    fresh = api.headers(uid, sid, "aal2", amr=[{"method": "totp", "timestamp": int(time.time())}])
+    spoofed = await api.client.patch("/v1/editorial/me/authenticator", headers=fresh,
+        json={"expected_version": member["version"], "require_mfa": False, "user_id": str(api.owner.id)})
+    assert spoofed.status_code == 422
+    await session.execute(text("update editorial_memberships set status='revoked' where user_id=:uid"), {"uid": uid})
+    await session.commit()
+    revoked = await api.client.patch("/v1/editorial/me/authenticator", headers=fresh,
+        json={"expected_version": member["version"], "require_mfa": False})
+    assert revoked.status_code == 403
+    assert (await api.client.get("/v1/editorial/me", headers=api.headers())).json()["member"]["require_mfa"] is True

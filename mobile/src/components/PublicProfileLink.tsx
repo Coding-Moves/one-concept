@@ -41,6 +41,7 @@ export function PublicProfileLink() {
     return () => { current = false; subscription.remove(); };
   }, [token, attempt]);
   const close = () => { setToken(null); setProfile(null); setError(false); };
+  // Unmount the portal on close so its focus trap cannot cover account screens.
   if (!token) return null;
   return <Modal visible onRequestClose={close} animationType="slide">
     <SafeAreaView style={{ flex: 1, backgroundColor: colors.background }}>

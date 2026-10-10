@@ -4,6 +4,8 @@ export interface RelationshipEntry {
   id: string;
   display_name: string;
   public_path: string | null;
+  avatar_ref?: string | null;
+  avatar_url?: string | null;
 }
 
 export interface RelationshipPage {
@@ -27,6 +29,8 @@ export const connectProfile = (id: string, token: string) =>
   apiRequest<RelationshipStatus>(tokenPath(token), { ...account(id), method: 'POST', rateLimitScope: 'request' });
 export const disconnectProfile = (id: string, relationshipId: string) =>
   apiRequest<void>(`${prefix}/${encodeURIComponent(relationshipId)}`, { ...account(id), method: 'DELETE' });
+export const blockRelationship = (id: string, relationshipId: string) =>
+  apiRequest<void>(`${prefix}/${encodeURIComponent(relationshipId)}/block`, { ...account(id), method: 'POST', rateLimitScope: 'request' });
 export const blockProfileConnection = (id: string, token: string) =>
   apiRequest<void>(`${tokenPath(token)}/block`, { ...account(id), method: 'POST' });
 

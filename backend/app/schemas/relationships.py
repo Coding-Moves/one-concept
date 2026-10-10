@@ -10,6 +10,8 @@ class RelationshipEntry(BaseModel):
     id: UUID
     display_name: str
     public_path: str | None = None
+    avatar_ref: str | None = None
+    avatar_url: str | None = None
 
 
 class RelationshipPage(BaseModel):

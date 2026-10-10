@@ -590,3 +590,14 @@ constraints. `ConnectionsScreen.tsx` owns private list/settings states;
 `services/connections.ts` client and transient `publicProfileNavigation.ts` keep
 navigation/account boundaries separate from anonymous profile data. See
 [connections.md](connections.md) for API, privacy, deployment and acceptance steps.
+
+### Directed profile relationships
+
+`api/v1/relationships.py`, `schemas/relationships.py`, and
+`services/relationships.py` own the current one-way Connect status, private
+list, revocable public link checks, and owner-fenced disconnect/block actions.
+The list includes only explicitly shared avatars; Storage failures leave names
+and actions available. `mobile/src/screens/ConnectionsScreen.tsx` shows the
+scan/link entry points and private list, while `services/relationships.ts`
+binds its requests to the signed-in account. The visitor card uses
+`components/RelationshipControls.tsx` for the Connect action.

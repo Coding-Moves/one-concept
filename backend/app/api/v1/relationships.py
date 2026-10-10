@@ -40,3 +40,9 @@ async def block(token: str, user: User, db: DB):
 async def remove(relationship_id: UUID, user: User, db: DB):
     await service.disconnect(db, user.id, relationship_id)
     return Response(status_code=204, headers=HEADERS)
+
+
+@router.post('/{relationship_id}/block', status_code=204)
+async def block_from_list(relationship_id: UUID, user: User, db: DB):
+    await service.block_relationship(db, user.id, relationship_id)
+    return Response(status_code=204, headers=HEADERS)

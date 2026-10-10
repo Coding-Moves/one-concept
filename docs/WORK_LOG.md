@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Profile photo save flow — 2026-10-10, PR preparation
+
+- Scope: [#401](https://github.com/Coding-Moves/one-concept/issues/401) fixes the camera/gallery path that stays on the phone's crop screen. The isolated `codex/401-profile-photo-save` branch targets `develop`; the unrelated release checkout and its uncommitted log remain untouched.
+- `4962234` center-crops the normalized JPEG and preserves orientation; `d2a9341` returns avatar write failures to Edit profile; `b4ace83` removes the device crop UI and adds a square preview with Save/Cancel, visible retry errors, and an account-owned Android pending picker marker cleared at sign-out. Private storage and the explicit public-avatar opt-in remain unchanged.
+- Validation: eight focused backend/profile-sharing tests passed against disposable PostgreSQL 16; Ruff `F,E9`, mobile typecheck, Expo web export, light/dark 320px browser photo preview/cancel/failure/retry/save regression, and `git diff --check` passed. The full mobile Node suite passed 96 of 97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local runtime (exit is correct but stderr is empty). Camera/gallery completion, Android activity recreation, and private-bucket behavior on a physical production device remain unverified and must be checked before release.
+- Related follow-ups are [bio #402](https://github.com/Coding-Moves/one-concept/issues/402), [shared profile #403](https://github.com/Coding-Moves/one-concept/issues/403), [sharing settings #404](https://github.com/Coding-Moves/one-concept/issues/404), and [Connections #405](https://github.com/Coding-Moves/one-concept/issues/405).
+
 ### Editorial review handoff and first future-refill plan — 2026-10-10
 
 - Scope: one PR into `develop` for automatic private correction requests after a reviewer's change request, the published/manual review-page regressions, symbolic MCQ option validation, and a curated five-subject launch backlog for future refill. No lesson is auto-approved or published.

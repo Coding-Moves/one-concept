@@ -1,9 +1,9 @@
 """Private, API-owned avatar storage.
 
-The mobile app sends a cropped image only after an explicit user action. This
-service re-encodes it to a small JPEG before putting it in a private Supabase
-bucket; database rows retain only the object key. No client receives the
-service role key or may choose an arbitrary object path.
+The mobile app sends a selected image only after an explicit save action. This
+service center-crops and re-encodes it to a small JPEG before putting it in a
+private Supabase bucket; database rows retain only the object key. No client
+receives the service role key or may choose an arbitrary object path.
 """
 import io
 import uuid

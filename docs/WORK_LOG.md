@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### Dependabot React renderer recovery — 2026-10-10
+
+- Scope: [PR #391](https://github.com/Coding-Moves/one-concept/pull/391) now combines the original React 19.2.8 commit from [#390](https://github.com/Coding-Moves/one-concept/pull/390) with the React DOM 19.2.8 commit. Both original bot commits remain in the integration history, and the current `develop` comparison changes only the two mobile package files plus this work-log entry. Dependabot closed [#387](https://github.com/Coding-Moves/one-concept/pull/387) after #389 already resolved `@react-navigation/native` 7.5.0 in the lockfile.
+- Validation: a clean Node 24 `npm ci`, mobile typecheck, all 97 mobile tests, matching-version server-renderer smoke test, and fixture-configured Expo exports for web, Android, and iOS passed. All three hosted PR checks passed; a current-head review and PR-specific merge confirmation remain pending. No production release or native runtime change was made.
+
 ### Editorial review handoff and first future-refill plan — 2026-10-10
 
 - Scope: one PR into `develop` for automatic private correction requests after a reviewer's change request, the published/manual review-page regressions, symbolic MCQ option validation, and a curated five-subject launch backlog for future refill. No lesson is auto-approved or published.

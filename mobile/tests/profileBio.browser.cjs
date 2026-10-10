@@ -64,6 +64,7 @@ const server = http.createServer((req, res) => {
         if (route.request().method() === 'POST') connected = true;
         body = connected ? { state: 'connected', relationship_id: '22222222-2222-4222-8222-222222222222' } : { state: 'available', relationship_id: null };
       }
+      else if (endpoint.includes('/v1/me/relationships/with/')) body = { state: 'available', relationship_id: null };
       else if (endpoint === '/v1/me/achievements') body = { items: [] };
       else if (endpoint === '/v1/me/subtopics/progress') body = { items: [] };
       else if (endpoint === '/v1/topics') body = [{ slug: 'computer-science', name: 'Computer Science', concept_count: 25, following: true }];
@@ -129,6 +130,12 @@ const server = http.createServer((req, res) => {
     await page.getByRole('button', { name: 'Close shared profile' }).click();
     await expect(page.getByRole('button', { name: 'Close shared profile' })).toHaveCount(0);
     await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await page.getByRole('textbox', { name: 'Shared profile link' }).fill(`http://127.0.0.1:4781/api/p/${token}`);
+    await page.getByRole('button', { name: 'Open shared profile' }).click();
+    await expect(page.getByText('Learning systems', { exact: true }).last()).toBeVisible();
+    await page.getByRole('button', { name: 'Close profile' }).click();
+    await expect(page.getByRole('button', { name: 'Close profile' })).toHaveCount(0);
+    await page.getByRole('button', { name: '← Back' }).click();
     await page.getByText('Edit profile', { exact: true }).click();
     const bioInput = page.getByRole('textbox', { name: 'Short bio' });
     await bioInput.click();
@@ -153,6 +160,8 @@ const server = http.createServer((req, res) => {
     await expect(page.getByText(/profile is unavailable/i)).toBeVisible();
     assert.deepEqual(errors, []);
     console.log('minimal publish, Connect, expanded preview, conflict recovery, bio clearing, and link revocation passed');
+    console.log('owner bio, public review, visitor card and Connect, and clearing passed');
+    console.log('owner bio, public review, share preview, visitor bio, and clearing passed');
     await context.close();
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); server.close(); process.exitCode = 1; });

@@ -85,6 +85,14 @@ export function PublicProfileLink() {
             {!profile.achievements.length && profile.current_streak === undefined && profile.concepts_learned === undefined && <Text style={{ color: colors.textMuted }}>No learning highlights have been shared.</Text>}
           </View>
           <Text style={[styles.footer, { color: colors.textMuted }]}>Shared with One Concept</Text>
+          <Text accessibilityRole="header" style={{ color: colors.text, fontSize: 28, fontWeight: '700' }}>{profile.display_name || 'One Concept learner'}</Text>
+          {profile.bio ? <Text style={{ color: colors.textSecondary, fontSize: 16, lineHeight: 24 }}>{profile.bio}</Text> : null}
+          {profile.current_streak !== undefined && <Text style={{ color: colors.text }}>Current streak: {profile.current_streak} days · Longest: {profile.longest_streak} days</Text>}
+          {profile.concepts_learned !== undefined && <Text style={{ color: colors.text }}>{profile.concepts_learned} concepts learned</Text>}
+          {profile.achievements.map((a, i) => <Text key={i} style={{ color: colors.text }}>{a.name} — {a.description}</Text>)}
+          {!profile.achievements.length && profile.current_streak === undefined && profile.concepts_learned === undefined && <Text style={{ color: colors.textMuted }}>No learning highlights have been shared.</Text>}
+          <Text style={{ color: colors.textMuted }}>Shared with One Concept</Text>
+          {token && <RelationshipControls token={token} />}
         </> : <Text style={{ color: colors.text }}>Loading public profile…</Text>}
       </ScrollView>
     </SafeAreaView>

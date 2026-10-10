@@ -7,6 +7,19 @@ claims as completed work.
 
 ## Current status
 
+### Profile photo save flow — 2026-10-10, PR #406 open
+
+- Scope: [#401](https://github.com/Coding-Moves/one-concept/issues/401) fixes the camera/gallery path that stays on the phone's crop screen. The isolated `codex/401-profile-photo-save` branch targets `develop`; the unrelated release checkout and its uncommitted log remain untouched.
+- `4962234` center-crops the normalized JPEG and preserves orientation; `d2a9341` returns avatar write failures to Edit profile; `b4ace83` removes the device crop UI and adds a square preview with Save/Cancel, visible retry errors, and an account-owned Android pending picker marker cleared at sign-out. Self-review led to `33aaeb9`, which removes an unnecessary gallery permission gate while retaining the camera check. The later deep review added `4d95195`, rejecting excessive decoded image dimensions before resize and giving a clearer retry hint. Private storage and the explicit public-avatar opt-in remain unchanged.
+- Validation: nine focused backend/profile-sharing tests passed against disposable PostgreSQL 16; Ruff `F,E9`, mobile typecheck, Expo web export, light/dark 320px browser photo preview/cancel/failure/retry/save regression, and `git diff --check` passed. The full mobile Node suite passed 96 of 97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local runtime (exit is correct but stderr is empty). Camera/gallery completion, Android activity recreation, and private-bucket behavior on a physical production device remain unverified and must be checked before release.
+- Related follow-ups are [bio #402](https://github.com/Coding-Moves/one-concept/issues/402), [shared profile #403](https://github.com/Coding-Moves/one-concept/issues/403), [sharing settings #404](https://github.com/Coding-Moves/one-concept/issues/404), and [Connections #405](https://github.com/Coding-Moves/one-concept/issues/405).
+- [PR #406](https://github.com/Coding-Moves/one-concept/pull/406) remains open. All three hosted checks passed on `97811a6`; the branch was merged with current `develop` to resolve the work-log overlap. The PR description closes #401 on merge; device and production-storage checks remain release acceptance.
+
+### Dependabot React renderer recovery — 2026-10-10
+
+- Scope: [PR #391](https://github.com/Coding-Moves/one-concept/pull/391) now combines the original React 19.2.8 commit from [#390](https://github.com/Coding-Moves/one-concept/pull/390) with the React DOM 19.2.8 commit. Both original bot commits remain in the integration history, and the current `develop` comparison changes only the two mobile package files plus this work-log entry. Dependabot closed [#387](https://github.com/Coding-Moves/one-concept/pull/387) after #389 already resolved `@react-navigation/native` 7.5.0 in the lockfile.
+- Validation: a clean Node 24 `npm ci`, mobile typecheck, all 97 mobile tests, matching-version server-renderer smoke test, and fixture-configured Expo exports for web, Android, and iOS passed. All three hosted PR checks passed; a current-head review and PR-specific merge confirmation remain pending. No production release or native runtime change was made.
+
 ### Editorial review handoff and first future-refill plan — 2026-10-10
 
 - Scope: one PR into `develop` for automatic private correction requests after a reviewer's change request, the published/manual review-page regressions, symbolic MCQ option validation, and a curated five-subject launch backlog for future refill. No lesson is auto-approved or published.
@@ -25,9 +38,10 @@ claims as completed work.
 ### Shared-profile visitor card — 2026-10-10, PR #409 open
 
 - Scope: [#403](https://github.com/Coding-Moves/one-concept/issues/403) on `codex/403-shared-profile`, based on bio PR #407 because both change the visitor view. Browser and app visitors see a responsive card built solely from the anonymous public allowlist, with Connect near identity in the app. The browser link opens the app to connect.
+- CI repair: the merge of current `develop` at `29cc549` retained an obsolete public-page block after the new renderer, causing Ruff to stop on unexpected indentation. `b6e1e3b` removed the stale block; backend Ruff `F,E9`, the two public-page rendering tests, and `git diff --check` passed locally. All three hosted checks passed on `385e362`.
 - `6144529` replaces the plain browser text with an escaped, no-script card, scoped photo origin in CSP, and focused rendering tests. `717e1bc` adds the in-app visitor card and Connect flow. Visual review prompted `5a70444` to replace ambiguous browser glyphs with vector icons.
 - Validation: ten focused backend tests passed against disposable PostgreSQL 16; Ruff F/E9, mobile typecheck, web export, the 320px visitor/Connect browser flow, and `git diff --check` passed. The full local mobile suite passed 96/97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local Node runtime. Physical Android/iOS deep links and signed storage photos remain manual release acceptance.
-- [PR #409](https://github.com/Coding-Moves/one-concept/pull/409) targets `develop` so hosted checks run. Its current diff includes #407 and #408; merge those PRs first, in that order, so the remaining diff is the visitor-card chunk. The visitor-modal overlap with #408 was resolved in this branch without rewriting commits. Issue #403 stays open for device acceptance.
+- [PR #409](https://github.com/Coding-Moves/one-concept/pull/409) targets `develop`. Bio PR #407 and Connections PR #408 have merged; the remaining diff is the visitor-card chunk. The visitor-modal overlap with #408 was resolved in this branch without rewriting commits. Issue #403 stays open for device acceptance.
 
 ### Saved bio visibility and public choice — 2026-10-10, PR #407 open
 

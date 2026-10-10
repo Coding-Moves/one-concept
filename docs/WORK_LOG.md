@@ -7,12 +7,13 @@ claims as completed work.
 
 ## Current status
 
-### Profile photo save flow — 2026-10-10, PR preparation
+### Profile photo save flow — 2026-10-10, PR #406 open
 
 - Scope: [#401](https://github.com/Coding-Moves/one-concept/issues/401) fixes the camera/gallery path that stays on the phone's crop screen. The isolated `codex/401-profile-photo-save` branch targets `develop`; the unrelated release checkout and its uncommitted log remain untouched.
-- `4962234` center-crops the normalized JPEG and preserves orientation; `d2a9341` returns avatar write failures to Edit profile; `b4ace83` removes the device crop UI and adds a square preview with Save/Cancel, visible retry errors, and an account-owned Android pending picker marker cleared at sign-out. Private storage and the explicit public-avatar opt-in remain unchanged.
+- `4962234` center-crops the normalized JPEG and preserves orientation; `d2a9341` returns avatar write failures to Edit profile; `b4ace83` removes the device crop UI and adds a square preview with Save/Cancel, visible retry errors, and an account-owned Android pending picker marker cleared at sign-out. Self-review led to `33aaeb9`, which removes an unnecessary gallery permission gate while retaining the camera check. Private storage and the explicit public-avatar opt-in remain unchanged.
 - Validation: eight focused backend/profile-sharing tests passed against disposable PostgreSQL 16; Ruff `F,E9`, mobile typecheck, Expo web export, light/dark 320px browser photo preview/cancel/failure/retry/save regression, and `git diff --check` passed. The full mobile Node suite passed 96 of 97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local runtime (exit is correct but stderr is empty). Camera/gallery completion, Android activity recreation, and private-bucket behavior on a physical production device remain unverified and must be checked before release.
 - Related follow-ups are [bio #402](https://github.com/Coding-Moves/one-concept/issues/402), [shared profile #403](https://github.com/Coding-Moves/one-concept/issues/403), [sharing settings #404](https://github.com/Coding-Moves/one-concept/issues/404), and [Connections #405](https://github.com/Coding-Moves/one-concept/issues/405).
+- [PR #406](https://github.com/Coding-Moves/one-concept/pull/406) is open for review. The published diff is mergeable and the local self-review is complete; hosted checks are running after the follow-up commit. Issue #401 stays open for physical-device and production-storage acceptance.
 
 ### Editorial review handoff and first future-refill plan — 2026-10-10
 

@@ -410,6 +410,8 @@ class ProfileSharing(Base):
     public_token: Mapped[str] = mapped_column(Text, unique=True, nullable=False)
     enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     show_name: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_avatar: Mapped[bool] = mapped_column(Boolean, default=False)
+    show_bio: Mapped[bool] = mapped_column(Boolean, default=False)
     show_streak: Mapped[bool] = mapped_column(Boolean, default=False)
     show_learning: Mapped[bool] = mapped_column(Boolean, default=False)
     achievement_codes: Mapped[list[str]] = mapped_column(ARRAY(Text), default=list)

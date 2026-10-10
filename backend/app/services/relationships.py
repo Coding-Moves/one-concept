@@ -100,10 +100,14 @@ async def block(db, actor, token):
 async def block_relationship(db, actor, relationship_id):
     """An owner can block someone already in their list even after link revocation."""
     peer = await db.scalar(text('''select target_user_id from profile_connections
-        where id=:id and source_user_id=:actor for update'''), {'id': relationship_id, 'actor': actor})
+        where id=:id and source_user_id=:actor'''), {'id': relationship_id, 'actor': actor})
     if peer is None:
         return
     await lock_people(db, actor, peer)
+    current_peer = await db.scalar(text('''select target_user_id from profile_connections
+        where id=:id and source_user_id=:actor for update'''), {'id': relationship_id, 'actor': actor})
+    if current_peer != peer:
+        return
     await db.execute(text('''insert into connection_blocks(owner_id,target_id) values (:actor,:peer)
         on conflict(owner_id,target_id) do nothing'''), {'actor': actor, 'peer': peer})
     await db.execute(text('''delete from profile_connections where

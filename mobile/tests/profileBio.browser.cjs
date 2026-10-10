@@ -81,15 +81,16 @@ const server = http.createServer((req, res) => {
     await page.getByRole('button', { name: 'Close share preview' }).click();
     await page.getByRole('button', { name: '← Back' }).click();
     await page.getByText('Connections', { exact: true }).click();
+    await page.getByRole('button', { name: 'Open shared link' }).click();
     await page.getByRole('textbox', { name: 'Shared profile link' }).fill(`http://127.0.0.1:4781/api/p/${token}`);
-    await page.getByRole('button', { name: 'Open shared profile' }).click();
+    await page.getByRole('button', { name: 'Open profile link' }).click();
     await expect(page.getByText('Learning systems', { exact: true }).last()).toBeVisible();
     await expect(page.getByText('ONE CONCEPT', { exact: true }).last()).toBeVisible();
     await page.getByRole('button', { name: 'Connect', exact: true }).click();
     await expect(page.getByText('Connected', { exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Close shared profile' }).click();
     await expect(page.getByRole('button', { name: 'Close shared profile' })).toHaveCount(0);
-    await page.getByRole('button', { name: '← Back' }).click();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
     await page.getByText('Edit profile', { exact: true }).click();
     const bioInput = page.getByRole('textbox', { name: 'Short bio' });
     await bioInput.click();

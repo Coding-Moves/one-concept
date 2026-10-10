@@ -1,4 +1,30 @@
-# Mutual Connections
+# Connections
+
+## Current directed flow
+
+The current Profile → Connections screen keeps a private, one-way list. A learner
+scans a friend's profile QR or opens their shared link, then taps **Connect** on
+that profile. This adds the friend to the learner's list without notifying or
+automatically connecting the friend back. The screen leads with those two entry
+paths and shows the list with only the identity/avatar the friend currently
+shares. An unavailable profile stays in the private list as **Private learner**
+until the owner disconnects or blocks it.
+
+`GET /v1/me/relationships` uses the verified account and bounded keyset
+pagination. It returns no email or peer account ID, and only returns an avatar
+when the friend's public profile is enabled and **Profile avatar** is selected.
+Private photo URLs are short-lived. Avatar Storage outages do not hide the list.
+`POST /v1/me/relationships/{relationship-id}/block` lets the list owner block
+someone even after that person's public link is revoked; it removes both
+directions' entries. Disconnect and block require confirmation in the app, and
+offline changes are disabled. Leaving the screen, signing out, or switching
+accounts clears the in-memory list.
+
+The mutual request model below documents the earlier flow and its migration;
+its request, acceptance, and cooldown controls are not the current Connections
+screen.
+
+## Historical mutual request flow
 
 Connections is a complete mutual-consent feature. A signed-in learner opens a
 shared profile and explicitly sends a request. Only the recipient can accept or

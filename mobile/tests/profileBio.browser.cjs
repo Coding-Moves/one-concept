@@ -27,6 +27,7 @@ const server = http.createServer((req, res) => {
   try {
     const state = { display_name: 'Reader', bio: 'Learning systems', avatar_ref: null, avatar_url: null, timezone: 'UTC', today, followed_topics: ['computer-science'], learned: [], likes: [], bookmarks: [], saved: [], stats: { current: 0, longest: 0, total_learned: 0, total_reviews: 0 }, assignment_slug: concept.slug, daily: { assigned_for: today, assigned_at: today + 'T08:00:00Z', learned: false, completed_at: null, outside_followed_topics: false, concept } };
     let sharing = { enabled: false, show_name: false, show_avatar: false, show_bio: false, show_streak: false, show_learning: false, achievement_codes: [], version: 0, public_path: null };
+    let conflictOnce = false;
     const context = await browser.newContext({ viewport: { width: 320, height: 740 } });
     await context.addInitScript(({ session, version }) => {
       localStorage.setItem('sb-127-auth-token', JSON.stringify(session));
@@ -35,6 +36,7 @@ const server = http.createServer((req, res) => {
     await context.route('**/api/**', async route => {
       const endpoint = new URL(route.request().url()).pathname.replace('/api', '');
       let body = {};
+      let status = 200;
       if (endpoint === '/v1/me/state') body = state;
       else if (endpoint === '/v1/me' && route.request().method() === 'PATCH') {
         const input = route.request().postDataJSON();
@@ -42,11 +44,17 @@ const server = http.createServer((req, res) => {
         body = state;
       } else if (endpoint === '/v1/me/profile-sharing') {
         if (route.request().method() === 'PUT') {
-          const input = route.request().postDataJSON();
-          sharing = { ...input, version: sharing.version + 1, public_path: input.enabled ? `/p/${token}` : null };
+          if (conflictOnce) {
+            conflictOnce = false;
+            status = 409;
+            body = { detail: 'Settings changed. Reload before saving.' };
+          } else {
+            const input = route.request().postDataJSON();
+            sharing = { ...input, version: sharing.version + 1, public_path: input.enabled ? `/p/${token}` : null };
+          }
         }
-        body = sharing;
-      } else if (endpoint.startsWith('/v1/public-profiles/')) body = { ...(sharing.show_name ? { display_name: state.display_name } : {}), ...(sharing.show_bio && state.bio ? { bio: state.bio } : {}), achievements: [] };
+        if (status === 200) body = sharing;
+      } else if (endpoint.startsWith('/v1/public-profiles/')) body = { ...(sharing.show_name ? { display_name: state.display_name } : {}), ...(sharing.show_bio && state.bio ? { bio: state.bio } : {}), ...(sharing.show_streak ? { current_streak: 0, longest_streak: 0 } : {}), achievements: [] };
       else if (endpoint === '/v1/me/relationships') body = { items: [], next_cursor: null };
       else if (endpoint.includes('/v1/me/relationships/with/')) body = { state: 'available', relationship_id: null };
       else if (endpoint === '/v1/me/achievements') body = { items: [] };
@@ -54,7 +62,7 @@ const server = http.createServer((req, res) => {
       else if (endpoint === '/v1/topics') body = [{ slug: 'computer-science', name: 'Computer Science', concept_count: 25, following: true }];
       else if (endpoint === '/v1/me/notifications') body = { enabled: false, weekly_quiz_enabled: false, reminder_times: ['08:00'] };
       else if (endpoint.startsWith('/v1/concepts/')) body = concept;
-      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+      await route.fulfill({ status, contentType: 'application/json', body: JSON.stringify(body) });
     });
     await context.route('**/auth/v1/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(session) }));
     const page = await context.newPage();
@@ -64,18 +72,38 @@ const server = http.createServer((req, res) => {
     await page.getByRole('tab', { name: 'Profile' }).click();
     await expect(page.getByText('Learning systems', { exact: true }).last()).toBeVisible();
     await page.getByText('Public profile', { exact: true }).click();
+    if (process.env.PROFILE_SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.PROFILE_SCREENSHOT_DIR, 'sharing-choices.png'), fullPage: true });
     await expect(page.getByRole('switch', { name: 'Share short bio' })).not.toBeChecked();
     await page.getByRole('switch', { name: 'Share display name' }).check();
     await page.getByRole('switch', { name: 'Share short bio' }).check();
+    await expect(page.getByText('You have changes that are not published yet.')).toBeVisible();
+    await expect(page.getByRole('switch', { name: 'Share learning streak' })).toHaveCount(0);
+    await page.getByRole('button', { name: /Learning highlights/ }).click();
+    await page.getByRole('switch', { name: 'Share learning streak' }).check();
     await page.getByRole('button', { name: 'Review changes' }).click();
-    await expect(page.getByText('Your short bio')).toBeVisible();
+    await expect(page.getByText('Visitor preview')).toBeVisible();
+    if (process.env.PROFILE_SCREENSHOT_DIR) {
+      await page.waitForTimeout(450);
+      await page.screenshot({ path: path.join(process.env.PROFILE_SCREENSHOT_DIR, 'sharing-review.png') });
+    }
     await expect(page.getByText('Learning systems', { exact: true }).last()).toBeVisible();
+    await expect(page.getByText('Current streak · Best 0')).toBeVisible();
     await page.getByRole('button', { name: 'Publish profile' }).click();
     assert.equal(sharing.show_bio, true);
-    await page.getByRole('button', { name: 'Share profile' }).click();
+    assert.equal(sharing.show_streak, true);
+    await expect(page.getByText('Public profile is live', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'View and share profile' }).click();
     await expect(page.getByText('Learning systems', { exact: true }).last()).toBeVisible();
     await page.getByRole('button', { name: 'Close share preview' }).click();
-    await page.getByRole('button', { name: '← Back' }).click();
+    await page.getByRole('switch', { name: 'Share profile avatar' }).check();
+    conflictOnce = true;
+    await page.getByRole('button', { name: 'Review changes' }).click();
+    await page.getByRole('button', { name: 'Publish changes' }).click();
+    await expect(page.getByText(/Sharing changed on another device/)).toBeVisible();
+    await expect(page.getByRole('switch', { name: 'Share profile avatar' })).toBeChecked();
+    await page.getByRole('button', { name: 'Discard edits and reload' }).click();
+    await expect(page.getByRole('switch', { name: 'Share profile avatar' })).not.toBeChecked();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
     await page.getByText('Connections', { exact: true }).click();
     await page.getByRole('textbox', { name: 'Shared profile link' }).fill(`http://127.0.0.1:4781/api/p/${token}`);
     await page.getByRole('button', { name: 'Open shared profile' }).click();

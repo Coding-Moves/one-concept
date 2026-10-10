@@ -7,14 +7,20 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.14 production migration ledger — 2026-10-10
+
+- The owner reported that production migrations `0044_public_profile_bio_choice.sql` and `0045_editorial_authenticator_choice.sql` were applied after preparation PR #412 merged. Commit `3c76e95` records that operator attestation in `backend/migrations/applied.txt`; it does not itself run SQL or prove the target schema.
+- This workspace has no production `DIRECT_URL` or open Supabase session, so an independent read-only target-schema check was unavailable. The protected production schema check remains required before mobile publication, and Railway's pre-deploy schema check must guard the API and workers. Do not infer deployment success from the ledger.
+- The ledger PR targets `develop` before the v1.10.14 `develop` → `main` release PR can pass its required migration filename check.
+
 ### v1.10.14 release preparation — 2026-10-10
 
 - Scope: prepare the next release on `codex/v1-10-14-release-prep` from current `develop` with app version 1.10.14 and its one-time What's New card. Keep native runtime 1.10.8 because this release adds no native package or app-config change. Open a focused PR into `develop`; the production release remains a separate `develop` → `main` PR.
 - Card highlights will cover repeating an unfinished daily lesson until Learned, refreshing Today when the app resumes, and the profile photo, bio, sharing, and connection improvements now in `develop`. Validate the exact version/card match and mobile TypeScript.
-- Release gates: authenticator PR #411 merged into `develop` as `619f1f0`. Migrations 0044 (public bio choice) and 0045 (authenticator choice) are absent from the verified production-applied ledger. Do not mark them applied without actual production verification; the release runbook requires migration application before opening the release PR.
+- Release gates at preparation: authenticator PR #411 merged into `develop` as `619f1f0`. Migrations 0044 (public bio choice) and 0045 (authenticator choice) still needed operator application before opening the release PR.
 - Commits: `95e317d` records scope; `32f7bd4` bumps the marketing version and adds the matching three-highlight card; `5d902af` integrates merged #411 without rewriting either history. No native runtime or package change was made in this chunk.
 - Validation: clean Node 24 locked install, mobile typecheck, exact version/card/runtime check, and `git diff --check` passed. The full local mobile suite had one failing existing `publicConfig.test.mjs` stderr assertion; all other cases passed. Hosted mobile, backend, and website checks passed. The existing version-keyed dismissal flow was inspected and reused.
-- [Preparation PR #412](https://github.com/Coding-Moves/one-concept/pull/412) targets `develop`; all three hosted checks passed on `a156963`. The production release PR will wait for #412 to merge and for the two pending production migrations to be verified and recorded.
+- [Preparation PR #412](https://github.com/Coding-Moves/one-concept/pull/412) passed all three hosted checks and merged into `develop` as `6b0fa83`. The owner's later migration attestation is recorded above; protected target-schema verification remains a release gate.
 
 ### Optional authenticator for the editorial website — 2026-10-10, PR #411 open
 

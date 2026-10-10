@@ -7,13 +7,6 @@ claims as completed work.
 
 ## Current status
 
-### Saved bio visibility and public choice — 2026-10-10, in progress
-
-- Scope: [#402](https://github.com/Coding-Moves/one-concept/issues/402) on `codex/402-profile-bio` gives the owner a visible saved bio and adds a separate, default-off public bio choice. The anonymous API, in-app visitor view, and browser page must show it only after explicit publication. This is separate from the photo PR and the later shared-profile, sharing-settings, and Connections issues.
-- Intended commits: additive migration and backend allowlist with regression coverage; mobile owner and visitor display with review choice; documentation and validation handoff. The existing bio column and 160-character limit remain in place.
-- `571e20f` adds the default-off migration, server allowlist, escaped browser bio, and privacy tests; `bb6ad61` shows the saved bio on the owner Profile; `1c3c823` adds the sharing switch, publish review, and public preview; `6913e3c` shows the visitor bio and unmounts its modal on close so it cannot trap focus over Edit profile; `5ac803f` records the migration in the schema contract.
-- Validation: eight profile-sharing PostgreSQL tests and the schema contract test passed against disposable PostgreSQL 16; mobile typecheck, three sharing unit tests, Expo web export, the 320px owner/review/visitor/clear browser flow, and `git diff --check` passed. The full local mobile suite passed 96 of 97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local Node runtime. Physical-device editing, sign-out/account-switch display, and production migration remain unverified.
-
 ### Editorial review handoff and first future-refill plan — 2026-10-10
 
 - Scope: one PR into `develop` for automatic private correction requests after a reviewer's change request, the published/manual review-page regressions, symbolic MCQ option validation, and a curated five-subject launch backlog for future refill. No lesson is auto-approved or published.
@@ -21,6 +14,12 @@ claims as completed work.
 - Focused commits: `3138911` preserves symbolic answer choices, `7ecc96a` clears inherited AI provenance from manual edits, `33a9055` queues one correction from a change request, `8f06e1f` packages five sourced plans and the rollout procedure, `c9f7014` preserves legacy-worker authority and covers queue/revocation cases, `07133a3` exposes the correction switch to owners, and `6445e2d` verifies the plan import and owner status. `551f491` merges current `develop` without rewriting those commits.
 - Validation: the complete backend PostgreSQL suite passed **585 tests**; the focused editorial/legacy suite passed **55 tests**, and the final plan-import/owner-status checks passed **2 tests**. The website passed 17 unit and 46 browser tests, TypeScript, and a fixture-configured production build. Ruff `F,E9` and `git diff --check` passed. No paid provider call or production import, variable change, deployment, or lesson publication was performed.
 - Handoff: [PR #400](https://github.com/Coding-Moves/one-concept/pull/400) targets `develop`; hosted checks are pending. A separate `develop` to `main` release and operator-controlled five-plan import/refill activation follow review of this PR. Reviewers still decide and publish each card.
+
+### Saved bio visibility and public choice — 2026-10-10, in progress
+
+- Scope: [#402](https://github.com/Coding-Moves/one-concept/issues/402) on `codex/402-profile-bio` gives the owner a visible saved bio and adds a separate, default-off public bio choice. The anonymous API, in-app visitor view, and browser page show it only after explicit publication. This is separate from the photo PR and the later shared-profile, sharing-settings, and Connections issues.
+- `571e20f` adds the default-off migration, server allowlist, escaped browser bio, and privacy tests; `bb6ad61` shows the saved bio on the owner Profile; `1c3c823` adds the sharing switch, publish review, and public preview; `6913e3c` shows the visitor bio and unmounts its modal on close so it cannot trap focus over Edit profile; `5ac803f` records the migration in the schema contract.
+- Validation: eight profile-sharing PostgreSQL tests and the schema contract test passed against disposable PostgreSQL 16; mobile typecheck, three sharing unit tests, Expo web export, the 320px owner/review/visitor/clear browser flow, and `git diff --check` passed. The full local mobile suite passed 96 of 97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local Node runtime. Physical-device editing, sign-out/account-switch display, and production migration remain unverified.
 
 ### Repeat unfinished daily lessons — PR open
 

@@ -38,6 +38,7 @@ export interface Operations {
   generation_enabled: boolean;
   future_refill_enabled?: boolean;
   legacy_enrichment_enabled?: boolean;
+  editorial_auto_correction_enabled?: boolean;
   email_enabled: boolean;
   workers: {
     service: string;

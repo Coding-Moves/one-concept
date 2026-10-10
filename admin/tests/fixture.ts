@@ -317,6 +317,7 @@ export async function fixture(
         review_blocked: false,
         planning_required: false,
         generation_enabled: true,
+        editorial_auto_correction_enabled: true,
         provider_configured: true,
       });
     if (method === "POST") {

@@ -205,6 +205,7 @@ async def operations(db, settings):
         "generation_enabled": settings.generation_enabled,
         "future_refill_enabled": settings.generation_enabled and settings.future_refill_enabled,
         "legacy_enrichment_enabled": settings.generation_enabled and settings.legacy_enrichment_enabled,
+        "editorial_auto_correction_enabled": settings.generation_enabled and settings.editorial_auto_correction_enabled,
         "email_enabled": settings.editorial_email_enabled,
         "workers": workers,
         "revision_jobs": jobs,

@@ -130,13 +130,19 @@ async def test_changes_request_queues_one_correction_when_authorized(api, sessio
         {"id": rid},
     ) == 1
     await session.execute(
+        text("update editorial_memberships set status='revoked' where user_id=:id"),
+        {"id": api.owner.id},
+    )
+    await session.commit()
+    assert not await jobs.requester_active(session, job)
+    await session.execute(
         text("update editorial_generation_jobs set status='cancelled' where id=:id"),
         {"id": job_id},
     )
     await session.commit()
 
 
-async def test_changes_request_remains_valid_when_automatic_correction_is_off(api, session, draft):
+async def test_changes_request_remains_valid_when_generation_is_off(api, session, draft):
     api.settings.editorial_auto_correction_enabled = True
     api.settings.generation_enabled = False
     rid = await content.rid_for(session, draft[1])
@@ -145,6 +151,25 @@ async def test_changes_request_remains_valid_when_automatic_correction_is_off(ap
     response, _ = await content.act(api, rid, "changes_requested")
     assert response.status_code == 200 and response.json()["status"] == "changes_requested"
     assert response.json()["generation_status"] == "disabled"
+    assert await session.scalar(
+        text("select count(*) from editorial_generation_jobs where source_revision_id=:id"),
+        {"id": rid},
+    ) == 0
+
+
+async def test_full_ai_queue_does_not_lose_review_decision(api, session, draft):
+    api.settings.generation_enabled = True
+    api.settings.editorial_auto_correction_enabled = True
+    api.settings.content_review_backlog_limit = 0
+    rid = await content.rid_for(session, draft[1])
+    await session.commit()
+    assert (await content.act(api, rid, "submit"))[0].status_code == 200
+    response, _ = await content.act(
+        api, rid, "changes_requested", note="Correct the example before approval."
+    )
+    assert response.status_code == 200
+    assert response.json()["status"] == "changes_requested"
+    assert response.json()["generation_status"] == "unavailable"
     assert await session.scalar(
         text("select count(*) from editorial_generation_jobs where source_revision_id=:id"),
         {"id": rid},

@@ -234,17 +234,18 @@ async def transition(db, jid, state, code=None, result=None, *, preserve_claim=F
 
 
 async def requester_active(db, row):
+    """Require current authority for manual, automatic, and legacy batch work."""
     return await db.scalar(
         text("""select exists(select 1 from editorial_memberships m
       join auth.users u on u.id=m.user_id
-      join editorial_workflow_events e on e.id=:event_id
+      left join editorial_workflow_events e on e.id=:event_id
       where m.user_id=:id and m.status='active'
       and m.approved_name is not null and m.capabilities @> array['review']::text[]
       and (m.capabilities @> array['request_generation']::text[]
         or (e.actor_id=m.user_id and e.action='generation_requested'
           and e.details->>'kind'='automatic_review'))
       and u.email_confirmed_at is not null and (u.banned_until is null or u.banned_until<=statement_timestamp()))"""),
-        {"id": row["requested_by"], "event_id": row["request_event_id"]},
+        {"id": row["requested_by"], "event_id": row.get("request_event_id")},
     )
 
 

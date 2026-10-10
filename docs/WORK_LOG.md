@@ -31,9 +31,10 @@ claims as completed work.
 ### Shared-profile visitor card — 2026-10-10, PR #409 open
 
 - Scope: [#403](https://github.com/Coding-Moves/one-concept/issues/403) on `codex/403-shared-profile`, based on bio PR #407 because both change the visitor view. Browser and app visitors see a responsive card built solely from the anonymous public allowlist, with Connect near identity in the app. The browser link opens the app to connect.
+- CI repair: the merge of current `develop` at `29cc549` retained an obsolete public-page block after the new renderer, causing Ruff to stop on unexpected indentation. Removed the stale block; backend Ruff `F,E9`, the two public-page rendering tests, and `git diff --check` pass locally. Hosted checks must verify the resulting PR head.
 - `6144529` replaces the plain browser text with an escaped, no-script card, scoped photo origin in CSP, and focused rendering tests. `717e1bc` adds the in-app visitor card and Connect flow. Visual review prompted `5a70444` to replace ambiguous browser glyphs with vector icons.
 - Validation: ten focused backend tests passed against disposable PostgreSQL 16; Ruff F/E9, mobile typecheck, web export, the 320px visitor/Connect browser flow, and `git diff --check` passed. The full local mobile suite passed 96/97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local Node runtime. Physical Android/iOS deep links and signed storage photos remain manual release acceptance.
-- [PR #409](https://github.com/Coding-Moves/one-concept/pull/409) targets `develop` so hosted checks run. Its current diff includes #407 and #408; merge those PRs first, in that order, so the remaining diff is the visitor-card chunk. The visitor-modal overlap with #408 was resolved in this branch without rewriting commits. Issue #403 stays open for device acceptance.
+- [PR #409](https://github.com/Coding-Moves/one-concept/pull/409) targets `develop`. Bio PR #407 and Connections PR #408 have merged; the remaining diff is the visitor-card chunk. The visitor-modal overlap with #408 was resolved in this branch without rewriting commits. Issue #403 stays open for device acceptance.
 
 ### Saved bio visibility and public choice — 2026-10-10, PR #407 open
 

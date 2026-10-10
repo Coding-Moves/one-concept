@@ -7,12 +7,13 @@ claims as completed work.
 
 ## Current status
 
-### Editorial review handoff and first future-refill plan — 2026-10-10 in progress
+### Editorial review handoff and first future-refill plan — 2026-10-10
 
 - Scope: one PR into `develop` for automatic private correction requests after a reviewer's change request, the published/manual review-page regressions, symbolic MCQ option validation, and a curated five-subject launch backlog for future refill. No lesson is auto-approved or published.
 - Live owner-site check: 120 existing lessons await human review; the published Blue-Green Deployment detail and historical revision show structured content and no red validation banner. An approved-but-stale revision must still show a real warning. The Software Engineering AI requests page has no pending new curriculum and its generation flag is paused.
-- Planned commits: MCQ validator regression; manual-provenance UI; automatic correction and reviewer-permission regression; launch plan/image/runbook; validation and handoff bookkeeping. A separate `develop` to `main` release and operator-controlled refill activation follow review of this PR.
-- Validation and handoff: pending.
+- Focused commits: `3138911` preserves symbolic answer choices, `7ecc96a` clears inherited AI provenance from manual edits, `33a9055` queues one correction from a change request, `8f06e1f` packages five sourced plans and the rollout procedure, `c9f7014` preserves legacy-worker authority and covers queue/revocation cases, `07133a3` exposes the correction switch to owners, and `6445e2d` verifies the plan import and owner status. `551f491` merges current `develop` without rewriting those commits.
+- Validation: the complete backend PostgreSQL suite passed **585 tests**; the focused editorial/legacy suite passed **55 tests**, and the final plan-import/owner-status checks passed **2 tests**. The website passed 17 unit and 46 browser tests, TypeScript, and a fixture-configured production build. Ruff `F,E9` and `git diff --check` passed. No paid provider call or production import, variable change, deployment, or lesson publication was performed.
+- Handoff: PR and hosted checks pending. A separate `develop` to `main` release and operator-controlled five-plan import/refill activation follow review of this PR. Reviewers still decide and publish each card.
 
 ### Repeat unfinished daily lessons — PR open
 
@@ -23,6 +24,7 @@ claims as completed work.
 
 ### Existing-card completion, 2026-10-09 — in progress
 
+- Live owner-site follow-up on 2026-10-10: all 125 existing published lessons have reached a private review-ready revision or have already been published; 120 await human decisions and five have been published. This closes the preparation count, not the human review and publication work.
 - Outcome: prepare complete private revisions for all 125 existing published lessons; human reviewers retain approval and publication. This chunk aligns legacy-only summary and example length checks with the published lesson schema without changing new-lesson generation or source checks.
 - Live owner-site evidence: Software Engineering has 24 of 25 lessons ready for review or published; Message Queues alone exhausted three attempts with `example_length`. Linux & Systems batch `#ED025056` has 18 ready and 7 queued. The Railway browser session expired before the next on-demand run; its daily scheduled worker remains configured. Other subjects have not started.
 - `8657d72` lets `generation.validate` accept an optional worked-example maximum; `fd641d0` does the same for summaries. The legacy path uses published `LessonBody` limits of 500 and 600 characters while ordinary generation retains 300 and 420. Boundary regressions reject over-limit content. No source or human-review gate changes.

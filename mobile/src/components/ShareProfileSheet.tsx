@@ -30,6 +30,7 @@ export function ShareProfileSheet({ value, busy, onClose, onShare }: {
           <Text style={[styles.brand, { color: colors.primary }]}>ONE CONCEPT</Text>
           <ProfileAvatar avatarRef={value.profile.avatar_ref} avatarUrl={value.profile.avatar_url} size={72} />
           <Text style={[styles.name, { color: colors.text }]}>{value.profile.display_name || 'One Concept learner'}</Text>
+          {value.profile.bio ? <Text style={[styles.copy, { color: colors.textSecondary }]}>{value.profile.bio}</Text> : null}
           <Text style={[styles.copy, { color: colors.textSecondary }]}>One concept. A little more understanding.</Text>
           <View style={styles.highlights}>
             {value.profile.current_streak !== undefined && <View style={[styles.highlight, { backgroundColor: colors.background }]}>

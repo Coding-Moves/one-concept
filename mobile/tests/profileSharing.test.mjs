@@ -31,7 +31,7 @@ test('private sharing requests require owning account and omit server-only publi
   setTokenProvider(async uid => { assert.equal(uid, 'owner'); return 'owner-token'; });
   let sent;
   t.mock.method(globalThis, 'fetch', async (_, init) => { sent=init; return new Response('{"enabled":false}'); });
-  await putSharing('owner', { enabled:false, show_name:false, show_avatar:false, show_streak:false, show_learning:false, achievement_codes:[], version:1, public_path:`/p/${token}` });
+  await putSharing('owner', { enabled:false, show_name:false, show_avatar:false, show_bio:false, show_streak:false, show_learning:false, achievement_codes:[], version:1, public_path:`/p/${token}` });
   assert.equal(JSON.parse(sent.body).public_path, undefined);
   assert.equal(sent.headers.Authorization, 'Bearer owner-token');
   let resolve;

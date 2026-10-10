@@ -54,7 +54,10 @@ const server = http.createServer((req, res) => {
           }
         }
         if (status === 200) body = sharing;
-      } else if (endpoint.startsWith('/v1/public-profiles/')) body = { ...(sharing.show_name ? { display_name: state.display_name } : {}), ...(sharing.show_bio && state.bio ? { bio: state.bio } : {}), ...(sharing.show_streak ? { current_streak: 0, longest_streak: 0 } : {}), achievements: [] };
+      } else if (endpoint.startsWith('/v1/public-profiles/')) {
+        if (!sharing.enabled) { status = 404; body = { detail: 'Profile unavailable' }; }
+        else body = { ...(sharing.show_name ? { display_name: state.display_name } : {}), ...(sharing.show_bio && state.bio ? { bio: state.bio } : {}), ...(sharing.show_streak ? { current_streak: 0, longest_streak: 0 } : {}), achievements: [] };
+      }
       else if (endpoint === '/v1/me/relationships') body = { items: [], next_cursor: null };
       else if (endpoint.includes('/v1/me/relationships/with/')) body = { state: 'available', relationship_id: null };
       else if (endpoint === '/v1/me/achievements') body = { items: [] };
@@ -75,6 +78,13 @@ const server = http.createServer((req, res) => {
     if (process.env.PROFILE_SCREENSHOT_DIR) await page.screenshot({ path: path.join(process.env.PROFILE_SCREENSHOT_DIR, 'sharing-choices.png'), fullPage: true });
     await expect(page.getByRole('switch', { name: 'Share short bio' })).not.toBeChecked();
     await page.getByRole('switch', { name: 'Share display name' }).check();
+    await page.getByRole('button', { name: 'Review changes' }).click();
+    await expect(page.getByText('Visitor preview')).toBeVisible();
+    await expect(page.getByText('Reader', { exact: true }).last()).toBeVisible();
+    await page.getByRole('button', { name: 'Publish profile' }).click();
+    assert.equal(sharing.enabled, true);
+    assert.equal(sharing.show_name, true);
+    assert.equal(sharing.show_bio, false);
     await page.getByRole('switch', { name: 'Share short bio' }).check();
     await expect(page.getByText('You have changes that are not published yet.')).toBeVisible();
     await expect(page.getByRole('switch', { name: 'Share learning streak' })).toHaveCount(0);
@@ -88,7 +98,7 @@ const server = http.createServer((req, res) => {
     }
     await expect(page.getByText('Learning systems', { exact: true }).last()).toBeVisible();
     await expect(page.getByText('Current streak · Best 0')).toBeVisible();
-    await page.getByRole('button', { name: 'Publish profile' }).click();
+    await page.getByRole('button', { name: 'Publish changes' }).click();
     assert.equal(sharing.show_bio, true);
     assert.equal(sharing.show_streak, true);
     await expect(page.getByText('Public profile is live', { exact: true })).toBeVisible();
@@ -122,8 +132,18 @@ const server = http.createServer((req, res) => {
     await page.getByRole('button', { name: 'Back', exact: true }).click();
     await expect(page.getByText('Learning systems', { exact: true })).toHaveCount(0);
     assert.equal(state.bio, null);
+    await page.getByText('Public profile', { exact: true }).click();
+    await page.getByRole('button', { name: 'Turn off sharing' }).click();
+    await page.getByRole('button', { name: 'Confirm turn off sharing' }).click();
+    assert.equal(sharing.enabled, false);
+    await expect(page.getByText(/Sharing is off/)).toBeVisible();
+    await page.getByRole('button', { name: 'Back', exact: true }).click();
+    await page.getByText('Connections', { exact: true }).click();
+    await page.getByRole('textbox', { name: 'Shared profile link' }).fill(`http://127.0.0.1:4781/api/p/${token}`);
+    await page.getByRole('button', { name: 'Open shared profile' }).click();
+    await expect(page.getByText(/profile is unavailable/i)).toBeVisible();
     assert.deepEqual(errors, []);
-    console.log('owner bio, public review, share preview, visitor bio, and clearing passed');
+    console.log('minimal publish, expanded preview, conflict recovery, bio clearing, and link revocation passed');
     await context.close();
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); server.close(); process.exitCode = 1; });

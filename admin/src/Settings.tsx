@@ -1,13 +1,17 @@
 import { useState } from "react";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Api } from "./api";
 import type { Me } from "./types";
 import { Field, Notice, message } from "./ui";
+import { AuthenticatorSetting } from "./AuthenticatorSetting";
 export function Settings({
+  auth,
   api,
   me,
   reloadMe,
   environment,
 }: {
+  auth: SupabaseClient;
   api: Api;
   me: Me;
   reloadMe: () => Promise<void>;
@@ -86,6 +90,7 @@ export function Settings({
             </button>
           </form>
         </section>
+        <AuthenticatorSetting auth={auth} api={api} me={me} reloadMe={reloadMe} />
         <Timezone key={me.member.version} api={api} me={me} reloadMe={reloadMe} />
         <section className="card">
           <h2>Workspace details</h2>
@@ -96,9 +101,11 @@ export function Settings({
             <dd>{me.member.status}</dd>
             <dt>Authenticator</dt>
             <dd>
-              {me.mfa_required
-                ? "Verification required before review"
-                : "Verified for this session"}
+              {!me.member.require_mfa
+                ? "Off for this account"
+                : me.mfa_required
+                  ? "Verification required before review"
+                  : "Verified for this session"}
             </dd>
             <dt>Permissions</dt>
             <dd>

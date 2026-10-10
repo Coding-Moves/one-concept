@@ -175,6 +175,40 @@ input[type="checkbox"] {
   accent-color: var(--primary);
   flex-shrink: 0;
 }
+.security-switch {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  margin: 20px 0;
+  cursor: pointer;
+}
+.security-switch small { display: block; margin-top: 5px; color: var(--muted); }
+.security-switch input[type="checkbox"] {
+  appearance: none;
+  width: 46px;
+  height: 26px;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  background: var(--line);
+  position: relative;
+  cursor: pointer;
+}
+.security-switch input[type="checkbox"]::before {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: transform 140ms ease;
+}
+.security-switch input[type="checkbox"]:checked { background: var(--primary); border-color: var(--primary); }
+.security-switch input[type="checkbox"]:checked::before { transform: translateX(20px); }
+.security-switch input[type="checkbox"]:focus-visible { outline: 3px solid var(--primary); outline-offset: 3px; }
+.security-switch input[type="checkbox"]:disabled { cursor: wait; opacity: .6; }
 fieldset {
   border: 0;
   padding: 0;

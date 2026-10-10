@@ -87,10 +87,12 @@ export function EditProfileScreen() {
   const pick = async (camera: boolean) => {
     if (busy.current || !userId) return;
     try {
-      const permission = camera ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
-      if (!permission.granted) {
-        Alert.alert('Photo permission needed', 'Allow access in your phone settings to choose a profile photo.');
-        return;
+      if (camera) {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+          Alert.alert('Camera permission needed', 'Allow camera access in your phone settings to take a profile photo.');
+          return;
+        }
       }
       await beginProfilePhotoPick(userId);
       const options: ImagePicker.ImagePickerOptions = {

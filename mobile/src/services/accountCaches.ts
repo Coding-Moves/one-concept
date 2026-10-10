@@ -12,6 +12,7 @@ import { invalidateAccountRequests } from '../api/client';
 import { clearDailyCache } from './dailyApi';
 import { conceptCache } from './conceptApi';
 import { clearNotificationPrefsCache } from './notifications';
+import { clearProfilePhotoPick } from './profilePhotoPicker';
 import { clearServerStateCache } from './remoteProgressRepository';
 import { historyPageCache } from './historyApi';
 import { savedCollectionCache } from './savedApi';
@@ -28,5 +29,6 @@ export async function clearAccountCaches(): Promise<void> {
     historyPageCache.clear(),
     clearTopicsCache(),
     clearNotificationPrefsCache(),
+    clearProfilePhotoPick(),
   ]);
 }

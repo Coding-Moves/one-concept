@@ -74,6 +74,7 @@ export async function fixture(
     email?: string;
     name?: string;
     shared?: unknown;
+    autoCorrection?: boolean;
   } = {},
 ) {
   const member = {
@@ -112,6 +113,7 @@ export async function fixture(
     mfa: options.mfa || false,
     commands: [] as any[],
     jobs: [] as any[],
+    autoCorrection: options.autoCorrection || false,
     member,
     members: [member],
   };
@@ -315,6 +317,7 @@ export async function fixture(
         review_blocked: false,
         planning_required: false,
         generation_enabled: true,
+        editorial_auto_correction_enabled: true,
         provider_configured: true,
       });
     if (method === "POST") {
@@ -363,6 +366,19 @@ export async function fixture(
             failure_code: null,
           },
         ];
+      if (body.action === "changes_requested" && state.autoCorrection)
+        state.jobs = [
+          {
+            id: "auto-job",
+            concept_id: cid,
+            source_revision_id: rid,
+            result_revision_id: null,
+            status: "pending",
+            attempts: 0,
+            token: state.token,
+            failure_code: null,
+          },
+        ];
       state.token = (++state.commandVersion).toString(16).padStart(64, "0");
       state.events.push({
         id: String(state.commandVersion),
@@ -381,6 +397,10 @@ export async function fixture(
           : state.status,
         token: state.token,
         published_version: state.status === "published" ? state.contentVersion : null,
+        generation_status:
+          body.action === "changes_requested" && state.autoCorrection
+            ? "queued"
+            : null,
       };
       receipts.set(body.request_id, result);
       if (state.uncertain) {

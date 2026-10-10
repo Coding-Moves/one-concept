@@ -17,9 +17,9 @@ export function editableLesson(raw: unknown): Lesson {
     summary: text(b.summary),
     example: text(b.example),
     subtopic_slug: text(b.subtopic_slug),
-    model: typeof b.model === "string" ? b.model : null,
-    prompt_version:
-      typeof b.prompt_version === "string" ? b.prompt_version : null,
+    // An editor-created revision must not claim the source lesson's AI run.
+    model: null,
+    prompt_version: null,
     curriculum: {
       objective: text(c.objective),
       difficulty: [1, 2, 3].includes(Number(c.difficulty))

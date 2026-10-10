@@ -88,6 +88,11 @@ for (const theme of ["light", "dark"]) {
     await expect(
       page.getByRole("heading", { name: "Last worker observations" }),
     ).toBeVisible();
+    await expect(
+      page.getByText("Automatic AI corrections (API configuration)")
+        .locator("..")
+        .getByText("Enabled"),
+    ).toBeVisible();
     await expect(page.getByText("Stale", { exact: true })).toBeVisible();
     await page.setViewportSize({ width: 390, height: 844 });
     const reachable = page

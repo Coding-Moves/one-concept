@@ -4,11 +4,17 @@ Automated checks reject malformed learning material; a named reviewer remains
 responsible for factual accuracy and suitability.
 """
 
+import re
 from typing import Literal
 
 from pydantic import Field, field_validator, model_validator
 
 from app.services.curriculum import StrictModel, normalized
+
+
+def normalized_option(value: str) -> str:
+    """Ignore casing and spacing without erasing meaningful math/code symbols."""
+    return " ".join(re.findall(r"\w+|[^\w\s]", value.casefold()))
 
 
 class Flashcard(StrictModel):
@@ -32,7 +38,7 @@ class MultipleChoiceQuestion(StrictModel):
     def options_are_distinct_and_useful(cls, values):
         if any(len(value.strip()) < 1 or len(value) > 240 for value in values):
             raise ValueError("Each MCQ option must be between 1 and 240 characters")
-        if len({normalized(value) for value in values}) != len(values):
+        if len({normalized_option(value) for value in values}) != len(values):
             raise ValueError("MCQ options must be distinct")
         return values
 

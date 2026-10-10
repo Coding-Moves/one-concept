@@ -162,6 +162,25 @@ async def test_checked_in_registry_and_extension_examples_import_without_changin
     await session.rollback()
 
 
+async def test_launch_refill_plan_imports_once_into_existing_subjects(session):
+    from pathlib import Path
+    from pydantic import TypeAdapter
+
+    path = Path(__file__).resolve().parents[1] / "content/curriculum.refill-launch.json"
+    plans = TypeAdapter(list[PlannedLesson]).validate_json(path.read_text())
+    assert len(plans) == 5 and len({plan.topic_slug for plan in plans}) == 5
+    await import_lessons(session, plans)
+    await import_lessons(session, plans)
+    rows = (
+        await session.execute(
+            text("select slug,status from concept_backlog where slug=any(:slugs)"),
+            {"slugs": [plan.slug for plan in plans]},
+        )
+    ).all()
+    assert len(rows) == 5 and all(row.status == "pending" for row in rows)
+    await session.rollback()
+
+
 async def test_subtopic_must_belong_to_the_lesson_subject(session):
     with pytest.raises(ValueError, match="subtopic"):
         await import_lessons(

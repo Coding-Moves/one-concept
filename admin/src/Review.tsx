@@ -103,24 +103,31 @@ export function Review({
     setEdit(null);
     setDirty(false);
     const action = (submitted.body as { action?: string }).action;
-    setNotice(
-      action === "comment"
-        ? "Comment saved."
-        : action === "assign"
-          ? "Assignment saved."
-          : ["publish", "approve_and_publish", "attest"].includes(
-                action || "",
-              ) && result.status === "published"
-            ? `Published successfully${result.published_version ? " · version " + result.published_version : ""}. Eligible learners can receive this content through normal app requests.`
-            : action === "approved" && result.status === "approved"
-              ? "Approved for the whole team. No additional reviewer approval is needed."
-              : action === "submit" && result.status === "validation_failed"
-                ? "Submission needs corrections. Review the validation errors below."
-                : submitted.path.endsWith("/generation-requests") &&
-                    result.status === "pending"
-                  ? "AI correction queued. It will return as a new draft for human review."
-                  : "Saved successfully.",
-    );
+    let notice = "Saved successfully.";
+    if (action === "comment") notice = "Comment saved.";
+    else if (action === "assign") notice = "Assignment saved.";
+    else if (
+      ["publish", "approve_and_publish", "attest"].includes(action || "") &&
+      result.status === "published"
+    )
+      notice = `Published successfully${result.published_version ? " · version " + result.published_version : ""}. Eligible learners can receive this content through normal app requests.`;
+    else if (action === "approved" && result.status === "approved")
+      notice = "Approved for the whole team. No additional reviewer approval is needed.";
+    else if (action === "changes_requested") {
+      if (result.generation_status === "queued")
+        notice = "Changes requested. AI correction queued for the next scheduled worker run; the result will still need human review.";
+      else if (result.generation_status === "unavailable")
+        notice = "Changes requested. The AI queue could not accept this correction; ask the owner to check its status.";
+      else if (result.generation_status === "disabled")
+        notice = "Changes requested. AI correction is paused.";
+    } else if (action === "submit" && result.status === "validation_failed")
+      notice = "Submission needs corrections. Review the validation errors below.";
+    else if (
+      submitted.path.endsWith("/generation-requests") &&
+      result.status === "pending"
+    )
+      notice = "AI correction queued. It will return as a new draft for human review.";
+    setNotice(notice);
     await load();
     if (result.revision_id && result.revision_id !== id)
       navigate({
@@ -691,7 +698,8 @@ export function Review({
               {revision &&
                 detail.status === "changes_requested" &&
                 can("review") &&
-                can("request_generation") && (
+                can("request_generation") &&
+                !jobs.some((job) => job.source_revision_id === id) && (
                   <button
                     disabled={decisionBlocked || !noted}
                     onClick={() =>

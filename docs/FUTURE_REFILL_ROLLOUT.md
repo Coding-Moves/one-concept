@@ -4,6 +4,13 @@ Issue #353 keeps future lesson refill separate from legacy enrichment and editor
 corrections. Every generated lesson remains a private draft until a reviewer
 approves the exact version.
 
+The first reviewed launch plan is
+[`backend/content/curriculum.refill-launch.json`](../backend/content/curriculum.refill-launch.json):
+one distinct lesson for each existing subject, with a learning objective and
+primary source. The production backend image contains this file. It is a
+bounded starting backlog, not an infinite AI curriculum planner. Add further
+reviewed plans as readers use these lessons.
+
 ## Release procedure
 
 Migration `0043_future_refill_daily_usage.sql` is already recorded as applied
@@ -15,6 +22,12 @@ separate release and operator review of the existing-lesson backfill.
    and neither `anon` nor `authenticated` can read or write them.
 3. Deploy the API and every generation-capable Railway worker with the same
    variables. Keep `GEMINI_API_KEY` in Railway Variables only.
+4. From the deployed backend image, import the reviewed launch plan once with
+   `python -m app.workers.content import-curriculum content/curriculum.refill-launch.json`.
+   The command is transactional and an exact re-import is safe. Inspect any
+   overlap warning against the live catalog before leaving the plans in the
+   queue. A duplicate or missing prerequisite is an import failure that needs
+   a corrected plan; never bypass catalog validation.
 
 ## Initial Railway values
 
@@ -33,6 +46,7 @@ FUTURE_REFILL_TOPIC_DAILY_CAP=1
 FUTURE_REFILL_URGENT_ENABLED=false
 FUTURE_REFILL_URGENT_DAILY_CALL_CAP=10
 FUTURE_REFILL_URGENT_TOPIC_DAILY_CAP=2
+EDITORIAL_AUTO_CORRECTION_ENABLED=true
 ```
 
 `GENERATION_ENABLED=false`, `FUTURE_REFILL_ENABLED=false`, and
@@ -44,6 +58,23 @@ urgent mode during the first rollout.
 `FUTURE_REFILL_ENABLED=false` also blocks owner requests for new planned drafts
 while existing published lessons are being enriched; AI corrections and the
 separately enabled legacy batch remain private review paths.
+
+After the launch plan is imported and the deployed worker is healthy, set
+`GENERATION_ENABLED=true` and `FUTURE_REFILL_ENABLED=true` on the API and
+`pool-topup` services, keeping the caps above. The scheduled worker checks
+active reader demand and prepares at most one new private draft per low-supply
+subject per normal day. It skips subjects with no plan or full review capacity.
+The owner can verify the reason in content health and AI requests. Railway's
+current `22:00 UTC` schedule corresponds to `03:00` in Pakistan; check the
+actual schedule before promising that hour. Do not turn on urgent refill until
+the first normal day has been inspected.
+
+A reviewer's **Request changes** decision queues one private AI correction
+when generation is enabled. The job stays bound to that reviewer and is
+cancelled if the membership is revoked before processing. The worker runs it
+on its next scheduled or manually started pass; it does not edit or publish
+the existing lesson. Set `EDITORIAL_AUTO_CORRECTION_ENABLED=false` to pause
+new automatic correction requests while leaving existing queued jobs intact.
 
 ## First-day verification
 

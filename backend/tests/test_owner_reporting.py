@@ -252,6 +252,10 @@ async def test_operations_missing_and_stale_are_not_success(api, session):
     r = await api.client.get("/v1/editorial/owner/operations", headers=api.headers())
     assert r.json()["workers"][0]["status"] == "stale"
     assert r.json()["generation_enabled"] is False
+    assert r.json()["editorial_auto_correction_enabled"] is False
+    api.settings.generation_enabled = True
+    r = await api.client.get("/v1/editorial/owner/operations", headers=api.headers())
+    assert r.json()["editorial_auto_correction_enabled"] is True
 
 
 @pytest.mark.parametrize(

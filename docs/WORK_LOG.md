@@ -12,6 +12,7 @@ claims as completed work.
 - The owner reported that production migrations `0044_public_profile_bio_choice.sql` and `0045_editorial_authenticator_choice.sql` were applied after preparation PR #412 merged. Commit `3c76e95` records that operator attestation in `backend/migrations/applied.txt`; it does not itself run SQL or prove the target schema.
 - This workspace has no production `DIRECT_URL` or open Supabase session, so an independent read-only target-schema check was unavailable. The protected production schema check remains required before mobile publication, and Railway's pre-deploy schema check must guard the API and workers. Do not infer deployment success from the ledger.
 - The ledger PR targets `develop` before the v1.10.14 `develop` → `main` release PR can pass its required migration filename check.
+- [Ledger PR #413](https://github.com/Coding-Moves/one-concept/pull/413) contains the operator record. [Draft release PR #414](https://github.com/Coding-Moves/one-concept/pull/414) targets `main` from `develop`; keep it draft until #413 merges and release checks pass. Neither PR authorizes production deployment or mobile publication by itself.
 
 ### v1.10.14 release preparation — 2026-10-10
 

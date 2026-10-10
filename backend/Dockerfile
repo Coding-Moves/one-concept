@@ -11,6 +11,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
+COPY content ./content
 COPY migrations ./migrations
 COPY schema ./schema
 

@@ -429,7 +429,9 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 - `services/curriculum.py` validates subject/subtopic/plan imports, duplicate
   candidates and prerequisite graphs. `backend/content/subjects.json` and
   `backend/content/subtopics.json` retain the five-topic taxonomy;
-  `curriculum.example.json` shows future data-only expansion.
+  `curriculum.example.json` shows future data-only expansion;
+  `curriculum.refill-launch.json` is the five-subject reviewed first refill
+  backlog packaged in the backend image for an explicit operator import.
 - `services/supply.py` persists assigned-count-plus-reserve demand and plans for
   active readers. `pool.py` counts drafts/in-flight claims in capacity and calls
   the shared quota/concurrency checks before committing any provider request.

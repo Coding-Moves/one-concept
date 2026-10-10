@@ -51,3 +51,5 @@
 0041_directed_profile_connections.sql
 0042_legacy_enrichment_batches.sql
 0043_future_refill_daily_usage.sql
+0044_public_profile_bio_choice.sql
+0045_editorial_authenticator_choice.sql

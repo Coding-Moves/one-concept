@@ -16,6 +16,7 @@ function AccountRelationshipControls({ token, userId }: { token: string; userId?
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [confirm, setConfirm] = useState<'disconnect' | 'block' | null>(null);
+  const [showOptions, setShowOptions] = useState(false);
   const active = useRef(true);
   const load = async () => {
     if (!userId) return;
@@ -45,9 +46,12 @@ function AccountRelationshipControls({ token, userId }: { token: string; userId?
   if (status?.state === 'self') return <Text style={{ color: colors.textSecondary }}>This is your profile.</Text>;
   if (status?.state === 'unavailable') return <Text style={{ color: colors.textSecondary }}>This profile is unavailable.</Text>;
   return <View style={{ gap: 10 }}>
-    {status?.state === 'available' && <>{button('Connect', () => void run('connect'))}<Text style={{ color: colors.textSecondary }}>Connect adds this learner only to your list. They are not notified and do not connect back automatically.</Text></>}
+    {status?.state === 'available' && <>{button('Connect', () => void run('connect'))}<Text style={{ color: colors.textSecondary }}>Add this learner to your Connections list.</Text></>}
     {status?.state === 'connected' && <>{<Text style={{ color: colors.textSecondary }}>Connected</Text>}{confirm === 'disconnect' ? <>{<Text style={{ color: colors.text }}>Disconnect from this learner?</Text>}{button('Confirm disconnect', () => void run('disconnect'), true)}{button('Keep connected', () => setConfirm(null))}</> : button('Disconnect', () => setConfirm('disconnect'), true)}</>}
-    {status && (confirm === 'block' ? <>{<Text style={{ color: colors.text }}>Block this learner? Both connection lists will be cleared.</Text>}{button('Confirm block', () => void run('block'), true)}{button('Keep unblocked', () => setConfirm(null))}</> : button('Block learner', () => setConfirm('block'), true))}
+    {status && <Pressable accessibilityRole="button" accessibilityState={{ expanded: showOptions }} onPress={() => { setShowOptions(value => !value); setConfirm(null); }} style={{ minHeight: 44, justifyContent: 'center' }}>
+      <Text style={{ color: colors.primary }}>{showOptions ? 'Hide options' : 'More options'}</Text>
+    </Pressable>}
+    {status && showOptions && (confirm === 'block' ? <>{<Text style={{ color: colors.text }}>Block this learner? Both connection lists will be cleared.</Text>}{button('Confirm block', () => void run('block'), true)}{button('Keep unblocked', () => setConfirm(null))}</> : button('Block learner', () => setConfirm('block'), true))}
     {message ? <Text accessibilityLiveRegion="polite" style={{ color: colors.text }}>{message}</Text> : null}
     {busy ? <Text accessibilityLiveRegion="polite" style={{ color: colors.textSecondary }}>Updating connection…</Text> : null}
   </View>;

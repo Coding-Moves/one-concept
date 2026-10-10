@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### Optional authenticator for the editorial website — 2026-10-10, in progress
+
+- Scope: one PR into `develop` for a per-account owner/reviewer Settings switch. Existing editorial accounts continue to require an authenticator by default. Turning it off requires a fresh verified TOTP challenge; turning it on restores MFA gating for that account. Supabase factors remain enrolled.
+- Planned commits: persist and enforce the choice with audited, versioned self-service API; add the Settings switch and challenge flow; cover owner/reviewer and access regressions; update the schema contract and handoff. The unrelated release checkout remains untouched.
+
 ### Profile photo save flow — 2026-10-10, PR #406 open
 
 - Scope: [#401](https://github.com/Coding-Moves/one-concept/issues/401) fixes the camera/gallery path that stays on the phone's crop screen. The isolated `codex/401-profile-photo-save` branch targets `develop`; the unrelated release checkout and its uncommitted log remain untouched.

@@ -44,38 +44,50 @@ export function ProfileSharingScreen() {
   const [moreChoicesOpen, setMoreChoicesOpen] = useState(false);
   const [preview, setPreview] = useState<{ url: string; profile: PublicProfile } | null>(null);
   const active = useRef(true);
+  const owner = useRef(userId);
+  owner.current = userId;
+  const operation = useRef(0);
   const pending = useRef(false);
   const presentation = useRef(0);
 
   const load = useCallback(async () => {
     if (pending.current) return;
+    const currentOperation = ++operation.current;
     pending.current = true;
     setBusy(true);
     setMessage('');
     setPreview(null);
     try {
       const settings = await getSharing(userId);
-      if (!active.current) return;
+      if (!active.current || owner.current !== userId || operation.current !== currentOperation) return;
       // Awards are loaded only to offer earned achievements as a safe allowlist.
       const earned = await apiRequest<{ items: Award[] }>('/v1/me/achievements', { expectedUserId: userId });
-      if (active.current) {
+      if (active.current && owner.current === userId && operation.current === currentOperation) {
         setSaved(settings);
         setDraft(settings);
         setMoreChoicesOpen(Boolean(settings.show_streak || settings.show_learning || settings.achievement_codes.length));
         setAwards(earned.items.filter(award => award.earned_on));
       }
     } catch {
-      if (active.current) setMessage('We could not load your sharing choices. Check your connection and try again.');
+      if (active.current && owner.current === userId && operation.current === currentOperation) setMessage('We could not load your sharing choices. Check your connection and try again.');
     } finally {
-      pending.current = false;
-      if (active.current) setBusy(false);
+      if (operation.current === currentOperation && owner.current === userId) {
+        pending.current = false;
+        if (active.current) setBusy(false);
+      }
     }
   }, [userId]);
 
   useEffect(() => {
     active.current = true;
+    operation.current += 1;
+    pending.current = false;
+    setSaved(null);
+    setDraft(null);
+    setAwards([]);
+    setPreview(null);
     void load();
-    return () => { active.current = false; };
+    return () => { active.current = false; operation.current += 1; };
   }, [load]);
   useEffect(() => {
     const subscription = AppState.addEventListener('change', () => {
@@ -87,12 +99,13 @@ export function ProfileSharingScreen() {
 
   const persist = async (enabled: boolean) => {
     if (!draft || pending.current || !online) return;
+    const currentOperation = ++operation.current;
     pending.current = true;
     setBusy(true);
     setMessage('');
     try {
       const result = await putSharing(userId, { ...(enabled ? draft : saved ?? draft), enabled });
-      if (active.current) {
+      if (active.current && owner.current === userId && operation.current === currentOperation) {
         setSaved(result);
         setDraft(result);
         setReviewing(false);
@@ -100,27 +113,30 @@ export function ProfileSharingScreen() {
         setMessage(enabled ? 'Your public profile is live. You can share its link whenever you like.' : 'Sharing is off. Your previous public link no longer works.');
       }
     } catch (error) {
-      if (active.current) {
+      if (active.current && owner.current === userId && operation.current === currentOperation) {
         setReviewing(false);
         setMessage(error instanceof ApiError && error.status === 409
           ? 'Sharing changed on another device. Nothing was published. Discard your edits and reload the current choices before trying again.'
           : 'Could not publish. Your choices are still here. Check your connection and review them again.');
       }
     } finally {
-      pending.current = false;
-      if (active.current) setBusy(false);
+      if (operation.current === currentOperation && owner.current === userId) {
+        pending.current = false;
+        if (active.current) setBusy(false);
+      }
     }
   };
 
   const openShare = async (send = false) => {
     if (pending.current) return;
     const opening = ++presentation.current;
+    const currentOperation = ++operation.current;
     pending.current = true;
     setBusy(true);
     setMessage('');
     try {
       const current = await getSharing(userId);
-      if (!active.current) return;
+      if (!active.current || owner.current !== userId || operation.current !== currentOperation) return;
       setSaved(current);
       setDraft(current);
       if (!current.enabled || !current.public_path) {
@@ -129,17 +145,19 @@ export function ProfileSharingScreen() {
       }
       const url = publicProfileUrl(current.public_path);
       const profile = await getPublicProfile(current.public_path.slice(3));
-      if (!active.current || opening !== presentation.current) return;
+      if (!active.current || owner.current !== userId || operation.current !== currentOperation || opening !== presentation.current) return;
       setPreview({ url, profile });
       if (send) await Share.share({ message: url });
     } catch {
-      if (active.current) {
+      if (active.current && owner.current === userId && operation.current === currentOperation) {
         setPreview(null);
         setMessage('We could not prepare your public link. Check your connection and try again.');
       }
     } finally {
-      pending.current = false;
-      if (active.current) setBusy(false);
+      if (operation.current === currentOperation && owner.current === userId) {
+        pending.current = false;
+        if (active.current) setBusy(false);
+      }
     }
   };
 

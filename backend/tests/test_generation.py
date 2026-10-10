@@ -20,7 +20,7 @@ from app.services.generation import (
     generate_concept,
     validate,
 )
-from app.services.interactions import set_followed_topics
+from app.services.interactions import complete_today, set_followed_topics
 from app.services.pool import generate_one, top_up
 from app.services.selection import get_or_create_daily
 
@@ -450,17 +450,15 @@ async def test_dry_followed_topic_schedules_prefetch_not_inline_generation(
         assert result.status == "ok"
         assert result.concept.topic_slug == "linux-systems"
         assert result.outside_followed_topics is False
+        await complete_today(session, user, DAY + timedelta(days=offset))
 
     linux_topic_id = await session.scalar(
         text("select id from public.topics where slug = 'linux-systems'")
     )
 
-    # The day past the shelf: no inline generation. Selection widens to the
-    # catalog for today (flagged) or reports exhaustion, and has asked to
-    # prefetch linux-systems ahead of demand.
+    # The day past the shelf: no inline generation or cross-topic fallback.
+    # Selection asks the worker to refill the followed subject instead.
     beyond = await get_or_create_daily(session, user, today=DAY + timedelta(days=published))
-    if beyond.status == "ok":
-        assert beyond.outside_followed_topics is True, "a dry topic widens, never generates inline"
-    else:
-        assert beyond.status == "exhausted"
+    assert beyond.status == "exhausted"
+    assert beyond.concept is None
     assert linux_topic_id in prefetched, "selection must schedule a prefetch for the dry topic"

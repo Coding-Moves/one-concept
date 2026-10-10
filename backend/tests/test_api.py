@@ -1,7 +1,7 @@
 """HTTP-level tests: auth gating, response shape, and status codes."""
 
 import uuid
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 import pytest_asyncio
@@ -77,6 +77,31 @@ async def test_daily_is_stable_across_calls(client):
     assert first["assigned_for"] == second["assigned_for"]
 
 
+async def test_state_assignment_pointer_matches_a_carried_daily_card(
+    client, sessionmaker_for_test, user
+):
+    first = (await client.get("/v1/me/state?compact=true")).json()
+    card = first["daily"]
+    assert first["assignment_slug"] == card["concept"]["slug"]
+
+    async with sessionmaker_for_test() as s:
+        await s.execute(
+            text("""update public.daily_assignments set assigned_for=:previous
+              where user_id=:uid and concept_id=:cid"""),
+            {
+                "uid": user,
+                "cid": card["concept"]["id"],
+                "previous": date.fromisoformat(card["assigned_for"]) - timedelta(days=1),
+            },
+        )
+        await s.commit()
+
+    repeated = (await client.get("/v1/me/state?compact=true")).json()
+    assert repeated["daily"]["concept"]["id"] == card["concept"]["id"]
+    assert repeated["daily"]["assigned_for"] == repeated["today"]
+    assert repeated["assignment_slug"] == card["concept"]["slug"]
+
+
 async def test_topics_lists_the_catalog_with_follow_state(client):
     response = await client.get("/v1/topics")
     assert response.status_code == 200
@@ -150,9 +175,10 @@ async def test_daily_exhaustion_is_a_409_not_a_500(client, sessionmaker_for_test
     # Assign every published concept to this user on distinct past days.
     async with sessionmaker_for_test() as s:
         await s.execute(text("""
-            insert into public.daily_assignments (id, user_id, concept_id, assigned_for)
+            insert into public.daily_assignments (id, user_id, concept_id, assigned_for, completed_at)
             select gen_random_uuid(), :u, c.id,
-                   date '2000-01-01' + (row_number() over (order by c.id))::int
+                   date '2000-01-01' + (row_number() over (order by c.id))::int,
+                   now()
               from public.concepts c
              where c.status = 'published'
         """), {"u": user})

@@ -96,7 +96,12 @@ for compatibility, historical offline semantics and rollout.
 requests; the API client refreshes an idle token and fences account changes and
 late denials without discarding recoverable review work.
 `Auth.tsx` handles invitation/recovery, password and MFA; `Settings.tsx` handles
-registered identity. `Queue.tsx` supplies topic/status/deadline filtering and
+registered identity, and `AuthenticatorSetting.tsx` lets owners and reviewers
+choose whether MFA is required for their own account. `editorial_accounts.py`
+enforces that persisted choice for every editorial capability. Disabling it
+requires a recent TOTP method timestamp from the verified Supabase JWT;
+`0045_editorial_authenticator_choice.sql` defaults existing accounts to on and
+extends the account audit. `Queue.tsx` supplies topic/status/deadline filtering and
 shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete
 packages, diffs, history, comments, checklist decisions and safe corrections.
 `Team.tsx` manages owner-only membership; `Generation.tsx` requests bounded work.
@@ -242,7 +247,7 @@ inside a root stack, with a concept-detail modal above them.
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, icon-marked accessible answer selection, result feedback and reattempts. |
 | `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, icon-marked accessible answer selection, retries, and prior-score history. |
 | `ProfileScreen.tsx` | Task-grouped account hub: profile/privacy, learning, topics, preferences, library and support. It keeps clear reminder prerequisites and immediate per-control queued reminder writes. |
-| `EditProfileScreen.tsx` | Preferred-name editing; confirmed, account-fenced Progress state update. |
+| `EditProfileScreen.tsx` / `services/profilePhotoPicker.ts` | Name and bio editing, camera/library photo preview and explicit save, account-bound Android picker recovery, and confirmed avatar writes. |
 | `ProfileSharingScreen.tsx` / `ProfilePublishReviewSheet.tsx` / `PublicProfileLink.tsx` | Opt-in, independently selected sharing fields, a private review-before-publish step, explicit unpublish confirmation, native share/local QR, and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
@@ -295,8 +300,8 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   retries while offline or actions remain, using 5–30 second backoff, including
   when only some requests succeed. Daily refreshes preserve pending actions;
   account/source changes invalidate them and clear the displayed state. Foreground
-  and browser reconnect events wake an idle loop immediately; backgrounding
-  pauses timers.
+  and reconnect events revalidate progress and the topic catalog even with an
+  empty mutation queue; backgrounding pauses timers.
   This remains compatible with the current APK and has no closed-app worker.
   Screen retries use its serialized `refresh`; topic and detail screens have
   their own retry paths. Failed loads do not substitute demo lessons or totals
@@ -383,16 +388,21 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 
 - `services/selection.py` returns an existing assignment first. With no active
   followed topic it returns the stable `personalization_required` state without
-  creating an assignment or signaling generation. Otherwise it excludes every
-  previously assigned concept, prefers the least recently seen followed topic,
-  and widens to the global published catalog only when that non-empty followed
-  pool is dry. It handles concurrent inserts and schedules background prefetch,
-  never waits on Gemini. `GET /me/state` projects the same condition through
-  `daily_availability`; old clients can safely ignore that additive field.
+  creating an assignment or signaling generation. On a new local day it carries
+  the most recent unfinished lesson in a still-followed topic forward until
+  completion, retaining the same assignment row and first assigned timestamp.
+  Otherwise it excludes previously assigned concepts, prefers the least recently
+  seen followed topic. When the followed pool has no unfinished or new lessons,
+  selection offers a review chosen by `services/reviews.py` from a followed topic
+  or waits for publication. Completed dates stay fixed. Selection handles
+  concurrent inserts and schedules background prefetch, never waits on Gemini.
+  `GET /me/state` projects the same condition through `daily_availability`; old
+  clients can safely ignore that additive field.
 - `services/state.py` aggregates profile, follows, learned/saved metadata, likes,
   assignment slug, and derived streaks in one SQL statement. The `/me/state`
-  handler then calls selection separately to add `daily`; one HTTP request does
-  not mean one database statement for the entire endpoint. Compact clients get
+  handler then calls selection separately to add `daily` and aligns
+  `assignment_slug` with the resulting card; one HTTP request does not mean one
+  database statement for the entire endpoint. Compact clients get
   at most 50 enriched learned/saved rows, older-topic counts and continuation
   cursors; bare membership and aggregate streak/totals remain complete. Legacy
   clients keep the full detail lists until upgraded.
@@ -429,7 +439,9 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 - `services/curriculum.py` validates subject/subtopic/plan imports, duplicate
   candidates and prerequisite graphs. `backend/content/subjects.json` and
   `backend/content/subtopics.json` retain the five-topic taxonomy;
-  `curriculum.example.json` shows future data-only expansion.
+  `curriculum.example.json` shows future data-only expansion;
+  `curriculum.refill-launch.json` is the five-subject reviewed first refill
+  backlog packaged in the backend image for an explicit operator import.
 - `services/supply.py` persists assigned-count-plus-reserve demand and plans for
   active readers. `pool.py` counts drafts/in-flight claims in capacity and calls
   the shared quota/concurrency checks before committing any provider request.
@@ -540,7 +552,7 @@ These observations are recorded for future assigned work; setup does not change
 the implementation or older documentation:
 
 - Backend/architecture prose still describes synchronous on-demand generation;
-  selection now schedules background prefetch and widens the stored catalog.
+  selection now schedules background prefetch within followed topics.
 - `/me/state` documentation says one query; its aggregate is one query, followed
   by selection queries for the folded daily lesson.
 - Some comments describe the HTTP client as unwired or the repository as local
@@ -556,10 +568,20 @@ the implementation or older documentation:
 ### Public profile privacy
 
 `api/v1/profile_sharing.py` exposes caller-owned settings and separately filtered
-public JSON/browser reads. `services/profile_sharing.py` owns row locking, version
-checks, earned-achievement filtering and revocable random tokens. Migration 0028
-adds the backend-only sharing table; 0029 preserves stored timezones during phone
-initialization. `mobile/src/services/profileSharing.ts` owns link parsing, local QR
+public JSON/browser reads. `app/public_profile_page.py` renders the responsive
+browser visitor card with escaped, allowlisted fields and an exact storage-origin
+image policy. The app's `PublicProfileLink.tsx` renders the corresponding
+visitor card and places Connect near identity. `services/profile_sharing.py`
+owns row locking, version checks, earned-achievement filtering and revocable
+random tokens. Migration 0028 adds the backend-only sharing table; 0029
+preserves stored timezones during phone
+initialization; 0044 adds the default-off public bio choice. The owner Profile
+reads the saved bio from progress; `ProfileSharingScreen.tsx` and
+`ProfilePublishReviewSheet.tsx` review its public choice with
+`PublicProfilePreview.tsx` showing the selected visitor fields.
+`ShareProfileSheet.tsx` uses that card for the published anonymous response,
+while `PublicProfileLink.tsx` shows only the anonymous allowlist.
+`mobile/src/services/profileSharing.ts` owns link parsing, local QR
 and anonymous visitor requests. See [profile-sharing.md](profile-sharing.md) for
 privacy guarantees, migration order and phone acceptance checks.
 
@@ -573,3 +595,14 @@ constraints. `ConnectionsScreen.tsx` owns private list/settings states;
 `services/connections.ts` client and transient `publicProfileNavigation.ts` keep
 navigation/account boundaries separate from anonymous profile data. See
 [connections.md](connections.md) for API, privacy, deployment and acceptance steps.
+
+### Directed profile relationships
+
+`api/v1/relationships.py`, `schemas/relationships.py`, and
+`services/relationships.py` own the current one-way Connect status, private
+list, revocable public link checks, and owner-fenced disconnect/block actions.
+The list includes only explicitly shared avatars; Storage failures leave names
+and actions available. `mobile/src/screens/ConnectionsScreen.tsx` shows the
+scan/link entry points and private list, while `services/relationships.ts`
+binds its requests to the signed-in account. The visitor card uses
+`components/RelationshipControls.tsx` for the Connect action.

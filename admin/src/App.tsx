@@ -313,6 +313,7 @@ export function App({
             <Notice>Checking your account…</Notice>
           ) : current.view === "settings" || !me.member.approved_name ? (
             <Settings
+              auth={auth}
               api={api}
               me={me}
               reloadMe={reloadMe}

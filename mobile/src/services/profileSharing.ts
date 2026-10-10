@@ -6,6 +6,7 @@ export interface SharingSettings {
   enabled: boolean;
   show_name: boolean;
   show_avatar: boolean;
+  show_bio: boolean;
   show_streak: boolean;
   show_learning: boolean;
   achievement_codes: string[];
@@ -14,6 +15,7 @@ export interface SharingSettings {
 }
 export interface PublicProfile {
   display_name?: string;
+  bio?: string;
   avatar_ref?: string;
   avatar_url?: string;
   current_streak?: number;

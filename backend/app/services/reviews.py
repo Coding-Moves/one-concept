@@ -43,6 +43,9 @@ async def choose_review(session: AsyncSession, user_id: uuid.UUID, today: date):
     cid = await session.scalar(
         text("""select a.concept_id from public.daily_assignments a
       join public.concepts c on c.id=a.concept_id
+      join public.topics t on t.id=c.topic_id and t.is_active
+      join public.subtopics s on s.id=c.subtopic_id and s.is_active
+      join public.user_topics ut on ut.topic_id=c.topic_id and ut.user_id=:uid
       left join lateral (select max(r.assigned_for) as last_review from public.daily_reviews r
         where r.user_id=:uid and r.concept_id=a.concept_id) seen on true
       where a.user_id=:uid and a.completed_at is not null and c.status='published'

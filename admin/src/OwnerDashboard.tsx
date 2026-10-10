@@ -509,6 +509,10 @@ function OperationsPanel({
                   <dd>{data.legacy_enrichment_enabled === undefined ? "Unknown" : data.legacy_enrichment_enabled ? "Enabled" : "Paused"}</dd>
                 </div>
                 <div>
+                  <dt>Automatic AI corrections (API configuration)</dt>
+                  <dd>{data.editorial_auto_correction_enabled === undefined ? "Unknown" : data.editorial_auto_correction_enabled ? "Enabled" : "Paused"}</dd>
+                </div>
+                <div>
                   <dt>Reviewer email (API configuration)</dt>
                   <dd>{data.email_enabled ? "Enabled" : "Disabled"}</dd>
                 </div>

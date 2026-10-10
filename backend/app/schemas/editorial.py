@@ -46,6 +46,10 @@ class ProfileInput(VersionInput):
     _name = field_validator("registered_name")(validate_registered_name)
 
 
+class AuthenticatorInput(VersionInput):
+    require_mfa: bool = Field(strict=True)
+
+
 class AccessInput(VersionInput):
     status: Literal["active", "revoked"]
     capabilities: list[Capability] = Field(max_length=5)
@@ -72,6 +76,7 @@ class Member(BaseModel):
     user_id: UUID
     invited_email: str
     notification_timezone: str = "UTC"
+    require_mfa: bool = True
     status: Literal["active", "revoked"]
     capabilities: list[Capability]
     requested_name: str | None

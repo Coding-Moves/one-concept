@@ -74,6 +74,7 @@ export const demoOperations: Operations = {
   generation_enabled: true,
   future_refill_enabled: false,
   legacy_enrichment_enabled: true,
+  editorial_auto_correction_enabled: true,
   email_enabled: false,
   workers: [
     {

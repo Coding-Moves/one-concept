@@ -7,9 +7,9 @@
     "@expo/metro-runtime": "~57.0.16",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
-    "@react-navigation/bottom-tabs": "^7.19.2",
+    "@react-navigation/bottom-tabs": "^7.20.0",
     "@react-navigation/native": "^7.4.1",
-    "@react-navigation/native-stack": "^7.19.2",
+    "@react-navigation/native-stack": "^7.20.0",
     "@supabase/supabase-js": "^2.117.2",
     "expo": "~57.0.26",
     "expo-camera": "~57.0.6",
@@ -24,8 +24,8 @@
     "expo-updates": "~57.0.24",
     "markdown-it": "15.0.2",
     "qrcode-generator": "2.0.4",
-    "react": "19.2.3",
-    "react-dom": "19.2.3",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
     "react-native": "0.86.3",
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
@@ -35,7 +35,7 @@
   "devDependencies": {
     "@types/markdown-it": "^14.2.0",
     "@types/react": "~19.2.2",
-    "typescript": "~6.0.3"
+    "typescript": "~7.0.2"
   },
   "scripts": {
     "start": "expo start",

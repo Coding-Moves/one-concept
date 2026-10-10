@@ -74,6 +74,7 @@ export async function fixture(
     email?: string;
     name?: string;
     shared?: unknown;
+    autoCorrection?: boolean;
   } = {},
 ) {
   const member = {
@@ -89,6 +90,7 @@ export async function fixture(
     ],
     requested_name: options.onboarding ? null : (options.name || "Amina Khan"),
     approved_name: options.onboarding ? null : (options.name || "Amina Khan"),
+    require_mfa: true,
     version: 1,
   };
   const freshState = {
@@ -110,8 +112,10 @@ export async function fixture(
     validationConflict: false,
     invalid: false,
     mfa: options.mfa || false,
+    challenges: 0,
     commands: [] as any[],
     jobs: [] as any[],
+    autoCorrection: options.autoCorrection || false,
     member,
     members: [member],
   };
@@ -195,6 +199,7 @@ export async function fixture(
       });
     if (path.includes("/verify")) {
       state.mfa = false;
+      state.challenges++;
       return fulfill(route, session());
     }
     if (path.endsWith("/user")) return fulfill(route, user);
@@ -241,8 +246,16 @@ export async function fixture(
         onboarding_required: !actorMember.requested_name,
         name_approval_pending:
           actorMember.requested_name !== actorMember.approved_name,
-        mfa_required: state.mfa,
+        mfa_required: actorMember.require_mfa && state.mfa,
       });
+    if (path === "/me/authenticator" && method === "PATCH") {
+      if (body.expected_version !== actorMember.version) return fulfill(route, { detail: "Account changed" }, 409);
+      if (body.require_mfa === false && (state.mfa || state.challenges === 0))
+        return fulfill(route, { detail: "Verify authenticator" }, 403);
+      actorMember.require_mfa = body.require_mfa;
+      actorMember.version++;
+      return fulfill(route, actorMember);
+    }
     if (path === "/me/profile") {
       Object.assign(actorMember, {
         requested_name: body.registered_name,
@@ -315,6 +328,7 @@ export async function fixture(
         review_blocked: false,
         planning_required: false,
         generation_enabled: true,
+        editorial_auto_correction_enabled: true,
         provider_configured: true,
       });
     if (method === "POST") {
@@ -363,6 +377,19 @@ export async function fixture(
             failure_code: null,
           },
         ];
+      if (body.action === "changes_requested" && state.autoCorrection)
+        state.jobs = [
+          {
+            id: "auto-job",
+            concept_id: cid,
+            source_revision_id: rid,
+            result_revision_id: null,
+            status: "pending",
+            attempts: 0,
+            token: state.token,
+            failure_code: null,
+          },
+        ];
       state.token = (++state.commandVersion).toString(16).padStart(64, "0");
       state.events.push({
         id: String(state.commandVersion),
@@ -381,6 +408,10 @@ export async function fixture(
           : state.status,
         token: state.token,
         published_version: state.status === "published" ? state.contentVersion : null,
+        generation_status:
+          body.action === "changes_requested" && state.autoCorrection
+            ? "queued"
+            : null,
       };
       receipts.set(body.request_id, result);
       if (state.uncertain) {

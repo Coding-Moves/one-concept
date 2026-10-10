@@ -5,6 +5,7 @@ from datetime import date, timedelta
 
 from sqlalchemy import text
 
+from app.services.interactions import complete_today, set_followed_topics
 from app.services.selection import get_or_create_daily
 
 DAY = date(2026, 9, 1)
@@ -35,6 +36,56 @@ async def test_same_day_is_idempotent(session, user):
         {"u": user},
     )
     assert count == 1, "a repeat call must not create a second assignment"
+
+
+async def test_unfinished_lesson_returns_on_later_days_until_learned(session, user):
+    await set_followed_topics(session, user, ["software-engineering"])
+    first = await get_or_create_daily(session, user, today=DAY)
+    first_row = (
+        await session.execute(
+            text("""select id, assigned_at from public.daily_assignments
+              where user_id=:uid and concept_id=:cid"""),
+            {"uid": user, "cid": first.concept.id},
+        )
+    ).one()
+
+    for offset in (1, 2):
+        today = DAY + timedelta(days=offset)
+        repeated = await get_or_create_daily(session, user, today=today)
+        assert repeated.concept.id == first.concept.id
+        assert repeated.assigned_for == today
+        assert repeated.assigned_at == first.assigned_at
+        assert repeated.outside_followed_topics is False
+        assert await session.scalar(
+            text("select count(*) from public.daily_assignments where user_id=:uid"),
+            {"uid": user},
+        ) == 1
+        assert await session.scalar(
+            text("select id from public.daily_assignments where user_id=:uid"),
+            {"uid": user},
+        ) == first_row.id
+
+    learned = await complete_today(session, user, DAY + timedelta(days=2))
+    assert learned.assigned_for == DAY + timedelta(days=2)
+    next_day = await get_or_create_daily(session, user, today=DAY + timedelta(days=3))
+    assert next_day.concept.id != first.concept.id
+    assert next_day.concept.topic_slug == "software-engineering"
+
+
+async def test_next_day_respects_changed_follows_before_carrying(session, user):
+    await set_followed_topics(session, user, ["linux-systems"])
+    linux = await get_or_create_daily(session, user, today=DAY)
+    await set_followed_topics(session, user, ["software-engineering"])
+
+    assert (await get_or_create_daily(session, user, today=DAY)).concept.id == linux.concept.id
+    software = await get_or_create_daily(session, user, today=DAY + timedelta(days=1))
+    assert software.concept.topic_slug == "software-engineering"
+    assert software.concept.id != linux.concept.id
+
+    await set_followed_topics(session, user, ["linux-systems"])
+    resumed = await get_or_create_daily(session, user, today=DAY + timedelta(days=2))
+    assert resumed.concept.id == linux.concept.id
+    assert resumed.assigned_for == DAY + timedelta(days=2)
 
 
 async def test_existing_daily_assignment_keeps_its_subtopic_after_retirement(session, user):
@@ -69,6 +120,7 @@ async def test_never_repeats_and_reports_exhaustion(session, user):
         result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
         assert result.status == "ok", f"day {offset} unexpectedly exhausted"
         seen.append(result.concept.id)
+        await complete_today(session, user, DAY + timedelta(days=offset))
 
     assert len(set(seen)) == catalog, "the same concept was assigned twice"
 
@@ -178,9 +230,10 @@ async def test_only_draws_from_followed_topics(session, user):
         result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
         assert result.concept.topic_slug == "mathematics"
         assert result.outside_followed_topics is False
+        await complete_today(session, user, DAY + timedelta(days=offset))
 
 
-async def test_widens_beyond_followed_topics_when_pool_is_dry(session, user):
+async def test_stays_within_followed_topics_when_pool_is_dry(session, user):
     keep = (
         await session.execute(
             text("select id from public.topics where slug = 'mathematics'")
@@ -199,12 +252,12 @@ async def test_widens_beyond_followed_topics_when_pool_is_dry(session, user):
     )
     for offset in range(available):
         await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
+        await complete_today(session, user, DAY + timedelta(days=offset))
 
-    # The followed topic is spent; rather than repeat, widen and say so.
+    # Other subjects still have available lessons, but follows are a boundary.
     result = await get_or_create_daily(session, user, today=DAY + timedelta(days=available))
-    assert result.status == "ok"
-    assert result.concept.topic_slug != "mathematics"
-    assert result.outside_followed_topics is True
+    assert result.status == "exhausted"
+    assert result.concept is None
 
 
 async def test_topics_rotate_before_repeating(session, user):
@@ -213,6 +266,7 @@ async def test_topics_rotate_before_repeating(session, user):
     for offset in range(5):
         result = await get_or_create_daily(session, user, today=DAY + timedelta(days=offset))
         topics.append(result.concept.topic_slug)
+        await complete_today(session, user, DAY + timedelta(days=offset))
     assert len(set(topics)) == 5, f"expected five distinct topics, got {topics}"
 
 
@@ -233,7 +287,25 @@ async def test_concurrent_devices_get_the_same_concept(sessionmaker_for_test, us
             text("select count(*) from public.daily_assignments where user_id = :u"),
             {"u": user},
         )
-    assert count == 1, "the race created more than one assignment"
+        assert count == 1, "the race created more than one assignment"
+
+
+async def test_concurrent_devices_carry_only_one_unfinished_assignment(
+    session, sessionmaker_for_test, user
+):
+    first = await get_or_create_daily(session, user, today=DAY)
+
+    async def call():
+        async with sessionmaker_for_test() as s:
+            return await get_or_create_daily(s, user, today=DAY + timedelta(days=1))
+
+    results = await asyncio.gather(*(call() for _ in range(4)))
+    assert all(result.concept.id == first.concept.id for result in results)
+    assert all(result.assigned_for == DAY + timedelta(days=1) for result in results)
+    assert await session.scalar(
+        text("select count(*) from public.daily_assignments where user_id=:uid"),
+        {"uid": user},
+    ) == 1
 
 
 async def test_completion_is_reflected(session, user):

@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.14',
+    highlights: [
+      'Keep the same unfinished daily lesson until you mark it Learned, and see Today refresh when you return to the app.',
+      'Preview and save a profile photo, and see your bio on your profile before choosing what to share.',
+      'Share a clearer profile card and connect with friends through simpler profile and privacy controls.',
+    ],
+  },
+  {
     version: '1.10.13',
     highlights: [
       'More lessons from the existing library can become complete cards with reviewed explanations, a flashcard, and three practice questions.',

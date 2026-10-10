@@ -111,12 +111,14 @@ export function LessonView({
           <p>No valid question package available.</p>
         )}
       </section>
-      <section className="muted">
-        <h3>Generation record</h3>
-        <p>
-          Model: {body.model} · Prompt version: {body.prompt_version}
-        </p>
-      </section>
+      {(body.model || body.prompt_version) && (
+        <section className="muted">
+          <h3>Generation record</h3>
+          <p>
+            Model: {body.model || "Unknown"} · Prompt version: {body.prompt_version || "Unknown"}
+          </p>
+        </section>
+      )}
     </div>
   );
 }

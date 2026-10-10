@@ -13,7 +13,7 @@ test("partial legacy packages remain editable without inventing lesson text", ()
   expect(lesson.learning_package.mcqs[0].options).toEqual(["", "", "", ""]);
   expect(lesson.summary).toBe("");
 });
-test("prompt version and complete lesson fields survive editing", () => {
+test("manual correction keeps lesson fields without inheriting its AI record", () => {
   const lesson = editableLesson({
     model: "model",
     prompt_version: "v12",
@@ -27,6 +27,7 @@ test("prompt version and complete lesson fields survive editing", () => {
       ],
     },
   });
-  expect(lesson.prompt_version).toBe("v12");
+  expect(lesson.model).toBeNull();
+  expect(lesson.prompt_version).toBeNull();
   expect(lesson.learning_package.mcqs[0].correct_index).toBe(2);
 });

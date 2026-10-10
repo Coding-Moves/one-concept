@@ -1,9 +1,9 @@
 """Streak calculation.
 
 Always derived from completion dates, never stored as a counter and never
-accepted from the client. `assigned_for` is stamped from the user's timezone at
-assignment time and never rewritten, so travelling does not retroactively
-rewrite history.
+accepted from the client. An unfinished assignment can move to the next local
+day when the same lesson returns; once completed, its credited day stays fixed
+so travelling does not retroactively rewrite learning history.
 """
 
 import uuid

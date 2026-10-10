@@ -19,6 +19,7 @@ class CurrentUser:
     email: str | None
     session_id: str | None = None
     aal: str = "aal1"
+    mfa_verified_at: int | None = None
 
 
 async def get_current_user(
@@ -50,7 +51,8 @@ async def get_current_user(
             detail={"code": "rate_limited", "retry_after_seconds": retry},
             headers={"Retry-After": str(retry), "Cache-Control": "no-store"},
         )
-    return CurrentUser(id=user_id, email=claims.email, session_id=claims.session_id, aal=claims.aal)
+    return CurrentUser(id=user_id, email=claims.email, session_id=claims.session_id,
+                       aal=claims.aal, mfa_verified_at=claims.mfa_verified_at)
 
 
 __all__ = ["CurrentUser", "get_current_user", "get_db", "AsyncSession"]

@@ -209,6 +209,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
   useEffect(() => {
     if (!repository.flushQueue || !isApiConfigured()) return;
     let active = true;
+    let refreshRequested = false;
     const loop = createSyncLoop(async () => {
       let retry = true;
       await apply(null, async () => {
@@ -216,26 +217,42 @@ export function ProgressProvider({ children, repository: override }: Props) {
         const entries = await queuedMutations();
         let next: ProgressState | null = null;
         if (entries.length) next = await repository.flushQueue!();
-        else if (!getConnectivity()) next = await repository.load();
+        // A foreground return or reconnect needs a fresh server snapshot even
+        // when there are no queued writes. Without this, Today can keep showing
+        // yesterday's cached assignment until the learner pulls to refresh.
+        if (refreshRequested || (!next && !getConnectivity())) next = await repository.load();
         if (!active) return null;
-        if (next && getConnectivity()) await fetchTopics().catch(() => {});
-        retry = !getConnectivity() || (await queuedMutations()).some(entry => !entry.retry?.paused);
+        if (next && getConnectivity()) {
+          refreshRequested = false;
+          await fetchTopics().catch(() => {});
+        }
+        retry = refreshRequested || !getConnectivity()
+          || (await queuedMutations()).some(entry => !entry.retry?.paused);
         return next;
       });
       return retry;
     }, AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
     const unsubscribe = subscribeConnectivity(online => {
-      if (online) loop.wake();
+      if (online) {
+        refreshRequested = true;
+        loop.wake();
+      }
       else loop.retry();
     });
     const unsubscribeQueue = subscribeQueue(() => {
       if (getConnectivity()) loop.wake();
       else loop.retry();
     });
-    const appState = AppState.addEventListener('change', state => loop.setActive(state === 'active'));
+    let wasActive = AppState.currentState === 'active';
+    const appState = AppState.addEventListener('change', state => {
+      const foreground = state === 'active';
+      if (foreground && !wasActive) refreshRequested = true;
+      wasActive = foreground;
+      loop.setActive(foreground);
+    });
     // Browsers have an immediate reconnect event. Native JS retries pending
     // work with backoff because the current APK has no connectivity module.
-    const reconnect = () => loop.wake();
+    const reconnect = () => { refreshRequested = true; loop.wake(); };
     const disconnect = () => setConnectivity(false);
     if (Platform.OS === 'web') {
       window.addEventListener('online', reconnect);
@@ -257,20 +274,26 @@ export function ProgressProvider({ children, repository: override }: Props) {
 
   // Retry shares the mutation chain, so a refresh cannot overwrite a later tap.
   const refresh = useCallback(() => apply(null, () => repository.load()), [apply, repository]);
+  const confirmProfileWrite = useCallback(async (work: () => Promise<ProgressState>) => {
+    const epoch = accountEpoch.current;
+    let failure: unknown;
+    let failed = false;
+    await apply(null, async () => { try { return await work(); } catch (error) { failure = error; failed = true; throw error; } });
+    if (epoch !== accountEpoch.current) throw new Error('Account changed');
+    if (failed) throw failure;
+  }, [apply]);
   const updateProfile = useCallback(async (input: { displayName?: string; bio?: string; avatarPreset?: string }) => {
     if (!userId || !repository.updateProfile) throw new Error('Sign in to edit your profile');
-    let failure: unknown;
-    await apply(null, async () => { try { return await repository.updateProfile!(input, userId); } catch (error) { failure = error; throw error; } });
-    if (failure) throw failure;
-  }, [apply, repository, userId]);
+    await confirmProfileWrite(() => repository.updateProfile!(input, userId));
+  }, [confirmProfileWrite, repository, userId]);
   const uploadAvatar = useCallback(async (uri: string, mimeType: string) => {
     if (!userId || !repository.uploadAvatar) throw new Error('Sign in to add a photo');
-    await apply(null, () => repository.uploadAvatar!(uri, mimeType, userId));
-  }, [apply, repository, userId]);
+    await confirmProfileWrite(() => repository.uploadAvatar!(uri, mimeType, userId));
+  }, [confirmProfileWrite, repository, userId]);
   const removeAvatar = useCallback(async () => {
     if (!userId || !repository.removeAvatar) throw new Error('Sign in to remove a photo');
-    await apply(null, () => repository.removeAvatar!(userId));
-  }, [apply, repository, userId]);
+    await confirmProfileWrite(() => repository.removeAvatar!(userId));
+  }, [confirmProfileWrite, repository, userId]);
   const retrySync = useCallback(() => apply(null, async () => {
     await retryPaused();
     return repository.flushQueue?.() ?? null;

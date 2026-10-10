@@ -3,7 +3,7 @@ import uuid
 from datetime import date, timedelta
 
 import pytest
-from app.services.interactions import complete_today
+from app.services.interactions import complete_today, set_followed_topics
 from app.services.reviews import complete_review
 from app.services.selection import get_or_create_daily
 from app.services.state import load_state
@@ -46,6 +46,17 @@ async def test_review_is_explicit_rotates_and_does_not_inflate_learning(
         session, uid, today=DAY + timedelta(days=1), allow_review=True
     )
     assert next_day.concept.id != result.concept.id
+
+
+async def test_review_stays_in_followed_subject_after_its_lessons_are_learned(
+    session, exhausted
+):
+    await set_followed_topics(session, exhausted, ["software-engineering"])
+
+    review = await get_or_create_daily(session, exhausted, today=DAY, allow_review=True)
+    assert review.status == "review"
+    assert review.concept.topic_slug == "software-engineering"
+    assert review.outside_followed_topics is False
 
 
 async def test_two_devices_choose_and_complete_one_review(
@@ -125,15 +136,16 @@ async def test_grace_rejects_backdating_wrong_account_and_newer_activity(
     await session.rollback()
 
 
-async def test_no_completed_history_has_honest_exhaustion(session, exhausted):
+async def test_unfinished_history_returns_a_lesson_before_a_review(session, exhausted):
     await session.execute(
         text("update public.daily_assignments set completed_at=null where user_id=:u"),
         {"u": exhausted},
     )
     await session.commit()
-    assert (
-        await get_or_create_daily(session, exhausted, today=DAY, allow_review=True)
-    ).status == "exhausted"
+    result = await get_or_create_daily(session, exhausted, today=DAY, allow_review=True)
+    assert result.status == "ok"
+    assert result.completed_at is None
+    assert result.assigned_for == DAY
 
 
 async def test_review_uses_profile_timezone_and_state_matches_streaks(

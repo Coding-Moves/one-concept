@@ -255,18 +255,21 @@ async def test_a_missed_older_day_cannot_be_back_completed(session, user):
     assert still_open == 1, "the older assignment stays incomplete"
 
 
-async def test_completing_prefers_today_over_yesterday(session, user):
-    """With both days assigned and uncompleted, completion targets today —
-    yesterday stays missed rather than being silently finished."""
-    await get_or_create_daily(session, user, today=DAY)
-    await get_or_create_daily(session, user, today=DAY + timedelta(days=1))
+async def test_completing_carried_lesson_credits_today_once(session, user):
+    """An unfinished lesson returns the next day and is learned on that day."""
+    first = await get_or_create_daily(session, user, today=DAY)
+    repeated = await get_or_create_daily(session, user, today=DAY + timedelta(days=1))
+    assert repeated.concept.id == first.concept.id
 
     completion = await complete_today(session, user, DAY + timedelta(days=1))
     assert completion.assigned_for == DAY + timedelta(days=1)
 
-    yesterday_open = await session.scalar(
+    yesterday_rows = await session.scalar(
         text("""select count(*) from public.daily_assignments
-                 where user_id = :u and assigned_for = :d and completed_at is null"""),
+                 where user_id = :u and assigned_for = :d"""),
         {"u": user, "d": DAY},
     )
-    assert yesterday_open == 1, "yesterday's missed day is not back-completed"
+    assert yesterday_rows == 0
+    stats = await compute_streaks(session, user, DAY + timedelta(days=1))
+    assert stats.total_learned == 1
+    assert stats.current == 1

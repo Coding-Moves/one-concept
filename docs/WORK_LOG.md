@@ -15,6 +15,13 @@ claims as completed work.
 - Validation: the complete backend PostgreSQL suite passed **585 tests**; the focused editorial/legacy suite passed **55 tests**, and the final plan-import/owner-status checks passed **2 tests**. The website passed 17 unit and 46 browser tests, TypeScript, and a fixture-configured production build. Ruff `F,E9` and `git diff --check` passed. No paid provider call or production import, variable change, deployment, or lesson publication was performed.
 - Handoff: [PR #400](https://github.com/Coding-Moves/one-concept/pull/400) targets `develop`; hosted checks are pending. A separate `develop` to `main` release and operator-controlled five-plan import/refill activation follow review of this PR. Reviewers still decide and publish each card.
 
+### Simple public-profile choices and visitor preview — 2026-10-10, PR preparation
+
+- Scope: [#404](https://github.com/Coding-Moves/one-concept/issues/404) on `codex/404-sharing-settings`, stacked on bio PR #407. Profile sharing now shows a clear Private/Shared state, three identity choices, an optional learning-highlights group, and one primary review/publish or view/share action.
+- `3e7a549` reuses the anonymous-field card in the published share preview. `0d55ae9` adds an actual draft visitor preview, shorter choices, version-conflict recovery that preserves draft edits until an explicit reload, and a 320px publish/visitor/conflict browser flow. `3bc24e1` fences in-flight reads and writes against account changes.
+- Validation: mobile typecheck, Expo web export, the 320px browser flow, visual inspection of the choices and review sheet, and `git diff --check` passed. The full local mobile suite passed 96/97 tests; the existing `publicConfig.test.mjs` stderr assertion fails under this local Node runtime. Physical-device large-text, screen-reader, offline, and account-switch acceptance remain to be checked before release.
+- Remaining: open the stacked PR and verify hosted checks and published diff. No migration or backend API change in this chunk.
+
 ### Saved bio visibility and public choice — 2026-10-10, PR #407 open
 
 - Scope: [#402](https://github.com/Coding-Moves/one-concept/issues/402) on `codex/402-profile-bio` gives the owner a visible saved bio and adds a separate, default-off public bio choice. The anonymous API, in-app visitor view, and browser page show it only after explicit publication. This is separate from the photo PR and the later shared-profile, sharing-settings, and Connections issues.

@@ -14,6 +14,7 @@ from app.config import Settings, get_settings
 from app.deps import CurrentUser, get_current_user, get_db
 from app.schemas.editorial import (
     AccessInput,
+    AuthenticatorInput,
     InviteInput,
     Me,
     Member,
@@ -88,13 +89,20 @@ async def me(user: User, db: DB, settings: Config):
         member=member,
         onboarding_required=member.requested_name is None,
         name_approval_pending=member.requested_name != member.approved_name,
-        mfa_required=user.aal != "aal2",
+        mfa_required=member.require_mfa and user.aal != "aal2",
     )
 
 
 @router.patch("/me/profile", response_model=Member)
 async def profile(body: ProfileInput, user: User, db: DB, settings: Config):
     member = await management.request_profile(db, user, settings, body)
+    await db.commit()
+    return member
+
+
+@router.patch("/me/authenticator", response_model=Member)
+async def authenticator(body: AuthenticatorInput, user: User, db: DB, settings: Config):
+    member = await management.set_authenticator_requirement(db, user, settings, body)
     await db.commit()
     return member
 

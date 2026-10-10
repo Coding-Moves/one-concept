@@ -1,5 +1,6 @@
 """Versioned account mutations. All authority is rechecked under the account lock."""
 
+import time
 from uuid import UUID
 
 from fastapi import HTTPException
@@ -8,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.deps import CurrentUser
-from app.schemas.editorial import AccessInput, InviteInput, Member, ProfileInput
+from app.schemas.editorial import AccessInput, AuthenticatorInput, InviteInput, Member, ProfileInput
 from app.services.editorial_accounts import audit, authorize, check_version, membership
 from app.services.editorial_invites import invite_auth_user
 
@@ -87,6 +88,35 @@ async def request_profile(
             "version": current.version + 1,
         },
     )
+    return await membership(db, actor.id)
+
+
+async def set_authenticator_requirement(
+    db: AsyncSession, actor: CurrentUser, settings: Settings, body: AuthenticatorInput
+) -> Member:
+    current = await authorize(db, actor, settings, mutation=True)
+    check_version(current, body.expected_version)
+    if current.require_mfa == body.require_mfa:
+        return current
+    if not body.require_mfa:
+        verified_at = actor.mfa_verified_at
+        now = time.time()
+        if (
+            actor.aal != "aal2"
+            or verified_at is None
+            or not now - 300 <= verified_at <= now + 60
+        ):
+            raise HTTPException(403, "Verify a current authenticator code before turning it off")
+    await db.execute(
+        text("""update editorial_memberships set require_mfa=:required,
+        version=version+1,updated_at=now() where user_id=:id"""),
+        {"required": body.require_mfa, "id": actor.id},
+    )
+    await audit(db, actor.id, actor.id, "authenticator_choice", {
+        "previous_required": current.require_mfa,
+        "required": body.require_mfa,
+        "version": current.version + 1,
+    })
     return await membership(db, actor.id)
 
 

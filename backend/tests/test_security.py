@@ -75,6 +75,21 @@ async def test_editorial_claims_only_come_from_signed_top_level_fields():
     assert claims.session_id is None
 
 
+async def test_mfa_time_uses_only_signed_totp_method_entries():
+    private, public = _keypair()
+    now = int(time.time())
+    claims = await verify_token(_token(private, aal="aal2", amr=[
+        {"method": "password", "timestamp": now + 20},
+        {"method": "totp", "timestamp": now - 10},
+        {"method": "totp", "timestamp": True},
+    ]), _jwks_cache_with(public), ISSUER)
+    assert claims.mfa_verified_at == now - 10
+    claims = await verify_token(_token(private, aal="aal2", user_metadata={
+        "amr": [{"method": "totp", "timestamp": now}]
+    }), _jwks_cache_with(public), ISSUER)
+    assert claims.mfa_verified_at is None
+
+
 async def test_wrong_audience_is_rejected():
     private, public = _keypair()
     with pytest.raises(HTTPException):

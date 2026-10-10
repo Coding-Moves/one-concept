@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Optional authenticator for the editorial website — 2026-10-10, PR #411 open
+
+- Scope: one PR into `develop` for a per-account owner/reviewer Settings switch. Existing editorial accounts continue to require an authenticator by default. Turning it off requires a fresh verified TOTP challenge; turning it on restores MFA gating for that account. Supabase factors remain enrolled.
+- `d90117f` adds the versioned, self-only API, audited database choice, signed TOTP timestamp check, and reviewed schema contract in migration 0045. `6bc1ac7` adds the switch and code confirmation for both roles. `8d3980f` tests revoked and spoofed changes. The unrelated release checkout remains untouched.
+- Validation: 54 editorial authority/API/security/schema tests passed against disposable PostgreSQL 16; the four focused authenticator API cases passed again after the authority follow-up. Website typecheck, 17 unit tests, fixture production build, all 48 browser tests, desktop visual inspection, Ruff `F,E9`, and `git diff --check` passed. The initial build without public fixture variables stopped before bundling; the configured build passed. No live Supabase factor or physical device was used.
+- [PR #411](https://github.com/Coding-Moves/one-concept/pull/411) targets `develop`. After bio PR #407 and Connections PR #408 merged, this branch integrated both; the combined 0044/0045 schema contract (21 tests) and focused authenticator/security tests (16 tests) passed against disposable PostgreSQL 16. All three hosted checks passed on `c604328`. Migration 0045 is not marked production-applied. Live Supabase owner/reviewer verification remains for release.
+
 ### Profile photo save flow — 2026-10-10, PR #406 open
 
 - Scope: [#401](https://github.com/Coding-Moves/one-concept/issues/401) fixes the camera/gallery path that stays on the phone's crop screen. The isolated `codex/401-profile-photo-save` branch targets `develop`; the unrelated release checkout and its uncommitted log remain untouched.

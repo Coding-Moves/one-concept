@@ -96,7 +96,12 @@ for compatibility, historical offline semantics and rollout.
 requests; the API client refreshes an idle token and fences account changes and
 late denials without discarding recoverable review work.
 `Auth.tsx` handles invitation/recovery, password and MFA; `Settings.tsx` handles
-registered identity. `Queue.tsx` supplies topic/status/deadline filtering and
+registered identity, and `AuthenticatorSetting.tsx` lets owners and reviewers
+choose whether MFA is required for their own account. `editorial_accounts.py`
+enforces that persisted choice for every editorial capability. Disabling it
+requires a recent TOTP method timestamp from the verified Supabase JWT;
+`0045_editorial_authenticator_choice.sql` defaults existing accounts to on and
+extends the account audit. `Queue.tsx` supplies topic/status/deadline filtering and
 shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete
 packages, diffs, history, comments, checklist decisions and safe corrections.
 `Team.tsx` manages owner-only membership; `Generation.tsx` requests bounded work.

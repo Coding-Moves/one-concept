@@ -2,6 +2,7 @@
 import secrets
 import uuid
 
+import httpx
 import pytest
 import pytest_asyncio
 from fastapi import Request
@@ -104,6 +105,13 @@ async def test_list_avatar_obeys_public_choice_and_revocation(api, people, sessi
     await session.commit()
     photo = (await api.get(url, headers=auth(a))).json()['items'][0]
     assert photo['avatar_ref'] is None and photo['avatar_url'] == 'https://storage.example.invalid/signed-photo'
+
+    async def storage_unavailable(_settings, _key):
+        raise httpx.ConnectError('storage unavailable', request=httpx.Request('POST', 'https://storage.example.invalid'))
+
+    monkeypatch.setattr(relationships, 'signed_avatar_url', storage_unavailable)
+    degraded = (await api.get(url, headers=auth(a))).json()['items'][0]
+    assert degraded['display_name'] and degraded['avatar_url'] is None
 
     await session.execute(text('update profile_sharing set enabled=false where user_id=:id'), {'id': b[0]})
     await session.commit()

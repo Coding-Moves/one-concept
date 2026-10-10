@@ -150,7 +150,7 @@ async def list_relationships(db, actor, cursor, limit):
             try:
                 async with semaphore:
                     avatar_url = await signed_avatar_url(get_settings(), row.shared_avatar)
-            except httpx.RequestError:
+            except (httpx.RequestError, ValueError):
                 # A transient Storage failure must not hide the owned list.
                 avatar_url = None
         return RelationshipEntry(id=row.id, display_name=row.display_name,

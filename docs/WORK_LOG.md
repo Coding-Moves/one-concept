@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Editorial review handoff and first future-refill plan — 2026-10-10 in progress
+
+- Scope: one PR into `develop` for automatic private correction requests after a reviewer's change request, the published/manual review-page regressions, symbolic MCQ option validation, and a curated five-subject launch backlog for future refill. No lesson is auto-approved or published.
+- Live owner-site check: 120 existing lessons await human review; the published Blue-Green Deployment detail and historical revision show structured content and no red validation banner. An approved-but-stale revision must still show a real warning. The Software Engineering AI requests page has no pending new curriculum and its generation flag is paused.
+- Planned commits: MCQ validator regression; manual-provenance UI; automatic correction and reviewer-permission regression; launch plan/image/runbook; validation and handoff bookkeeping. A separate `develop` to `main` release and operator-controlled refill activation follow review of this PR.
+- Validation and handoff: pending.
+
 ### Existing-card completion, 2026-10-09 — in progress
 
 - Outcome: prepare complete private revisions for all 125 existing published lessons; human reviewers retain approval and publication. This chunk aligns legacy-only summary and example length checks with the published lesson schema without changing new-lesson generation or source checks.

@@ -1,21 +1,22 @@
 """Private, API-owned avatar storage.
 
-The mobile app sends a cropped image only after an explicit user action. This
-service re-encodes it to a small JPEG before putting it in a private Supabase
-bucket; database rows retain only the object key. No client receives the
-service role key or may choose an arbitrary object path.
+The mobile app sends a selected image only after an explicit save action. This
+service center-crops and re-encodes it to a small JPEG before putting it in a
+private Supabase bucket; database rows retain only the object key. No client
+receives the service role key or may choose an arbitrary object path.
 """
 import io
 import uuid
 
 import httpx
 from fastapi import HTTPException
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageOps, UnidentifiedImageError
 
 from app.config import Settings
 
 BUCKET = "profile-avatars"
 MAX_BYTES = 262_144
+MAX_PIXELS = 25_000_000
 PRESETS = {"aurora", "comet", "forest", "ocean", "sunset", "violet"}
 
 
@@ -43,12 +44,17 @@ def normalize_avatar(data: bytes) -> bytes:
         raise HTTPException(413, "Choose an image smaller than 5 MB")
     try:
         with Image.open(io.BytesIO(data)) as source:
+            if source.width * source.height > MAX_PIXELS:
+                raise HTTPException(422, "Choose a photo with fewer than 25 million pixels")
             source.verify()
         with Image.open(io.BytesIO(data)) as source:
-            image = source.convert("RGB")
-            image.thumbnail((512, 512), Image.Resampling.LANCZOS)
-            canvas = Image.new("RGB", (512, 512), "white")
-            canvas.paste(image, ((512 - image.width) // 2, (512 - image.height) // 2))
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            side = min(image.size)
+            left = (image.width - side) // 2
+            top = (image.height - side) // 2
+            canvas = image.crop((left, top, left + side, top + side)).resize(
+                (512, 512), Image.Resampling.LANCZOS
+            )
     except (UnidentifiedImageError, OSError, ValueError):
         raise HTTPException(422, "Choose a valid photo in JPEG, PNG, or WebP format") from None
     for quality in (85, 78, 70, 62, 54):

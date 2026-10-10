@@ -209,6 +209,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
   useEffect(() => {
     if (!repository.flushQueue || !isApiConfigured()) return;
     let active = true;
+    let refreshRequested = false;
     const loop = createSyncLoop(async () => {
       let retry = true;
       await apply(null, async () => {
@@ -216,26 +217,42 @@ export function ProgressProvider({ children, repository: override }: Props) {
         const entries = await queuedMutations();
         let next: ProgressState | null = null;
         if (entries.length) next = await repository.flushQueue!();
-        else if (!getConnectivity()) next = await repository.load();
+        // A foreground return or reconnect needs a fresh server snapshot even
+        // when there are no queued writes. Without this, Today can keep showing
+        // yesterday's cached assignment until the learner pulls to refresh.
+        if (refreshRequested || (!next && !getConnectivity())) next = await repository.load();
         if (!active) return null;
-        if (next && getConnectivity()) await fetchTopics().catch(() => {});
-        retry = !getConnectivity() || (await queuedMutations()).some(entry => !entry.retry?.paused);
+        if (next && getConnectivity()) {
+          refreshRequested = false;
+          await fetchTopics().catch(() => {});
+        }
+        retry = refreshRequested || !getConnectivity()
+          || (await queuedMutations()).some(entry => !entry.retry?.paused);
         return next;
       });
       return retry;
     }, AppState.currentState !== 'background' && AppState.currentState !== 'inactive');
     const unsubscribe = subscribeConnectivity(online => {
-      if (online) loop.wake();
+      if (online) {
+        refreshRequested = true;
+        loop.wake();
+      }
       else loop.retry();
     });
     const unsubscribeQueue = subscribeQueue(() => {
       if (getConnectivity()) loop.wake();
       else loop.retry();
     });
-    const appState = AppState.addEventListener('change', state => loop.setActive(state === 'active'));
+    let wasActive = AppState.currentState === 'active';
+    const appState = AppState.addEventListener('change', state => {
+      const foreground = state === 'active';
+      if (foreground && !wasActive) refreshRequested = true;
+      wasActive = foreground;
+      loop.setActive(foreground);
+    });
     // Browsers have an immediate reconnect event. Native JS retries pending
     // work with backoff because the current APK has no connectivity module.
-    const reconnect = () => loop.wake();
+    const reconnect = () => { refreshRequested = true; loop.wake(); };
     const disconnect = () => setConnectivity(false);
     if (Platform.OS === 'web') {
       window.addEventListener('online', reconnect);

@@ -12,7 +12,7 @@ anon_client = test_api.anon_client
 
 async def test_private_default_and_selected_public_fields(client, session, user):
     settings = (await client.get('/v1/me/profile-sharing')).json()
-    assert settings == dict(enabled=False, show_name=False, show_avatar=False, show_streak=False,
+    assert settings == dict(enabled=False, show_name=False, show_avatar=False, show_bio=False, show_streak=False,
                             show_learning=False, achievement_codes=[], version=0, public_path=None)
     await session.execute(text('update profiles set display_name=:name where id=:uid'),
                           {'uid': user, 'name': '<script>alert(1)</script>'})
@@ -57,6 +57,38 @@ async def test_revocation_rotation_stale_write_and_owned_achievements(client):
     on = (await client.put('/v1/me/profile-sharing', json={**off,'enabled':True})).json()
     assert on['public_path'] != old_path
     assert (await client.get(old_path)).status_code == 404
+
+
+async def test_bio_is_private_until_selected_and_disappears_when_cleared(client, session, user):
+    await session.execute(text('update profiles set bio=:bio where id=:uid'),
+                          {'uid': user, 'bio': '<friend> learning every day'})
+    await session.commit()
+    settings = (await client.get('/v1/me/profile-sharing')).json()
+    enabled = (await client.put('/v1/me/profile-sharing', json={**{k: v for k, v in settings.items() if k != 'public_path'},
+                                                            'enabled': True})).json()
+    token = enabled['public_path'].split('/')[-1]
+    assert (await client.get('/v1/public-profiles/' + token)).json() == {'achievements': []}
+    assert '<friend>' not in (await client.get(enabled['public_path'])).text
+
+    shared = (await client.put('/v1/me/profile-sharing', json={**{k: v for k, v in enabled.items() if k != 'public_path'},
+                                                           'show_bio': True})).json()
+    assert shared['show_bio'] is True
+    assert (await client.get('/v1/public-profiles/' + token)).json() == {
+        'bio': '<friend> learning every day', 'achievements': []}
+    page = (await client.get(shared['public_path'])).text
+    assert '&lt;friend&gt; learning every day' in page
+    assert '<friend>' not in page and 'learner@example.invalid' not in page
+
+    await session.execute(text('update profiles set bio=null where id=:uid'), {'uid': user})
+    await session.commit()
+    assert (await client.get('/v1/public-profiles/' + token)).json() == {'achievements': []}
+    await session.execute(text('update profiles set bio=:bio where id=:uid'), {'uid': user, 'bio': 'Back again'})
+    await session.commit()
+    hidden = (await client.put('/v1/me/profile-sharing', json={**{k: v for k, v in shared.items() if k != 'public_path'},
+                                                           'show_bio': False})).json()
+    assert hidden['show_bio'] is False
+    assert (await client.get('/v1/public-profiles/' + token)).json() == {'achievements': []}
+    assert 'Back again' not in (await client.get(hidden['public_path'])).text
 
 
 async def test_only_selected_earned_achievements(client, session, user):

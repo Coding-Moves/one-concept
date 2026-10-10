@@ -56,6 +56,8 @@ async def public_page(token: str, db: DB):
         return HTMLResponse(render_page('Profile unavailable', '<p>This link is private or no longer available.</p>'),
                             status_code=404, headers=HEADERS)
     sections = []
+    if profile.bio:
+        sections.append(f'<p>{escape(profile.bio)}</p>')
     if profile.current_streak is not None:
         sections.append(f'<p>Current streak: {profile.current_streak} days · Longest: {profile.longest_streak} days</p>')
     if profile.concepts_learned is not None:

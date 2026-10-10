@@ -6,6 +6,7 @@ import { ShareProfileSheet } from '../components/ShareProfileSheet';
 import { ScreenHeader } from '../components/ScreenHeader';
 import { SettingRow } from '../components/SettingRow';
 import { useAuth } from '../context/AuthContext';
+import { useProgress } from '../context/ProgressContext';
 import { useOnline } from '../context/ConnectivityContext';
 import { useTheme } from '../context/ThemeContext';
 import { apiRequest } from '../api/client';
@@ -17,6 +18,7 @@ function reviewFields(settings: SharingSettings | null): PublicProfileFields {
   return {
     displayName: Boolean(settings?.show_name),
     avatar: Boolean(settings?.show_avatar),
+    bio: Boolean(settings?.show_bio),
     streak: Boolean(settings?.show_streak),
     concepts: Boolean(settings?.show_learning),
     achievements: Boolean(settings?.achievement_codes.length),
@@ -27,6 +29,7 @@ function reviewFields(settings: SharingSettings | null): PublicProfileFields {
 export function ProfileSharingScreen() {
   const navigation = useNavigation();
   const { session } = useAuth();
+  const { progress } = useProgress();
   const userId = session!.user.id;
   const { colors } = useTheme();
   const online = useOnline();
@@ -158,6 +161,7 @@ export function ProfileSharingScreen() {
     <ProfilePublishReviewSheet
       visible={reviewing}
       fields={reviewFields(settings)}
+      bioText={progress.bio}
       busy={busy}
       title={saved?.enabled ? 'Review profile changes' : 'Review your public profile'}
       confirmLabel={saved?.enabled ? 'Publish changes' : 'Publish profile'}
@@ -179,6 +183,7 @@ export function ProfileSharingScreen() {
       {settings ? <>
         <SettingRow icon="image-outline" tone="primary" title="Profile avatar" subtitle="Show your chosen avatar on your public profile." value={settings.show_avatar} onValueChange={value => updateDraft({ show_avatar: value })} accessibilityLabel="Share profile avatar" accessibilityHint="Includes or hides your avatar on your public profile." disabled={busy} />
         <SettingRow icon="person-outline" tone="primary" title="Display name" subtitle="Show the name people see on your profile." value={settings.show_name} onValueChange={value => updateDraft({ show_name: value })} accessibilityLabel="Share display name" accessibilityHint="Includes or hides your display name on your public profile." disabled={busy} />
+        <SettingRow icon="document-text-outline" tone="primary" title="Short bio" subtitle={progress.bio ? 'Show the short bio from your profile.' : 'Add a bio in Edit profile to show it here.'} value={settings.show_bio} onValueChange={value => updateDraft({ show_bio: value })} accessibilityLabel="Share short bio" accessibilityHint="Includes or hides your short bio on your public profile." disabled={busy || (!progress.bio && !settings.show_bio)} />
         <SettingRow icon="flame-outline" tone="streak" title="Learning streak" subtitle="Show your current and longest learning streak." value={settings.show_streak} onValueChange={value => updateDraft({ show_streak: value })} accessibilityLabel="Share learning streak" accessibilityHint="Includes or hides your learning streak on your public profile." disabled={busy} />
         <SettingRow icon="library-outline" tone="saved" title="Concepts learned" subtitle="Show the number of concepts you have completed." value={settings.show_learning} onValueChange={value => updateDraft({ show_learning: value })} accessibilityLabel="Share concepts learned" accessibilityHint="Includes or hides your completed concept count on your public profile." disabled={busy} />
         <SettingRow icon="ribbon-outline" tone="achievement" title="Earned achievements" subtitle={awards.length ? 'Show your earned awards. Select individual awards below.' : 'You have no earned achievements to share yet.'} value={visibleAwardCodes.length > 0} onValueChange={value => updateDraft({ achievement_codes: value ? awards.map(award => award.code) : [] })} accessibilityLabel="Share earned achievements" accessibilityHint="Includes or hides your earned achievements on your public profile." disabled={busy || awards.length === 0} />

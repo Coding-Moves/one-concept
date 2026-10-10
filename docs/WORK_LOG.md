@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.14 release preparation — 2026-10-10
+
+- Scope: prepare the next release on `codex/v1-10-14-release-prep` from current `develop` with app version 1.10.14 and its one-time What's New card. Keep native runtime 1.10.8 because this release adds no native package or app-config change. Open a focused PR into `develop`; the production release remains a separate `develop` → `main` PR.
+- Card highlights will cover repeating an unfinished daily lesson until Learned, refreshing Today when the app resumes, and the profile photo, bio, sharing, and connection improvements now in `develop`. Validate the exact version/card match and mobile TypeScript.
+- Release gates: authenticator PR #411 is still open. Migrations 0044 (public bio choice) and 0045 (authenticator choice from #411) are absent from the verified production-applied ledger. Do not mark them applied without actual production verification; the release runbook requires migration application before opening the release PR.
+
 ### Profile photo save flow — 2026-10-10, PR #406 open
 
 - Scope: [#401](https://github.com/Coding-Moves/one-concept/issues/401) fixes the camera/gallery path that stays on the phone's crop screen. The isolated `codex/401-profile-photo-save` branch targets `develop`; the unrelated release checkout and its uncommitted log remain untouched.

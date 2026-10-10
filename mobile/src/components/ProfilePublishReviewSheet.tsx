@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { PublicProfile } from '../services/profileSharing';
+import { PublicProfilePreview } from './PublicProfilePreview';
 
 export type PublicProfileFields = {
   displayName: boolean;
@@ -12,21 +14,13 @@ export type PublicProfileFields = {
   achievements: boolean;
 };
 
-const fieldLabels: Record<keyof PublicProfileFields, string> = {
-  displayName: 'Your display name',
-  avatar: 'Your profile avatar',
-  bio: 'Your short bio',
-  streak: 'Your learning streak',
-  concepts: 'Concepts learned',
-  achievements: 'Earned achievements',
-};
-
 /** A local review step: no public URL exists until the learner explicitly publishes. */
 export function ProfilePublishReviewSheet({
   visible,
   fields,
-  bioText,
+  profile,
   busy,
+  online,
   title,
   confirmLabel,
   onClose,
@@ -34,8 +28,9 @@ export function ProfilePublishReviewSheet({
 }: {
   visible: boolean;
   fields: PublicProfileFields;
-  bioText?: string | null;
+  profile: PublicProfile;
   busy: boolean;
+  online: boolean;
   title: string;
   confirmLabel: string;
   onClose: () => void;
@@ -54,7 +49,7 @@ export function ProfilePublishReviewSheet({
             </View>
             <View style={styles.headerCopy}>
               <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>{title}</Text>
-              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Review what people can see before you publish.</Text>
+              <Text style={[styles.subtitle, { color: colors.textSecondary }]}>See what visitors will see before you publish.</Text>
             </View>
             <Pressable accessibilityRole="button" accessibilityLabel="Close profile sharing review" disabled={busy} onPress={onClose} style={styles.close}>
               <Ionicons name="close" size={24} color={colors.text} />
@@ -65,22 +60,19 @@ export function ProfilePublishReviewSheet({
               <Ionicons name="shield-checkmark-outline" size={20} color={colors.success} />
               <Text style={[styles.noticeText, { color: colors.text }]}>Your email, saved concepts, and private activity stay private.</Text>
             </View>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Visible on your profile</Text>
-            {selected.length ? selected.map(field => (
-              <View key={field} style={[styles.field, { backgroundColor: colors.surface }]}>
-                <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-                <View style={{ flex: 1, gap: 4 }}>
-                  <Text style={[styles.fieldText, { color: colors.text }]}>{fieldLabels[field]}</Text>
-                  {field === 'bio' && bioText ? <Text style={{ color: colors.textSecondary, lineHeight: 20 }}>{bioText}</Text> : null}
-                </View>
-              </View>
-            )) : <Text style={[styles.empty, { color: colors.textSecondary }]}>Choose at least one item before publishing your profile.</Text>}
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>Visitor preview</Text>
+            <View style={[styles.preview, { backgroundColor: colors.surface }]}>
+              <PublicProfilePreview profile={profile} />
+            </View>
+            {!selected.length && <Text style={[styles.empty, { color: colors.textSecondary }]}>Choose at least one item before publishing your profile.</Text>}
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Learning counts may change as you make progress.</Text>
+            {!online && <Text accessibilityLiveRegion="polite" style={[styles.subtitle, { color: colors.textSecondary }]}>Connect to the internet to publish.</Text>}
             <Pressable
               accessibilityRole="button"
-              accessibilityState={{ disabled: busy || !selected.length, busy }}
-              disabled={busy || !selected.length}
+              accessibilityState={{ disabled: busy || !selected.length || !online, busy }}
+              disabled={busy || !selected.length || !online}
               onPress={onConfirm}
-              style={({ pressed }) => [styles.primary, { backgroundColor: colors.primary, opacity: busy || !selected.length ? 0.5 : pressed ? 0.8 : 1 }]}
+              style={({ pressed }) => [styles.primary, { backgroundColor: colors.primary, opacity: busy || !selected.length || !online ? 0.5 : pressed ? 0.8 : 1 }]}
             >
               <Text style={[styles.primaryText, { color: colors.onPrimary }]}>{busy ? 'Saving…' : confirmLabel}</Text>
             </Pressable>
@@ -107,8 +99,7 @@ const styles = StyleSheet.create({
   notice: { flexDirection: 'row', gap: 10, padding: 14, borderRadius: 14, alignItems: 'flex-start' },
   noticeText: { flex: 1, fontSize: 14, lineHeight: 20 },
   sectionTitle: { fontSize: 15, fontWeight: '700', marginTop: 4 },
-  field: { flexDirection: 'row', alignItems: 'center', gap: 10, padding: 14, borderRadius: 14 },
-  fieldText: { fontSize: 15, fontWeight: '600' },
+  preview: { borderRadius: 20, padding: 20 },
   empty: { fontSize: 14, lineHeight: 20, padding: 14 },
   primary: { minHeight: 52, borderRadius: 16, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
   primaryText: { fontSize: 16, fontWeight: '700' },

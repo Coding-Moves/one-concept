@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ProfileAvatar } from './ProfileAvatar';
+import { PublicProfilePreview } from './PublicProfilePreview';
 import { useMemo } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -27,27 +27,7 @@ export function ShareProfileSheet({ value, busy, onClose, onShare }: {
       </View>
       {value && <ScrollView contentContainerStyle={styles.content}>
         <View style={[styles.card, { backgroundColor: colors.surface }]}>
-          <Text style={[styles.brand, { color: colors.primary }]}>ONE CONCEPT</Text>
-          <ProfileAvatar avatarRef={value.profile.avatar_ref} avatarUrl={value.profile.avatar_url} size={72} />
-          <Text style={[styles.name, { color: colors.text }]}>{value.profile.display_name || 'One Concept learner'}</Text>
-          {value.profile.bio ? <Text style={[styles.copy, { color: colors.textSecondary }]}>{value.profile.bio}</Text> : null}
-          <Text style={[styles.copy, { color: colors.textSecondary }]}>One concept. A little more understanding.</Text>
-          <View style={styles.highlights}>
-            {value.profile.current_streak !== undefined && <View style={[styles.highlight, { backgroundColor: colors.background }]}>
-              <Ionicons name="flame-outline" size={24} color={colors.streak} />
-              <Text style={[styles.number, { color: colors.text }]}>{value.profile.current_streak} days</Text>
-              <Text style={[styles.copy, { color: colors.textSecondary }]}>Current streak · Best {value.profile.longest_streak}</Text>
-            </View>}
-            {value.profile.concepts_learned !== undefined && <View style={[styles.highlight, { backgroundColor: colors.background }]}>
-              <Ionicons name="library-outline" size={24} color={colors.primary} />
-              <Text style={[styles.number, { color: colors.text }]}>{value.profile.concepts_learned}</Text>
-              <Text style={[styles.copy, { color: colors.textSecondary }]}>Concepts learned</Text>
-            </View>}
-          </View>
-          {value.profile.achievements.map((a, i) => <View key={i} style={styles.award}>
-            <Ionicons name="ribbon-outline" size={22} color={colors.primary} />
-            <Text style={{ flex: 1, color: colors.text }}>{a.name}</Text>
-          </View>)}
+          <PublicProfilePreview profile={value.profile} />
           {matrix && <View accessible accessibilityLabel="QR code containing only your public profile link" style={{ alignSelf: 'center', backgroundColor: 'white', padding: pixel * 4, marginTop: 8 }}>
             {matrix.map((row, y) => <View key={y} style={{ flexDirection: 'row', height: pixel }}>{row.map((dark, x) => <View key={x} style={{ width: pixel, height: pixel, backgroundColor: dark ? 'black' : 'white' }} />)}</View>)}
           </View>}
@@ -68,14 +48,7 @@ const styles = StyleSheet.create({
   heading: { flex: 1, fontSize: 22, fontWeight: '700' },
   content: { padding: 24, gap: 22, alignItems: 'center' },
   card: { width: '100%', maxWidth: 432, padding: 24, borderRadius: 28, gap: 18, alignItems: 'center' },
-  brand: { fontSize: 12, letterSpacing: 2, fontWeight: '700' },
-  avatar: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  name: { fontSize: 28, fontWeight: '700', textAlign: 'center' },
   copy: { textAlign: 'center', fontSize: 14, lineHeight: 21 },
-  highlights: { width: '100%', gap: 10 },
-  highlight: { padding: 16, borderRadius: 18, gap: 6, alignItems: 'center' },
-  number: { fontSize: 24, fontWeight: '700' },
-  award: { width: '100%', flexDirection: 'row', alignItems: 'center', gap: 10 },
   share: { width: '100%', maxWidth: 432, padding: 16, borderRadius: 18, minHeight: 52, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12 },
   shareText: { flexShrink: 1, fontSize: 17, fontWeight: '700', textAlign: 'center' },
 });

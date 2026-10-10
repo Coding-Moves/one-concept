@@ -5,6 +5,7 @@ process.env.EXPO_PUBLIC_API_BASE_URL ||= 'https://api.example.org';
 const { apiRequest, apiRetryDelay, invalidateAccountRequests, setTokenProvider, ApiError, API_BASE_URL } = await import('../src/api/client.ts');
 const { connectionList, requestConnection, actOnConnection, connectionError } = await import('../src/services/connections.ts');
 const { openPublicProfile, onPublicProfileOpen } = await import('../src/services/publicProfileNavigation.ts');
+const { blockRelationship, relationshipList } = await import('../src/services/relationships.ts');
 
 test('connection requests stay account-bound and invitation cooldowns do not pause learning', async t => {
   invalidateAccountRequests();setTokenProvider(async uid=>{assert.equal(uid,'reader');return 'reader-token';});
@@ -31,4 +32,19 @@ test('connection errors stay friendly and public profile navigation is transient
   assert.equal(openPublicProfile('https://other.invalid/p/'+'a'.repeat(43)),false);
   const url=API_BASE_URL+'/p/'+'a'.repeat(43);
   assert.equal(openPublicProfile(url),true);assert.deepEqual(seen,[url]);stop();openPublicProfile(url);assert.equal(seen.length,1);
+});
+test('owned relationship list and block call use the current account token', async t => {
+  invalidateAccountRequests();
+  setTokenProvider(async uid => { assert.equal(uid, 'reader'); return 'reader-token'; });
+  const calls = [];
+  t.mock.method(globalThis, 'fetch', async (url, init) => {
+    calls.push({ url, init });
+    return init.method === 'POST' ? new Response(null, { status: 204 }) : new Response('{"items":[],"next_cursor":null}');
+  });
+  assert.deepEqual((await relationshipList('reader')).items, []);
+  await blockRelationship('reader', '11111111-1111-4111-8111-111111111111');
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer reader-token');
+  assert.equal(calls[1].init.headers.Authorization, 'Bearer reader-token');
+  assert.equal(calls[1].init.method, 'POST');
+  assert.ok(String(calls[1].url).endsWith('/v1/me/relationships/11111111-1111-4111-8111-111111111111/block'));
 });

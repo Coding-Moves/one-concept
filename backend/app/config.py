@@ -80,6 +80,10 @@ class Settings(BaseSettings):
     allowed_origins: str = "http://localhost:8081"
     # Off until migration, owner bootstrap and dashboard/Auth setup are verified.
     editorial_enabled: bool = False
+    # When enabled, an authorized reviewer's changes-requested decision queues
+    # one private AI correction in the same transaction. The worker remains
+    # scheduled and publication still requires human approval.
+    editorial_auto_correction_enabled: bool = True
     editorial_invite_redirect_url: str = ""
     # Dedicated backend delivery; Supabase Auth templates are not a mail API.
     editorial_email_enabled: bool = False

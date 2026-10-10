@@ -86,6 +86,8 @@ test("approval and publication roles can complete their separate handoff", async
   await checkAll(page);
   await page.getByRole("button", { name: "Approve revision" }).click();
   await expect(page.getByText("Approved for the whole team", { exact: false })).toBeVisible();
+  await expect(page.getByText("Corrections needed")).toHaveCount(0);
+  await expect(page.getByText("Revision is stale", { exact: false })).toHaveCount(0);
   expect(state.status).toBe("approved");
 });
 test("publication-only access opens the approved queue and publishes", async ({
@@ -237,6 +239,24 @@ test("change request, diff, AI correction status and manual revision", async ({
     page.getByRole("button", { name: "Submit for review" }),
   ).toBeVisible();
   expect(state.body.summary).toContain("carefully updated");
+  expect(state.body.model).toBeNull();
+  expect(state.body.prompt_version).toBeNull();
+  await expect(page.getByRole("heading", { name: "Generation record" })).toHaveCount(0);
+});
+test("requesting changes shows an automatically queued private correction", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context, { autoCorrection: true });
+  await login(page);
+  await openLesson(page);
+  await page.getByLabel("Review note or comment").fill(
+    "Clarify the example before this revision can be approved.",
+  );
+  await page.getByRole("button", { name: "Request changes", exact: true }).click();
+  await expect(page.getByText("AI correction queued for the next scheduled worker run", { exact: false })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Request AI correction" })).toHaveCount(0);
+  expect(state.jobs).toHaveLength(1);
 });
 test("uncertain publication retries the same operation without duplicate approval", async ({
   page,

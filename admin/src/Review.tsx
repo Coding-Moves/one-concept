@@ -114,6 +114,12 @@ export function Review({
             ? `Published successfully${result.published_version ? " · version " + result.published_version : ""}. Eligible learners can receive this content through normal app requests.`
             : action === "approved" && result.status === "approved"
               ? "Approved for the whole team. No additional reviewer approval is needed."
+              : action === "changes_requested" && result.generation_status === "queued"
+                ? "Changes requested. AI correction queued for the next scheduled worker run; the result will still need human review."
+                : action === "changes_requested" && result.generation_status === "unavailable"
+                  ? "Changes requested. The AI queue could not accept this correction; ask the owner to check its status."
+                    : action === "changes_requested" && result.generation_status === "disabled"
+                      ? "Changes requested. AI correction is paused."
               : action === "submit" && result.status === "validation_failed"
                 ? "Submission needs corrections. Review the validation errors below."
                 : submitted.path.endsWith("/generation-requests") &&
@@ -691,7 +697,8 @@ export function Review({
               {revision &&
                 detail.status === "changes_requested" &&
                 can("review") &&
-                can("request_generation") && (
+                can("request_generation") &&
+                !jobs.some((job) => job.source_revision_id === id) && (
                   <button
                     disabled={decisionBlocked || !noted}
                     onClick={() =>

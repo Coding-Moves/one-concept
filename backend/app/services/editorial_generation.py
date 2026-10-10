@@ -98,6 +98,20 @@ async def request_revision(db, actor, settings, rid, command):
     fingerprint, old = await workflow.receipt(db, actor, command, f"ai-revision:{rid}")
     if old is not None:
         return old
+    result = await _enqueue_revision(
+        db, actor, settings, rid, command, member, kind="revision"
+    )
+    return await workflow.remember(db, actor, command, fingerprint, result)
+
+
+async def request_revision_after_decision(db, actor, settings, rid, command, member):
+    """Queue an owner-enabled correction from a review-only decision."""
+    return await _enqueue_revision(
+        db, actor, settings, rid, command, member, kind="automatic_review"
+    )
+
+
+async def _enqueue_revision(db, actor, settings, rid, command, member, *, kind):
     if not settings.generation_enabled:
         raise HTTPException(409, "Generation is disabled; no job was queued")
     row = await revisions.revision(db, rid)
@@ -152,7 +166,7 @@ async def request_revision(db, actor, settings, rid, command):
         rid=rid,
         cid=row["concept_id"],
         tid=tid,
-        details={"kind": "revision", "feedback_event_id": feedback["id"]},
+        details={"kind": kind, "feedback_event_id": feedback["id"]},
     )
     jid = await db.scalar(
         text("""insert into editorial_generation_jobs
@@ -172,9 +186,7 @@ async def request_revision(db, actor, settings, rid, command):
             "feedback": feedback["note"],
         },
     )
-    return await workflow.remember(
-        db, actor, command, fingerprint, visible(await get_job(db, jid))
-    )
+    return visible(await get_job(db, jid))
 
 
 async def cancel(db, actor, settings, jid, command):
@@ -224,10 +236,15 @@ async def transition(db, jid, state, code=None, result=None, *, preserve_claim=F
 async def requester_active(db, row):
     return await db.scalar(
         text("""select exists(select 1 from editorial_memberships m
-      join auth.users u on u.id=m.user_id where m.user_id=:id and m.status='active'
-      and m.approved_name is not null and m.capabilities @> array['review','request_generation']::text[]
+      join auth.users u on u.id=m.user_id
+      join editorial_workflow_events e on e.id=:event_id
+      where m.user_id=:id and m.status='active'
+      and m.approved_name is not null and m.capabilities @> array['review']::text[]
+      and (m.capabilities @> array['request_generation']::text[]
+        or (e.actor_id=m.user_id and e.action='generation_requested'
+          and e.details->>'kind'='automatic_review'))
       and u.email_confirmed_at is not null and (u.banned_until is null or u.banned_until<=statement_timestamp()))"""),
-        {"id": row["requested_by"]},
+        {"id": row["requested_by"], "event_id": row["request_event_id"]},
     )
 
 

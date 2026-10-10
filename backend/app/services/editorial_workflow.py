@@ -6,6 +6,7 @@ and mutations. A receipt is replayed only after current authorization succeeds.
 
 import hashlib
 import json
+from uuid import uuid4
 
 from fastapi import HTTPException
 from fastapi.encoders import jsonable_encoder
@@ -14,6 +15,7 @@ from sqlalchemy import text
 from app.services import editorial_revisions as revisions
 from app.services.editorial_accounts import authorize, membership
 from app.services.publication import stage_revision
+from app.schemas.editorial_content import VersionCommand
 
 
 def digest(value):
@@ -169,6 +171,7 @@ async def revision_action(db, actor, settings, rid, command):
     if row["status"] == "generating":
         raise ValueError("Generation is still running; reload when the draft is ready")
     version = None
+    generation_status = None
     if command.action == "submit":
         await revisions.submit_revision(db, rid, actor, settings, command.note)
     elif command.action in (
@@ -187,6 +190,33 @@ async def revision_action(db, actor, settings, rid, command):
             command.note,
             command.quality,
         )
+        if (
+            command.action == "changes_requested"
+            and settings.editorial_auto_correction_enabled
+        ):
+            if not settings.generation_enabled:
+                generation_status = "disabled"
+            else:
+                # The review decision and its AI request commit together. The
+                # outer receipt prevents a retry from creating a second job.
+                from app.services import editorial_generation as generation_jobs
+
+                changed = await revisions.revision(db, rid)
+                automatic = VersionCommand(
+                    request_id=uuid4(),
+                    expected_token=revision_token(changed),
+                    note=command.note,
+                )
+                try:
+                    await generation_jobs.request_revision_after_decision(
+                        db, actor, settings, rid, automatic, member
+                    )
+                except ValueError:
+                    # A full queue or a newer correction must not discard the
+                    # reviewer's decision. The owner can inspect and retry.
+                    generation_status = "unavailable"
+                else:
+                    generation_status = "queued"
         if command.action == "approve_and_publish":
             version = await revisions.publish_reviewed_revision(
                 db, rid, actor, settings, note=command.note
@@ -248,6 +278,7 @@ async def revision_action(db, actor, settings, rid, command):
             "status": updated["status"],
             "token": revision_token(updated),
             "published_version": version,
+            "generation_status": generation_status,
         },
     )
 

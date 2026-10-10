@@ -2,6 +2,7 @@
 import secrets
 import uuid
 
+import httpx
 import pytest
 import pytest_asyncio
 from fastapi import Request
@@ -76,6 +77,83 @@ async def test_disconnect_is_owner_fenced_and_survives_profile_revocation(api, p
     assert len((await api.get('/v1/me/relationships', headers=auth(a))).json()['items']) == 1
     assert (await api.delete('/v1/me/relationships/' + entry['relationship_id'], headers=auth(a))).status_code == 204
     assert (await api.get('/v1/me/relationships', headers=auth(a))).json()['items'] == []
+
+
+async def test_list_avatar_obeys_public_choice_and_revocation(api, people, session, monkeypatch):
+    from app.services import relationships
+
+    a, b, _ = people
+    await api.post(path(b), headers=auth(a))
+    await session.execute(text("update profiles set avatar_url='preset:forest' where id=:id"), {'id': b[0]})
+    await session.commit()
+    url = '/v1/me/relationships'
+    hidden = (await api.get(url, headers=auth(a))).json()['items'][0]
+    assert hidden['avatar_ref'] is None and hidden['avatar_url'] is None
+
+    await session.execute(text('update profile_sharing set show_avatar=true where user_id=:id'), {'id': b[0]})
+    await session.commit()
+    shared = (await api.get(url, headers=auth(a))).json()['items'][0]
+    assert shared['avatar_ref'] == 'preset:forest' and shared['avatar_url'] is None
+
+    async def signed(_settings, key):
+        assert key == f'avatars/{b[0]}/photo.jpg'
+        return 'https://storage.example.invalid/signed-photo'
+
+    monkeypatch.setattr(relationships, 'signed_avatar_url', signed)
+    await session.execute(text('update profiles set avatar_url=:key where id=:id'),
+                          {'id': b[0], 'key': f'avatars/{b[0]}/photo.jpg'})
+    await session.commit()
+    photo = (await api.get(url, headers=auth(a))).json()['items'][0]
+    assert photo['avatar_ref'] is None and photo['avatar_url'] == 'https://storage.example.invalid/signed-photo'
+
+    async def storage_unavailable(_settings, _key):
+        raise httpx.ConnectError('storage unavailable', request=httpx.Request('POST', 'https://storage.example.invalid'))
+
+    monkeypatch.setattr(relationships, 'signed_avatar_url', storage_unavailable)
+    degraded = (await api.get(url, headers=auth(a))).json()['items'][0]
+    assert degraded['display_name'] and degraded['avatar_url'] is None
+
+    await session.execute(text('update profile_sharing set enabled=false where user_id=:id'), {'id': b[0]})
+    await session.commit()
+    revoked = (await api.get(url, headers=auth(a))).json()['items'][0]
+    assert revoked['public_path'] is None and revoked['avatar_ref'] is None and revoked['avatar_url'] is None
+
+
+async def test_slow_photo_storage_does_not_delay_the_connections_list(api, people, session, monkeypatch):
+    import asyncio
+    from app.services import relationships
+
+    a, b, _ = people
+    await api.post(path(b), headers=auth(a))
+    await session.execute(text('update profile_sharing set show_avatar=true where user_id=:id'), {'id': b[0]})
+    await session.execute(text('update profiles set avatar_url=:key where id=:id'),
+                          {'id': b[0], 'key': f'avatars/{b[0]}/photo.jpg'})
+    await session.commit()
+
+    async def stalled(_settings, _key):
+        await asyncio.sleep(1)
+        return 'https://storage.example.invalid/late'
+
+    monkeypatch.setattr(relationships, 'signed_avatar_url', stalled)
+    monkeypatch.setattr(relationships, 'AVATAR_LOOKUP_TIMEOUT_SECONDS', 0.01)
+    page = (await api.get('/v1/me/relationships', headers=auth(a))).json()
+    assert len(page['items']) == 1
+    assert page['items'][0]['display_name'] and page['items'][0]['avatar_url'] is None
+
+
+async def test_block_from_list_is_owner_fenced_and_works_after_revocation(api, people, session):
+    a, b, c = people
+    entry = (await api.post(path(b), headers=auth(a))).json()
+    await api.post(path(a), headers=auth(b))
+    await session.execute(text('update profile_sharing set enabled=false where user_id=:id'), {'id': b[0]})
+    await session.commit()
+    target = '/v1/me/relationships/' + entry['relationship_id'] + '/block'
+    assert (await api.post(target, headers=auth(c))).status_code == 204
+    assert len((await api.get('/v1/me/relationships', headers=auth(a))).json()['items']) == 1
+    assert (await api.post(target, headers=auth(a))).status_code == 204
+    assert (await api.get('/v1/me/relationships', headers=auth(a))).json()['items'] == []
+    assert (await api.get('/v1/me/relationships', headers=auth(b))).json()['items'] == []
+    assert (await api.post(path(a), headers=auth(b))).status_code == 404
 
 
 async def test_private_self_and_blocks_have_the_same_unavailable_outcome(api, people):

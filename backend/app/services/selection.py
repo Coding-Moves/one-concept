@@ -3,12 +3,16 @@
 The rules, in order:
   1. If today already has an assignment, return it unchanged — no reselection,
      no side effects, no LLM call.
-  2. Otherwise pick from published concepts in the user's followed topics,
+  2. Otherwise carry the most recent unfinished lesson in a followed topic
+     forward to today, keeping its assignment identity and original timestamp.
+  3. Otherwise pick from published concepts in the user's followed topics,
      excluding every concept already assigned to them.
-  3. Rotate topics: prefer the topic the user has seen least recently, so a
+  4. Rotate topics: prefer the topic the user has seen least recently, so a
      user following five topics gets a visibly varied week instead of whichever
      topic happens to hold the most content.
-  4. Persist, tolerating the race where two devices ask at the same moment.
+  5. If no followed lesson is available, offer a followed-topic review to
+     capable clients or wait for new publication. Never choose another topic.
+  6. Persist, tolerating the race where two devices ask at the same moment.
 
 Generation never happens on this path. When a followed topic is running low, or
 has just run dry, selection asks the prefetch service to top it up in the
@@ -56,7 +60,8 @@ class DailyResult:
     assigned_at: datetime | None = None
     completed_at: datetime | None = None
     concept: ConceptPayload | None = None
-    # True when a non-empty followed-topic pool was dry and we widened search.
+    # Retained in the response contract for existing clients; selection stays
+    # within followed topics, so new assignments always report False.
     outside_followed_topics: bool = False
 
 
@@ -95,8 +100,8 @@ _CANDIDATE = text("""
           join public.topics t on t.id=c.topic_id and t.is_active
           join public.subtopics s on s.id=c.subtopic_id and s.is_active
          where c.status = 'published'
-           and (:ignore_follows or c.topic_id in (
-                 select topic_id from public.user_topics where user_id = :uid))
+           and c.topic_id in (
+                 select topic_id from public.user_topics where user_id = :uid)
            and not exists (
                  select 1 from public.daily_assignments a
                   where a.user_id = :uid and a.concept_id = c.id)
@@ -120,6 +125,30 @@ _INSERT = text("""
     values (gen_random_uuid(), :uid, :cid, :today)
     on conflict (user_id, assigned_for) do nothing
     returning id
+""")
+
+# Unfinished assignments have no learning history yet. Move one to the new
+# local day instead of inserting a second row for the same concept: the unique
+# user/concept key stays intact and completion credits only the day learned.
+# A subject the learner unfollowed is left behind when the next day is chosen.
+_CARRY_UNFINISHED = text("""
+    with pending as (
+        select a.id
+          from public.daily_assignments a
+          join public.concepts c on c.id = a.concept_id and c.status = 'published'
+          join public.topics t on t.id = c.topic_id and t.is_active
+          join public.subtopics s on s.id = c.subtopic_id and s.is_active
+          join public.user_topics ut on ut.topic_id = c.topic_id and ut.user_id = :uid
+         where a.user_id = :uid and a.completed_at is null
+           and a.assigned_for < :today
+         order by a.assigned_for desc, a.id
+         limit 1
+    )
+    update public.daily_assignments a
+       set assigned_for = :today
+      from pending
+     where a.id = pending.id
+    returning a.concept_id
 """)
 
 
@@ -196,6 +225,24 @@ def _row_to_result(row, outside: bool) -> DailyResult:
     )
 
 
+async def _signal_low_supply(
+    session: AsyncSession,
+    user_id: uuid.UUID,
+    concept_id: uuid.UUID,
+    prefetch_topics: set[uuid.UUID],
+) -> None:
+    watermark = (
+        await session.execute(_TOPIC_UNREAD, {"uid": user_id, "cid": concept_id})
+    ).first()
+    if (
+        watermark
+        and watermark.topic_id is not None
+        and watermark.unread <= get_settings().content_low_watermark
+    ):
+        await signal_reader(session, user_id, watermark.topic_id, commit=False)
+        prefetch_topics.add(watermark.topic_id)
+
+
 async def _select_new(
     session: AsyncSession,
     user_id: uuid.UUID,
@@ -226,32 +273,33 @@ async def _select_new(
     if not has_active_follow:
         return DailyResult(status="personalization_required", assigned_for=today)
 
-    # Followed topics first; widen only when a non-empty followed pool is dry.
-    outside = False
+    carried_concept_id = (
+        await session.execute(_CARRY_UNFINISHED, {"uid": user_id, "today": today})
+    ).scalar_one_or_none()
+    if carried_concept_id is not None:
+        await _signal_low_supply(session, user_id, carried_concept_id, prefetch_topics)
+        row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).first()
+        return (
+            _row_to_result(row, outside=False)
+            if row is not None
+            else DailyResult(status="exhausted", assigned_for=today)
+        )
+
+    # The followed set is a boundary, including when its published pool is dry.
     concept_id = (
-        await session.execute(_CANDIDATE, {"uid": user_id, "ignore_follows": False})
+        await session.execute(_CANDIDATE, {"uid": user_id})
     ).scalar_one_or_none()
 
     if concept_id is None:
-        # The followed pool is dry. Kick off a background top-up for the user's
-        # stalest followed topic so coming days are covered, then widen to the
-        # whole catalog for today — never block the response on Gemini (#43).
+        # Ask the worker to refill a followed topic for coming days. Today's
+        # request can offer a review, but it never waits on Gemini or assigns
+        # a lesson from a subject the learner did not follow.
         stale_topic = (
             await session.execute(_FOLLOWED_TOPIC_BY_STALENESS, {"uid": user_id})
         ).scalar_one_or_none()
         if stale_topic is not None:
             await signal_reader(session, user_id, stale_topic, commit=False)
             prefetch_topics.add(stale_topic)
-
-        outside = True
-        concept_id = (
-            await session.execute(_CANDIDATE, {"uid": user_id, "ignore_follows": True})
-        ).scalar_one_or_none()
-
-    if concept_id is None:
-        # Genuinely nothing left: every published concept is already assigned to
-        # this user and generation could not add one. Say so rather than
-        # repeating a concept.
         return DailyResult(status="exhausted", assigned_for=today)
 
     try:
@@ -275,23 +323,13 @@ async def _select_new(
 
     # Nearing the end of a followed topic? Top it up ahead of demand so the pool
     # refills before it ever runs dry — a fire-and-forget task, not a wait (#43).
-    if not outside:
-        watermark = (
-            await session.execute(_TOPIC_UNREAD, {"uid": user_id, "cid": concept_id})
-        ).first()
-        if (
-            watermark
-            and watermark.topic_id is not None
-            and watermark.unread <= get_settings().content_low_watermark
-        ):
-            await signal_reader(session, user_id, watermark.topic_id, commit=False)
-            prefetch_topics.add(watermark.topic_id)
+    await _signal_low_supply(session, user_id, concept_id, prefetch_topics)
 
     row = (await session.execute(_EXISTING, {"uid": user_id, "today": today})).first()
     if row is None:
         # A catalog writer can retire the selected lesson between statements.
         return DailyResult(status="exhausted", assigned_for=today)
-    return _row_to_result(row, outside=outside)
+    return _row_to_result(row, outside=False)
 
 
 async def get_or_create_daily(

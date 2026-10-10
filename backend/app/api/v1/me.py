@@ -126,6 +126,10 @@ async def get_state(
     result = await get_or_create_daily(db, user.id, allow_review=reviews)
     out.daily = _daily_out_or_none(result)
     out.daily_availability = _daily_availability(result)
+    if result.status == "ok" and result.concept is not None:
+        # Selection can create or carry today's assignment after load_state.
+        # Keep the compact assignment pointer aligned with the folded card.
+        out.assignment_slug = result.concept.slug
     if result.status == "review":
         out.review = ReviewOut(
             review_id=result.review_id,assigned_for=result.assigned_for,

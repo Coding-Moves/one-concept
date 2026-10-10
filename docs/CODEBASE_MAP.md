@@ -295,8 +295,8 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
   retries while offline or actions remain, using 5–30 second backoff, including
   when only some requests succeed. Daily refreshes preserve pending actions;
   account/source changes invalidate them and clear the displayed state. Foreground
-  and browser reconnect events wake an idle loop immediately; backgrounding
-  pauses timers.
+  and reconnect events revalidate progress and the topic catalog even with an
+  empty mutation queue; backgrounding pauses timers.
   This remains compatible with the current APK and has no closed-app worker.
   Screen retries use its serialized `refresh`; topic and detail screens have
   their own retry paths. Failed loads do not substitute demo lessons or totals
@@ -383,16 +383,21 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 
 - `services/selection.py` returns an existing assignment first. With no active
   followed topic it returns the stable `personalization_required` state without
-  creating an assignment or signaling generation. Otherwise it excludes every
-  previously assigned concept, prefers the least recently seen followed topic,
-  and widens to the global published catalog only when that non-empty followed
-  pool is dry. It handles concurrent inserts and schedules background prefetch,
-  never waits on Gemini. `GET /me/state` projects the same condition through
-  `daily_availability`; old clients can safely ignore that additive field.
+  creating an assignment or signaling generation. On a new local day it carries
+  the most recent unfinished lesson in a still-followed topic forward until
+  completion, retaining the same assignment row and first assigned timestamp.
+  Otherwise it excludes previously assigned concepts, prefers the least recently
+  seen followed topic. When the followed pool has no unfinished or new lessons,
+  selection offers a review chosen by `services/reviews.py` from a followed topic
+  or waits for publication. Completed dates stay fixed. Selection handles
+  concurrent inserts and schedules background prefetch, never waits on Gemini.
+  `GET /me/state` projects the same condition through `daily_availability`; old
+  clients can safely ignore that additive field.
 - `services/state.py` aggregates profile, follows, learned/saved metadata, likes,
   assignment slug, and derived streaks in one SQL statement. The `/me/state`
-  handler then calls selection separately to add `daily`; one HTTP request does
-  not mean one database statement for the entire endpoint. Compact clients get
+  handler then calls selection separately to add `daily` and aligns
+  `assignment_slug` with the resulting card; one HTTP request does not mean one
+  database statement for the entire endpoint. Compact clients get
   at most 50 enriched learned/saved rows, older-topic counts and continuation
   cursors; bare membership and aggregate streak/totals remain complete. Legacy
   clients keep the full detail lists until upgraded.
@@ -540,7 +545,7 @@ These observations are recorded for future assigned work; setup does not change
 the implementation or older documentation:
 
 - Backend/architecture prose still describes synchronous on-demand generation;
-  selection now schedules background prefetch and widens the stored catalog.
+  selection now schedules background prefetch within followed topics.
 - `/me/state` documentation says one query; its aggregate is one query, followed
   by selection queries for the folded daily lesson.
 - Some comments describe the HTTP client as unwired or the repository as local

@@ -70,9 +70,13 @@ async def test_three_readers_learn_for_a_year_through_refills_and_outages(
             {"t": topic.id, "prefix": prefix + "-" + topic.slug},
         )
     await session.commit()
-    await set_followed_topics(session, users[0], [t.slug for t in topics])
-    await set_followed_topics(session, users[1], [topics[0].slug])
-    await set_followed_topics(session, users[2], [topics[1].slug, topics[2].slug])
+    followed = {
+        users[0]: [t.slug for t in topics],
+        users[1]: [topics[0].slug],
+        users[2]: [topics[1].slug, topics[2].slug],
+    }
+    for uid, slugs in followed.items():
+        await set_followed_topics(session, uid, slugs)
     generate = AsyncMock(
         return_value=GeneratedConcept(
             summary="A complete, useful explanation of this simulated learning objective. "
@@ -157,6 +161,7 @@ async def test_three_readers_learn_for_a_year_through_refills_and_outages(
                 assert activity.status in ("ok", "review"), (
                     f"No useful activity on day {offset}"
                 )
+                assert activity.concept.topic_slug in followed[uid]
                 if activity.status == "ok":
                     assert activity.concept.id not in seen[uid]
                     seen[uid].add(activity.concept.id)
@@ -172,7 +177,7 @@ async def test_three_readers_learn_for_a_year_through_refills_and_outages(
         for uid in users:
             stats = await compute_streaks(session, uid, start + timedelta(days=364))
             assert stats.current == stats.longest == 365
-            assert stats.total_learned == len(seen[uid]) > 125
+            assert stats.total_learned == len(seen[uid]) > 25 * len(followed[uid])
             assert stats.total_learned + stats.total_reviews == 365
         assert review_days > 0
         assert generate.await_count <= 60

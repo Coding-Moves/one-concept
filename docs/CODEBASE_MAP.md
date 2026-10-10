@@ -563,16 +563,20 @@ the implementation or older documentation:
 ### Public profile privacy
 
 `api/v1/profile_sharing.py` exposes caller-owned settings and separately filtered
-public JSON/browser reads. `services/profile_sharing.py` owns row locking, version
-checks, earned-achievement filtering and revocable random tokens. Migration 0028
-adds the backend-only sharing table; 0029 preserves stored timezones during phone
+public JSON/browser reads. `app/public_profile_page.py` renders the responsive
+browser visitor card with escaped, allowlisted fields and an exact storage-origin
+image policy. The app's `PublicProfileLink.tsx` renders the corresponding
+visitor card and places Connect near identity. `services/profile_sharing.py`
+owns row locking, version checks, earned-achievement filtering and revocable
+random tokens. Migration 0028 adds the backend-only sharing table; 0029
+preserves stored timezones during phone
 initialization; 0044 adds the default-off public bio choice. The owner Profile
 reads the saved bio from progress; `ProfileSharingScreen.tsx` and
 `ProfilePublishReviewSheet.tsx` review its public choice with
 `PublicProfilePreview.tsx` showing the selected visitor fields.
 `ShareProfileSheet.tsx` uses that card for the published anonymous response,
-while `PublicProfileLink.tsx`
-shows only the anonymous allowlist. `mobile/src/services/profileSharing.ts` owns link parsing, local QR
+while `PublicProfileLink.tsx` shows only the anonymous allowlist.
+`mobile/src/services/profileSharing.ts` owns link parsing, local QR
 and anonymous visitor requests. See [profile-sharing.md](profile-sharing.md) for
 privacy guarantees, migration order and phone acceptance checks.
 

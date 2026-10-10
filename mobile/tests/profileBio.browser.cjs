@@ -28,6 +28,7 @@ const server = http.createServer((req, res) => {
     const state = { display_name: 'Reader', bio: 'Learning systems', avatar_ref: null, avatar_url: null, timezone: 'UTC', today, followed_topics: ['computer-science'], learned: [], likes: [], bookmarks: [], saved: [], stats: { current: 0, longest: 0, total_learned: 0, total_reviews: 0 }, assignment_slug: concept.slug, daily: { assigned_for: today, assigned_at: today + 'T08:00:00Z', learned: false, completed_at: null, outside_followed_topics: false, concept } };
     let sharing = { enabled: false, show_name: false, show_avatar: false, show_bio: false, show_streak: false, show_learning: false, achievement_codes: [], version: 0, public_path: null };
     let conflictOnce = false;
+    let connected = false;
     const context = await browser.newContext({ viewport: { width: 320, height: 740 } });
     await context.addInitScript(({ session, version }) => {
       localStorage.setItem('sb-127-auth-token', JSON.stringify(session));
@@ -59,7 +60,10 @@ const server = http.createServer((req, res) => {
         else body = { ...(sharing.show_name ? { display_name: state.display_name } : {}), ...(sharing.show_bio && state.bio ? { bio: state.bio } : {}), ...(sharing.show_streak ? { current_streak: 0, longest_streak: 0 } : {}), achievements: [] };
       }
       else if (endpoint === '/v1/me/relationships') body = { items: [], next_cursor: null };
-      else if (endpoint.includes('/v1/me/relationships/with/')) body = { state: 'available', relationship_id: null };
+      else if (endpoint.includes('/v1/me/relationships/with/')) {
+        if (route.request().method() === 'POST') connected = true;
+        body = connected ? { state: 'connected', relationship_id: '22222222-2222-4222-8222-222222222222' } : { state: 'available', relationship_id: null };
+      }
       else if (endpoint === '/v1/me/achievements') body = { items: [] };
       else if (endpoint === '/v1/me/subtopics/progress') body = { items: [] };
       else if (endpoint === '/v1/topics') body = [{ slug: 'computer-science', name: 'Computer Science', concept_count: 25, following: true }];
@@ -118,8 +122,11 @@ const server = http.createServer((req, res) => {
     await page.getByRole('textbox', { name: 'Shared profile link' }).fill(`http://127.0.0.1:4781/api/p/${token}`);
     await page.getByRole('button', { name: 'Open shared profile' }).click();
     await expect(page.getByText('Learning systems', { exact: true }).last()).toBeVisible();
-    await page.getByRole('button', { name: 'Close profile' }).click();
-    await expect(page.getByRole('button', { name: 'Close profile' })).toHaveCount(0);
+    await expect(page.getByText('ONE CONCEPT', { exact: true }).last()).toBeVisible();
+    await page.getByRole('button', { name: 'Connect', exact: true }).click();
+    await expect(page.getByText('Connected', { exact: true })).toBeVisible();
+    await page.getByRole('button', { name: 'Close shared profile' }).click();
+    await expect(page.getByRole('button', { name: 'Close shared profile' })).toHaveCount(0);
     await page.getByRole('button', { name: '← Back' }).click();
     await page.getByText('Edit profile', { exact: true }).click();
     const bioInput = page.getByRole('textbox', { name: 'Short bio' });
@@ -143,7 +150,7 @@ const server = http.createServer((req, res) => {
     await page.getByRole('button', { name: 'Open shared profile' }).click();
     await expect(page.getByText(/profile is unavailable/i)).toBeVisible();
     assert.deepEqual(errors, []);
-    console.log('minimal publish, expanded preview, conflict recovery, bio clearing, and link revocation passed');
+    console.log('minimal publish, Connect, expanded preview, conflict recovery, bio clearing, and link revocation passed');
     await context.close();
   } finally { await browser.close(); server.close(); }
 })().catch(error => { console.error(error); server.close(); process.exitCode = 1; });

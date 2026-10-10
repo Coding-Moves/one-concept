@@ -11,7 +11,14 @@ claims as completed work.
 
 - Scope: prepare the next release on `codex/v1-10-14-release-prep` from current `develop` with app version 1.10.14 and its one-time What's New card. Keep native runtime 1.10.8 because this release adds no native package or app-config change. Open a focused PR into `develop`; the production release remains a separate `develop` → `main` PR.
 - Card highlights will cover repeating an unfinished daily lesson until Learned, refreshing Today when the app resumes, and the profile photo, bio, sharing, and connection improvements now in `develop`. Validate the exact version/card match and mobile TypeScript.
-- Release gates: authenticator PR #411 is still open. Migrations 0044 (public bio choice) and 0045 (authenticator choice from #411) are absent from the verified production-applied ledger. Do not mark them applied without actual production verification; the release runbook requires migration application before opening the release PR.
+- Release gates: authenticator PR #411 merged into `develop` as `619f1f0`. Migrations 0044 (public bio choice) and 0045 (authenticator choice) are absent from the verified production-applied ledger. Do not mark them applied without actual production verification; the release runbook requires migration application before opening the release PR.
+
+### Optional authenticator for the editorial website — 2026-10-10, PR #411 open
+
+- Scope: one PR into `develop` for a per-account owner/reviewer Settings switch. Existing editorial accounts continue to require an authenticator by default. Turning it off requires a fresh verified TOTP challenge; turning it on restores MFA gating for that account. Supabase factors remain enrolled.
+- `d90117f` adds the versioned, self-only API, audited database choice, signed TOTP timestamp check, and reviewed schema contract in migration 0045. `6bc1ac7` adds the switch and code confirmation for both roles. `8d3980f` tests revoked and spoofed changes. The unrelated release checkout remains untouched.
+- Validation: 54 editorial authority/API/security/schema tests passed against disposable PostgreSQL 16; the four focused authenticator API cases passed again after the authority follow-up. Website typecheck, 17 unit tests, fixture production build, all 48 browser tests, desktop visual inspection, Ruff `F,E9`, and `git diff --check` passed. The initial build without public fixture variables stopped before bundling; the configured build passed. No live Supabase factor or physical device was used.
+- [PR #411](https://github.com/Coding-Moves/one-concept/pull/411) targets `develop`. After bio PR #407 and Connections PR #408 merged, this branch integrated both; the combined 0044/0045 schema contract (21 tests) and focused authenticator/security tests (16 tests) passed against disposable PostgreSQL 16. All three hosted checks passed on `c604328`. Migration 0045 is not marked production-applied. Live Supabase owner/reviewer verification remains for release.
 
 ### Profile photo save flow — 2026-10-10, PR #406 open
 

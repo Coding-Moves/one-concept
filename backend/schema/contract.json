@@ -43,7 +43,8 @@
     "0041_directed_profile_connections.sql": "240efb2583ec82cb1fe1077bf7a10b006413a204262d6caf26d0ab01dd76571c",
     "0042_legacy_enrichment_batches.sql": "04a951903b6e0189d4faace67b4dfb0859d7d48ecb5832e78d99accfb1d81db0",
     "0043_future_refill_daily_usage.sql": "0f50e876b4d5b07e1902792d611ccf6df6553d78e88aa590ceaced28240b856b",
-    "0044_public_profile_bio_choice.sql": "3bb615621c95e2d3b7cbfba55b2dd02b8b6d7886209c613108543b4182fb94b0"
+    "0044_public_profile_bio_choice.sql": "3bb615621c95e2d3b7cbfba55b2dd02b8b6d7886209c613108543b4182fb94b0",
+    "0045_editorial_authenticator_choice.sql": "fe525bccd0f0e1a98bf4cc5bcf4ee24fee1f09807db1ac5037c70640dedce394"
   },
   "schema": {
     "columns": {
@@ -1198,6 +1199,12 @@
         "identity": "",
         "not_null": false,
         "type": "text"
+      },
+      "editorial_memberships.require_mfa": {
+        "default": "true",
+        "identity": "",
+        "not_null": true,
+        "type": "boolean"
       },
       "editorial_memberships.status": {
         "default": "'active'::text",
@@ -2418,7 +2425,7 @@
         "validated": true
       },
       "editorial_account_events.editorial_account_events_action_check": {
-        "definition": "CHECK ((action = ANY (ARRAY['bootstrap'::text, 'invite'::text, 'profile_requested'::text, 'profile_approved'::text, 'access_changed'::text, 'notification_policy'::text, 'notification_timezone'::text, 'notification_retry'::text])))",
+        "definition": "CHECK ((action = ANY (ARRAY['bootstrap'::text, 'invite'::text, 'profile_requested'::text, 'profile_approved'::text, 'access_changed'::text, 'notification_policy'::text, 'notification_timezone'::text, 'notification_retry'::text, 'authenticator_choice'::text])))",
         "validated": true
       },
       "editorial_account_events.editorial_account_events_pkey": {

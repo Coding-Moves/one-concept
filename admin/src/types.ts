@@ -15,6 +15,7 @@ export interface Member {
   user_id: string;
   invited_email: string;
   notification_timezone?: string;
+  require_mfa: boolean;
   status: "active" | "revoked";
   capabilities: Capability[];
   requested_name: string | null;

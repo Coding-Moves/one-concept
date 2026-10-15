@@ -5,6 +5,9 @@ export type ApiConfig = {
   anonKey: string;
   serviceRoleKey: string;
   allowedOrigins: readonly string[];
+  contentLowWatermark?: number;
+  contentReservePerTopic?: number;
+  contentActiveDays?: number;
 };
 
 type Fetcher = typeof fetch;
@@ -228,6 +231,14 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const parsed = new URL(origin);
     return parsed.origin !== origin || (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1');
   })) throw new Error('Allowed origins must be exact HTTPS origins or local development origins');
+  const low = config.contentLowWatermark ?? 10;
+  const reserve = config.contentReservePerTopic ?? 60;
+  const activeDays = config.contentActiveDays ?? 90;
+  if (![low, reserve, activeDays].every(Number.isInteger)
+      || low < 0 || low > 30 || reserve < 1 || reserve > 365
+      || activeDays < 1 || activeDays > 365) {
+    throw new Error('Invalid content supply settings');
+  }
 
   return async request => {
     const cors = corsHeaders(request.headers.get('origin'), config.allowedOrigins);
@@ -272,7 +283,10 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         return response(await rpc('edge_api_topics', { p_user_id: userId }, config, fetcher), 200, cors);
       }
       if (daily) {
-        const selected = await rpc('edge_api_daily', { p_user_id: userId }, config, fetcher) as JsonObject;
+        const selected = await rpc('edge_api_daily', {
+          p_user_id: userId, p_low: low, p_reserve: reserve,
+          p_active_days: activeDays, p_today: null,
+        }, config, fetcher) as JsonObject;
         return response(selected, selected.reason ? 409 : 200, cors);
       }
       if (stats) {

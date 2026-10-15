@@ -81,7 +81,9 @@ test('daily returns the verified account assignment or typed unavailable state',
   assert.equal(selected.status, 200);
   assert.deepEqual(await selected.json(), payload);
   assert.match(calls[0].url, /\/rpc\/edge_api_daily$/);
-  assert.deepEqual(calls[0].args, { p_user_id: userId });
+  assert.deepEqual(calls[0].args, {
+    p_user_id: userId, p_low: 10, p_reserve: 60, p_active_days: 90, p_today: null,
+  });
   payload = { assigned_for: '2026-10-16', reason: 'catalog_exhausted',
     detail: 'You have already been assigned every available concept.' };
   const unavailable = await handler(request('/v1/daily', { headers }));
@@ -334,4 +336,6 @@ test('only exact API path and method combinations are served', async () => {
 test('configuration rejects wildcard and unsafe browser origins', () => {
   assert.throws(() => createHandler({ ...config, allowedOrigins: ['*'] }));
   assert.throws(() => createHandler({ ...config, allowedOrigins: ['http://review.example.com'] }));
+  assert.throws(() => createHandler({ ...config, contentLowWatermark: 31 }));
+  assert.throws(() => createHandler({ ...config, contentReservePerTopic: 0 }));
 });

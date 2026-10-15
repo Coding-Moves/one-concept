@@ -129,6 +129,9 @@ INCREMENTAL_PROBES = {
     "0081_supabase_editorial_profile_request_api.sql": (
         "public.edge_api_editorial_request_profile(uuid,uuid,text,integer,text)",
     ),
+    "0082_supabase_editorial_timezone_api.sql": (
+        "public.edge_api_editorial_notification_timezone(uuid,uuid,text,integer,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

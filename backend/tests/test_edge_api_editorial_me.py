@@ -126,3 +126,34 @@ async def test_editorial_profile_request_rechecks_session_and_version_under_lock
       has_function_privilege('service_role',
         'public.edge_api_editorial_request_profile(uuid,uuid,text,integer,text)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+
+
+@pytest.mark.asyncio
+async def test_editorial_notification_timezone_is_versioned_and_session_bound(session, user):
+    sid = uuid.uuid4()
+    await session.execute(text("update auth.users set email_confirmed_at=now() where id=:uid"), {"uid": user})
+    await session.execute(text("insert into auth.sessions(id,user_id) values(:sid,:uid)"),
+                          {"sid": sid, "uid": user})
+    await session.execute(text("""insert into public.editorial_memberships
+      (user_id,invited_email,capabilities) values(:uid,'reviewer@example.invalid',array['review'])"""),
+      {"uid": user})
+    change = text("""select public.edge_api_editorial_notification_timezone(
+      :uid,:sid,:aal,:version,:timezone)""")
+    args = {"uid": user, "sid": sid, "aal": "aal1", "version": 1,
+            "timezone": "Asia/Karachi"}
+    assert _json(await session.scalar(change, args))["notification_timezone"] == "Asia/Karachi"
+    assert _json(await session.scalar(change, args))["error"] == "version_conflict"
+    args["version"] = 2
+    args["timezone"] = "Not/A_Timezone"
+    assert _json(await session.scalar(change, args))["error"] == "unknown_timezone"
+    assert await session.scalar(text("""select count(*) from public.editorial_account_events
+      where actor_id=:uid and action='notification_timezone'"""), {"uid": user}) == 1
+    await session.execute(text("delete from auth.sessions where id=:sid"), {"sid": sid})
+    args["timezone"] = "UTC"
+    assert _json(await session.scalar(change, args))["error"] == "session_required"
+    rights = (await session.execute(text("""select
+      has_function_privilege('authenticated',
+        'public.edge_api_editorial_notification_timezone(uuid,uuid,text,integer,text)', 'EXECUTE'),
+      has_function_privilege('service_role',
+        'public.edge_api_editorial_notification_timezone(uuid,uuid,text,integer,text)', 'EXECUTE')"""))).one()
+    assert rights == (False, True)

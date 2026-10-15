@@ -80,7 +80,8 @@
     "0078_supabase_subtopic_quiz_history_api.sql": "a3c7c15dd10481e81598c605c65b5b086c571fcebd87cbbd7acd9d8f66a88c01",
     "0079_supabase_editorial_me_api.sql": "95deab6ac2b19fc07ba337f228a1b6813462d3a9713e7ea4c8a4bcbced70f940",
     "0080_supabase_editorial_reviewers_list_api.sql": "556f4004bca61fee65649a9c2f2138299017a95e2fd44e4d34dc685ebfc15b7d",
-    "0081_supabase_editorial_profile_request_api.sql": "f3dc53f9579bfaabd3fef651a1429701473201a11abe10486eac7ba1104d93f7"
+    "0081_supabase_editorial_profile_request_api.sql": "f3dc53f9579bfaabd3fef651a1429701473201a11abe10486eac7ba1104d93f7",
+    "0082_supabase_editorial_timezone_api.sql": "13d06487f07e7526f6d862cda20e0c376f86be18c8cf55c3c31350c6ca3b9047"
   },
   "schema": {
     "columns": {

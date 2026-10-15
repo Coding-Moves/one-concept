@@ -2,7 +2,7 @@
 
 The current candidate serves health, topics, concept detail, idempotent
 Like/Save, notification preferences, push-token, streak-statistics, history,
-saved-pagination, subtopic-progress, daily-selection, and completion routes at
+saved-pagination, subtopic-progress, daily-selection, completion, and achievement routes at
 `/functions/v1/api`. The remaining entries in
 [the route matrix](SUPABASE_API_ROUTE_PARITY.md) are not implemented. Keep Railway
 and all production clients on the existing API until #416 meets its acceptance
@@ -17,13 +17,15 @@ authenticated staging learner flow has not yet been checked. A protected
 incremental job now checks the exact staging project, the verified 0049 RPC,
 and explicit before/after RPC signatures for each later migration. The
 fresh-project runner must not be rerun against the initialized project.
+Migration 0054 and its achievement routes are locally tested but are not yet
+applied or deployed to staging.
 
 ## Local checks
 
 - Use Node 24 and the existing locked mobile TypeScript installation:
   `mobile/node_modules/.bin/tsc -p supabase/functions/tsconfig.json` and
   `node --experimental-strip-types supabase/functions/api/handler.test.mjs`.
-- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_staging_migrations.py -q -rs`
+- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_edge_api_achievements.py tests/test_staging_migrations.py -q -rs`
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
 - For runtime parity, serve the function with the Supabase CLI and an isolated
   local stack when available. TypeScript/Node tests do not prove Deno runtime

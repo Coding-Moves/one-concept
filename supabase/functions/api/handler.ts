@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -257,7 +257,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const subtopicProgress = path === '/v1/me/subtopics/progress';
     const subtopicSeen = path === '/v1/me/subtopics/completions/seen';
     const daily = path === '/v1/daily';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && !daily && concept === null) {
+    const dailyComplete = path === '/v1/daily/complete';
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && !daily && !dailyComplete && concept === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -266,7 +267,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         ? request.method === 'GET' || request.method === 'PUT'
         : pushToken
           ? request.method === 'POST' || request.method === 'DELETE'
-          : subtopicSeen
+          : subtopicSeen || dailyComplete
             ? request.method === 'POST'
           : request.method === 'GET';
     if (!validMethod) return httpError(405, 'Method Not Allowed', cors);
@@ -288,6 +289,14 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           p_active_days: activeDays, p_today: null,
         }, config, fetcher) as JsonObject;
         return response(selected, selected.reason ? 409 : 200, cors);
+      }
+      if (dailyComplete) {
+        const completed = await rpc('edge_api_complete_daily', {
+          p_user_id: userId, p_today: null,
+        }, config, fetcher);
+        return completed === null
+          ? httpError(404, 'No concept has been assigned recently. Fetch /v1/daily first.', cors)
+          : response(completed, 200, cors);
       }
       if (stats) {
         return response(await rpc('edge_api_stats', { p_user_id: userId }, config, fetcher), 200, cors);

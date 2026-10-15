@@ -92,6 +92,31 @@ test('daily returns the verified account assignment or typed unavailable state',
   assert.equal((await handler(request('/v1/daily', { method: 'POST', headers }))).status, 405);
 });
 
+test('daily completion is account-scoped and preserves the missing-assignment response', async () => {
+  const calls = [];
+  let body = { completed: true, assigned_for: '2026-10-15', stats: {
+    current: 1, longest: 1, total_learned: 1, total_reviews: 0,
+  }, subtopic_completion: null };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(body);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const completed = await handler(request('/v1/daily/complete', { method: 'POST', headers }));
+  assert.equal(completed.status, 200);
+  assert.deepEqual(await completed.json(), body);
+  assert.match(calls[0].url, /\/rpc\/edge_api_complete_daily$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_today: null });
+  body = null;
+  const missing = await handler(request('/v1/daily/complete', { method: 'POST', headers }));
+  assert.equal(missing.status, 404);
+  assert.deepEqual(await missing.json(), {
+    detail: 'No concept has been assigned recently. Fetch /v1/daily first.',
+  });
+  assert.equal((await handler(request('/v1/daily/complete', { headers }))).status, 405);
+});
+
 test('rejected or malformed Auth responses cannot reach the service RPC', async () => {
   for (const authResult of [new Response(null, { status: 401 }), Response.json({ id: 'not-a-uuid' })]) {
     let calls = 0;

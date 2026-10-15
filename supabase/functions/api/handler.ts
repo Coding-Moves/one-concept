@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -286,6 +286,36 @@ function connectionPageInput(query: URLSearchParams): {
   return { kind, cursor, limit };
 }
 
+function relationshipPageInput(query: URLSearchParams): {
+  created: string | null; id: string | null; limit: number;
+} {
+  const rawLimit = query.get('limit') ?? '25';
+  if (!/^\d+$/.test(rawLimit)) throw new ClientBodyError(422, 'Invalid relationship page');
+  const limit = Number(rawLimit);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) {
+    throw new ClientBodyError(422, 'Invalid relationship page');
+  }
+  const cursor = query.get('cursor');
+  if (cursor === null) return { created: null, id: null, limit };
+  const split = cursor.lastIndexOf(':');
+  const created = cursor.slice(0, split);
+  const id = cursor.slice(split + 1);
+  const timestamp = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(?:Z|[+-](\d{2}):(\d{2}))$/.exec(created);
+  const year = Number(timestamp?.[1]);
+  const month = Number(timestamp?.[2]);
+  const day = Number(timestamp?.[3]);
+  const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+  const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+  if (split < 1 || !UUID.test(id)
+      || !timestamp || year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1]
+      || Number(timestamp[4]) > 23 || Number(timestamp[5]) > 59 || Number(timestamp[6]) > 59
+      || (timestamp[7] !== undefined && (Number(timestamp[7]) > 23 || Number(timestamp[8]) > 59))
+      || Number.isNaN(Date.parse(created))) {
+    throw new ClientBodyError(422, 'Invalid cursor');
+  }
+  return { created, id, limit };
+}
+
 function connectionActionInput(body: JsonObject): string {
   if (Object.keys(body).length !== 1 || typeof body.action !== 'string'
       || !['accept', 'decline', 'cancel', 'remove', 'block'].includes(body.action)) {
@@ -350,7 +380,7 @@ function queryBoolean(query: URLSearchParams, name: string): boolean {
   throw new ClientBodyError(422, `Invalid ${name} query value`);
 }
 
-async function signedAvatarUrl(ref: unknown, userId: string, config: ApiConfig, fetcher: Fetcher): Promise<string | null> {
+async function signedAvatarUrl(ref: unknown, userId: string, config: ApiConfig, fetcher: Fetcher, timeoutMs = 5000): Promise<string | null> {
   if (typeof ref !== 'string' || !new RegExp(`^avatars/${userId}/[a-f0-9]{32}\\.jpg$`).test(ref)) return null;
   try {
     const result = await fetcher(`${config.supabaseUrl}/storage/v1/object/sign/profile-avatars/${ref}`, {
@@ -361,7 +391,7 @@ async function signedAvatarUrl(ref: unknown, userId: string, config: ApiConfig, 
         'content-type': 'application/json',
       },
       body: JSON.stringify({ expiresIn: 120 }),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(Math.max(1, timeoutMs)),
       redirect: 'error',
     });
     if (!result.ok) return null;
@@ -463,7 +493,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const connectionAction = /^\/v1\/me\/connections\/([^/]+)\/actions$/.exec(path);
     const connectionUnblock = /^\/v1\/me\/connections\/blocks\/([^/]+)$/.exec(path);
     const relationshipStatus = /^\/v1\/me\/relationships\/with\/([^/]+)$/.exec(path);
+    const relationshipBlock = /^\/v1\/me\/relationships\/with\/([^/]+)\/block$/.exec(path);
     const relationshipRemove = /^\/v1\/me\/relationships\/([^/]+)$/.exec(path);
+    const relationshipBlockById = /^\/v1\/me\/relationships\/([^/]+)\/block$/.exec(path);
     const reviewComplete = /^\/v1\/reviews\/([^/]+)\/complete$/.exec(path);
     const notifications = path === '/v1/me/notifications';
     const pushToken = path === '/v1/me/push-token';
@@ -472,6 +504,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const sharing = path === '/v1/me/profile-sharing';
     const connectionSettings = path === '/v1/me/connections/settings';
     const connectionList = path === '/v1/me/connections';
+    const relationshipList = path === '/v1/me/relationships';
     const state = path === '/v1/me/state';
     const profile = path === '/v1/me';
     const followedTopics = path === '/v1/me/topics';
@@ -483,7 +516,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipRemove === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -504,7 +537,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? request.method === 'DELETE'
         : connectionUnblock
           ? request.method === 'DELETE'
-          : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null || connectionBlock !== null || connectionAction !== null
+          : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null || connectionBlock !== null || relationshipBlock !== null || relationshipBlockById !== null || connectionAction !== null
             ? request.method === 'POST'
           : request.method === 'GET';
     if (!validMethod) return httpError(405, 'Method Not Allowed', cors);
@@ -599,6 +632,48 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         }, config, fetcher);
         return data === null ? unavailable(cors) : sharingResponse(data, 200, cors);
       }
+      if (relationshipList) {
+        const input = relationshipPageInput(requestUrl.searchParams);
+        const data = await rpc('edge_api_relationships', {
+          p_user_id: userId, p_cursor_at: input.created,
+          p_cursor_id: input.id, p_limit: input.limit,
+        }, config, fetcher) as JsonObject | null;
+        if (data === null || !Array.isArray(data.items)) return unavailable(cors);
+        const raw = data.items as unknown[];
+        const mapped = raw.map(value => {
+          if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+          const row = value as JsonObject;
+          if (typeof row.id !== 'string' || !UUID.test(row.id)
+              || typeof row.display_name !== 'string') return null;
+          return {
+            id: row.id, display_name: row.display_name,
+            public_path: typeof row.public_path === 'string'
+              && /^\/p\/[A-Za-z0-9_-]{43}$/.test(row.public_path) ? row.public_path : null,
+            avatar_ref: typeof row.avatar_ref === 'string'
+              && /^preset:(aurora|comet|forest|ocean|sunset|violet)$/.test(row.avatar_ref)
+              ? row.avatar_ref : null,
+            avatar_url: null as string | null,
+          };
+        });
+        if (mapped.some(value => value === null)) return unavailable(cors);
+        const items = mapped as Exclude<(typeof mapped)[number], null>[];
+        let next = 0;
+        const deadline = Date.now() + 3000;
+        await Promise.all(Array.from({ length: Math.min(6, raw.length) }, async () => {
+          while (next < raw.length) {
+            const index = next++;
+            const row = raw[index] as JsonObject;
+            if (typeof row.avatar_owner !== 'string' || !UUID.test(row.avatar_owner)) continue;
+            const remaining = deadline - Date.now();
+            if (remaining <= 0) break;
+            items[index].avatar_url = await signedAvatarUrl(
+              row.avatar_key, row.avatar_owner, config, fetcher, remaining,
+            );
+          }
+        }));
+        return sharingResponse({ items,
+          next_cursor: typeof data.next_cursor === 'string' ? data.next_cursor : null }, 200, cors);
+      }
       if (connectionStatus) {
         if (!/^[A-Za-z0-9_-]{43}$/.test(connectionStatus[1])) {
           return sharingResponse({ detail: 'Profile unavailable' }, 404, cors);
@@ -627,19 +702,22 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         }
         return sharingResponse(data, 200, cors);
       }
-      if (connectionBlock) {
-        if (!/^[A-Za-z0-9_-]{43}$/.test(connectionBlock[1])) {
+      if (connectionBlock || relationshipBlock) {
+        const sharedToken = (connectionBlock ?? relationshipBlock)![1];
+        if (!/^[A-Za-z0-9_-]{43}$/.test(sharedToken)) {
           return sharingResponse({ detail: 'Profile unavailable' }, 404, cors);
         }
         const data = await rpc('edge_api_connection_block_token', {
-          p_user_id: userId, p_token: connectionBlock[1],
+          p_user_id: userId, p_token: sharedToken,
         }, config, fetcher) as JsonObject | null;
         if (data === null) return unavailable(cors);
         if (data.error === 'unavailable') {
           return sharingResponse({ detail: 'This connection is unavailable' }, 404, cors);
         }
         if (data.error === 'self') {
-          return sharingResponse({ detail: 'You cannot block yourself' }, 400, cors);
+          return relationshipBlock
+            ? sharingResponse({ detail: 'This profile is unavailable' }, 404, cors)
+            : sharingResponse({ detail: 'You cannot block yourself' }, 400, cors);
         }
         return data.ok === true ? privateNoContent(cors) : unavailable(cors);
       }
@@ -698,6 +776,15 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         }
         const data = await rpc('edge_api_relationship_remove', {
           p_user_id: userId, p_relationship_id: relationshipRemove[1],
+        }, config, fetcher) as JsonObject | null;
+        return data?.ok === true ? privateNoContent(cors) : unavailable(cors);
+      }
+      if (relationshipBlockById) {
+        if (!UUID.test(relationshipBlockById[1])) {
+          return sharingResponse({ detail: 'Invalid relationship ID' }, 422, cors);
+        }
+        const data = await rpc('edge_api_relationship_block', {
+          p_user_id: userId, p_relationship_id: relationshipBlockById[1],
         }, config, fetcher) as JsonObject | null;
         return data?.ok === true ? privateNoContent(cors) : unavailable(cors);
       }

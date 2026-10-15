@@ -528,6 +528,34 @@ test('blocking a public connection token is authenticated and returns private 20
   assert.equal(calls.length, 3);
 });
 
+test('directed relationship blocking reuses the pair-safe RPC and hides self identity', async () => {
+  const token = 'c'.repeat(43);
+  const calls = [];
+  let payload = { ok: true };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const path = `/v1/me/relationships/with/${token}/block`;
+  const headers = { authorization: 'Bearer account-token' };
+  assert.equal((await handler(request(path, { method: 'POST' }))).status, 401);
+  const blocked = await handler(request(path, { method: 'POST', headers }));
+  assert.equal(blocked.status, 204);
+  assert.equal(blocked.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.match(calls[0].url, /\/rpc\/edge_api_connection_block_token$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_token: token });
+  payload = { error: 'self' };
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 404);
+  payload = { error: 'unavailable' };
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 404);
+  assert.equal((await handler(request('/v1/me/relationships/with/bad/block', {
+    method: 'POST', headers,
+  }))).status, 404);
+  assert.equal((await handler(request(path, { method: 'GET', headers }))).status, 405);
+  assert.equal(calls.length, 3);
+});
+
 test('connection actions use the verified account and validate method, ID, and action', async () => {
   const id = '00000000-0000-4000-8000-000000000001';
   const calls = [];
@@ -660,6 +688,99 @@ test('directed relationship removal is authenticated, owner-bound, and idempoten
   }))).status, 422);
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
   assert.equal(calls.length, 2);
+});
+
+test('blocking an owned relationship ID is private and works after token revocation', async () => {
+  const id = '00000000-0000-4000-8000-000000000001';
+  const calls = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json({ ok: true });
+  });
+  const path = `/v1/me/relationships/${id}/block`;
+  const headers = { authorization: 'Bearer account-token' };
+  assert.equal((await handler(request(path, { method: 'POST' }))).status, 401);
+  for (let repeat = 0; repeat < 2; repeat++) {
+    const blocked = await handler(request(path, { method: 'POST', headers }));
+    assert.equal(blocked.status, 204);
+    assert.equal(blocked.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  }
+  assert.match(calls[0].url, /\/rpc\/edge_api_relationship_block$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_relationship_id: id });
+  assert.equal((await handler(request('/v1/me/relationships/bad/block', {
+    method: 'POST', headers,
+  }))).status, 422);
+  assert.equal((await handler(request(path, { method: 'DELETE', headers }))).status, 405);
+  assert.equal(calls.length, 2);
+});
+
+test('directed pages hide internal avatar data and sign only owner-bound photos', async () => {
+  const peer = '00000000-0000-4000-8000-000000000002';
+  const firstId = '00000000-0000-4000-8000-000000000003';
+  const photo = `avatars/${peer}/${'a'.repeat(32)}.jpg`;
+  const cursor = `2026-10-15T12:00:00.000000Z:${firstId}`;
+  const rpcCalls = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.includes('/storage/v1/object/sign/')) {
+      assert.match(url, new RegExp(`${peer}/`));
+      return Response.json({ signedURL: `/object/sign/profile-avatars/${photo}?token=short` });
+    }
+    rpcCalls.push({ url, args: JSON.parse(init.body) });
+    return Response.json({ items: [
+      { id: firstId, display_name: 'Private learner', public_path: `/p/${'a'.repeat(43)}`,
+        avatar_ref: null, avatar_key: photo, avatar_owner: peer, sort_time: 'internal' },
+      { id: '00000000-0000-4000-8000-000000000004', display_name: 'Older',
+        public_path: null, avatar_ref: 'preset:aurora', avatar_key: null,
+        avatar_owner: null, sort_time: 'internal' },
+    ], next_cursor: cursor });
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const path = `/v1/me/relationships?limit=2&cursor=${encodeURIComponent(cursor)}`;
+  assert.equal((await handler(request(path))).status, 401);
+  const result = await handler(request(path, { headers }));
+  assert.equal(result.status, 200);
+  const page = await result.json();
+  assert.equal(page.items.length, 2);
+  assert.equal(page.items[0].avatar_ref, null);
+  assert.match(page.items[0].avatar_url, new RegExp(`${peer}/`));
+  assert.equal(page.items[1].avatar_ref, 'preset:aurora');
+  assert.equal(page.items[1].avatar_url, null);
+  assert.equal(page.items[0].avatar_key, undefined);
+  assert.equal(page.items[0].avatar_owner, undefined);
+  assert.equal(page.items[0].sort_time, undefined);
+  assert.equal(page.next_cursor, cursor);
+  assert.match(rpcCalls[0].url, /\/rpc\/edge_api_relationships$/);
+  assert.deepEqual(rpcCalls[0].args, { p_user_id: userId,
+    p_cursor_at: '2026-10-15T12:00:00.000000Z', p_cursor_id: firstId, p_limit: 2 });
+  assert.equal((await handler(request('/v1/me/relationships?cursor=bad', { headers }))).status, 422);
+  const invalidDate = `2026-02-30T12:00:00Z:${firstId}`;
+  assert.equal((await handler(request(`/v1/me/relationships?cursor=${encodeURIComponent(invalidDate)}`,
+    { headers }))).status, 422);
+  assert.equal((await handler(request('/v1/me/relationships?limit=51', { headers }))).status, 422);
+  assert.equal((await handler(request('/v1/me/relationships', { method: 'POST', headers }))).status, 405);
+  assert.equal(rpcCalls.length, 1);
+});
+
+test('directed pages never sign a photo key from another account', async () => {
+  const peer = '00000000-0000-4000-8000-000000000002';
+  let storageCalls = 0;
+  const handler = createHandler(config, async (url) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.includes('/storage/v1/')) storageCalls++;
+    return Response.json({ items: [{
+      id: '00000000-0000-4000-8000-000000000003', display_name: 'Private learner',
+      public_path: null, avatar_ref: null,
+      avatar_key: `avatars/${userId}/${'a'.repeat(32)}.jpg`, avatar_owner: peer,
+    }], next_cursor: null });
+  });
+  const result = await handler(request('/v1/me/relationships', {
+    headers: { authorization: 'Bearer account-token' },
+  }));
+  assert.equal(result.status, 200);
+  assert.equal((await result.json()).items[0].avatar_url, null);
+  assert.equal(storageCalls, 0);
 });
 
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {

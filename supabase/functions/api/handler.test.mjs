@@ -263,6 +263,50 @@ test('editorial authenticator choice forwards only a verified TOTP timestamp', a
   assert.equal((await handler(request(path, { headers }))).status, 405);
 });
 
+test('editorial profile approval requires a valid reviewer and current owner session', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const peerId = '00000000-0000-4000-8000-000000000002';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { user_id: peerId, approved_name: 'Reviewer Name', version: 2 };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const path = `/v1/editorial/reviewers/${peerId}/approve-profile`;
+  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  assert.equal((await handler(request(path, { method: 'POST',
+    body: JSON.stringify({ expected_version: 1 }),
+  }))).status, 401);
+  assert.equal((await handler(request('/v1/editorial/reviewers/bad/approve-profile', {
+    method: 'POST', headers, body: JSON.stringify({ expected_version: 1 }),
+  }))).status, 422);
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ expected_version: 1, approved_name: 'Forged' }),
+  }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const approved = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ expected_version: 1 }),
+  }));
+  assert.equal(approved.status, 200);
+  assert.deepEqual(await approved.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_approve_profile$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_subject_id: peerId, p_expected_version: 1,
+  });
+  payload = { error: 'self_approval' };
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ expected_version: 1 }),
+  }))).status, 403);
+  payload = { error: 'request_required' };
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ expected_version: 1 }),
+  }))).status, 409);
+  assert.equal((await handler(request(path, { headers }))).status, 405);
+});
+
 test('weekly quiz selection uses the verified account and never exposes a private RPC result to anonymous callers', async () => {
   const calls = [];
   const quiz = { available: false, week_start: '2026-10-12', required_concepts: 7,

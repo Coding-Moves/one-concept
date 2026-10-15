@@ -37,7 +37,7 @@ reachable database and anonymous `/v1/topics` returned 401. Protected SQL run
 `38754177200` applied and verified migrations 0066–0070 in staging; Edge run
 `38754683827` deployed their matching candidate. Live `/health` returned 200 with
 a reachable database and anonymous `/v1/topics` returned 401. Migrations
-0071–0078 and their directed relationship and quiz routes are locally tested but not
+0071–0079 and their directed relationship, quiz, and editorial identity routes are locally tested but not
 staged. The three authenticated smoke secrets are saved; its protected run is
 waiting for approval.
 
@@ -46,7 +46,7 @@ waiting for approval.
 - Use Node 24 and the existing locked mobile TypeScript installation:
   `mobile/node_modules/.bin/tsc -p supabase/functions/tsconfig.json` and
   `node --experimental-strip-types supabase/functions/api/handler.test.mjs`.
-- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_edge_api_achievements.py tests/test_edge_api_reviews.py tests/test_edge_api_state.py tests/test_edge_api_followed_topics.py tests/test_edge_api_profile_update.py tests/test_edge_api_analytics.py tests/test_edge_api_profile_sharing.py tests/test_edge_api_public_profile.py tests/test_edge_api_connection_preferences.py tests/test_edge_api_connections.py tests/test_edge_api_connection_status.py tests/test_edge_api_connection_request.py tests/test_edge_api_connection_block_token.py tests/test_edge_api_connection_action.py tests/test_edge_api_connection_unblock.py tests/test_edge_api_relationship_status.py tests/test_edge_api_relationship_connect.py tests/test_edge_api_relationship_remove.py tests/test_edge_api_relationship_block.py tests/test_edge_api_relationship_list.py tests/test_edge_api_weekly_quiz.py tests/test_edge_api_subtopic_quiz.py tests/test_staging_migrations.py -q -rs`
+- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_edge_api_achievements.py tests/test_edge_api_reviews.py tests/test_edge_api_state.py tests/test_edge_api_followed_topics.py tests/test_edge_api_profile_update.py tests/test_edge_api_analytics.py tests/test_edge_api_profile_sharing.py tests/test_edge_api_public_profile.py tests/test_edge_api_connection_preferences.py tests/test_edge_api_connections.py tests/test_edge_api_connection_status.py tests/test_edge_api_connection_request.py tests/test_edge_api_connection_block_token.py tests/test_edge_api_connection_action.py tests/test_edge_api_connection_unblock.py tests/test_edge_api_relationship_status.py tests/test_edge_api_relationship_connect.py tests/test_edge_api_relationship_remove.py tests/test_edge_api_relationship_block.py tests/test_edge_api_relationship_list.py tests/test_edge_api_weekly_quiz.py tests/test_edge_api_subtopic_quiz.py tests/test_edge_api_editorial_me.py tests/test_staging_migrations.py -q -rs`
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
 - Run `backend/tests/test_staging_api_smoke.py` with the local suite. The
   protected smoke job signs in with a dedicated staging Auth user and compares
@@ -108,6 +108,10 @@ waiting for approval.
    `CONTENT_ACTIVE_DAYS` to the same bounded integers in the Edge environment;
    otherwise they default to 10, 60, and 90. The daily RPC receives these
    values explicitly and never receives a client-supplied date.
+   Keep `EDITORIAL_ENABLED` false until staging has dedicated confirmed owner
+   and reviewer accounts with current Auth sessions and membership rows. Set
+   it to `true` only for protected role/MFA acceptance checks; the handler
+   still verifies each bearer token and the SQL gate checks the current session.
 4. Configure the protected GitHub `supabase-staging` environment with a scoped
    `SUPABASE_STAGING_ACCESS_TOKEN` secret granting Edge Functions write on the
    staging project, a `SUPABASE_STAGING_DATABASE_URL` secret containing only

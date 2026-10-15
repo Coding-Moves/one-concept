@@ -157,3 +157,40 @@ async def test_editorial_notification_timezone_is_versioned_and_session_bound(se
       has_function_privilege('service_role',
         'public.edge_api_editorial_notification_timezone(uuid,uuid,text,integer,text)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+
+
+@pytest.mark.asyncio
+async def test_editorial_authenticator_choice_requires_recent_totp_to_disable(session, user):
+    sid = uuid.uuid4()
+    await session.execute(text("update auth.users set email_confirmed_at=now() where id=:uid"), {"uid": user})
+    await session.execute(text("insert into auth.sessions(id,user_id) values(:sid,:uid)"),
+                          {"sid": sid, "uid": user})
+    await session.execute(text("""insert into public.editorial_memberships
+      (user_id,invited_email,capabilities) values(:uid,'reviewer@example.invalid',array['review'])"""),
+      {"uid": user})
+    change = text("""select public.edge_api_editorial_authenticator(
+      :uid,:sid,:aal,:verified_at,:version,:required)""")
+    now = int(await session.scalar(text("select extract(epoch from now())")))
+    args = {"uid": user, "sid": sid, "aal": "aal1", "verified_at": now,
+            "version": 1, "required": False}
+    assert _json(await session.scalar(change, args))["error"] == "recent_mfa_required"
+    args["aal"] = "aal2"
+    args["verified_at"] = now - 301
+    assert _json(await session.scalar(change, args))["error"] == "recent_mfa_required"
+    args["verified_at"] = now - 10
+    changed = _json(await session.scalar(change, args))
+    assert changed["require_mfa"] is False and changed["version"] == 2
+    assert _json(await session.scalar(change, args))["error"] == "version_conflict"
+    args.update({"version": 2, "aal": "aal1", "verified_at": None, "required": True})
+    assert _json(await session.scalar(change, args))["require_mfa"] is True
+    assert await session.scalar(text("""select count(*) from public.editorial_account_events
+      where actor_id=:uid and action='authenticator_choice'"""), {"uid": user}) == 2
+    await session.execute(text("delete from auth.sessions where id=:sid"), {"sid": sid})
+    args["version"] = 3
+    assert _json(await session.scalar(change, args))["error"] == "session_required"
+    rights = (await session.execute(text("""select
+      has_function_privilege('authenticated',
+        'public.edge_api_editorial_authenticator(uuid,uuid,text,bigint,integer,boolean)', 'EXECUTE'),
+      has_function_privilege('service_role',
+        'public.edge_api_editorial_authenticator(uuid,uuid,text,bigint,integer,boolean)', 'EXECUTE')"""))).one()
+    assert rights == (False, True)

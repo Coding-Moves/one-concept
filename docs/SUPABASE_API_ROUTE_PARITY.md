@@ -77,7 +77,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/v1/me/relationships` | Mobile / verified learner | Not ported |
 | GET, POST | `/v1/me/relationships/with/{token}` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/relationships/with/{token}/block` | Mobile / verified learner | Not ported |
-| DELETE | `/v1/me/relationships/{relationship_id}` | Mobile / verified learner | Not ported |
+| DELETE | `/v1/me/relationships/{relationship_id}` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/relationships/{relationship_id}/block` | Mobile / verified learner | Not ported |
 | GET | `/privacy` | Browser / public HTML | #418 web cutover |
 | GET | `/confirmed` | Browser / public HTML | #418 web cutover |

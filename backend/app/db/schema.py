@@ -88,7 +88,8 @@ async def snapshot(connection) -> dict:
             'edge_api_subtopic_progress','edge_api_mark_subtopics_seen',
             'edge_api_daily_payload','edge_api_signal_supply','edge_api_daily',
             'edge_api_record_subtopic_completion','edge_api_award_eligible',
-            'edge_api_complete_daily')""",
+            'edge_api_complete_daily','edge_api_achievements',
+            'edge_api_achievements_seen')""",
     }
     result = {}
     for kind, query in queries.items():

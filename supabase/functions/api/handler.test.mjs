@@ -64,6 +64,27 @@ test('topics requires Auth verification and passes only its returned user ID to 
   assert.deepEqual(JSON.parse(calls[1].init.body), { p_user_id: userId });
 });
 
+test('weekly quiz selection uses the verified account and never exposes a private RPC result to anonymous callers', async () => {
+  const calls = [];
+  const quiz = { available: false, week_start: '2026-10-12', required_concepts: 7,
+    available_concepts: 2, detail: 'Complete more concepts with reviewed questions to unlock this weekly quiz.' };
+  const handler = createHandler(config, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(quiz);
+  });
+  assert.equal((await handler(request('/v1/quizzes/weekly'))).status, 401);
+  assert.equal(calls.length, 0);
+  const headers = { authorization: 'Bearer account-token' };
+  const result = await handler(request('/v1/quizzes/weekly', { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), quiz);
+  assert.match(calls[1].url, /\/rpc\/edge_api_weekly_quiz$/);
+  assert.deepEqual(JSON.parse(calls[1].init.body), { p_user_id: userId });
+  assert.equal((await handler(request('/v1/quizzes/weekly', { method: 'POST', headers }))).status, 405);
+  assert.equal(calls.length, 2);
+});
+
 test('daily returns the verified account assignment or typed unavailable state', async () => {
   const calls = [];
   let payload = {

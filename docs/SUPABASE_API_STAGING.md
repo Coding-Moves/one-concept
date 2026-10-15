@@ -73,6 +73,11 @@ fresh-project runner must not be rerun against the initialized project.
    needed for browser testing. No wildcard is accepted. `SUPABASE_URL`,
    `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are Edge runtime secrets;
    never copy the service key to a client, PR, log or build artifact.
+   If the current FastAPI deployment overrides its supply defaults, set
+   `CONTENT_LOW_WATERMARK`, `CONTENT_RESERVE_PER_TOPIC`, and
+   `CONTENT_ACTIVE_DAYS` to the same bounded integers in the Edge environment;
+   otherwise they default to 10, 60, and 90. The daily RPC receives these
+   values explicitly and never receives a client-supplied date.
 4. Configure the protected GitHub `supabase-staging` environment with a scoped
    `SUPABASE_STAGING_ACCESS_TOKEN` secret granting Edge Functions write on the
    staging project, a `SUPABASE_STAGING_DATABASE_URL` secret containing only

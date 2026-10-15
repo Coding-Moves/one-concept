@@ -29,8 +29,18 @@ function response(body: unknown, status: number, cors: Headers): Response {
   return new Response(JSON.stringify(body), { status, headers });
 }
 
-function error(status: number, code: string, cors: Headers): Response {
-  return response({ detail: { code } }, status, cors);
+function httpError(status: number, detail: string, cors: Headers, authenticate = false): Response {
+  const result = response({ detail }, status, cors);
+  if (authenticate) result.headers.set('www-authenticate', 'Bearer');
+  return result;
+}
+
+function unavailable(cors: Headers): Response {
+  const incident = crypto.randomUUID().replaceAll('-', '');
+  const result = response({ error: { code: 'service_unavailable', incident_id: incident } }, 503, cors);
+  result.headers.set('retry-after', '30');
+  result.headers.set('x-incident-id', incident);
+  return result;
 }
 
 function corsHeaders(origin: string | null, allowed: readonly string[]): Headers | null {
@@ -38,6 +48,7 @@ function corsHeaders(origin: string | null, allowed: readonly string[]): Headers
   const headers = new Headers({ vary: 'Origin' });
   if (origin !== null) {
     headers.set('access-control-allow-origin', origin);
+    headers.set('access-control-allow-credentials', 'true');
     headers.set('access-control-allow-methods', METHODS);
     headers.set('access-control-allow-headers', HEADERS);
     headers.set('access-control-expose-headers', 'Retry-After');
@@ -93,12 +104,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
 
   return async request => {
     const cors = corsHeaders(request.headers.get('origin'), config.allowedOrigins);
-    if (!cors) return error(403, 'origin_not_allowed', new Headers());
+    if (!cors) return httpError(403, 'Origin not allowed', new Headers());
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
 
     const path = routePath(new URL(request.url).pathname);
-    if (path === null) return error(404, 'not_found', cors);
-    if (request.method !== 'GET') return error(405, 'method_not_allowed', cors);
+    if (path === null) return httpError(404, 'Not Found', cors);
+    if (request.method !== 'GET') return httpError(405, 'Method Not Allowed', cors);
 
     try {
       if (path === '/health') {
@@ -106,15 +117,15 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       }
       if (path === '/v1/topics') {
         const token = bearerToken(request);
-        if (!token) return error(401, 'unauthorized', cors);
+        if (!token) return httpError(401, 'Missing bearer token', cors, true);
         const userId = await authenticatedUser(token, config, fetcher);
-        if (!userId) return error(401, 'unauthorized', cors);
+        if (!userId) return httpError(401, 'Invalid or expired token', cors, true);
         return response(await rpc('edge_api_topics', { p_user_id: userId }, config, fetcher), 200, cors);
       }
-      return error(404, 'not_found', cors);
+      return httpError(404, 'Not Found', cors);
     } catch {
       // Do not echo provider errors or sensitive query details to callers.
-      return error(503, 'upstream_unavailable', cors);
+      return unavailable(cors);
     }
   };
 }

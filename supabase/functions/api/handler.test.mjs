@@ -21,6 +21,7 @@ test('health probes the database and sets exact-origin CORS', async () => {
   assert.equal(result.status, 200);
   assert.deepEqual(await result.json(), { status: 'ok', database: 'reachable' });
   assert.equal(result.headers.get('access-control-allow-origin'), 'https://review.example.com');
+  assert.equal(result.headers.get('access-control-allow-credentials'), 'true');
   assert.equal(result.headers.get('cache-control'), 'no-store');
   assert.equal(calls.length, 1);
   assert.match(calls[0].url, /\/rest\/v1\/rpc\/edge_api_health$/);
@@ -50,6 +51,8 @@ test('topics requires Auth verification and passes only its returned user ID to 
   });
   const missing = await handler(request('/v1/topics'));
   assert.equal(missing.status, 401);
+  assert.deepEqual(await missing.json(), { detail: 'Missing bearer token' });
+  assert.equal(missing.headers.get('www-authenticate'), 'Bearer');
   assert.equal(calls.length, 0);
   const result = await handler(request('/v1/topics', { headers: { authorization: 'Bearer user-access-token' } }));
   assert.equal(result.status, 200);
@@ -67,6 +70,7 @@ test('rejected or malformed Auth responses cannot reach the service RPC', async 
     const handler = createHandler(config, async () => { calls++; return authResult; });
     const result = await handler(request('/v1/topics', { headers: { authorization: 'Bearer bad-token' } }));
     assert.equal(result.status, 401);
+    assert.deepEqual(await result.json(), { detail: 'Invalid or expired token' });
     assert.equal(calls, 1);
   }
 });
@@ -78,6 +82,9 @@ test('upstream failures are generic and do not reveal secrets', async () => {
   const body = await result.text();
   assert.equal(body.includes('provider-secret'), false);
   assert.equal(body.includes(config.serviceRoleKey), false);
+  assert.equal(result.headers.get('retry-after'), '30');
+  assert.match(result.headers.get('x-incident-id'), /^[0-9a-f]{32}$/);
+  assert.equal(JSON.parse(body).error.code, 'service_unavailable');
 });
 
 test('only exact API path and method combinations are served', async () => {

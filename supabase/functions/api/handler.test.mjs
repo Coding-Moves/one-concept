@@ -367,6 +367,49 @@ test('public profile signs only an owner-matching private avatar key', async () 
   assert.equal(storageCalls, 0);
 });
 
+test('connection settings use verified identity and reject stale or malformed writes', async () => {
+  const calls = [];
+  let payload = { accepting_requests: false, version: 0 };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  assert.equal((await handler(request('/v1/me/connections/settings'))).status, 401);
+  const current = await handler(request('/v1/me/connections/settings', { headers }));
+  assert.equal(current.status, 200);
+  assert.deepEqual(await current.json(), payload);
+  assert.match(calls[0].url, /\/rpc\/edge_api_connection_settings_get$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId });
+  payload = { accepting_requests: true, version: 1 };
+  const updated = await handler(request('/v1/me/connections/settings', {
+    method: 'PUT', headers, body: JSON.stringify({ accepting_requests: true, version: 0 }),
+  }));
+  assert.equal(updated.status, 200);
+  assert.deepEqual(await updated.json(), payload);
+  assert.match(calls[1].url, /\/rpc\/edge_api_connection_settings_put$/);
+  assert.deepEqual(calls[1].args, { p_user_id: userId, p_accepting: true, p_version: 0 });
+  payload = { error: 'version_conflict' };
+  const stale = await handler(request('/v1/me/connections/settings', {
+    method: 'PUT', headers, body: JSON.stringify({ accepting_requests: false, version: 0 }),
+  }));
+  assert.equal(stale.status, 409);
+  assert.equal(stale.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.deepEqual(await stale.json(), { detail: 'Settings changed. Reload before saving.' });
+  for (const body of [{ accepting_requests: 'yes', version: 0 },
+    { accepting_requests: true, version: -1 },
+    { accepting_requests: true, version: 0, other_user: userId }]) {
+    assert.equal((await handler(request('/v1/me/connections/settings', {
+      method: 'PUT', headers, body: JSON.stringify(body),
+    }))).status, 422);
+  }
+  assert.equal(calls.length, 3);
+  assert.equal((await handler(request('/v1/me/connections/settings', {
+    method: 'POST', headers,
+  }))).status, 405);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -258,6 +258,16 @@ function sharingInput(body: JsonObject): Record<string, unknown> {
   };
 }
 
+function connectionSettingsInput(body: JsonObject): { p_accepting: boolean; p_version: number } {
+  if (Object.keys(body).some(key => key !== 'accepting_requests' && key !== 'version')
+      || typeof body.accepting_requests !== 'boolean'
+      || typeof body.version !== 'number' || !Number.isInteger(body.version)
+      || body.version < 0) {
+    throw new ClientBodyError(422, 'Invalid connection settings');
+  }
+  return { p_accepting: body.accepting_requests, p_version: body.version };
+}
+
 function sharingResponse(body: unknown, status: number, cors: Headers): Response {
   const result = response(body, status, cors);
   result.headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
@@ -420,6 +430,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const stats = path === '/v1/me/stats';
     const analytics = path === '/v1/me/analytics';
     const sharing = path === '/v1/me/profile-sharing';
+    const connectionSettings = path === '/v1/me/connections/settings';
     const state = path === '/v1/me/state';
     const profile = path === '/v1/me';
     const followedTopics = path === '/v1/me/topics';
@@ -431,12 +442,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
       ? request.method === 'PUT' || request.method === 'DELETE'
-      : notifications || sharing
+      : notifications || sharing || connectionSettings
         ? request.method === 'GET' || request.method === 'PUT'
         : followedTopics
           ? request.method === 'PUT'
@@ -517,6 +528,17 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         }
         if (data.error === 'unearned_achievements') {
           return sharingResponse({ detail: 'Only earned achievements can be shared' }, 422, cors);
+        }
+        return sharingResponse(data, 200, cors);
+      }
+      if (connectionSettings) {
+        const args = request.method === 'PUT' ? connectionSettingsInput((await readJson(request))!) : {};
+        const data = await rpc(request.method === 'PUT'
+          ? 'edge_api_connection_settings_put' : 'edge_api_connection_settings_get',
+        { p_user_id: userId, ...args }, config, fetcher) as JsonObject | null;
+        if (data === null) return unavailable(cors);
+        if (data.error === 'version_conflict') {
+          return sharingResponse({ detail: 'Settings changed. Reload before saving.' }, 409, cors);
         }
         return sharingResponse(data, 200, cors);
       }

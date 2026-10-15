@@ -139,7 +139,7 @@ def main() -> int:
             print("Could not inspect staging schema", file=sys.stderr)
             return 1
         if flags.get("profiles"):
-            rows = psql(env, "-At", "-c", "select exists(select 1 from public.profiles)")
+            rows = psql(env, "-qAt", "-c", "set row_security = off; select exists(select 1 from public.profiles)")
             if rows.returncode != 0 or rows.stdout.strip() not in ("t", "f"):
                 print("Could not check staging profile row presence", file=sys.stderr)
                 return 1

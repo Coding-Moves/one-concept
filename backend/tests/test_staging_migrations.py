@@ -88,6 +88,7 @@ def test_inspection_is_read_only_and_does_not_print_credentials(monkeypatch, tmp
     assert runner.main() == 0
     assert len(calls) == 2
     assert calls[0][-1] == runner.INSPECT_SQL
+    assert "row_security = off" in calls[1][-1]
     assert all("-f" not in call for call in calls)
     output = capsys.readouterr().out
     assert '"profiles": true' in output

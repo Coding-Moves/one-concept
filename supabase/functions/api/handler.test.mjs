@@ -410,6 +410,36 @@ test('connection settings use verified identity and reject stale or malformed wr
   }))).status, 405);
 });
 
+test('connection list scopes kind and cursor to the verified account', async () => {
+  const cursor = '00000000-0000-4000-8000-000000000001';
+  const calls = [];
+  const page = { items: [{ id: cursor, display_name: 'Private learner', public_path: null }],
+    next_cursor: null };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(page);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  assert.equal((await handler(request('/v1/me/connections'))).status, 401);
+  const listed = await handler(request(`/v1/me/connections?kind=blocked&cursor=${cursor}&limit=1`, { headers }));
+  assert.equal(listed.status, 200);
+  assert.deepEqual(await listed.json(), page);
+  assert.equal(listed.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.match(calls[0].url, /\/rpc\/edge_api_connections$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId,
+    p_kind: 'blocked', p_cursor: cursor, p_limit: 1 });
+  const defaultPage = await handler(request('/v1/me/connections', { headers }));
+  assert.equal(defaultPage.status, 200);
+  assert.deepEqual(calls[1].args, { p_user_id: userId,
+    p_kind: 'accepted', p_cursor: null, p_limit: 25 });
+  for (const query of ['kind=unknown', 'cursor=bad', 'limit=0', 'limit=51']) {
+    assert.equal((await handler(request(`/v1/me/connections?${query}`, { headers }))).status, 422);
+  }
+  assert.equal(calls.length, 2);
+  assert.equal((await handler(request('/v1/me/connections', { method: 'POST', headers }))).status, 405);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

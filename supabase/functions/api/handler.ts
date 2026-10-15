@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -286,6 +286,14 @@ function connectionPageInput(query: URLSearchParams): {
   return { kind, cursor, limit };
 }
 
+function connectionActionInput(body: JsonObject): string {
+  if (Object.keys(body).length !== 1 || typeof body.action !== 'string'
+      || !['accept', 'decline', 'cancel', 'remove', 'block'].includes(body.action)) {
+    throw new ClientBodyError(422, 'Invalid connection action');
+  }
+  return body.action;
+}
+
 function sharingResponse(body: unknown, status: number, cors: Headers): Response {
   const result = response(body, status, cors);
   result.headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
@@ -452,6 +460,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const publicProfile = /^\/v1\/public-profiles\/([^/]+)$/.exec(path);
     const connectionStatus = /^\/v1\/me\/connections\/with\/([^/]+)$/.exec(path);
     const connectionBlock = /^\/v1\/me\/connections\/with\/([^/]+)\/block$/.exec(path);
+    const connectionAction = /^\/v1\/me\/connections\/([^/]+)\/actions$/.exec(path);
     const reviewComplete = /^\/v1\/reviews\/([^/]+)\/complete$/.exec(path);
     const notifications = path === '/v1/me/notifications';
     const pushToken = path === '/v1/me/push-token';
@@ -471,7 +480,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -486,7 +495,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? request.method === 'PATCH'
         : pushToken
           ? request.method === 'POST' || request.method === 'DELETE'
-          : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null || connectionBlock !== null
+          : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null || connectionBlock !== null || connectionAction !== null
             ? request.method === 'POST'
           : request.method === 'GET';
     if (!validMethod) return httpError(405, 'Method Not Allowed', cors);
@@ -623,6 +632,27 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         if (data.error === 'self') {
           return sharingResponse({ detail: 'You cannot block yourself' }, 400, cors);
         }
+        return data.ok === true ? privateNoContent(cors) : unavailable(cors);
+      }
+      if (connectionAction) {
+        if (!UUID.test(connectionAction[1])) {
+          return sharingResponse({ detail: 'Invalid connection ID' }, 422, cors);
+        }
+        const body = await readJson(request);
+        const data = await rpc('edge_api_connection_action', {
+          p_user_id: userId, p_connection_id: connectionAction[1],
+          p_action: connectionActionInput(body!),
+        }, config, fetcher) as JsonObject | null;
+        if (data === null) return unavailable(cors);
+        const errors: Record<string, { status: number; detail: string }> = {
+          unavailable: { status: 404, detail: 'This connection is unavailable' },
+          recipient_only: { status: 403, detail: 'Only the recipient can answer a request' },
+          sender_only: { status: 403, detail: 'Only the sender can cancel a request' },
+          changed: { status: 409, detail: 'This request has changed. Reload the list.' },
+          invalid: { status: 422, detail: 'Invalid connection action' },
+        };
+        const mapped = typeof data.error === 'string' ? errors[data.error] : undefined;
+        if (mapped) return sharingResponse({ detail: mapped.detail }, mapped.status, cors);
         return data.ok === true ? privateNoContent(cors) : unavailable(cors);
       }
       if (state) {

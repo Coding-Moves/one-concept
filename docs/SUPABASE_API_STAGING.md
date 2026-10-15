@@ -1,11 +1,18 @@
 # Supabase API candidate staging (#416)
 
 The current candidate serves health, topics, concept detail, idempotent
-Like/Save, notification preferences, push-token, and streak-statistics routes at
+Like/Save, notification preferences, push-token, streak-statistics, history,
+and saved-pagination routes at
 `/functions/v1/api`. The remaining entries in
 [the route matrix](SUPABASE_API_ROUTE_PARITY.md) are not implemented. Keep Railway
 and all production clients on the existing API until #416 meets its acceptance
 criteria and #418 performs the cutover.
+
+The first staging schema run applied migrations 0001–0049 and deployed the
+candidate at commit `b8fddd4`. Migration 0050 and its history/saved routes are
+locally tested but are not yet applied or deployed in staging. Later candidate
+migrations need a reviewed incremental staging path; the fresh-project runner
+must not be rerun against the initialized project.
 
 ## Local checks
 

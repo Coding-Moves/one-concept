@@ -70,7 +70,9 @@
     "0068_supabase_connection_unblock_api.sql": "521a7e81e18d9201acd16d6ff0252f86633a31e66aeab27741bfee7d667bb503",
     "0069_supabase_relationship_status_api.sql": "16ac2644fd8b589f3b9403ca75aff65f4e425bc4078693232a442414bf7a94a8",
     "0070_supabase_relationship_connect_api.sql": "125d32cd7e4abcbcec6167341dbbc4ff4da4bae7b82a22d25956386b8c54857c",
-    "0071_supabase_relationship_remove_api.sql": "b8844b9991fa948310d232d7d333411f4d26ce06a72ab6ab8293f844bda750a8"
+    "0071_supabase_relationship_remove_api.sql": "b8844b9991fa948310d232d7d333411f4d26ce06a72ab6ab8293f844bda750a8",
+    "0072_supabase_relationship_block_api.sql": "263ce39a8fbbba692c255e9a21942dba50ccbb7c9e2c320fc542d1763baf4f8a",
+    "0073_supabase_relationship_list_api.sql": "daeb2596900dfb611a1800ca2d891acff4d3a2c2b1bf01d8f5c6f36dc91456e0"
   },
   "schema": {
     "columns": {

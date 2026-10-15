@@ -98,6 +98,12 @@ INCREMENTAL_PROBES = {
     "0071_supabase_relationship_remove_api.sql": (
         "public.edge_api_relationship_remove(uuid,uuid)",
     ),
+    "0072_supabase_relationship_block_api.sql": (
+        "public.edge_api_relationship_block(uuid,uuid)",
+    ),
+    "0073_supabase_relationship_list_api.sql": (
+        "public.edge_api_relationships(uuid,timestamp with time zone,uuid,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -46,7 +46,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/v1/concepts/{slug}` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | PUT, DELETE | `/v1/concepts/{slug}/like` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | PUT, DELETE | `/v1/concepts/{slug}/save` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| GET | `/v1/me/state` | Mobile / verified learner | Not ported |
+| GET | `/v1/me/state` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/me/history` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/me/saved` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/me/stats` | Mobile / verified learner | Candidate; local handler/SQL tests |
@@ -57,7 +57,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | PUT, DELETE | `/v1/me/avatar` | Mobile / verified learner | Not ported |
 | GET | `/v1/me/subtopics/progress` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/subtopics/completions/seen` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| POST | `/v1/reviews/{review_id}/complete` | Mobile / verified learner | Not ported |
+| POST | `/v1/reviews/{review_id}/complete` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/me/achievements` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/achievements/seen` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/me/analytics` | Mobile / verified learner | Not ported |

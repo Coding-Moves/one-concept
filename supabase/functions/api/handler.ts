@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -170,6 +170,14 @@ function subtopicIds(body: JsonObject): string[] {
     throw new ClientBodyError(422, 'Invalid subtopic completion IDs');
   }
   return body.ids as string[];
+}
+
+function achievementCodes(body: JsonObject): string[] {
+  if (!Array.isArray(body.codes) || body.codes.length < 1 || body.codes.length > 100
+      || !body.codes.every(value => typeof value === 'string')) {
+    throw new ClientBodyError(422, 'Invalid achievement codes');
+  }
+  return body.codes as string[];
 }
 
 function pageLimit(query: URLSearchParams): number {
@@ -256,9 +264,11 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const saved = path === '/v1/me/saved';
     const subtopicProgress = path === '/v1/me/subtopics/progress';
     const subtopicSeen = path === '/v1/me/subtopics/completions/seen';
+    const achievements = path === '/v1/me/achievements';
+    const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && !daily && !dailyComplete && concept === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -267,7 +277,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         ? request.method === 'GET' || request.method === 'PUT'
         : pushToken
           ? request.method === 'POST' || request.method === 'DELETE'
-          : subtopicSeen || dailyComplete
+          : subtopicSeen || achievementsSeen || dailyComplete
             ? request.method === 'POST'
           : request.method === 'GET';
     if (!validMethod) return httpError(405, 'Method Not Allowed', cors);
@@ -321,6 +331,17 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         const body = await readJson(request);
         await rpc('edge_api_mark_subtopics_seen', {
           p_user_id: userId, p_ids: subtopicIds(body!),
+        }, config, fetcher);
+        return noContent(cors);
+      }
+      if (achievements) {
+        const data = await rpc('edge_api_achievements', { p_user_id: userId }, config, fetcher);
+        return data === null ? unavailable(cors) : response(data, 200, cors);
+      }
+      if (achievementsSeen) {
+        const body = await readJson(request);
+        await rpc('edge_api_achievements_seen', {
+          p_user_id: userId, p_codes: achievementCodes(body!),
         }, config, fetcher);
         return noContent(cors);
       }

@@ -117,6 +117,34 @@ test('daily completion is account-scoped and preserves the missing-assignment re
   assert.equal((await handler(request('/v1/daily/complete', { headers }))).status, 405);
 });
 
+test('achievements are account-scoped and acknowledgment validates its code list', async () => {
+  const calls = [];
+  const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(url.endsWith('/rpc/edge_api_achievements') ? payload : null);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const result = await handler(request('/v1/me/achievements', { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls[0].url, /\/rpc\/edge_api_achievements$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId });
+  const seen = await handler(request('/v1/me/achievements/seen', {
+    method: 'POST', headers, body: JSON.stringify({ codes: ['first-concept'] }),
+  }));
+  assert.equal(seen.status, 204);
+  assert.match(calls[1].url, /\/rpc\/edge_api_achievements_seen$/);
+  assert.deepEqual(calls[1].args, { p_user_id: userId, p_codes: ['first-concept'] });
+  const invalid = await handler(request('/v1/me/achievements/seen', {
+    method: 'POST', headers, body: JSON.stringify({ codes: [] }),
+  }));
+  assert.equal(invalid.status, 422);
+  assert.equal(calls.length, 2);
+  assert.equal((await handler(request('/v1/me/achievements/seen', { headers }))).status, 405);
+});
+
 test('rejected or malformed Auth responses cannot reach the service RPC', async () => {
   for (const authResult of [new Response(null, { status: 401 }), Response.json({ id: 'not-a-uuid' })]) {
     let calls = 0;

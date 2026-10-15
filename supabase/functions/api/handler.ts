@@ -86,7 +86,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -159,6 +159,14 @@ function pushInput(body: JsonObject): { token: string; platform: string | null }
     throw new ClientBodyError(422, 'Invalid push token');
   }
   return { token, platform: typeof platform === 'string' ? platform : null };
+}
+
+function subtopicIds(body: JsonObject): string[] {
+  if (!Array.isArray(body.ids) || body.ids.length < 1 || body.ids.length > 100
+      || !body.ids.every(value => typeof value === 'string' && UUID.test(value))) {
+    throw new ClientBodyError(422, 'Invalid subtopic completion IDs');
+  }
+  return body.ids as string[];
 }
 
 function pageLimit(query: URLSearchParams): number {
@@ -235,7 +243,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const stats = path === '/v1/me/stats';
     const history = path === '/v1/me/history';
     const saved = path === '/v1/me/saved';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && concept === null) {
+    const subtopicProgress = path === '/v1/me/subtopics/progress';
+    const subtopicSeen = path === '/v1/me/subtopics/completions/seen';
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && concept === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -244,6 +254,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         ? request.method === 'GET' || request.method === 'PUT'
         : pushToken
           ? request.method === 'POST' || request.method === 'DELETE'
+          : subtopicSeen
+            ? request.method === 'POST'
           : request.method === 'GET';
     if (!validMethod) return httpError(405, 'Method Not Allowed', cors);
 
@@ -273,6 +285,16 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           p_user_id: userId, p_before: cursor.before, p_concept_id: cursor.conceptId,
           p_limit: pageLimit(requestUrl.searchParams),
         }, config, fetcher), 200, cors);
+      }
+      if (subtopicProgress) {
+        return response(await rpc('edge_api_subtopic_progress', { p_user_id: userId }, config, fetcher), 200, cors);
+      }
+      if (subtopicSeen) {
+        const body = await readJson(request);
+        await rpc('edge_api_mark_subtopics_seen', {
+          p_user_id: userId, p_ids: subtopicIds(body!),
+        }, config, fetcher);
+        return noContent(cors);
       }
       if (notifications) {
         const data = request.method === 'GET'

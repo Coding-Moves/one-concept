@@ -204,6 +204,46 @@ test('invalid pagination is rejected before service-role RPC access', async () =
   assert.equal((await handler(request('/v1/me/history'))).status, 401);
 });
 
+test('subtopic progress and seen writes use the verified account', async () => {
+  const calls = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(url.endsWith('edge_api_subtopic_progress') ? { items: [] } : true);
+  });
+  const headers = { authorization: 'Bearer account-token', 'content-type': 'application/json' };
+  const progress = await handler(request('/v1/me/subtopics/progress', { headers }));
+  assert.equal(progress.status, 200);
+  assert.deepEqual(await progress.json(), { items: [] });
+  assert.match(calls[0].url, /\/rpc\/edge_api_subtopic_progress$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId });
+
+  const seen = await handler(request('/v1/me/subtopics/completions/seen', {
+    method: 'POST', headers, body: JSON.stringify({ ids: [userId] }),
+  }));
+  assert.equal(seen.status, 204);
+  assert.match(calls[1].url, /\/rpc\/edge_api_mark_subtopics_seen$/);
+  assert.deepEqual(calls[1].args, { p_user_id: userId, p_ids: [userId] });
+});
+
+test('subtopic acknowledgment rejects invalid IDs before service-role access', async () => {
+  let serviceCalls = 0;
+  const handler = createHandler(config, async url => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    serviceCalls++;
+    return Response.json(true);
+  });
+  const headers = { authorization: 'Bearer account-token', 'content-type': 'application/json' };
+  for (const ids of [[], ['invalid-id'], Array(101).fill(userId)]) {
+    const result = await handler(request('/v1/me/subtopics/completions/seen', {
+      method: 'POST', headers, body: JSON.stringify({ ids }),
+    }));
+    assert.equal(result.status, 422);
+  }
+  assert.equal(serviceCalls, 0);
+  assert.equal((await handler(request('/v1/me/subtopics/completions/seen', { headers }))).status, 405);
+});
+
 test('invalid or excessive preference bodies fail before database access', async () => {
   let calls = 0;
   const handler = createHandler(config, async url => {

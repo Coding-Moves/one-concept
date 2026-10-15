@@ -117,6 +117,50 @@ test('daily completion is account-scoped and preserves the missing-assignment re
   assert.equal((await handler(request('/v1/daily/complete', { headers }))).status, 405);
 });
 
+test('startup state uses verified identity, bounded supply settings, and private avatar signing', async () => {
+  const ref = `avatars/${userId}/${'a'.repeat(32)}.jpg`;
+  const calls = [];
+  const state = { today: '2026-10-15', daily: null, daily_availability: 'review_available',
+    avatar_ref: ref, avatar_url: null, learned: [], bookmarks: [] };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, init });
+    if (url.includes('/storage/v1/object/sign/')) {
+      return Response.json({ signedURL: `/object/sign/profile-avatars/${ref}?token=private-signature` });
+    }
+    return Response.json({ ...state });
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const result = await handler(request('/v1/me/state?compact=true&reviews=true', { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { ...state,
+    avatar_url: `${config.supabaseUrl}/storage/v1/object/sign/profile-avatars/${ref}?token=private-signature`,
+  });
+  assert.match(calls[0].url, /\/rpc\/edge_api_state$/);
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    p_user_id: userId, p_compact: true, p_reviews: true,
+    p_low: 10, p_reserve: 60, p_active_days: 90, p_today: null,
+  });
+  assert.equal(calls[1].init.headers.apikey, config.serviceRoleKey);
+  assert.deepEqual(JSON.parse(calls[1].init.body), { expiresIn: 120 });
+  const invalid = await handler(request('/v1/me/state?compact=maybe', { headers }));
+  assert.equal(invalid.status, 422);
+  assert.equal(calls.length, 2);
+});
+
+test('startup state never signs another account avatar key', async () => {
+  let storageCalls = 0;
+  const handler = createHandler(config, async (url) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.includes('/storage/v1/')) { storageCalls++; throw Error('must not sign'); }
+    return Response.json({ avatar_ref: `avatars/${'b'.repeat(36)}/${'a'.repeat(32)}.jpg` });
+  });
+  const result = await handler(request('/v1/me/state', { headers: { authorization: 'Bearer account-token' } }));
+  assert.equal(result.status, 200);
+  assert.equal((await result.json()).avatar_url, null);
+  assert.equal(storageCalls, 0);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

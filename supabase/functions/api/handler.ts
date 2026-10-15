@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -191,6 +191,37 @@ function pageLimit(query: URLSearchParams): number {
   return limit;
 }
 
+function queryBoolean(query: URLSearchParams, name: string): boolean {
+  const raw = query.get(name)?.toLowerCase();
+  if (raw === undefined || ['false', '0', 'off', 'no'].includes(raw)) return false;
+  if (['true', '1', 'on', 'yes'].includes(raw)) return true;
+  throw new ClientBodyError(422, `Invalid ${name} query value`);
+}
+
+async function signedAvatarUrl(ref: unknown, userId: string, config: ApiConfig, fetcher: Fetcher): Promise<string | null> {
+  if (typeof ref !== 'string' || !new RegExp(`^avatars/${userId}/[a-f0-9]{32}\\.jpg$`).test(ref)) return null;
+  try {
+    const result = await fetcher(`${config.supabaseUrl}/storage/v1/object/sign/profile-avatars/${ref}`, {
+      method: 'POST',
+      headers: {
+        apikey: config.serviceRoleKey,
+        authorization: `Bearer ${config.serviceRoleKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ expiresIn: 120 }),
+      signal: AbortSignal.timeout(5000),
+      redirect: 'error',
+    });
+    if (!result.ok) return null;
+    const value: { signedURL?: unknown } = await result.json();
+    const expected = `/object/sign/profile-avatars/avatars/${userId}/`;
+    return typeof value.signedURL === 'string' && value.signedURL.startsWith(expected)
+      ? `${config.supabaseUrl}/storage/v1${value.signedURL}` : null;
+  } catch {
+    return null;
+  }
+}
+
 function historyCursor(query: URLSearchParams): string | null {
   const raw = query.get('cursor');
   if (raw === null) return null;
@@ -261,6 +292,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const notifications = path === '/v1/me/notifications';
     const pushToken = path === '/v1/me/push-token';
     const stats = path === '/v1/me/stats';
+    const state = path === '/v1/me/state';
     const history = path === '/v1/me/history';
     const saved = path === '/v1/me/saved';
     const subtopicProgress = path === '/v1/me/subtopics/progress';
@@ -269,7 +301,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !state && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -320,6 +352,17 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       }
       if (stats) {
         return response(await rpc('edge_api_stats', { p_user_id: userId }, config, fetcher), 200, cors);
+      }
+      if (state) {
+        const data = await rpc('edge_api_state', {
+          p_user_id: userId,
+          p_compact: queryBoolean(requestUrl.searchParams, 'compact'),
+          p_reviews: queryBoolean(requestUrl.searchParams, 'reviews'),
+          p_low: low, p_reserve: reserve, p_active_days: activeDays, p_today: null,
+        }, config, fetcher) as JsonObject | null;
+        if (data === null) return unavailable(cors);
+        data.avatar_url = await signedAvatarUrl(data.avatar_ref, userId, config, fetcher);
+        return response(data, 200, cors);
       }
       if (history) {
         return response(await rpc('edge_api_history', {

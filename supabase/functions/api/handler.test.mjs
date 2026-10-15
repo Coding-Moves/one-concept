@@ -637,6 +637,31 @@ test('directed connect preserves caller scope, privacy, and rate-limit header', 
   assert.equal(calls.length, 3);
 });
 
+test('directed relationship removal is authenticated, owner-bound, and idempotent', async () => {
+  const id = '00000000-0000-4000-8000-000000000001';
+  const calls = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json({ ok: true });
+  });
+  const path = `/v1/me/relationships/${id}`;
+  const headers = { authorization: 'Bearer account-token' };
+  assert.equal((await handler(request(path, { method: 'DELETE' }))).status, 401);
+  for (let repeat = 0; repeat < 2; repeat++) {
+    const removed = await handler(request(path, { method: 'DELETE', headers }));
+    assert.equal(removed.status, 204);
+    assert.equal(removed.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  }
+  assert.match(calls[0].url, /\/rpc\/edge_api_relationship_remove$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_relationship_id: id });
+  assert.equal((await handler(request('/v1/me/relationships/bad', {
+    method: 'DELETE', headers,
+  }))).status, 422);
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+  assert.equal(calls.length, 2);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

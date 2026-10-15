@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'supabase-api-staging-inspect-*'
+      - 'supabase-api-staging-reset-*'
       - 'supabase-api-staging-schema-*'
       - 'supabase-api-staging-deploy-*'
 
@@ -15,6 +16,23 @@ permissions:
   contents: read
 
 jobs:
+  reset_demo:
+    if: startsWith(github.ref_name, 'supabase-api-staging-reset-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Remove only the reviewed disposable demo schema
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: python backend/tools/apply_staging_migrations.py --reset-demo
+
   inspect:
     if: startsWith(github.ref_name, 'supabase-api-staging-inspect-')
     runs-on: ubuntu-latest

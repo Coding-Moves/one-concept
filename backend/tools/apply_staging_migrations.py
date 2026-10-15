@@ -16,6 +16,72 @@ from urllib.parse import unquote, urlsplit
 
 MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 PROJECT_REF = re.compile(r"^[a-z0-9]{20}$")
+DEMO_PROJECT_REF = "zhrulokgngjceqgjkcmw"
+FRESH_SQL = """set row_security = off;
+select
+  to_regclass('auth.users') is not null,
+  to_regnamespace('public') is not null,
+  not exists (
+    select 1 from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'S', 'f', 'c')
+  ),
+  not exists (
+    select 1 from pg_type t join pg_namespace n on n.oid = t.typnamespace
+    where n.nspname = 'public' and t.typtype in ('e', 'd')
+  ),
+  not exists (
+    select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+  ),
+  not exists (
+    select 1 from pg_trigger t
+    where t.tgrelid = to_regclass('auth.users') and not t.tgisinternal
+  ),
+  not exists (select 1 from auth.users)"""
+RESET_DEMO_SQL = """begin;
+set local row_security = off;
+do $$
+declare
+  relations text[];
+  functions text[];
+begin
+  if current_database() <> 'postgres' or to_regclass('auth.users') is null then
+    raise exception 'demo reset refused: unexpected database';
+  end if;
+  if exists(select 1 from auth.users) then
+    raise exception 'demo reset refused: Auth users exist';
+  end if;
+  if exists(select 1 from pg_trigger t
+    where t.tgrelid = 'auth.users'::regclass and not t.tgisinternal) then
+    raise exception 'demo reset refused: Auth user triggers exist';
+  end if;
+  select coalesce(array_agg(c.relname::text || ':' || c.relkind::text order by c.relname), '{}'::text[])
+    into relations
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'S', 'f', 'c');
+  if relations <> array[
+    'admins:r', 'payout_requests:r', 'profiles:r',
+    'screenshots:r', 'tasks:r', 'wallets:r'
+  ] then
+    raise exception 'demo reset refused: public relation inventory changed';
+  end if;
+  if exists(select 1 from pg_type t join pg_namespace n on n.oid = t.typnamespace
+    where n.nspname = 'public' and t.typtype in ('e', 'd')) then
+    raise exception 'demo reset refused: custom public types exist';
+  end if;
+  select coalesce(array_agg(p.proname || '(' || pg_get_function_identity_arguments(p.oid) || ')'
+    order by p.proname, pg_get_function_identity_arguments(p.oid)), '{}'::text[])
+    into functions
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public';
+  if functions <> array['rls_auto_enable()'] then
+    raise exception 'demo reset refused: public function inventory changed';
+  end if;
+end $$;
+drop table public.admins, public.payout_requests, public.profiles,
+  public.screenshots, public.tasks, public.wallets restrict;
+drop function public.rls_auto_enable() restrict;
+commit;"""
 INSPECT_SQL = """select json_build_object(
   'auth_users', to_regclass('auth.users') is not null,
   'profiles', to_regclass('public.profiles') is not null,
@@ -109,6 +175,7 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check-only", action="store_true", help="validate target and list files without connecting")
     mode.add_argument("--inspect", action="store_true", help="read only staging schema presence flags")
+    mode.add_argument("--reset-demo", action="store_true", help="remove the reviewed disposable demo schema from one staging project")
     args = parser.parse_args()
     try:
         env = connection_environment(
@@ -129,6 +196,17 @@ def main() -> int:
     if not shutil.which("psql"):
         print("psql is required", file=sys.stderr)
         return 2
+    if args.reset_demo:
+        if os.environ["STAGING_PROJECT_REF"] != DEMO_PROJECT_REF:
+            print("Demo reset refused: staging project reference does not match", file=sys.stderr)
+            return 2
+        reset = psql(env, "-q", "-c", RESET_DEMO_SQL)
+        if reset.returncode != 0:
+            print("Demo reset stopped without committing", file=sys.stderr)
+            print(reset.stderr[-1200:], file=sys.stderr)
+            return 1
+        print("Reviewed staging demo schema removed; verify freshness before applying migrations")
+        return 0
     if args.inspect:
         inspection = psql(env, "-At", "-c", INSPECT_SQL)
         try:
@@ -146,8 +224,8 @@ def main() -> int:
             flags["profiles_has_rows"] = rows.stdout.strip() == "t"
         print(json.dumps(flags, sort_keys=True))
         return 0
-    check = psql(env, "-At", "-c", "select to_regclass('auth.users') is not null, to_regclass('public.profiles') is null")
-    if check.returncode != 0 or check.stdout.strip() != "t|t":
+    check = psql(env, "-qAt", "-F", "|", "-c", FRESH_SQL)
+    if check.returncode != 0 or check.stdout.strip() != "t|t|t|t|t|t|t":
         print("Target is not a fresh Supabase project; inspect its schema before applying SQL", file=sys.stderr)
         return 2
     for file in files:

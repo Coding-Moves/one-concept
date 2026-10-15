@@ -66,6 +66,65 @@ def test_existing_application_schema_stops_before_any_migration(monkeypatch, tmp
     assert "-f" not in calls[0]
 
 
+@pytest.mark.parametrize("freshness", [
+    "t|t|f|t|t|t|t\n",  # Another application's table exists without profiles.
+    "t|t|t|t|t|t|f\n",  # Auth users exist before the app trigger is installed.
+])
+def test_other_application_objects_or_auth_users_stop_before_migrations(monkeypatch, tmp_path, freshness):
+    monkeypatch.setenv("STAGING_PROJECT_REF", STAGING)
+    monkeypatch.setenv("PRODUCTION_PROJECT_REF", PRODUCTION)
+    monkeypatch.setenv("STAGING_DIRECT_URL", f"postgresql://postgres:fixture@db.{STAGING}.supabase.co:5432/postgres")
+    (tmp_path / "0001_schema.sql").write_text("select 1;")
+    monkeypatch.setattr(runner, "MIGRATIONS", tmp_path)
+    monkeypatch.setattr(runner.shutil, "which", lambda _: "/usr/bin/psql")
+    monkeypatch.setattr(sys, "argv", ["apply_staging_migrations.py"])
+    calls = []
+
+    def fake_psql(_env, *args):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, freshness, "")
+
+    monkeypatch.setattr(runner, "psql", fake_psql)
+    assert runner.main() == 2
+    assert len(calls) == 1
+    assert calls[0][-1] == runner.FRESH_SQL
+
+
+def test_demo_reset_requires_exact_staging_project(monkeypatch, tmp_path):
+    monkeypatch.setenv("STAGING_PROJECT_REF", STAGING)
+    monkeypatch.setenv("PRODUCTION_PROJECT_REF", PRODUCTION)
+    monkeypatch.setenv("STAGING_DIRECT_URL", f"postgresql://postgres:fixture@db.{STAGING}.supabase.co:5432/postgres")
+    (tmp_path / "0001_schema.sql").write_text("select 1;")
+    monkeypatch.setattr(runner, "MIGRATIONS", tmp_path)
+    monkeypatch.setattr(runner.shutil, "which", lambda _: "/usr/bin/psql")
+    monkeypatch.setattr(sys, "argv", ["apply_staging_migrations.py", "--reset-demo"])
+    monkeypatch.setattr(runner, "psql", lambda *_: pytest.fail("reset reached SQL for wrong project"))
+    assert runner.main() == 2
+
+
+def test_demo_reset_runs_only_reviewed_transaction(monkeypatch, tmp_path, capsys):
+    staging = runner.DEMO_PROJECT_REF
+    monkeypatch.setenv("STAGING_PROJECT_REF", staging)
+    monkeypatch.setenv("PRODUCTION_PROJECT_REF", PRODUCTION)
+    monkeypatch.setenv("STAGING_DIRECT_URL", f"postgresql://postgres.{staging}:private-password@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres")
+    (tmp_path / "0001_schema.sql").write_text("select 1;")
+    monkeypatch.setattr(runner, "MIGRATIONS", tmp_path)
+    monkeypatch.setattr(runner.shutil, "which", lambda _: "/usr/bin/psql")
+    monkeypatch.setattr(sys, "argv", ["apply_staging_migrations.py", "--reset-demo"])
+    calls = []
+
+    def fake_psql(_env, *args):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(runner, "psql", fake_psql)
+    assert runner.main() == 0
+    assert len(calls) == 1
+    assert calls[0][-1] == runner.RESET_DEMO_SQL
+    assert "-f" not in calls[0]
+    assert "private-password" not in capsys.readouterr().out
+
+
 def test_inspection_is_read_only_and_does_not_print_credentials(monkeypatch, tmp_path, capsys):
     monkeypatch.setenv("STAGING_PROJECT_REF", STAGING)
     monkeypatch.setenv("PRODUCTION_PROJECT_REF", PRODUCTION)

@@ -589,6 +589,54 @@ test('unblock deletes only the verified account block and remains idempotent', a
   assert.equal(calls.length, 2);
 });
 
+test('directed relationship status uses the verified caller and hides invalid tokens', async () => {
+  const calls = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json({ state: 'available', relationship_id: null });
+  });
+  const path = `/v1/me/relationships/with/${'a'.repeat(43)}`;
+  const headers = { authorization: 'Bearer account-token' };
+  assert.equal((await handler(request(path))).status, 401);
+  const result = await handler(request(path, { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { state: 'available', relationship_id: null });
+  assert.equal(result.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.match(calls[0].url, /\/rpc\/edge_api_relationship_status$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_token: 'a'.repeat(43) });
+  assert.equal((await handler(request('/v1/me/relationships/with/bad', { headers }))).status, 404);
+  assert.equal((await handler(request(path, { method: 'DELETE', headers }))).status, 405);
+  assert.equal(calls.length, 1);
+});
+
+test('directed connect preserves caller scope, privacy, and rate-limit header', async () => {
+  const calls = [];
+  let reply = { state: 'connected', relationship_id: '00000000-0000-4000-8000-000000000001' };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(reply);
+  });
+  const path = `/v1/me/relationships/with/${'a'.repeat(43)}`;
+  const headers = { authorization: 'Bearer account-token' };
+  const created = await handler(request(path, { method: 'POST', headers }));
+  assert.equal(created.status, 200);
+  assert.deepEqual(await created.json(), reply);
+  assert.match(calls[0].url, /\/rpc\/edge_api_relationship_connect$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_token: 'a'.repeat(43) });
+  reply = { error: 'unavailable' };
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 404);
+  reply = { error: 'limit', retry_after: 86400 };
+  const limited = await handler(request(path, { method: 'POST', headers }));
+  assert.equal(limited.status, 429);
+  assert.equal(limited.headers.get('retry-after'), '86400');
+  assert.equal((await handler(request('/v1/me/relationships/with/bad', {
+    method: 'POST', headers,
+  }))).status, 404);
+  assert.equal(calls.length, 3);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

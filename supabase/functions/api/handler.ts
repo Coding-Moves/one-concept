@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -564,8 +564,10 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? request.method === 'GET' || request.method === 'POST'
         : relationshipRemove
           ? request.method === 'DELETE'
-        : weeklyAttempt || subtopicAttempt
+        : weeklyAttempt
           ? request.method === 'POST'
+        : subtopicAttempt
+          ? request.method === 'GET' || request.method === 'POST'
         : connectionUnblock
           ? request.method === 'DELETE'
           : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null || connectionBlock !== null || relationshipBlock !== null || relationshipBlockById !== null || connectionAction !== null
@@ -627,7 +629,15 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       }
       if (subtopicAttempt) {
         if (!UUID.test(subtopicAttempt[1])) return httpError(422, 'Invalid quiz ID', cors);
-        if (request.method !== 'POST') return httpError(405, 'Method Not Allowed', cors);
+        if (request.method === 'GET') {
+          const history = await rpc('edge_api_subtopic_quiz_attempts', {
+            p_user_id: userId, p_completion_id: subtopicAttempt[1],
+          }, config, fetcher) as JsonObject | null;
+          if (history === null) return unavailable(cors);
+          return history.error === 'unavailable'
+            ? httpError(404, 'Completed subtopic not found', cors)
+            : response(history, 200, cors);
+        }
         const answers = quizAnswers((await readJson(request))!, 1, 7);
         const attempt = await rpc('edge_api_submit_subtopic_quiz', {
           p_user_id: userId, p_quiz_id: subtopicAttempt[1], p_answers: answers,

@@ -117,7 +117,7 @@ function editorialClaims(token: string, verifiedUserId: string): { sessionId: st
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_request_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -282,6 +282,20 @@ function profileInput(body: JsonObject): {
     displayName, hasBio, bio, preset: typeof rawPreset === 'string' ? rawPreset : null,
     timezone: typeof rawTimezone === 'string' ? rawTimezone : null, initializeTimezone,
   };
+}
+
+function editorialProfileInput(body: JsonObject): { version: number; name: string } {
+  if (Object.keys(body).some(key => key !== 'expected_version' && key !== 'registered_name')
+      || typeof body.expected_version !== 'number' || !Number.isInteger(body.expected_version)
+      || body.expected_version < 1 || typeof body.registered_name !== 'string'
+      || [...body.registered_name].length > 160) {
+    throw new ClientBodyError(422, 'Invalid editorial profile');
+  }
+  const name = body.registered_name.normalize('NFC').trim().split(/\s+/u).join(' ');
+  if ([...name].length < 2 || [...name].length > 80 || /\p{C}/u.test(name)) {
+    throw new ClientBodyError(422, 'Invalid editorial profile');
+  }
+  return { version: body.expected_version, name };
 }
 
 function sharingInput(body: JsonObject): Record<string, unknown> {
@@ -564,7 +578,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const weeklyQuiz = path === '/v1/quizzes/weekly';
     const editorialMe = path === '/v1/editorial/me';
     const editorialReviewers = path === '/v1/editorial/reviewers';
-    const editorial = editorialMe || editorialReviewers;
+    const editorialProfile = path === '/v1/editorial/me/profile';
+    const editorial = editorialMe || editorialReviewers || editorialProfile;
     const state = path === '/v1/me/state';
     const profile = path === '/v1/me';
     const followedTopics = path === '/v1/me/topics';
@@ -588,6 +603,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         : followedTopics
           ? request.method === 'PUT'
         : profile
+          ? request.method === 'PATCH'
+        : editorialProfile
           ? request.method === 'PATCH'
         : pushToken
           ? request.method === 'POST' || request.method === 'DELETE'
@@ -644,9 +661,14 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
             || !/^\d+$/.test(rawLimit) || Number(rawLimit) < 1 || Number(rawLimit) > 100)) {
           return editorialResponse({ detail: 'Invalid reviewer page' }, 422, cors);
         }
-        const data = await rpc(editorialReviewers ? 'edge_api_editorial_reviewers' : 'edge_api_editorial_me', {
+        const profileInput = editorialProfile
+          ? editorialProfileInput((await readJson(request))!) : null;
+        const data = await rpc(editorialProfile ? 'edge_api_editorial_request_profile'
+          : editorialReviewers ? 'edge_api_editorial_reviewers' : 'edge_api_editorial_me', {
           p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
           ...(editorialReviewers ? { p_cursor: cursor, p_limit: Number(rawLimit) } : {}),
+          ...(profileInput ? { p_expected_version: profileInput.version,
+            p_registered_name: profileInput.name } : {}),
         }, config, fetcher) as JsonObject | null;
         if (data === null) return unavailable(cors);
         if (data.error === 'session_required') {
@@ -663,6 +685,10 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           return editorialResponse({ detail: 'Complete MFA verification for editorial actions' }, 403, cors);
         }
         if (data.error === 'invalid_page') return editorialResponse({ detail: 'Invalid reviewer page' }, 422, cors);
+        if (data.error === 'invalid') return editorialResponse({ detail: 'Invalid editorial profile' }, 422, cors);
+        if (data.error === 'version_conflict') {
+          return editorialResponse({ detail: 'Account changed; reload before saving' }, 409, cors);
+        }
         return editorialResponse(data, 200, cors);
       }
       if (path === '/v1/topics') {

@@ -133,6 +133,51 @@ test('editorial reviewer pages pass a current session and enforce private pagina
   assert.equal(denied.headers.get('x-content-type-options'), 'nosniff');
 });
 
+test('editorial profile requests normalize the name and require the current version', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });
+  const calls = [];
+  let payload = { user_id: userId, requested_name: 'Reviewer Name', version: 2 };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const path = '/v1/editorial/me/profile';
+  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  assert.equal((await handler(request(path, { method: 'PATCH',
+    body: JSON.stringify({ expected_version: 1, registered_name: 'Reviewer Name' }),
+  }))).status, 401);
+  for (const body of [
+    { expected_version: 0, registered_name: 'Reviewer Name' },
+    { expected_version: 1, registered_name: 'R\u200beviewer' },
+    { expected_version: 1, registered_name: 'Reviewer Name', user_id: userId },
+  ]) {
+    assert.equal((await handler(request(path, {
+      method: 'PATCH', headers, body: JSON.stringify(body),
+    }))).status, 422);
+  }
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const updated = await handler(request(path, {
+    method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, registered_name: '  Reviewer   Name  ' }),
+  }));
+  assert.equal(updated.status, 200);
+  assert.deepEqual(await updated.json(), payload);
+  assert.equal(updated.headers.get('cache-control'), 'no-store');
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_request_profile$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal1',
+    p_expected_version: 1, p_registered_name: 'Reviewer Name',
+  });
+  payload = { error: 'version_conflict' };
+  const stale = await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, registered_name: 'Reviewer Name' }),
+  }));
+  assert.equal(stale.status, 409);
+  assert.equal((await handler(request(path, { headers }))).status, 405);
+});
+
 test('weekly quiz selection uses the verified account and never exposes a private RPC result to anonymous callers', async () => {
   const calls = [];
   const quiz = { available: false, week_start: '2026-10-12', required_concepts: 7,

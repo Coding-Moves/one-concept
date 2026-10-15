@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### Supabase API migration candidate — issue #416, 2026-10-15
+
+- Outcome: build the first of three Railway-exit PRs on `codex/supabase-api-migration` from current `develop`, without changing production clients or Railway services.
+- Chunk boundary: inventory every HTTP route, establish a secure Supabase Edge Function/SQL request path, then port and verify API contracts in focused commits. Scheduled workers belong to #417; browser/client cutover and release belong to #418.
+- Intended commits: route and consumer inventory; Edge authentication/routing foundation with tests; atomic SQL and endpoint ports with contract tests; deployment/verification guidance; final review and handoff. Keep this PR draft until #416 acceptance is met.
+
 ### v1.10.14 production migration ledger — 2026-10-10
 
 - The owner reported that production migrations `0044_public_profile_bio_choice.sql` and `0045_editorial_authenticator_choice.sql` were applied after preparation PR #412 merged. Commit `3c76e95` records that operator attestation in `backend/migrations/applied.txt`; it does not itself run SQL or prove the target schema.

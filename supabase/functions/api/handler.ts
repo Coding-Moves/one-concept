@@ -117,7 +117,7 @@ function editorialClaims(token: string, verifiedUserId: string): { sessionId: st
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -563,6 +563,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const relationshipList = path === '/v1/me/relationships';
     const weeklyQuiz = path === '/v1/quizzes/weekly';
     const editorialMe = path === '/v1/editorial/me';
+    const editorialReviewers = path === '/v1/editorial/reviewers';
+    const editorial = editorialMe || editorialReviewers;
     const state = path === '/v1/me/state';
     const profile = path === '/v1/me';
     const followedTopics = path === '/v1/me/topics';
@@ -574,7 +576,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !weeklyQuiz && !editorialMe && weeklyAttempt === null && subtopicQuiz === null && subtopicAttempt === null && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !weeklyQuiz && !editorial && weeklyAttempt === null && subtopicQuiz === null && subtopicAttempt === null && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -625,19 +627,26 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         return sharingResponse(visible, 200, cors);
       }
       const token = bearerToken(request);
-      if (!token) return editorialMe
+      if (!token) return editorial
         ? editorialResponse({ detail: 'Missing bearer token' }, 401, cors, true)
         : httpError(401, 'Missing bearer token', cors, true);
       const userId = await authenticatedUser(token, config, fetcher);
-      if (!userId) return editorialMe
+      if (!userId) return editorial
         ? editorialResponse({ detail: 'Invalid or expired token' }, 401, cors, true)
         : httpError(401, 'Invalid or expired token', cors, true);
-      if (editorialMe) {
+      if (editorial) {
         if (!config.editorialEnabled) return editorialResponse({ detail: 'Editorial access is disabled' }, 503, cors);
         const claims = editorialClaims(token, userId);
         if (!claims) return editorialResponse({ detail: 'A current Supabase session is required' }, 401, cors, true);
-        const data = await rpc('edge_api_editorial_me', {
+        const cursor = requestUrl.searchParams.get('cursor');
+        const rawLimit = requestUrl.searchParams.get('limit') ?? '25';
+        if (editorialReviewers && ((cursor !== null && !UUID.test(cursor))
+            || !/^\d+$/.test(rawLimit) || Number(rawLimit) < 1 || Number(rawLimit) > 100)) {
+          return editorialResponse({ detail: 'Invalid reviewer page' }, 422, cors);
+        }
+        const data = await rpc(editorialReviewers ? 'edge_api_editorial_reviewers' : 'edge_api_editorial_me', {
           p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
+          ...(editorialReviewers ? { p_cursor: cursor, p_limit: Number(rawLimit) } : {}),
         }, config, fetcher) as JsonObject | null;
         if (data === null) return unavailable(cors);
         if (data.error === 'session_required') {
@@ -646,6 +655,14 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         if (data.error === 'unavailable') {
           return editorialResponse({ detail: 'Editorial access is unavailable' }, 403, cors);
         }
+        if (data.error === 'permission') return editorialResponse({ detail: 'Editorial permission required' }, 403, cors);
+        if (data.error === 'profile_required') {
+          return editorialResponse({ detail: 'Complete profile setup and obtain name approval' }, 403, cors);
+        }
+        if (data.error === 'mfa_required') {
+          return editorialResponse({ detail: 'Complete MFA verification for editorial actions' }, 403, cors);
+        }
+        if (data.error === 'invalid_page') return editorialResponse({ detail: 'Invalid reviewer page' }, 422, cors);
         return editorialResponse(data, 200, cors);
       }
       if (path === '/v1/topics') {

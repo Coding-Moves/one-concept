@@ -105,6 +105,34 @@ test('editorial me rechecks an Auth-verified session and server membership', asy
   }))).status, 403);
 });
 
+test('editorial reviewer pages pass a current session and enforce private pagination', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { items: [{ user_id: userId, status: 'active' }], next_cursor: null };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  assert.equal((await handler(request('/v1/editorial/reviewers', { method: 'POST', headers }))).status, 405);
+  assert.equal((await handler(request('/v1/editorial/reviewers?limit=101', { headers }))).status, 422);
+  assert.equal(calls.length, 1);
+  const result = await handler(request(`/v1/editorial/reviewers?cursor=${sessionId}&limit=12`, { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_reviewers$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2', p_cursor: sessionId, p_limit: 12,
+  });
+  payload = { error: 'mfa_required' };
+  const denied = await handler(request('/v1/editorial/reviewers', { headers }));
+  assert.equal(denied.status, 403);
+  assert.equal(denied.headers.get('cache-control'), 'no-store');
+  assert.equal(denied.headers.get('x-content-type-options'), 'nosniff');
+});
+
 test('weekly quiz selection uses the verified account and never exposes a private RPC result to anonymous callers', async () => {
   const calls = [];
   const quiz = { available: false, week_start: '2026-10-12', required_concepts: 7,

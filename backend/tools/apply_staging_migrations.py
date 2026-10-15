@@ -74,6 +74,9 @@ INCREMENTAL_PROBES = {
     "0063_supabase_connection_list_api.sql": (
         "public.edge_api_connections(uuid,text,uuid,integer)",
     ),
+    "0064_supabase_connection_status_api.sql": (
+        "public.edge_api_connection_status(uuid,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

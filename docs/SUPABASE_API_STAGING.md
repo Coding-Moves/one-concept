@@ -24,15 +24,15 @@ criteria and #418 performs the cutover.
    Do not run this candidate against live learner/reviewer accounts while most
    routes are absent. Verify the exact project reference before each command.
 2. Apply the repository's ordered migrations to that project through
-   `0049_supabase_stats_api.sql` using its port-5432 direct or session-pooler
-   PostgreSQL URL. From this branch, run
-   `python backend/tools/apply_staging_migrations.py --check-only`, then
-   `python backend/tools/apply_staging_migrations.py` with
-   `STAGING_PROJECT_REF`, `PRODUCTION_PROJECT_REF`, and `STAGING_DIRECT_URL`
-   set privately in the shell. The runner requires the connection to identify
-   the staging project, refuses a production match, and only applies the full
-   sequence to a fresh Supabase project. Do not paste the URL into chat or
-   store it in a repository file. These
+   `0049_supabase_stats_api.sql` using its port-5432 session-pooler PostgreSQL
+   URL. The protected schema tag in step 4 runs
+   `backend/tools/apply_staging_migrations.py` after validating the target.
+   For a local fallback, run the script with `--check-only`, then without it,
+   with `STAGING_PROJECT_REF`, `PRODUCTION_PROJECT_REF`, and
+   `STAGING_DIRECT_URL` set privately in the shell. The runner requires the
+   connection to identify the staging project, refuses a production match,
+   and only applies the full sequence to a fresh Supabase project. Do not
+   paste the URL into chat or store it in a repository file. These
    migrations are intentionally absent from `backend/migrations/applied.txt`;
    only a verified production application belongs there. Check that only
    `service_role` can execute the `edge_api_*` RPCs.
@@ -42,15 +42,21 @@ criteria and #418 performs the cutover.
    never copy the service key to a client, PR, log or build artifact.
 4. Configure the protected GitHub `supabase-staging` environment with a scoped
    `SUPABASE_STAGING_ACCESS_TOKEN` secret granting Edge Functions write on the
-   staging project, plus `SUPABASE_STAGING_PROJECT_REF` and
-   `SUPABASE_PRODUCTION_PROJECT_REF` variables. The staging environment requires
-   approval by `Muawiya-contact` and accepts only `supabase-api-staging-*` tags.
-   After reviewing the exact commit and applying the staging SQL migrations,
-   create and push a unique tag of that form on the candidate commit. The
-   tag-triggered `supabase-api-candidate.yml` workflow refuses an absent or
-   identical target and deploys only `api`. GitHub cannot dispatch a new
-   workflow manually from a PR branch before the workflow reaches the default
-   branch. SQL migrations are a separate, verified prerequisite.
+   staging project, a `SUPABASE_STAGING_DATABASE_URL` secret containing only
+   that project's session-pooler URI on port 5432, plus
+   `SUPABASE_STAGING_PROJECT_REF` and `SUPABASE_PRODUCTION_PROJECT_REF`
+   variables. Insert the staging database password into the URI, encoding
+   reserved URL characters. The staging environment requires approval by
+   `Muawiya-contact` and accepts only `supabase-api-staging-*` tags. After
+   reviewing the exact commit and passing PR checks, create and push a unique
+   `supabase-api-staging-schema-*` tag. Approve its protected job and verify all
+   ordered migrations and the final RPC check succeed. Then create and push a
+   unique `supabase-api-staging-deploy-*` tag on the same commit; approve its
+   separate protected job. The first job receives the database URI, and the
+   second receives the scoped Edge token. The deploy job refuses an absent or
+   identical project target and deploys only `api`. GitHub cannot dispatch a
+   new workflow manually from a PR branch before the workflow reaches the
+   default branch.
    `supabase/config.toml` disables
    gateway JWT verification because health is public; the handler verifies a
    bearer token through Supabase Auth before any private RPC. A route added

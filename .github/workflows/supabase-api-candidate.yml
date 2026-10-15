@@ -3,7 +3,8 @@ name: Deploy Supabase API candidate to staging
 on:
   push:
     tags:
-      - 'supabase-api-staging-*'
+      - 'supabase-api-staging-schema-*'
+      - 'supabase-api-staging-deploy-*'
 
 concurrency:
   group: supabase-api-staging
@@ -13,7 +14,27 @@ permissions:
   contents: read
 
 jobs:
+  migrate:
+    if: startsWith(github.ref_name, 'supabase-api-staging-schema-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply ordered SQL to fresh staging project
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: |
+          python backend/tools/apply_staging_migrations.py --check-only
+          python backend/tools/apply_staging_migrations.py
+
   deploy:
+    if: startsWith(github.ref_name, 'supabase-api-staging-deploy-')
     runs-on: ubuntu-latest
     environment: supabase-staging
     env:

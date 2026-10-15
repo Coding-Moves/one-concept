@@ -219,6 +219,50 @@ test('editorial notification timezone changes validate IANA names and current ve
   assert.equal((await handler(request(path, { headers }))).status, 405);
 });
 
+test('editorial authenticator choice forwards only a verified TOTP timestamp', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const verifiedAt = Math.floor(Date.now() / 1000) - 12;
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2', amr: [
+    { method: 'password', timestamp: verifiedAt + 10 },
+    { method: 'totp', timestamp: verifiedAt },
+    { method: 'totp', timestamp: true },
+  ] });
+  const calls = [];
+  let payload = { user_id: userId, require_mfa: false, version: 2 };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const path = '/v1/editorial/me/authenticator';
+  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  for (const body of [
+    { expected_version: 0, require_mfa: false },
+    { expected_version: 1, require_mfa: 'false' },
+    { expected_version: 1, require_mfa: false, user_id: userId },
+  ]) {
+    assert.equal((await handler(request(path, { method: 'PATCH', headers,
+      body: JSON.stringify(body),
+    }))).status, 422);
+  }
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const changed = await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, require_mfa: false }),
+  }));
+  assert.equal(changed.status, 200);
+  assert.deepEqual(await changed.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_authenticator$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_expected_version: 1, p_require_mfa: false, p_mfa_verified_at: verifiedAt,
+  });
+  payload = { error: 'recent_mfa_required' };
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, require_mfa: false }),
+  }))).status, 403);
+  assert.equal((await handler(request(path, { headers }))).status, 405);
+});
+
 test('weekly quiz selection uses the verified account and never exposes a private RPC result to anonymous callers', async () => {
   const calls = [];
   const quiz = { available: false, week_start: '2026-10-12', required_concepts: 7,

@@ -161,6 +161,38 @@ test('startup state never signs another account avatar key', async () => {
   assert.equal(storageCalls, 0);
 });
 
+test('topic follow replacement uses the verified account and keeps the state response', async () => {
+  const calls = [];
+  let payload = { followed_topics: ['software-engineering'], daily: null,
+    daily_availability: 'available', avatar_ref: null, avatar_url: null };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const updated = await handler(request('/v1/me/topics?compact=true', {
+    method: 'PUT', headers, body: JSON.stringify({ topics: ['software-engineering'] }),
+  }));
+  assert.equal(updated.status, 200);
+  assert.deepEqual(await updated.json(), payload);
+  assert.match(calls[0].url, /\/rpc\/edge_api_set_topics$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId,
+    p_slugs: ['software-engineering'], p_compact: true, p_today: null });
+  payload = { error: 'unknown_topics', topics: ['missing'] };
+  const unknown = await handler(request('/v1/me/topics', {
+    method: 'PUT', headers, body: JSON.stringify({ topics: ['missing'] }),
+  }));
+  assert.equal(unknown.status, 400);
+  assert.deepEqual(await unknown.json(), { detail: "Unknown topics: ['missing']" });
+  const invalid = await handler(request('/v1/me/topics', {
+    method: 'PUT', headers, body: JSON.stringify({ topics: [null] }),
+  }));
+  assert.equal(invalid.status, 422);
+  assert.equal(calls.length, 2);
+  assert.equal((await handler(request('/v1/me/topics', { headers }))).status, 405);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

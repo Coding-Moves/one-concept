@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -178,6 +178,15 @@ function achievementCodes(body: JsonObject): string[] {
     throw new ClientBodyError(422, 'Invalid achievement codes');
   }
   return body.codes as string[];
+}
+
+function topicSlugs(body: JsonObject): string[] {
+  const slugs = body.topics === undefined ? [] : body.topics;
+  if (!Array.isArray(slugs) || slugs.length > 50
+      || !slugs.every(value => typeof value === 'string')) {
+    throw new ClientBodyError(422, 'Invalid followed topics');
+  }
+  return slugs as string[];
 }
 
 function pageLimit(query: URLSearchParams): number {
@@ -293,6 +302,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const pushToken = path === '/v1/me/push-token';
     const stats = path === '/v1/me/stats';
     const state = path === '/v1/me/state';
+    const followedTopics = path === '/v1/me/topics';
     const history = path === '/v1/me/history';
     const saved = path === '/v1/me/saved';
     const subtopicProgress = path === '/v1/me/subtopics/progress';
@@ -301,13 +311,15 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !state && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !state && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
       ? request.method === 'PUT' || request.method === 'DELETE'
       : notifications
         ? request.method === 'GET' || request.method === 'PUT'
+        : followedTopics
+          ? request.method === 'PUT'
         : pushToken
           ? request.method === 'POST' || request.method === 'DELETE'
           : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null
@@ -361,6 +373,20 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           p_low: low, p_reserve: reserve, p_active_days: activeDays, p_today: null,
         }, config, fetcher) as JsonObject | null;
         if (data === null) return unavailable(cors);
+        data.avatar_url = await signedAvatarUrl(data.avatar_ref, userId, config, fetcher);
+        return response(data, 200, cors);
+      }
+      if (followedTopics) {
+        const body = await readJson(request);
+        const data = await rpc('edge_api_set_topics', {
+          p_user_id: userId, p_slugs: topicSlugs(body!),
+          p_compact: queryBoolean(requestUrl.searchParams, 'compact'), p_today: null,
+        }, config, fetcher) as JsonObject | null;
+        if (data === null) return unavailable(cors);
+        if (data.error === 'unknown_topics' && Array.isArray(data.topics)) {
+          const labels = data.topics.map(value => `'${String(value)}'`).join(', ');
+          return httpError(400, `Unknown topics: [${labels}]`, cors);
+        }
         data.avatar_url = await signedAvatarUrl(data.avatar_ref, userId, config, fetcher);
         return response(data, 200, cors);
       }

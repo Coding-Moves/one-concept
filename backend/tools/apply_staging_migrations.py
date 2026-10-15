@@ -24,7 +24,41 @@ INSPECT_SQL = """select json_build_object(
   'editorial_memberships', to_regclass('public.editorial_memberships') is not null,
   'profile_sharing', to_regclass('public.profile_sharing') is not null,
   'edge_api_health', to_regprocedure('public.edge_api_health()') is not null,
-  'edge_api_stats', to_regprocedure('public.edge_api_stats(uuid)') is not null
+  'edge_api_stats', to_regprocedure('public.edge_api_stats(uuid)') is not null,
+  'public_relations', coalesce((
+    select json_agg(c.relname order by c.relname)
+    from pg_class c join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public' and c.relkind in ('r', 'p', 'v', 'm', 'S')
+  ), '[]'::json),
+  'public_functions', coalesce((
+    select json_agg(distinct p.proname order by p.proname)
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+    where n.nspname = 'public'
+  ), '[]'::json),
+  'profiles_columns', coalesce((
+    select json_agg(json_build_object(
+      'name', a.attname, 'type', format_type(a.atttypid, a.atttypmod),
+      'not_null', a.attnotnull, 'has_default', d.oid is not null
+    ) order by a.attnum)
+    from pg_attribute a left join pg_attrdef d on d.adrelid = a.attrelid and d.adnum = a.attnum
+    where a.attrelid = to_regclass('public.profiles') and a.attnum > 0 and not a.attisdropped
+  ), '[]'::json),
+  'profiles_constraints', coalesce((
+    select json_agg(json_build_object('name', k.conname, 'type', k.contype) order by k.conname)
+    from pg_constraint k where k.conrelid = to_regclass('public.profiles')
+  ), '[]'::json),
+  'profiles_inbound_references', coalesce((
+    select json_agg(json_build_object('table', k.conrelid::regclass::text, 'name', k.conname) order by k.conname)
+    from pg_constraint k where k.confrelid = to_regclass('public.profiles') and k.contype = 'f'
+  ), '[]'::json),
+  'profiles_triggers', coalesce((
+    select json_agg(t.tgname order by t.tgname)
+    from pg_trigger t where t.tgrelid = to_regclass('public.profiles') and not t.tgisinternal
+  ), '[]'::json),
+  'auth_user_triggers', coalesce((
+    select json_agg(t.tgname order by t.tgname)
+    from pg_trigger t where t.tgrelid = to_regclass('auth.users') and not t.tgisinternal
+  ), '[]'::json)
 )::text"""
 
 
@@ -104,6 +138,12 @@ def main() -> int:
         if inspection.returncode != 0 or not isinstance(flags, dict):
             print("Could not inspect staging schema", file=sys.stderr)
             return 1
+        if flags.get("profiles"):
+            rows = psql(env, "-At", "-c", "select exists(select 1 from public.profiles)")
+            if rows.returncode != 0 or rows.stdout.strip() not in ("t", "f"):
+                print("Could not check staging profile row presence", file=sys.stderr)
+                return 1
+            flags["profiles_has_rows"] = rows.stdout.strip() == "t"
         print(json.dumps(flags, sort_keys=True))
         return 0
     check = psql(env, "-At", "-c", "select to_regclass('auth.users') is not null, to_regclass('public.profiles') is null")

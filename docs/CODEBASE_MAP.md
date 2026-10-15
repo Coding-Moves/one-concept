@@ -366,8 +366,8 @@ clients. The complete route checklist and
 remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
 `backend/tools/apply_staging_migrations.py` applies ordered migrations only to
 a fresh staging project after checking its project reference against the connection.
-Its `--inspect` mode reports only staging schema object-presence flags when the
-fresh-project gate rejects an existing application schema.
+Its `--inspect` mode reports staging schema metadata and profile row presence
+when the fresh-project gate rejects an existing application schema.
 Migration #417 will move scheduled workers; #418 owns browser pages and client
 cutover. Until then, the FastAPI implementation below remains authoritative.
 

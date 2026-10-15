@@ -1,9 +1,11 @@
 """The staging schema tool must reject wrong-project connection strings."""
 
+import json
 import subprocess
 import sys
 
 import pytest
+from sqlalchemy import text
 
 from tools import apply_staging_migrations as runner
 from tools.apply_staging_migrations import connection_environment
@@ -79,13 +81,25 @@ def test_inspection_is_read_only_and_does_not_print_credentials(monkeypatch, tmp
 
     def fake_psql(_env, *args):
         calls.append(args)
-        return subprocess.CompletedProcess(args, 0, '{"auth_users":true,"profiles":true}', "")
+        output = '{"auth_users":true,"profiles":true}' if len(calls) == 1 else "f\n"
+        return subprocess.CompletedProcess(args, 0, output, "")
 
     monkeypatch.setattr(runner, "psql", fake_psql)
     assert runner.main() == 0
-    assert len(calls) == 1
+    assert len(calls) == 2
     assert calls[0][-1] == runner.INSPECT_SQL
-    assert "-f" not in calls[0]
+    assert all("-f" not in call for call in calls)
     output = capsys.readouterr().out
     assert '"profiles": true' in output
+    assert '"profiles_has_rows": false' in output
     assert "private-password" not in output
+
+
+@pytest.mark.asyncio
+async def test_inspection_query_reads_schema_metadata_without_user_records(session):
+    raw = (await session.execute(text(runner.INSPECT_SQL))).scalar_one()
+    flags = json.loads(raw)
+    assert flags["auth_users"] and flags["profiles"] and flags["topics"]
+    assert "profiles" in flags["public_relations"]
+    assert {column["name"] for column in flags["profiles_columns"]} >= {"id", "timezone"}
+    assert "on_auth_user_created" in flags["auth_user_triggers"]

@@ -38,8 +38,8 @@ criteria and #418 performs the cutover.
    `service_role` can execute the `edge_api_*` RPCs.
    If the schema job rejects the project as nonfresh, stop. Push a unique
    `supabase-api-staging-inspect-*` tag on a reviewed commit and approve its
-   protected job. It reads only presence flags for Auth, key application
-   tables, and the candidate RPCs. Use those flags to plan a verified
+   protected job. It reads only schema metadata and whether `profiles` has
+   any rows; it does not print user records. Use that evidence to plan a verified
    incremental path or a fresh staging project; do not drop tables or retry
    the full migration sequence blindly.
 3. In the staging project, set `ALLOWED_ORIGINS` to exact HTTPS website origins

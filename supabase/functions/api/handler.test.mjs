@@ -141,6 +141,33 @@ test('subtopic quiz selection uses only the owned completion and hides missing e
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
 });
 
+test('subtopic attempts validate variable quiz size and score only the verified account', async () => {
+  const quizId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const calls = [];
+  let payload = { attempt_id: quizId, quiz_id: quizId, correct_count: 2, question_count: 3, results: [] };
+  const handler = createHandler(config, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const path = `/v1/quizzes/subtopics/${quizId}/attempts`;
+  const headers = { authorization: 'Bearer account-token', 'content-type': 'application/json' };
+  const answers = Array.from({ length: 3 }, (_, i) => ({ question_id: `question-${i}`, selected_index: i }));
+  assert.equal((await handler(request(path))).status, 405);
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ answers: [...answers.slice(0, 2), answers[0]] }) }))).status, 422);
+  assert.equal(calls.length, 1);
+  const result = await handler(request(path, { method: 'POST', headers, body: JSON.stringify({ answers }) }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls[2].url, /\/rpc\/edge_api_submit_subtopic_quiz$/);
+  assert.deepEqual(JSON.parse(calls[2].init.body), { p_user_id: userId, p_quiz_id: quizId, p_answers: answers });
+  payload = { error: 'unavailable' };
+  const missing = await handler(request(path, { method: 'POST', headers, body: JSON.stringify({ answers }) }));
+  assert.equal(missing.status, 400);
+  assert.deepEqual(await missing.json(), { detail: 'Subtopic quiz not found' });
+});
+
 test('daily returns the verified account assignment or typed unavailable state', async () => {
   const calls = [];
   let payload = {

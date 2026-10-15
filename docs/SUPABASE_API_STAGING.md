@@ -23,10 +23,10 @@ criteria and #418 performs the cutover.
    Do not run this candidate against live learner/reviewer accounts while most
    routes are absent. Verify the exact project reference before each command.
 2. Apply the repository's ordered migrations to that project through
-   `0046_supabase_api_basics.sql` using its **direct** PostgreSQL URL. This
-   migration is intentionally absent from `backend/migrations/applied.txt`;
+   `0047_supabase_concept_api.sql` using its **direct** PostgreSQL URL. These
+   migrations are intentionally absent from `backend/migrations/applied.txt`;
    only a verified production application belongs there. Check that only
-   `service_role` can execute `edge_api_health` and `edge_api_topics`.
+   `service_role` can execute the `edge_api_*` RPCs.
 3. In the staging project, set `ALLOWED_ORIGINS` to exact HTTPS website origins
    needed for browser testing. No wildcard is accepted. `SUPABASE_URL`,
    `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are Edge runtime secrets;

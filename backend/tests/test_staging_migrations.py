@@ -166,6 +166,21 @@ def test_incremental_migration_requires_exact_reviewed_project(monkeypatch, tmp_
     assert runner.apply_incremental({}, files) == 2
 
 
+def test_incremental_probe_accepts_zero_arguments_without_accepting_sql(monkeypatch):
+    calls = []
+
+    def fake_psql(_env, *args):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "t\n", "")
+
+    monkeypatch.setattr(runner, "psql", fake_psql)
+    assert runner.function_presence({}, ("public.edge_api_new_profile_token()",)) == (True,)
+    assert calls[-1][-1] == "select to_regprocedure('public.edge_api_new_profile_token()') is not null"
+    with pytest.raises(ValueError, match="Unreviewed"):
+        runner.function_presence({}, ("public.edge_api_new_profile_token();drop table users",))
+    assert len(calls) == 1
+
+
 def _incremental_files(tmp_path):
     baseline = tmp_path / runner.INCREMENTAL_BASELINE
     pending = [tmp_path / name for name in runner.INCREMENTAL_PROBES]

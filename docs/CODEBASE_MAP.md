@@ -481,6 +481,8 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 ## Schema and migrations
 
 `db/schema.py` compares actual catalog metadata against `backend/schema/contract.json`.
+The contract records migration hashes and the candidate Edge API RPC definitions
+alongside the reviewed application schema.
 `workers/schema_check.py` performs the bounded read-only target check using
 `DIRECT_URL`; `docs/SCHEMA_VERIFICATION.md` covers contract maintenance and
 Railway/GitHub setup. No SQL is applied by verification.

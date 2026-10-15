@@ -64,7 +64,8 @@
     "0062_supabase_connection_preferences_api.sql": "c4ba2dfb6c3ce87d002f78936aad3d600944882143137e38b45c8e8913a87949",
     "0063_supabase_connection_list_api.sql": "d0bbab08c04694fefe1d78ca8211373b78480b22ec3c5eac0b3ab265979fcaa4",
     "0064_supabase_connection_status_api.sql": "b879162cfb4231e9bb60e52594620b5dbc2d025a0d46eedffd2ffaa438b6bed5",
-    "0065_supabase_connection_request_api.sql": "b8f5a63e60d2d45ff1ffd930a86e5de5be99a47a581fc0366fcec367384c8d41"
+    "0065_supabase_connection_request_api.sql": "b8f5a63e60d2d45ff1ffd930a86e5de5be99a47a581fc0366fcec367384c8d41",
+    "0066_supabase_connection_block_token_api.sql": "5c59fbfe609101aa78e7fddded2da360683a4fc9e5cab3913a124b470717133c"
   },
   "schema": {
     "columns": {

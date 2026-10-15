@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -257,6 +257,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const path = routePath(requestUrl.pathname);
     if (path === null) return httpError(404, 'Not Found', cors);
     const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
+    const reviewComplete = /^\/v1\/reviews\/([^/]+)\/complete$/.exec(path);
     const notifications = path === '/v1/me/notifications';
     const pushToken = path === '/v1/me/push-token';
     const stats = path === '/v1/me/stats';
@@ -268,7 +269,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -277,7 +278,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         ? request.method === 'GET' || request.method === 'PUT'
         : pushToken
           ? request.method === 'POST' || request.method === 'DELETE'
-          : subtopicSeen || achievementsSeen || dailyComplete
+          : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null
             ? request.method === 'POST'
           : request.method === 'GET';
     if (!validMethod) return httpError(405, 'Method Not Allowed', cors);
@@ -306,6 +307,15 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         }, config, fetcher);
         return completed === null
           ? httpError(404, 'No concept has been assigned recently. Fetch /v1/daily first.', cors)
+          : response(completed, 200, cors);
+      }
+      if (reviewComplete) {
+        if (!UUID.test(reviewComplete[1])) return httpError(422, 'Invalid review ID', cors);
+        const completed = await rpc('edge_api_complete_review', {
+          p_user_id: userId, p_review_id: reviewComplete[1], p_today: null,
+        }, config, fetcher);
+        return completed === null
+          ? httpError(409, 'Review is unavailable or its completion window has ended', cors)
           : response(completed, 200, cors);
       }
       if (stats) {

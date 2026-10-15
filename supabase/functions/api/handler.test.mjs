@@ -145,6 +145,33 @@ test('achievements are account-scoped and acknowledgment validates its code list
   assert.equal((await handler(request('/v1/me/achievements/seen', { headers }))).status, 405);
 });
 
+test('review completion uses the verified account and preserves conflict response', async () => {
+  const reviewId = '42fb4109-a67a-4b2d-a824-4d4635001c3e';
+  const calls = [];
+  let payload = { completed: true, assigned_for: '2026-10-15', stats: {
+    current: 1, longest: 1, total_learned: 2, total_reviews: 1,
+  }, subtopic_completion: null };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const completed = await handler(request(`/v1/reviews/${reviewId}/complete`, { method: 'POST', headers }));
+  assert.equal(completed.status, 200);
+  assert.deepEqual(await completed.json(), payload);
+  assert.match(calls[0].url, /\/rpc\/edge_api_complete_review$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_review_id: reviewId, p_today: null });
+  payload = null;
+  const stale = await handler(request(`/v1/reviews/${reviewId}/complete`, { method: 'POST', headers }));
+  assert.equal(stale.status, 409);
+  assert.deepEqual(await stale.json(), { detail: 'Review is unavailable or its completion window has ended' });
+  const invalid = await handler(request('/v1/reviews/not-a-uuid/complete', { method: 'POST', headers }));
+  assert.equal(invalid.status, 422);
+  assert.equal(calls.length, 2);
+  assert.equal((await handler(request(`/v1/reviews/${reviewId}/complete`, { headers }))).status, 405);
+});
+
 test('rejected or malformed Auth responses cannot reach the service RPC', async () => {
   for (const authResult of [new Response(null, { status: 401 }), Response.json({ id: 'not-a-uuid' })]) {
     let calls = 0;

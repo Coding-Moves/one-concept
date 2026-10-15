@@ -45,11 +45,15 @@ declare
   relations text[];
   functions text[];
 begin
-  if current_database() <> 'postgres' or to_regclass('auth.users') is null then
+  if current_database() <> 'postgres' or to_regclass('auth.users') is null
+    or to_regclass('storage.objects') is null or to_regclass('storage.buckets') is null then
     raise exception 'demo reset refused: unexpected database';
   end if;
-  if exists(select 1 from auth.users) then
-    raise exception 'demo reset refused: Auth users exist';
+  if exists(select 1 from storage.objects) then
+    raise exception 'demo reset refused: Storage objects exist';
+  end if;
+  if exists(select 1 from storage.buckets) then
+    raise exception 'demo reset refused: Storage buckets exist';
   end if;
   if exists(select 1 from pg_trigger t
     where t.tgrelid = 'auth.users'::regclass and not t.tgisinternal) then
@@ -81,6 +85,7 @@ end $$;
 drop table public.admins, public.payout_requests, public.profiles,
   public.screenshots, public.tasks, public.wallets restrict;
 drop function public.rls_auto_enable() restrict;
+delete from auth.users;
 commit;"""
 INSPECT_SQL = """select json_build_object(
   'auth_users', to_regclass('auth.users') is not null,
@@ -205,7 +210,11 @@ def main() -> int:
             print("Demo reset stopped without committing", file=sys.stderr)
             print(reset.stderr[-1200:], file=sys.stderr)
             return 1
-        print("Reviewed staging demo schema removed; verify freshness before applying migrations")
+        fresh = psql(env, "-qAt", "-F", "|", "-c", FRESH_SQL)
+        if fresh.returncode != 0 or fresh.stdout.strip() != "t|t|t|t|t|t|t":
+            print("Demo reset committed but staging is not fresh; inspect before migrations", file=sys.stderr)
+            return 1
+        print("Reviewed staging demo schema and Auth users removed; fresh-project check passed")
         return 0
     if args.inspect:
         inspection = psql(env, "-At", "-c", INSPECT_SQL)

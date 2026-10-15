@@ -115,13 +115,15 @@ def test_demo_reset_runs_only_reviewed_transaction(monkeypatch, tmp_path, capsys
 
     def fake_psql(_env, *args):
         calls.append(args)
-        return subprocess.CompletedProcess(args, 0, "", "")
+        output = "" if len(calls) == 1 else "t|t|t|t|t|t|t\n"
+        return subprocess.CompletedProcess(args, 0, output, "")
 
     monkeypatch.setattr(runner, "psql", fake_psql)
     assert runner.main() == 0
-    assert len(calls) == 1
+    assert len(calls) == 2
     assert calls[0][-1] == runner.RESET_DEMO_SQL
-    assert "-f" not in calls[0]
+    assert calls[1][-1] == runner.FRESH_SQL
+    assert all("-f" not in call for call in calls)
     assert "private-password" not in capsys.readouterr().out
 
 

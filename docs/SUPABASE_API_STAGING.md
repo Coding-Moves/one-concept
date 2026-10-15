@@ -43,12 +43,13 @@ criteria and #418 performs the cutover.
    incremental path or a fresh staging project; do not drop tables or retry
    the full migration sequence blindly.
    For the current project `zhrulokgngjceqgjkcmw`, the owner authorized
-   removing its disposable demo schema. A separate protected
+   removing its disposable demo schema and Auth users. A separate protected
    `supabase-api-staging-reset-*` tag runs `--reset-demo`: it requires that
-   exact project reference, no Auth users or custom Auth user triggers, and
-   precisely the inspected six public tables plus `rls_auto_enable()`.
-   The SQL drops those objects with `RESTRICT` in one transaction; an inventory
-   mismatch or dependency stops it without committing. Review the tag commit,
+   exact project reference, no custom Auth user triggers, empty Storage objects
+   and buckets, and precisely the inspected six public tables plus
+   `rls_auto_enable()`. One transaction drops those objects with `RESTRICT`
+   and deletes the Auth users; an inventory mismatch, stored object, or dependency
+   stops it without committing. Review the tag commit,
    approve the reset job, verify the fresh-project check, and only then run
    the separate schema tag for migrations 0001–0049.
 3. In the staging project, set `ALLOWED_ORIGINS` to exact HTTPS website origins

@@ -27,6 +27,11 @@ INCREMENTAL_PROBES = {
         "public.edge_api_subtopic_progress(uuid)",
         "public.edge_api_mark_subtopics_seen(uuid,uuid[])",
     ),
+    "0052_supabase_daily_selection_api.sql": (
+        "public.edge_api_daily_payload(uuid,date)",
+        "public.edge_api_signal_supply(uuid,uuid,integer,integer,integer)",
+        "public.edge_api_daily(uuid,integer,integer,integer,date)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

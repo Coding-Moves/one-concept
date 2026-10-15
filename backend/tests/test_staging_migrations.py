@@ -171,26 +171,33 @@ def test_incremental_migration_rejects_unprobed_file_or_missing_baseline(monkeyp
     baseline = tmp_path / runner.INCREMENTAL_BASELINE
     reviewed = tmp_path / "0050_supabase_collections_api.sql"
     later = tmp_path / "0051_supabase_subtopic_progress_api.sql"
-    unknown = tmp_path / "0052_unreviewed.sql"
+    daily = tmp_path / "0052_supabase_daily_selection_api.sql"
+    unknown = tmp_path / "0053_unreviewed.sql"
     monkeypatch.setattr(runner, "function_presence", lambda *_: pytest.fail("unreviewed migration reached SQL"))
     assert runner.apply_incremental({}, [reviewed]) == 2
-    assert runner.apply_incremental({}, [baseline, reviewed, later, unknown]) == 2
+    assert runner.apply_incremental({}, [baseline, reviewed, later, daily, unknown]) == 2
 
 
-@pytest.mark.parametrize("states, expected, writes", [
-    ([(False,)], 2, 0),  # The 0049 baseline was not installed.
-    ([(True,), (True, False)], 2, 0),  # A partial 0050 must be inspected.
-    ([(True,), (False, False), (True, True), (False, False), (True, True)], 0, 2),
-    ([(True,), (True, True), (False, False), (True, True)], 0, 1),
-    ([(True,), (True, True), (True, True)], 0, 0),  # A protected job retry is harmless.
+@pytest.mark.parametrize("states, expected, writes, first", [
+    ([(False,)], 2, 0, None),  # The 0049 baseline was not installed.
+    ([(True,), (True, False)], 2, 0, None),  # A partial 0050 must be inspected.
+    ([(True,), (False, False), (True, True), (False, False), (True, True),
+      (False, False, False), (True, True, True)], 0, 3, "0050_supabase_collections_api.sql"),
+    ([(True,), (True, True), (False, False), (True, True),
+      (False, False, False), (True, True, True)], 0, 2, "0051_supabase_subtopic_progress_api.sql"),
+    ([(True,), (True, True), (True, True), (False, False, False),
+      (True, True, True)], 0, 1, "0052_supabase_daily_selection_api.sql"),
+    ([(True,), (True, True), (True, True), (True, True, True)], 0, 0, None),
 ])
-def test_incremental_migration_probes_before_and_after_sql(monkeypatch, tmp_path, states, expected, writes):
+def test_incremental_migration_probes_before_and_after_sql(monkeypatch, tmp_path, states, expected, writes, first):
     monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
     baseline = tmp_path / runner.INCREMENTAL_BASELINE
     reviewed = tmp_path / "0050_supabase_collections_api.sql"
     later = tmp_path / "0051_supabase_subtopic_progress_api.sql"
+    daily = tmp_path / "0052_supabase_daily_selection_api.sql"
     reviewed.write_text("begin; select 1; commit;")
     later.write_text("begin; select 2; commit;")
+    daily.write_text("begin; select 3; commit;")
     probes = iter(states)
     monkeypatch.setattr(runner, "function_presence", lambda *_: next(probes))
     applied = []
@@ -200,21 +207,22 @@ def test_incremental_migration_probes_before_and_after_sql(monkeypatch, tmp_path
         return subprocess.CompletedProcess(args, 0, "", "")
 
     monkeypatch.setattr(runner, "psql", fake_psql)
-    assert runner.apply_incremental({}, [baseline, reviewed, later]) == expected
+    assert runner.apply_incremental({}, [baseline, reviewed, later, daily]) == expected
     assert len(applied) == writes
     if writes:
-        assert applied[0][-2:] == ("-f", str(reviewed if writes == 2 else later))
+        assert applied[0][-2:] == ("-f", str(tmp_path / first))
 
 
 def test_incremental_migration_rejects_unreadable_postcheck(monkeypatch, tmp_path):
     monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
     reviewed = tmp_path / "0050_supabase_collections_api.sql"
     later = tmp_path / "0051_supabase_subtopic_progress_api.sql"
+    daily = tmp_path / "0052_supabase_daily_selection_api.sql"
     reviewed.write_text("begin; select 1; commit;")
     probes = iter([(True,), (False, False), None])
     monkeypatch.setattr(runner, "function_presence", lambda *_: next(probes))
     monkeypatch.setattr(runner, "psql", lambda _env, *args: subprocess.CompletedProcess(args, 0, "", ""))
-    assert runner.apply_incremental({}, [tmp_path / runner.INCREMENTAL_BASELINE, reviewed, later]) == 1
+    assert runner.apply_incremental({}, [tmp_path / runner.INCREMENTAL_BASELINE, reviewed, later, daily]) == 1
 
 
 @pytest.mark.asyncio

@@ -53,7 +53,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | PUT | `/v1/me/topics` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST, DELETE | `/v1/me/push-token` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET, PUT | `/v1/me/notifications` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| PATCH | `/v1/me` | Mobile / verified learner | Not ported |
+| PATCH | `/v1/me` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | PUT, DELETE | `/v1/me/avatar` | Mobile / verified learner | Not ported |
 | GET | `/v1/me/subtopics/progress` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/subtopics/completions/seen` | Mobile / verified learner | Candidate; local handler/SQL tests |

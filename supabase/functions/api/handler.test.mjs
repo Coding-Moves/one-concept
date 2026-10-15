@@ -193,6 +193,50 @@ test('topic follow replacement uses the verified account and keeps the state res
   assert.equal((await handler(request('/v1/me/topics', { headers }))).status, 405);
 });
 
+test('profile edit validates the input, preserves timezone errors, and deletes only its old avatar', async () => {
+  const oldRef = `avatars/${userId}/${'a'.repeat(32)}.jpg`;
+  const calls = [];
+  let payload = { state: { display_name: 'Muawiya', bio: null,
+    avatar_ref: 'preset:aurora', avatar_url: null, daily: null }, old_avatar_ref: oldRef };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, init });
+    return url.includes('/storage/v1/') ? Response.json({}) : Response.json(payload);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const updated = await handler(request('/v1/me?compact=true', {
+    method: 'PATCH', headers, body: JSON.stringify({
+      display_name: '  Muawiya  ', bio: '  ', avatar_preset: 'aurora',
+      timezone: 'Asia/Karachi', initialize_timezone: true,
+    }),
+  }));
+  assert.equal(updated.status, 200);
+  assert.deepEqual(await updated.json(), payload.state);
+  assert.match(calls[0].url, /\/rpc\/edge_api_patch_profile$/);
+  assert.deepEqual(JSON.parse(calls[0].init.body), {
+    p_user_id: userId, p_display_name: 'Muawiya', p_has_bio: true, p_bio: null,
+    p_avatar_preset: 'aurora', p_timezone: 'Asia/Karachi',
+    p_initialize_timezone: true, p_compact: true, p_today: null,
+  });
+  assert.match(calls[1].url, /\/storage\/v1\/object\/profile-avatars$/);
+  assert.equal(calls[1].init.headers.apikey, config.serviceRoleKey);
+  assert.deepEqual(JSON.parse(calls[1].init.body), { prefixes: [oldRef] });
+
+  payload = { error: 'unknown_timezone' };
+  const timezone = await handler(request('/v1/me', {
+    method: 'PATCH', headers, body: JSON.stringify({ timezone: 'Not/A/Zone' }),
+  }));
+  assert.equal(timezone.status, 400);
+  assert.deepEqual(await timezone.json(), { detail: 'Unknown timezone' });
+  assert.equal(calls.length, 3);
+  const invalid = await handler(request('/v1/me', {
+    method: 'PATCH', headers, body: JSON.stringify({ display_name: '  ' }),
+  }));
+  assert.equal(invalid.status, 422);
+  assert.equal(calls.length, 3);
+  assert.equal((await handler(request('/v1/me', { headers }))).status, 405);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

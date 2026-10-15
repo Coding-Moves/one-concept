@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -189,6 +189,48 @@ function topicSlugs(body: JsonObject): string[] {
   return slugs as string[];
 }
 
+function profileInput(body: JsonObject): {
+  displayName: string | null; hasBio: boolean; bio: string | null;
+  preset: string | null; timezone: string | null; initializeTimezone: boolean;
+} {
+  const rawName = body.display_name;
+  let displayName: string | null = null;
+  if (rawName !== undefined && rawName !== null) {
+    if (typeof rawName !== 'string' || [...rawName].length > 60) {
+      throw new ClientBodyError(422, 'Invalid display name');
+    }
+    displayName = rawName.normalize('NFC').trim();
+    if (!displayName || [...displayName].length > 60 || /\p{C}/u.test(displayName)) {
+      throw new ClientBodyError(422, 'Invalid display name');
+    }
+  }
+  const hasBio = Object.prototype.hasOwnProperty.call(body, 'bio');
+  const rawBio = body.bio;
+  if (hasBio && rawBio !== null && (typeof rawBio !== 'string' || [...rawBio].length > 160)) {
+    throw new ClientBodyError(422, 'Invalid bio');
+  }
+  const bio = typeof rawBio === 'string' ? rawBio.trim().split(/\s+/u).join(' ') || null : null;
+  const rawPreset = body.avatar_preset;
+  if (rawPreset !== undefined && rawPreset !== null
+      && (typeof rawPreset !== 'string'
+          || !['aurora', 'comet', 'forest', 'ocean', 'sunset', 'violet'].includes(rawPreset))) {
+    throw new ClientBodyError(422, 'Unknown avatar preset');
+  }
+  const rawTimezone = body.timezone;
+  if (rawTimezone !== undefined && rawTimezone !== null
+      && (typeof rawTimezone !== 'string' || [...rawTimezone].length > 64)) {
+    throw new ClientBodyError(422, 'Invalid timezone');
+  }
+  const initializeTimezone = body.initialize_timezone === undefined ? false : body.initialize_timezone;
+  if (typeof initializeTimezone !== 'boolean') {
+    throw new ClientBodyError(422, 'Invalid timezone initialization');
+  }
+  return {
+    displayName, hasBio, bio, preset: typeof rawPreset === 'string' ? rawPreset : null,
+    timezone: typeof rawTimezone === 'string' ? rawTimezone : null, initializeTimezone,
+  };
+}
+
 function pageLimit(query: URLSearchParams): number {
   const raw = query.get('limit');
   if (raw === null) return 50;
@@ -229,6 +271,23 @@ async function signedAvatarUrl(ref: unknown, userId: string, config: ApiConfig, 
   } catch {
     return null;
   }
+}
+
+async function deleteOldAvatar(ref: unknown, userId: string, config: ApiConfig, fetcher: Fetcher): Promise<void> {
+  if (typeof ref !== 'string' || !new RegExp(`^avatars/${userId}/[a-f0-9]{32}\\.jpg$`).test(ref)) return;
+  try {
+    await fetcher(`${config.supabaseUrl}/storage/v1/object/profile-avatars`, {
+      method: 'DELETE',
+      headers: {
+        apikey: config.serviceRoleKey,
+        authorization: `Bearer ${config.serviceRoleKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ prefixes: [ref] }),
+      signal: AbortSignal.timeout(5000),
+      redirect: 'error',
+    });
+  } catch { /* A failed old-object cleanup must not undo the saved profile. */ }
 }
 
 function historyCursor(query: URLSearchParams): string | null {
@@ -302,6 +361,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const pushToken = path === '/v1/me/push-token';
     const stats = path === '/v1/me/stats';
     const state = path === '/v1/me/state';
+    const profile = path === '/v1/me';
     const followedTopics = path === '/v1/me/topics';
     const history = path === '/v1/me/history';
     const saved = path === '/v1/me/saved';
@@ -311,7 +371,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !state && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -320,6 +380,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         ? request.method === 'GET' || request.method === 'PUT'
         : followedTopics
           ? request.method === 'PUT'
+        : profile
+          ? request.method === 'PATCH'
         : pushToken
           ? request.method === 'POST' || request.method === 'DELETE'
           : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null
@@ -389,6 +451,25 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         }
         data.avatar_url = await signedAvatarUrl(data.avatar_ref, userId, config, fetcher);
         return response(data, 200, cors);
+      }
+      if (profile) {
+        const body = await readJson(request);
+        const input = profileInput(body!);
+        const data = await rpc('edge_api_patch_profile', {
+          p_user_id: userId, p_display_name: input.displayName,
+          p_has_bio: input.hasBio, p_bio: input.bio, p_avatar_preset: input.preset,
+          p_timezone: input.timezone, p_initialize_timezone: input.initializeTimezone,
+          p_compact: queryBoolean(requestUrl.searchParams, 'compact'), p_today: null,
+        }, config, fetcher) as JsonObject | null;
+        if (data === null) return unavailable(cors);
+        if (data.error === 'unknown_timezone') return httpError(400, 'Unknown timezone', cors);
+        if (typeof data.state !== 'object' || data.state === null || Array.isArray(data.state)) {
+          return unavailable(cors);
+        }
+        await deleteOldAvatar(data.old_avatar_ref, userId, config, fetcher);
+        const state = data.state as JsonObject;
+        state.avatar_url = await signedAvatarUrl(state.avatar_ref, userId, config, fetcher);
+        return response(state, 200, cors);
       }
       if (history) {
         return response(await rpc('edge_api_history', {

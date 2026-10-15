@@ -10,16 +10,17 @@ criteria and #418 performs the cutover.
 
 The first staging schema run applied migrations 0001–0049 and deployed the
 candidate at commit `b8fddd4`. Migration 0050 and its history/saved routes are
-locally tested but are not yet applied or deployed in staging. Later candidate
-migrations need a reviewed incremental staging path; the fresh-project runner
-must not be rerun against the initialized project.
+locally tested but are not yet applied or deployed in staging. A protected
+incremental job now checks the exact staging project, the verified 0049 RPC,
+and explicit before/after RPC signatures for each later migration. The
+fresh-project runner must not be rerun against the initialized project.
 
 ## Local checks
 
 - Use Node 24 and the existing locked mobile TypeScript installation:
   `mobile/node_modules/.bin/tsc -p supabase/functions/tsconfig.json` and
   `node --experimental-strip-types supabase/functions/api/handler.test.mjs`.
-- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py -q -rs`
+- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_staging_migrations.py -q -rs`
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
 - For runtime parity, serve the function with the Supabase CLI and an isolated
   local stack when available. TypeScript/Node tests do not prove Deno runtime
@@ -60,6 +61,13 @@ must not be rerun against the initialized project.
    Review the tag commit,
    approve the reset job, verify the fresh-project check, and only then run
    the separate schema tag for migrations 0001–0049.
+   For this initialized staging project, inspect the commit containing the
+   new migration, then push a unique `supabase-api-staging-incremental-*` tag.
+   Its protected job runs `--apply-incremental`; it refuses an unknown project,
+   a missing 0049 baseline, an unlisted later migration, or partially present
+   RPCs. It verifies the new RPCs after SQL. A retry skips an already complete
+   migration. Add explicit probes and tests when adding each later migration.
+   Approve that job separately before deploying an updated Edge candidate.
 3. In the staging project, set `ALLOWED_ORIGINS` to exact HTTPS website origins
    needed for browser testing. No wildcard is accepted. `SUPABASE_URL`,
    `SUPABASE_ANON_KEY` and `SUPABASE_SERVICE_ROLE_KEY` are Edge runtime secrets;
@@ -73,8 +81,10 @@ must not be rerun against the initialized project.
    reserved URL characters. The staging environment requires approval by
    `Muawiya-contact` and accepts only `supabase-api-staging-*` tags. After
    reviewing the exact commit and passing PR checks, create and push a unique
-   `supabase-api-staging-schema-*` tag. Approve its protected job and verify all
-   ordered migrations and the final RPC check succeed. Then create and push a
+   `supabase-api-staging-schema-*` tag for a fresh project, or an
+   `supabase-api-staging-incremental-*` tag for this initialized project. Approve
+   its protected job and verify the applicable SQL and RPC checks succeed.
+   Then create and push a
    unique `supabase-api-staging-deploy-*` tag on the same commit; approve its
    separate protected job. The first job receives the database URI, and the
    second receives the scoped Edge token. The deploy job refuses an absent or

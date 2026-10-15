@@ -372,6 +372,10 @@ when the fresh-project gate rejects an existing application schema.
 Its one-project `--reset-demo` mode removes only the reviewed disposable demo
 schema, its event trigger, and Auth users after exact object and empty-Storage
 checks; protected reset and migration tags are separate jobs.
+For the initialized staging project, `--apply-incremental` requires the verified
+0049 RPC baseline and explicit before/after probes for every later migration.
+The protected incremental tag runs this path separately from the fresh-schema
+and Edge deploy jobs.
 Migration #417 will move scheduled workers; #418 owns browser pages and client
 cutover. Until then, the FastAPI implementation below remains authoritative.
 

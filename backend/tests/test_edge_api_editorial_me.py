@@ -1,0 +1,57 @@
+"""Editorial identity checks current Auth session and server-side membership."""
+
+import json
+import uuid
+
+import pytest
+from sqlalchemy import text
+
+
+ME = text("select public.edge_api_editorial_me(:uid,:sid,:aal)")
+
+
+def _json(value):
+    return json.loads(value) if isinstance(value, str) else value
+
+
+@pytest.mark.asyncio
+async def test_editorial_me_requires_current_confirmed_session_and_membership(session, user):
+    sid = uuid.uuid4()
+    args = {"uid": user, "sid": sid, "aal": "aal1"}
+    assert _json(await session.scalar(ME, args))["error"] == "session_required"
+    await session.execute(text("insert into auth.sessions(id,user_id) values(:sid,:uid)"), args)
+    assert _json(await session.scalar(ME, args))["error"] == "session_required"
+    await session.execute(text("update auth.users set email_confirmed_at=now() where id=:uid"), args)
+    assert _json(await session.scalar(ME, args))["error"] == "unavailable"
+    await session.execute(text("""insert into public.editorial_memberships
+      (user_id,invited_email,capabilities) values(:uid,'owner@example.invalid',array['review'])"""), args)
+    onboarding = _json(await session.scalar(ME, args))
+    assert onboarding["onboarding_required"] is True
+    assert onboarding["name_approval_pending"] is False
+    assert onboarding["mfa_required"] is True
+    assert onboarding["member"]["user_id"] == str(user)
+    await session.execute(text("""update public.editorial_memberships
+      set requested_name='Owner Name' where user_id=:uid"""), args)
+    pending = _json(await session.scalar(ME, args))
+    assert pending["name_approval_pending"] is True
+    args["aal"] = "aal2"
+    assert _json(await session.scalar(ME, args))["mfa_required"] is False
+    await session.execute(text("update auth.sessions set not_after=now()-interval '1 second' where id=:sid"), args)
+    assert _json(await session.scalar(ME, args))["error"] == "session_required"
+    await session.execute(text("update auth.sessions set not_after=null where id=:sid"), args)
+    await session.execute(text("update auth.users set banned_until=now()+interval '1 day' where id=:uid"), args)
+    assert _json(await session.scalar(ME, args))["error"] == "session_required"
+    await session.execute(text("update auth.users set banned_until=null where id=:uid"), args)
+    other = uuid.uuid4()
+    await session.execute(text("insert into auth.users(id,email) values(:id,'other@example.invalid')"),
+                          {"id": other})
+    await session.execute(text("update auth.sessions set user_id=:other where id=:sid"),
+                          {"other": other, "sid": sid})
+    assert _json(await session.scalar(ME, args))["error"] == "session_required"
+    await session.execute(text("update auth.sessions set user_id=:uid where id=:sid"), args)
+    await session.execute(text("update public.editorial_memberships set status='revoked' where user_id=:uid"), args)
+    assert _json(await session.scalar(ME, args))["error"] == "unavailable"
+    rights = (await session.execute(text("""select
+      has_function_privilege('authenticated', 'public.edge_api_editorial_me(uuid,uuid,text)', 'EXECUTE'),
+      has_function_privilege('service_role', 'public.edge_api_editorial_me(uuid,uuid,text)', 'EXECUTE')"""))).one()
+    assert rights == (False, True)

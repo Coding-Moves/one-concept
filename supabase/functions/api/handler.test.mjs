@@ -500,6 +500,34 @@ test('connection requests preserve pair status, privacy, and retry headers', asy
   assert.equal(calls.length, 6);
 });
 
+test('blocking a public connection token is authenticated and returns private 204', async () => {
+  const token = 'b'.repeat(43);
+  const calls = [];
+  let payload = { ok: true };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const path = `/v1/me/connections/with/${token}/block`;
+  const headers = { authorization: 'Bearer account-token' };
+  assert.equal((await handler(request(path, { method: 'POST' }))).status, 401);
+  const blocked = await handler(request(path, { method: 'POST', headers }));
+  assert.equal(blocked.status, 204);
+  assert.equal(blocked.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.match(calls[0].url, /\/rpc\/edge_api_connection_block_token$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_token: token });
+  payload = { error: 'unavailable' };
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 404);
+  payload = { error: 'self' };
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 400);
+  assert.equal((await handler(request('/v1/me/connections/with/bad/block', {
+    method: 'POST', headers,
+  }))).status, 404);
+  assert.equal((await handler(request(path, { method: 'GET', headers }))).status, 405);
+  assert.equal(calls.length, 3);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

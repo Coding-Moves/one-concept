@@ -97,3 +97,32 @@ async def test_editorial_reviewer_pages_require_capability_name_and_mfa(session,
       has_function_privilege('service_role',
         'public.edge_api_editorial_reviewers(uuid,uuid,text,uuid,integer)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+
+
+@pytest.mark.asyncio
+async def test_editorial_profile_request_rechecks_session_and_version_under_lock(session, user):
+    sid = uuid.uuid4()
+    await session.execute(text("update auth.users set email_confirmed_at=now() where id=:uid"), {"uid": user})
+    await session.execute(text("insert into auth.sessions(id,user_id) values(:sid,:uid)"),
+                          {"sid": sid, "uid": user})
+    await session.execute(text("""insert into public.editorial_memberships
+      (user_id,invited_email,capabilities) values(:uid,'reviewer@example.invalid',array['review'])"""),
+      {"uid": user})
+    request = text("""select public.edge_api_editorial_request_profile(
+      :uid,:sid,:aal,:version,:name)""")
+    args = {"uid": user, "sid": sid, "aal": "aal1", "version": 1, "name": "Reviewer Name"}
+    first = _json(await session.scalar(request, args))
+    assert first["requested_name"] == "Reviewer Name" and first["version"] == 2
+    assert _json(await session.scalar(request, args))["error"] == "version_conflict"
+    args["version"] = 2
+    assert _json(await session.scalar(request, args))["version"] == 2
+    assert await session.scalar(text("""select count(*) from public.editorial_account_events
+      where actor_id=:uid and action='profile_requested'"""), {"uid": user}) == 1
+    await session.execute(text("delete from auth.sessions where id=:sid"), {"sid": sid})
+    assert _json(await session.scalar(request, args))["error"] == "session_required"
+    rights = (await session.execute(text("""select
+      has_function_privilege('authenticated',
+        'public.edge_api_editorial_request_profile(uuid,uuid,text,integer,text)', 'EXECUTE'),
+      has_function_privilege('service_role',
+        'public.edge_api_editorial_request_profile(uuid,uuid,text,integer,text)', 'EXECUTE')"""))).one()
+    assert rights == (False, True)

@@ -126,6 +126,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_authorize(uuid,uuid,text,text)",
         "public.edge_api_editorial_reviewers(uuid,uuid,text,uuid,integer)",
     ),
+    "0081_supabase_editorial_profile_request_api.sql": (
+        "public.edge_api_editorial_request_profile(uuid,uuid,text,integer,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

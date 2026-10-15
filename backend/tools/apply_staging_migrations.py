@@ -95,6 +95,9 @@ INCREMENTAL_PROBES = {
     "0070_supabase_relationship_connect_api.sql": (
         "public.edge_api_relationship_connect(uuid,text)",
     ),
+    "0071_supabase_relationship_remove_api.sql": (
+        "public.edge_api_relationship_remove(uuid,uuid)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -76,3 +76,17 @@ async def test_subtopic_quiz_waits_for_reviewed_catalog_and_freezes(session, use
       has_function_privilege('service_role',
         'public.edge_api_submit_subtopic_quiz(uuid,uuid,jsonb)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+    history = text("select public.edge_api_subtopic_quiz_attempts(:uid,:completion)")
+    listed = _json(await session.scalar(history, {"uid": user, "completion": completion}))
+    assert len(listed["items"]) == 2
+    assert {item["attempt_id"] for item in listed["items"]} == {
+        attempt["attempt_id"], retry["attempt_id"]}
+    assert all(item["question_count"] == 3 for item in listed["items"])
+    assert _json(await session.scalar(history, {"uid": uuid.uuid4(),
+                                                "completion": completion}))["error"] == "unavailable"
+    rights = (await session.execute(text("""select
+      has_function_privilege('authenticated',
+        'public.edge_api_subtopic_quiz_attempts(uuid,uuid)', 'EXECUTE'),
+      has_function_privilege('service_role',
+        'public.edge_api_subtopic_quiz_attempts(uuid,uuid)', 'EXECUTE')"""))).one()
+    assert rights == (False, True)

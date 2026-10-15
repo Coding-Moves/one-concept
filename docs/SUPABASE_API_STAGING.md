@@ -1,7 +1,7 @@
 # Supabase API candidate staging (#416)
 
-The current candidate serves only `GET /health` and `GET /v1/topics` at
-`/functions/v1/api`. The remaining entries in
+The current candidate serves health, topics, concept detail, and idempotent
+Like/Save routes at `/functions/v1/api`. The remaining entries in
 [the route matrix](SUPABASE_API_ROUTE_PARITY.md) are not implemented. Keep Railway
 and all production clients on the existing API until #416 meets its acceptance
 criteria and #418 performs the cutover.
@@ -11,7 +11,7 @@ criteria and #418 performs the cutover.
 - Use Node 24 and the existing locked mobile TypeScript installation:
   `mobile/node_modules/.bin/tsc -p supabase/functions/tsconfig.json` and
   `node --experimental-strip-types supabase/functions/api/handler.test.mjs`.
-- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py -q -rs`
+- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py -q -rs`
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
 - For runtime parity, serve the function with the Supabase CLI and an isolated
   local stack when available. TypeScript/Node tests do not prove Deno runtime
@@ -45,9 +45,10 @@ criteria and #418 performs the cutover.
 The initial staging probe must get `{ "status": "ok", "database": "reachable" }`
 from `/functions/v1/api/health`, `401` from `/functions/v1/api/v1/topics` without
 a bearer token, and the expected topic array with a valid **staging** account.
-Check an unapproved Origin receives `403`. Compare these responses to the
-existing FastAPI endpoints with the same seeded data. Never paste token values
-or full request headers into CI logs.
+Check concept detail, repeated Like/Save writes, and unknown slug `404` against
+the same seeded data. An unapproved Origin must receive `403`. Compare these
+responses to the existing FastAPI endpoints. Never paste token values or full
+request headers into CI logs.
 
 ## Promotion gate
 

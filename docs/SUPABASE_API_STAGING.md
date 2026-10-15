@@ -28,6 +28,11 @@ are locally tested but are not yet applied or deployed to staging.
   `node --experimental-strip-types supabase/functions/api/handler.test.mjs`.
 - From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_edge_api_achievements.py tests/test_edge_api_reviews.py tests/test_edge_api_state.py tests/test_staging_migrations.py -q -rs`
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
+- Run `backend/tests/test_staging_api_smoke.py` with the local suite. The
+  protected smoke job signs in with a dedicated staging Auth user and compares
+  the startup, topic, statistics, and achievement responses; it never logs the
+  account credentials or access token. Its startup request may create that
+  test user's daily assignment.
 - For runtime parity, serve the function with the Supabase CLI and an isolated
   local stack when available. TypeScript/Node tests do not prove Deno runtime
   packaging or hosted behavior.
@@ -102,6 +107,17 @@ are locally tested but are not yet applied or deployed to staging.
    identical project target and deploys only `api`. GitHub cannot dispatch a
    new workflow manually from a PR branch before the workflow reaches the
    default branch.
+   For the separate authenticated smoke tag, create a dedicated user only in
+   the staging project's Authentication → Users area. Save that user's email
+   and password as `SUPABASE_STAGING_TEST_EMAIL` and
+   `SUPABASE_STAGING_TEST_PASSWORD` in the same GitHub environment. Save the
+   staging project's publishable API key as
+   `SUPABASE_STAGING_PUBLISHABLE_KEY` there. Never put these values in the
+   repository or chat. After the SQL and Edge deployment jobs succeed, push a
+   unique `supabase-api-staging-smoke-*` tag on the same commit and approve its
+   protected job. Its project-reference guard rejects production and other
+   projects. A successful smoke covers only the listed learner reads, not the
+   remaining route, role, privacy, and load checks.
    `supabase/config.toml` disables
    gateway JWT verification because health is public; the handler verifies a
    bearer token through Supabase Auth before any private RPC. A route added

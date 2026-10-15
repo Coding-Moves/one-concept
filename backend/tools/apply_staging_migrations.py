@@ -41,6 +41,11 @@ INCREMENTAL_PROBES = {
         "public.edge_api_achievements(uuid)",
         "public.edge_api_achievements_seen(uuid,text[])",
     ),
+    "0055_supabase_daily_reviews_api.sql": (
+        "public.edge_api_review_payload(uuid,date)",
+        "public.edge_api_choose_review(uuid,date)",
+        "public.edge_api_complete_review(uuid,uuid,date)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

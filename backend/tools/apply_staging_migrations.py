@@ -32,6 +32,8 @@ select
   not exists (
     select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
+  ) and not exists (
+    select 1 from pg_event_trigger where evtname = 'ensure_rls'
   ),
   not exists (
     select 1 from pg_trigger t
@@ -81,9 +83,15 @@ begin
   if functions <> array['rls_auto_enable()'] then
     raise exception 'demo reset refused: public function inventory changed';
   end if;
+  if not exists(select 1 from pg_event_trigger
+    where evtname = 'ensure_rls'
+      and evtfoid = to_regprocedure('public.rls_auto_enable()')) then
+    raise exception 'demo reset refused: event trigger inventory changed';
+  end if;
 end $$;
 drop table public.admins, public.payout_requests, public.profiles,
   public.screenshots, public.tasks, public.wallets restrict;
+drop event trigger ensure_rls restrict;
 drop function public.rls_auto_enable() restrict;
 delete from auth.users;
 commit;"""

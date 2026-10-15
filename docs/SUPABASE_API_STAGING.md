@@ -47,9 +47,10 @@ criteria and #418 performs the cutover.
    `supabase-api-staging-reset-*` tag runs `--reset-demo`: it requires that
    exact project reference, no custom Auth user triggers, empty Storage objects
    and buckets, and precisely the inspected six public tables plus
-   `rls_auto_enable()`. One transaction drops those objects with `RESTRICT`
-   and deletes the Auth users; an inventory mismatch, stored object, or dependency
-   stops it without committing. Review the tag commit,
+   `rls_auto_enable()` and its `ensure_rls` event trigger. One transaction drops
+   those objects with `RESTRICT` and deletes the Auth users; an inventory
+   mismatch, stored object, or other dependency stops it without committing.
+   Review the tag commit,
    approve the reset job, verify the fresh-project check, and only then run
    the separate schema tag for migrations 0001–0049.
 3. In the staging project, set `ALLOWED_ORIGINS` to exact HTTPS website origins

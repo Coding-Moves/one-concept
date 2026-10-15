@@ -49,7 +49,8 @@ create table public.tasks(user_id uuid references public.profiles(id));
 create table public.wallets(user_id uuid references public.profiles(id));
 create table public.payout_requests(user_id uuid references public.profiles(id));
 create table public.screenshots(user_id uuid references public.profiles(id));
-create function public.rls_auto_enable() returns void language plpgsql as $$begin end$$;"""
+create function public.rls_auto_enable() returns event_trigger language plpgsql as $$begin end$$;
+create event trigger ensure_rls on ddl_command_end execute function public.rls_auto_enable();"""
         assert sql(setup).returncode == 0
         assert sql("with new_user as (insert into auth.users(id) values (gen_random_uuid()) returning id) insert into public.profiles(id) select id from new_user").returncode == 0
         assert sql("insert into storage.objects(id) values ('demo-file')").returncode == 0
@@ -68,9 +69,17 @@ create function public.rls_auto_enable() returns void language plpgsql as $$begi
         assert sql("select to_regclass('public.profiles') is not null").stdout.strip() == "t"
 
         assert sql("delete from storage.buckets").returncode == 0
+        assert sql("drop event trigger ensure_rls").returncode == 0
+        refused_trigger = sql(RESET_DEMO_SQL)
+        assert refused_trigger.returncode != 0
+        assert "event trigger inventory changed" in refused_trigger.stderr
+        assert sql("select to_regclass('public.profiles') is not null").stdout.strip() == "t"
+
+        assert sql("create event trigger ensure_rls on ddl_command_end execute function public.rls_auto_enable()").returncode == 0
         cleaned = sql(RESET_DEMO_SQL)
         assert cleaned.returncode == 0, cleaned.stderr[-500:]
         assert sql(FRESH_SQL).stdout.strip() == "t|t|t|t|t|t|t"
+        assert sql("select exists(select 1 from pg_event_trigger where evtname = 'ensure_rls')").stdout.strip() == "f"
         first_migration = Path(__file__).resolve().parents[1] / "migrations" / "0001_schema.sql"
         applied = sql(first_migration.read_text())
         assert applied.returncode == 0, applied.stderr[-500:]

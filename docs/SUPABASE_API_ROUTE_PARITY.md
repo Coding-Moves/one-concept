@@ -63,9 +63,9 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/v1/me/analytics` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/quizzes/weekly` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/quizzes/weekly/{quiz_id}/attempts` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| GET | `/v1/quizzes/subtopics/{completion_id}` | Mobile / verified learner | Not ported |
-| GET | `/v1/quizzes/subtopics/{completion_id}/attempts` | Mobile / verified learner | Not ported |
-| POST | `/v1/quizzes/subtopics/{quiz_id}/attempts` | Mobile / verified learner | Not ported |
+| GET | `/v1/quizzes/subtopics/{completion_id}` | Mobile / verified learner | Candidate; local handler/SQL tests |
+| GET | `/v1/quizzes/subtopics/{completion_id}/attempts` | Mobile / verified learner | Candidate; local handler/SQL tests |
+| POST | `/v1/quizzes/subtopics/{quiz_id}/attempts` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET, PUT | `/v1/me/profile-sharing` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/public-profiles/{token}` | Public visitor / filtered anonymous data | Candidate; local handler/SQL tests |
 | GET, PUT | `/v1/me/connections/settings` | Mobile / verified learner | Candidate; local handler/SQL tests |

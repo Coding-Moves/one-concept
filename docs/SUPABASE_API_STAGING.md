@@ -28,11 +28,12 @@ staging. Edge run `38740221408` deployed commit `e0cf046` to that project;
 live `/health` returned 200 with a reachable database and anonymous
 `/v1/topics` returned 401. Migrations 0060–0065 and their private/public
 profile-sharing and connection routes are locally tested but not yet staged.
-The first protected 0060–0064 SQL run stopped before applying migration 0060
-because its signature guard rejected a reviewed zero-argument RPC probe.
-Commit `b2d5a72` repairs the guard; its replacement SQL run awaits protected
-approval. The authenticated smoke still needs its staging test account and
-GitHub environment secrets.
+Protected 0060–0064 SQL runs `38745247414` and `38746546997` both stopped
+before applying migration 0060: their signature guard rejected, respectively,
+a reviewed zero-argument RPC and an older `timestamp with time zone` RPC.
+Commit `375ca68` replaces the syntax check with an exact list of reviewed
+signatures and tests every entry. A fresh protected SQL run is needed. The
+authenticated smoke still needs its staging test account and GitHub secrets.
 
 ## Local checks
 

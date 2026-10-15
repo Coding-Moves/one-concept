@@ -8,6 +8,7 @@ on:
       - 'supabase-api-staging-schema-*'
       - 'supabase-api-staging-incremental-*'
       - 'supabase-api-staging-deploy-*'
+      - 'supabase-api-staging-smoke-*'
 
 concurrency:
   group: supabase-api-staging
@@ -110,3 +111,20 @@ jobs:
           version: latest
       - name: Deploy candidate API function only
         run: supabase functions deploy api --project-ref "$STAGING_REF"
+
+  smoke:
+    if: startsWith(github.ref_name, 'supabase-api-staging-smoke-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check authenticated staging learner contract
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+          SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
+          SUPABASE_STAGING_TEST_PASSWORD: ${{ secrets.SUPABASE_STAGING_TEST_PASSWORD }}
+        run: python backend/tools/staging_api_smoke.py

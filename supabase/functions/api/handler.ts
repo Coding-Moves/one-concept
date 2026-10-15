@@ -86,7 +86,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -188,7 +188,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
     const notifications = path === '/v1/me/notifications';
     const pushToken = path === '/v1/me/push-token';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && concept === null) {
+    const stats = path === '/v1/me/stats';
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && concept === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -210,6 +211,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       if (!userId) return httpError(401, 'Invalid or expired token', cors, true);
       if (path === '/v1/topics') {
         return response(await rpc('edge_api_topics', { p_user_id: userId }, config, fetcher), 200, cors);
+      }
+      if (stats) {
+        return response(await rpc('edge_api_stats', { p_user_id: userId }, config, fetcher), 200, cors);
       }
       if (notifications) {
         const data = request.method === 'GET'

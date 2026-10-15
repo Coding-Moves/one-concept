@@ -144,6 +144,23 @@ test('notification preferences preserve the older-client weekly choice', async (
   });
 });
 
+test('streak statistics use only the verified account', async () => {
+  const stats = { current: 3, longest: 7, total_learned: 26, total_reviews: 2 };
+  const calls = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(stats);
+  });
+  const result = await handler(request('/v1/me/stats', {
+    headers: { authorization: 'Bearer account-token' },
+  }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), stats);
+  assert.match(calls[0].url, /\/rpc\/edge_api_stats$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId });
+});
+
 test('invalid or excessive preference bodies fail before database access', async () => {
   let calls = 0;
   const handler = createHandler(config, async url => {

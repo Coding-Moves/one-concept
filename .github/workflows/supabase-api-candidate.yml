@@ -1,7 +1,13 @@
 name: Deploy Supabase API candidate to staging
 
 on:
-  workflow_dispatch:
+  push:
+    tags:
+      - 'supabase-api-staging-*'
+
+concurrency:
+  group: supabase-api-staging
+  cancel-in-progress: false
 
 permissions:
   contents: read

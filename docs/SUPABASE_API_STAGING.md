@@ -35,9 +35,14 @@ criteria and #418 performs the cutover.
 4. Configure the protected GitHub `supabase-staging` environment with a scoped
    `SUPABASE_STAGING_ACCESS_TOKEN` secret granting Edge Functions write on the
    staging project, plus `SUPABASE_STAGING_PROJECT_REF` and
-   `SUPABASE_PRODUCTION_PROJECT_REF` variables. The manually dispatched
-   `supabase-api-candidate.yml` workflow refuses an absent or identical target
-   and deploys only `api`. SQL migrations are a separate, verified prerequisite.
+   `SUPABASE_PRODUCTION_PROJECT_REF` variables. The staging environment requires
+   approval by `Muawiya-contact` and accepts only `supabase-api-staging-*` tags.
+   After reviewing the exact commit and applying the staging SQL migrations,
+   create and push a unique tag of that form on the candidate commit. The
+   tag-triggered `supabase-api-candidate.yml` workflow refuses an absent or
+   identical target and deploys only `api`. GitHub cannot dispatch a new
+   workflow manually from a PR branch before the workflow reaches the default
+   branch. SQL migrations are a separate, verified prerequisite.
    `supabase/config.toml` disables
    gateway JWT verification because health is public; the handler verifies a
    bearer token through Supabase Auth before any private RPC. A route added

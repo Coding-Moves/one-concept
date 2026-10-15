@@ -194,3 +194,45 @@ async def test_editorial_authenticator_choice_requires_recent_totp_to_disable(se
       has_function_privilege('service_role',
         'public.edge_api_editorial_authenticator(uuid,uuid,text,bigint,integer,boolean)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+
+
+@pytest.mark.asyncio
+async def test_editorial_profile_approval_requires_another_current_admin(session, user):
+    sid = uuid.uuid4()
+    peer = uuid.uuid4()
+    await session.execute(text("update auth.users set email_confirmed_at=now() where id=:uid"), {"uid": user})
+    await session.execute(text("insert into auth.sessions(id,user_id) values(:sid,:uid)"),
+                          {"sid": sid, "uid": user})
+    await session.execute(text("""insert into public.editorial_memberships
+      (user_id,invited_email,capabilities,requested_name,approved_name)
+      values(:uid,'owner@example.invalid',array['manage_reviewers'],'Owner','Owner')"""),
+      {"uid": user})
+    await session.execute(text("insert into auth.users(id,email) values(:uid,'peer@example.invalid')"),
+                          {"uid": peer})
+    await session.execute(text("""insert into public.editorial_memberships
+      (user_id,invited_email,capabilities,requested_name)
+      values(:uid,'peer@example.invalid',array['review'],'Peer Name')"""),
+      {"uid": peer})
+    approve = text("""select public.edge_api_editorial_approve_profile(
+      :uid,:sid,:aal,:peer,:version)""")
+    args = {"uid": user, "sid": sid, "aal": "aal1", "peer": peer, "version": 1}
+    assert _json(await session.scalar(approve, args))["error"] == "mfa_required"
+    args["aal"] = "aal2"
+    args["peer"] = user
+    assert _json(await session.scalar(approve, args))["error"] == "self_approval"
+    args["peer"] = peer
+    approved = _json(await session.scalar(approve, args))
+    assert approved["approved_name"] == "Peer Name" and approved["version"] == 2
+    assert _json(await session.scalar(approve, args))["error"] == "version_conflict"
+    args["version"] = 2
+    assert _json(await session.scalar(approve, args))["version"] == 2
+    assert await session.scalar(text("""select count(*) from public.editorial_account_events
+      where actor_id=:uid and subject_id=:peer and action='profile_approved'"""), args) == 1
+    await session.execute(text("delete from auth.sessions where id=:sid"), {"sid": sid})
+    assert _json(await session.scalar(approve, args))["error"] == "session_required"
+    rights = (await session.execute(text("""select
+      has_function_privilege('authenticated',
+        'public.edge_api_editorial_approve_profile(uuid,uuid,text,uuid,integer)', 'EXECUTE'),
+      has_function_privilege('service_role',
+        'public.edge_api_editorial_approve_profile(uuid,uuid,text,uuid,integer)', 'EXECUTE')"""))).one()
+    assert rights == (False, True)

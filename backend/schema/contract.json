@@ -82,7 +82,8 @@
     "0080_supabase_editorial_reviewers_list_api.sql": "556f4004bca61fee65649a9c2f2138299017a95e2fd44e4d34dc685ebfc15b7d",
     "0081_supabase_editorial_profile_request_api.sql": "f3dc53f9579bfaabd3fef651a1429701473201a11abe10486eac7ba1104d93f7",
     "0082_supabase_editorial_timezone_api.sql": "13d06487f07e7526f6d862cda20e0c376f86be18c8cf55c3c31350c6ca3b9047",
-    "0083_supabase_editorial_authenticator_api.sql": "fea24d8ae3364b0ad8f9001e26aedccb88915d47a0d3c9415e1d0c8ebbfa2501"
+    "0083_supabase_editorial_authenticator_api.sql": "fea24d8ae3364b0ad8f9001e26aedccb88915d47a0d3c9415e1d0c8ebbfa2501",
+    "0084_supabase_editorial_profile_approval_api.sql": "2eb8ccc20564db6d1be2dd06c1f800e93091c62af25d4bfcda25966cc38ca22a"
   },
   "schema": {
     "columns": {

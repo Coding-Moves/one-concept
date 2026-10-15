@@ -135,6 +135,9 @@ INCREMENTAL_PROBES = {
     "0083_supabase_editorial_authenticator_api.sql": (
         "public.edge_api_editorial_authenticator(uuid,uuid,text,bigint,integer,boolean)",
     ),
+    "0084_supabase_editorial_profile_approval_api.sql": (
+        "public.edge_api_editorial_approve_profile(uuid,uuid,text,uuid,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

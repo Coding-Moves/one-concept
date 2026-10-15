@@ -49,7 +49,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/v1/me/state` | Mobile / verified learner | Not ported |
 | GET | `/v1/me/history` | Mobile / verified learner | Not ported |
 | GET | `/v1/me/saved` | Mobile / verified learner | Not ported |
-| GET | `/v1/me/stats` | Mobile / verified learner | Not ported |
+| GET | `/v1/me/stats` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | PUT | `/v1/me/topics` | Mobile / verified learner | Not ported |
 | POST, DELETE | `/v1/me/push-token` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET, PUT | `/v1/me/notifications` | Mobile / verified learner | Candidate; local handler/SQL tests |

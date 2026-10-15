@@ -10,6 +10,7 @@ const config = {
   allowedOrigins: ['https://review.example.com'],
 };
 const request = (path, init = {}) => new Request(`https://one-concept.supabase.co/functions/v1/api${path}`, init);
+const editorialToken = (claims) => `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
 
 test('health probes the database and sets exact-origin CORS', async () => {
   const calls = [];
@@ -62,6 +63,46 @@ test('topics requires Auth verification and passes only its returned user ID to 
   assert.equal(calls[0].init.headers.authorization, 'Bearer user-access-token');
   assert.equal(calls[1].init.headers.apikey, config.serviceRoleKey);
   assert.deepEqual(JSON.parse(calls[1].init.body), { p_user_id: userId });
+});
+
+test('editorial me rechecks an Auth-verified session and server membership', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });
+  const calls = [];
+  let payload = { member: { user_id: userId, require_mfa: true },
+    onboarding_required: false, name_approval_pending: false, mfa_required: true };
+  const fetcher = async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  };
+  const disabled = createHandler(config, fetcher);
+  assert.equal((await disabled(request('/v1/editorial/me', {
+    headers: { authorization: `Bearer ${token}` },
+  }))).status, 503);
+  assert.equal(calls.length, 1);
+  const handler = createHandler({ ...config, editorialEnabled: true }, fetcher);
+  assert.equal((await handler(request('/v1/editorial/me'))).status, 401);
+  const wrongSub = editorialToken({ sub: 'a5a94932-62e0-4780-91c7-af48b93e27ab', session_id: sessionId });
+  assert.equal((await handler(request('/v1/editorial/me', {
+    headers: { authorization: `Bearer ${wrongSub}` },
+  }))).status, 401);
+  const result = await handler(request('/v1/editorial/me', { headers: { authorization: `Bearer ${token}` } }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.equal(result.headers.get('x-content-type-options'), 'nosniff');
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_me$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal1',
+  });
+  payload = { error: 'session_required' };
+  assert.equal((await handler(request('/v1/editorial/me', {
+    headers: { authorization: `Bearer ${token}` },
+  }))).status, 401);
+  payload = { error: 'unavailable' };
+  assert.equal((await handler(request('/v1/editorial/me', {
+    headers: { authorization: `Bearer ${token}` },
+  }))).status, 403);
 });
 
 test('weekly quiz selection uses the verified account and never exposes a private RPC result to anonymous callers', async () => {

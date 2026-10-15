@@ -8,6 +8,7 @@ export type ApiConfig = {
   contentLowWatermark?: number;
   contentReservePerTopic?: number;
   contentActiveDays?: number;
+  editorialEnabled?: boolean;
 };
 
 type Fetcher = typeof fetch;
@@ -45,6 +46,15 @@ function response(body: unknown, status: number, cors: Headers): Response {
 
 function httpError(status: number, detail: string, cors: Headers, authenticate = false): Response {
   const result = response({ detail }, status, cors);
+  if (authenticate) result.headers.set('www-authenticate', 'Bearer');
+  return result;
+}
+
+function editorialResponse(body: unknown, status: number, cors: Headers, authenticate = false): Response {
+  const result = response(body, status, cors);
+  result.headers.set('vary', 'Authorization, Origin');
+  result.headers.set('x-content-type-options', 'nosniff');
+  result.headers.set('content-security-policy', "default-src 'none'; frame-ancestors 'none'");
   if (authenticate) result.headers.set('www-authenticate', 'Bearer');
   return result;
 }
@@ -89,7 +99,25 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+function editorialClaims(token: string, verifiedUserId: string): { sessionId: string; aal: string } | null {
+  // Supabase Auth has already verified this exact bearer token. Read only the
+  // session and AAL claims, then recheck session ownership in PostgreSQL.
+  const parts = token.split('.');
+  if (parts.length !== 3 || parts[1].length > 8192 || !/^[A-Za-z0-9_-]+$/.test(parts[1])) return null;
+  try {
+    const encoded = parts[1].replaceAll('-', '+').replaceAll('_', '/');
+    const bytes = Uint8Array.from(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=')),
+      char => char.charCodeAt(0));
+    const payload: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) return null;
+    const claims = payload as JsonObject;
+    if (claims.sub !== verifiedUserId || typeof claims.session_id !== 'string'
+        || !UUID.test(claims.session_id)) return null;
+    return { sessionId: claims.session_id, aal: claims.aal === 'aal2' ? 'aal2' : 'aal1' };
+  } catch { return null; }
+}
+
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -534,6 +562,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const connectionList = path === '/v1/me/connections';
     const relationshipList = path === '/v1/me/relationships';
     const weeklyQuiz = path === '/v1/quizzes/weekly';
+    const editorialMe = path === '/v1/editorial/me';
     const state = path === '/v1/me/state';
     const profile = path === '/v1/me';
     const followedTopics = path === '/v1/me/topics';
@@ -545,7 +574,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !weeklyQuiz && weeklyAttempt === null && subtopicQuiz === null && subtopicAttempt === null && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !weeklyQuiz && !editorialMe && weeklyAttempt === null && subtopicQuiz === null && subtopicAttempt === null && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -596,9 +625,29 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         return sharingResponse(visible, 200, cors);
       }
       const token = bearerToken(request);
-      if (!token) return httpError(401, 'Missing bearer token', cors, true);
+      if (!token) return editorialMe
+        ? editorialResponse({ detail: 'Missing bearer token' }, 401, cors, true)
+        : httpError(401, 'Missing bearer token', cors, true);
       const userId = await authenticatedUser(token, config, fetcher);
-      if (!userId) return httpError(401, 'Invalid or expired token', cors, true);
+      if (!userId) return editorialMe
+        ? editorialResponse({ detail: 'Invalid or expired token' }, 401, cors, true)
+        : httpError(401, 'Invalid or expired token', cors, true);
+      if (editorialMe) {
+        if (!config.editorialEnabled) return editorialResponse({ detail: 'Editorial access is disabled' }, 503, cors);
+        const claims = editorialClaims(token, userId);
+        if (!claims) return editorialResponse({ detail: 'A current Supabase session is required' }, 401, cors, true);
+        const data = await rpc('edge_api_editorial_me', {
+          p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
+        }, config, fetcher) as JsonObject | null;
+        if (data === null) return unavailable(cors);
+        if (data.error === 'session_required') {
+          return editorialResponse({ detail: 'A confirmed account and current session are required' }, 401, cors, true);
+        }
+        if (data.error === 'unavailable') {
+          return editorialResponse({ detail: 'Editorial access is unavailable' }, 403, cors);
+        }
+        return editorialResponse(data, 200, cors);
+      }
       if (path === '/v1/topics') {
         return response(await rpc('edge_api_topics', { p_user_id: userId }, config, fetcher), 200, cors);
       }

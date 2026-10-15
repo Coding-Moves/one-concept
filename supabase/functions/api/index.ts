@@ -26,4 +26,5 @@ Deno.serve(createHandler({
   contentLowWatermark: optionalInteger('CONTENT_LOW_WATERMARK', 10),
   contentReservePerTopic: optionalInteger('CONTENT_RESERVE_PER_TOPIC', 60),
   contentActiveDays: optionalInteger('CONTENT_ACTIVE_DAYS', 90),
+  editorialEnabled: Deno.env.get('EDITORIAL_ENABLED') === 'true',
 }));

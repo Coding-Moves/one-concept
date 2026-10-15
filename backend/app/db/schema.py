@@ -80,7 +80,10 @@ async def snapshot(connection) -> dict:
           where n.nspname='public' and p.proname in ('handle_new_user','touch_updated_at',
             'prevent_editorial_evidence_mutation','protect_reviewed_revision_body',
             'protect_editorial_job_input','protect_generated_revision_body',
-            'capture_editorial_notification','enqueue_editorial_notification')""",
+            'capture_editorial_notification','enqueue_editorial_notification',
+            'edge_api_health','edge_api_topics','edge_api_concept',
+            'edge_api_set_interaction','edge_api_notifications',
+            'edge_api_set_notifications','edge_api_push_token','edge_api_stats')""",
     }
     result = {}
     for kind, query in queries.items():

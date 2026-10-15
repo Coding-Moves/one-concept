@@ -19,7 +19,14 @@ def _json(value):
 
 
 async def _learned_assignment(session, user, day):
-    concept = await session.scalar(text("select id from public.concepts where status='published' limit 1"))
+    concept = await session.scalar(text("""
+        select c.id from public.concepts c
+        join public.topics t on t.id=c.topic_id and t.is_active
+        join public.subtopics s on s.id=c.subtopic_id and s.is_active
+        join public.user_topics ut on ut.topic_id=c.topic_id and ut.user_id=:uid
+        where c.status='published' limit 1
+    """), {"uid": user})
+    assert concept is not None
     await session.execute(text("""
         insert into public.daily_assignments(user_id, concept_id, assigned_for, completed_at)
         values (:uid, :cid, :day, now())
@@ -56,13 +63,13 @@ async def test_review_reuses_followed_learned_lesson_and_completes_once(session,
 
 @pytest.mark.asyncio
 async def test_review_respects_followed_boundary_and_account_scope(session, user):
-    await _learned_assignment(session, user, DAY - timedelta(days=1))
+    concept = await _learned_assignment(session, user, DAY - timedelta(days=1))
     await session.execute(text("delete from public.user_topics where user_id=:uid"), {"uid": user})
     assert await session.scalar(SELECT, {"uid": user, "day": DAY}) is None
     await session.execute(text("""
         insert into public.user_topics(user_id, topic_id)
-        select :uid, topic_id from public.concepts where status='published' limit 1
-    """), {"uid": user})
+        select :uid, topic_id from public.concepts where id=:cid
+    """), {"uid": user, "cid": concept})
     review = _json(await session.scalar(SELECT, {"uid": user, "day": DAY}))
     assert review is not None
     assert await session.scalar(COMPLETE, {

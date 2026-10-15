@@ -46,6 +46,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_choose_review(uuid,date)",
         "public.edge_api_complete_review(uuid,uuid,date)",
     ),
+    "0056_supabase_learner_state_api.sql": (
+        "public.edge_api_state(uuid,boolean,boolean,integer,integer,integer,date)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -1,7 +1,8 @@
 # Supabase API candidate staging (#416)
 
-The current candidate serves health, topics, concept detail, and idempotent
-Like/Save routes at `/functions/v1/api`. The remaining entries in
+The current candidate serves health, topics, concept detail, idempotent
+Like/Save, notification preferences, and push-token routes at
+`/functions/v1/api`. The remaining entries in
 [the route matrix](SUPABASE_API_ROUTE_PARITY.md) are not implemented. Keep Railway
 and all production clients on the existing API until #416 meets its acceptance
 criteria and #418 performs the cutover.
@@ -11,7 +12,7 @@ criteria and #418 performs the cutover.
 - Use Node 24 and the existing locked mobile TypeScript installation:
   `mobile/node_modules/.bin/tsc -p supabase/functions/tsconfig.json` and
   `node --experimental-strip-types supabase/functions/api/handler.test.mjs`.
-- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py -q -rs`
+- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py -q -rs`
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
 - For runtime parity, serve the function with the Supabase CLI and an isolated
   local stack when available. TypeScript/Node tests do not prove Deno runtime
@@ -23,7 +24,7 @@ criteria and #418 performs the cutover.
    Do not run this candidate against live learner/reviewer accounts while most
    routes are absent. Verify the exact project reference before each command.
 2. Apply the repository's ordered migrations to that project through
-   `0047_supabase_concept_api.sql` using its **direct** PostgreSQL URL. These
+   `0048_supabase_notifications_api.sql` using its **direct** PostgreSQL URL. These
    migrations are intentionally absent from `backend/migrations/applied.txt`;
    only a verified production application belongs there. Check that only
    `service_role` can execute the `edge_api_*` RPCs.
@@ -46,7 +47,9 @@ The initial staging probe must get `{ "status": "ok", "database": "reachable" }`
 from `/functions/v1/api/health`, `401` from `/functions/v1/api/v1/topics` without
 a bearer token, and the expected topic array with a valid **staging** account.
 Check concept detail, repeated Like/Save writes, and unknown slug `404` against
-the same seeded data. An unapproved Origin must receive `403`. Compare these
+the same seeded data. Exercise notification preferences, an optional weekly
+quiz setting, push-token registration, and bodyless deregistration on a test
+account. An unapproved Origin must receive `403`. Compare these
 responses to the existing FastAPI endpoints. Never paste token values or full
 request headers into CI logs.
 

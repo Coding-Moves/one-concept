@@ -360,8 +360,8 @@ private diagnostics and restore procedures.
 ## Backend request and service flow
 
 The Supabase API candidate for #416 lives in `supabase/functions/api/` and
-`backend/migrations/0046_supabase_api_basics.sql`–`0047_supabase_concept_api.sql`.
-Its current health, topics, and concept routes are isolated from production
+`backend/migrations/0046_supabase_api_basics.sql`–`0048_supabase_notifications_api.sql`.
+Its current health, topics, concept, notification, and push-token routes are isolated from production
 clients. The complete route checklist and
 remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
 Migration #417 will move scheduled workers; #418 owns browser pages and client

@@ -41,7 +41,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | POST | `/v1/editorial/legacy-enrichment-batches/{batch_id}/actions` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/legacy-enrichment-batches/{batch_id}/entries` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/topics` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| GET | `/v1/daily` | Mobile / verified learner | Not ported |
+| GET | `/v1/daily` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/daily/complete` | Mobile / verified learner | Not ported |
 | GET | `/v1/concepts/{slug}` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | PUT, DELETE | `/v1/concepts/{slug}/like` | Mobile / verified learner | Candidate; local handler/SQL tests |

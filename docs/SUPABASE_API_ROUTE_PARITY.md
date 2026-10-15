@@ -43,9 +43,9 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/v1/topics` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/daily` | Mobile / verified learner | Not ported |
 | POST | `/v1/daily/complete` | Mobile / verified learner | Not ported |
-| GET | `/v1/concepts/{slug}` | Mobile / verified learner | Not ported |
-| PUT, DELETE | `/v1/concepts/{slug}/like` | Mobile / verified learner | Not ported |
-| PUT, DELETE | `/v1/concepts/{slug}/save` | Mobile / verified learner | Not ported |
+| GET | `/v1/concepts/{slug}` | Mobile / verified learner | Candidate; local handler/SQL tests |
+| PUT, DELETE | `/v1/concepts/{slug}/like` | Mobile / verified learner | Candidate; local handler/SQL tests |
+| PUT, DELETE | `/v1/concepts/{slug}/save` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/me/state` | Mobile / verified learner | Not ported |
 | GET | `/v1/me/history` | Mobile / verified learner | Not ported |
 | GET | `/v1/me/saved` | Mobile / verified learner | Not ported |

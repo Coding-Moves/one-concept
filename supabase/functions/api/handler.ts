@@ -75,7 +75,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -89,6 +89,12 @@ async function rpc(name: 'edge_api_health' | 'edge_api_topics', args: Record<str
   });
   if (!result.ok) throw new Error(`Database unavailable: ${result.status}`);
   return result.json();
+}
+
+function noContent(cors: Headers): Response {
+  const headers = new Headers(cors);
+  headers.set('cache-control', 'no-store');
+  return new Response(null, { status: 204, headers });
 }
 
 export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (request: Request) => Promise<Response> {
@@ -109,18 +115,47 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
 
     const path = routePath(new URL(request.url).pathname);
     if (path === null) return httpError(404, 'Not Found', cors);
-    if (request.method !== 'GET') return httpError(405, 'Method Not Allowed', cors);
+    const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
+    if (path !== '/health' && path !== '/v1/topics' && concept === null) {
+      return httpError(404, 'Not Found', cors);
+    }
+    const validMethod = concept?.[2]
+      ? request.method === 'PUT' || request.method === 'DELETE'
+      : request.method === 'GET';
+    if (!validMethod) return httpError(405, 'Method Not Allowed', cors);
 
     try {
       if (path === '/health') {
         return response(await rpc('edge_api_health', {}, config, fetcher), 200, cors);
       }
+      const token = bearerToken(request);
+      if (!token) return httpError(401, 'Missing bearer token', cors, true);
+      const userId = await authenticatedUser(token, config, fetcher);
+      if (!userId) return httpError(401, 'Invalid or expired token', cors, true);
       if (path === '/v1/topics') {
-        const token = bearerToken(request);
-        if (!token) return httpError(401, 'Missing bearer token', cors, true);
-        const userId = await authenticatedUser(token, config, fetcher);
-        if (!userId) return httpError(401, 'Invalid or expired token', cors, true);
         return response(await rpc('edge_api_topics', { p_user_id: userId }, config, fetcher), 200, cors);
+      }
+      if (concept) {
+        let slug: string;
+        try {
+          slug = decodeURIComponent(concept[1]);
+        } catch {
+          return httpError(404, 'Not Found', cors);
+        }
+        if (slug.includes('/') || slug.length > 200) return httpError(404, 'Not Found', cors);
+        if (!concept[2]) {
+          const detail = await rpc('edge_api_concept', { p_user_id: userId, p_slug: slug }, config, fetcher);
+          return detail === null ? httpError(404, 'Concept not found', cors) : response(detail, 200, cors);
+        }
+        const found = await rpc('edge_api_set_interaction', {
+          p_user_id: userId,
+          p_slug: slug,
+          p_kind: concept[2],
+          p_on: request.method === 'PUT',
+        }, config, fetcher);
+        return found === false
+          ? httpError(404, `No concept with slug '${slug}'`, cors)
+          : noContent(cors);
       }
       return httpError(404, 'Not Found', cors);
     } catch {

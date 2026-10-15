@@ -75,6 +75,53 @@ test('rejected or malformed Auth responses cannot reach the service RPC', async 
   }
 });
 
+test('published concept detail uses the verified account and keeps the existing body', async () => {
+  const calls = [];
+  const body = { id: 'concept-1', slug: 'hash-tables', title: 'Hash Tables', like_count: 0 };
+  const handler = createHandler(config, async (url, init) => {
+    calls.push({ url, init });
+    return url.endsWith('/auth/v1/user') ? Response.json({ id: userId }) : Response.json(body);
+  });
+  const result = await handler(request('/v1/concepts/hash-tables', { headers: { authorization: 'Bearer account-token' } }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), body);
+  assert.match(calls[1].url, /\/rpc\/edge_api_concept$/);
+  assert.deepEqual(JSON.parse(calls[1].init.body), { p_user_id: userId, p_slug: 'hash-tables' });
+});
+
+test('like and save writes are idempotent method-to-state operations', async () => {
+  const writes = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    writes.push(JSON.parse(init.body));
+    return Response.json(true);
+  });
+  for (const [method, kind, on] of [
+    ['PUT', 'like', true], ['DELETE', 'like', false],
+    ['PUT', 'save', true], ['DELETE', 'save', false],
+  ]) {
+    const result = await handler(request(`/v1/concepts/hash-tables/${kind}`, {
+      method, headers: { authorization: 'Bearer account-token' },
+    }));
+    assert.equal(result.status, 204);
+    assert.equal(await result.text(), '');
+    assert.deepEqual(writes.at(-1), { p_user_id: userId, p_slug: 'hash-tables', p_kind: kind, p_on: on });
+  }
+});
+
+test('missing concepts return the original not-found contracts', async () => {
+  const handler = createHandler(config, async url =>
+    url.endsWith('/auth/v1/user') ? Response.json({ id: userId }) : Response.json(null));
+  const headers = { authorization: 'Bearer account-token' };
+  const detail = await handler(request('/v1/concepts/missing', { headers }));
+  assert.equal(detail.status, 404);
+  assert.deepEqual(await detail.json(), { detail: 'Concept not found' });
+  const writeHandler = createHandler(config, async url =>
+    url.endsWith('/auth/v1/user') ? Response.json({ id: userId }) : Response.json(false));
+  const write = await writeHandler(request('/v1/concepts/missing/save', { method: 'PUT', headers }));
+  assert.equal(write.status, 404);
+});
+
 test('upstream failures are generic and do not reveal secrets', async () => {
   const handler = createHandler(config, async () => new Response('provider-secret', { status: 500 }));
   const result = await handler(request('/health'));

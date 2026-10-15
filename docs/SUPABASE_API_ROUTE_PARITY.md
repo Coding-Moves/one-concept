@@ -55,8 +55,8 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET, PUT | `/v1/me/notifications` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | PATCH | `/v1/me` | Mobile / verified learner | Not ported |
 | PUT, DELETE | `/v1/me/avatar` | Mobile / verified learner | Not ported |
-| GET | `/v1/me/subtopics/progress` | Mobile / verified learner | Not ported |
-| POST | `/v1/me/subtopics/completions/seen` | Mobile / verified learner | Not ported |
+| GET | `/v1/me/subtopics/progress` | Mobile / verified learner | Candidate; local handler/SQL tests |
+| POST | `/v1/me/subtopics/completions/seen` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/reviews/{review_id}/complete` | Mobile / verified learner | Not ported |
 | GET | `/v1/me/achievements` | Mobile / verified learner | Not ported |
 | POST | `/v1/me/achievements/seen` | Mobile / verified learner | Not ported |

@@ -249,9 +249,9 @@ def psql(env: dict[str, str], *args: str) -> subprocess.CompletedProcess[str]:
 
 def function_presence(env: dict[str, str], signatures: tuple[str, ...]) -> tuple[bool, ...] | None:
     """Read only the existence of reviewed RPC signatures, never application rows."""
-    if not signatures or any(not re.fullmatch(
-        r"public\.[a-z_]+\((?:[a-z\[\]]+(?:,[a-z\[\]]+)*)?\)", item,
-    ) for item in signatures):
+    reviewed = {"public.edge_api_stats(uuid)"}
+    reviewed.update(signature for probes in INCREMENTAL_PROBES.values() for signature in probes)
+    if not signatures or any(item not in reviewed for item in signatures):
         raise ValueError("Unreviewed incremental migration probe")
     expressions = ", ".join(f"to_regprocedure('{item}') is not null" for item in signatures)
     result = psql(env, "-qAt", "-F", "|", "-c", f"select {expressions}")

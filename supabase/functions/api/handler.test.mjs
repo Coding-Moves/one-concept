@@ -258,6 +258,65 @@ test('analytics uses only the verified account and preserves the bounded read mo
   assert.equal(calls.length, 1);
 });
 
+test('sharing settings are private, versioned, and reject unearned selections', async () => {
+  const calls = [];
+  let payload = { enabled: false, show_name: false, show_avatar: false,
+    show_bio: false, show_streak: false, show_learning: false,
+    achievement_codes: [], version: 0, public_path: null };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const missing = await handler(request('/v1/me/profile-sharing'));
+  assert.equal(missing.status, 401);
+  assert.equal(calls.length, 0);
+  const current = await handler(request('/v1/me/profile-sharing', { headers }));
+  assert.equal(current.status, 200);
+  assert.deepEqual(await current.json(), payload);
+  assert.match(calls[0].url, /\/rpc\/edge_api_sharing_get$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId });
+  assert.equal(current.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.equal(current.headers.get('referrer-policy'), 'no-referrer');
+
+  payload = { ...payload, enabled: true, show_bio: true, version: 1, public_path: `/p/${'a'.repeat(43)}` };
+  const changed = await handler(request('/v1/me/profile-sharing', {
+    method: 'PUT', headers, body: JSON.stringify({ enabled: true, show_bio: true,
+      achievement_codes: [], version: 0 }),
+  }));
+  assert.equal(changed.status, 200);
+  assert.deepEqual(await changed.json(), payload);
+  assert.match(calls[1].url, /\/rpc\/edge_api_sharing_put$/);
+  assert.deepEqual(calls[1].args, {
+    p_user_id: userId, p_enabled: true, p_show_name: false,
+    p_show_avatar: false, p_show_bio: true, p_show_streak: false,
+    p_show_learning: false, p_codes: [], p_version: 0,
+  });
+
+  payload = { error: 'version_conflict' };
+  const stale = await handler(request('/v1/me/profile-sharing', {
+    method: 'PUT', headers, body: JSON.stringify({ version: 0 }),
+  }));
+  assert.equal(stale.status, 409);
+  assert.deepEqual(await stale.json(), { detail: 'Settings changed. Reload before saving.' });
+  payload = { error: 'unearned_achievements' };
+  const unearned = await handler(request('/v1/me/profile-sharing', {
+    method: 'PUT', headers, body: JSON.stringify({ version: 1, achievement_codes: ['concept_1'] }),
+  }));
+  assert.equal(unearned.status, 422);
+  assert.deepEqual(await unearned.json(), { detail: 'Only earned achievements can be shared' });
+  for (const body of [{ version: -1 }, { version: 1, enabled: 'yes' },
+    { version: 1, achievement_codes: [null] }, { version: 1, other_account: userId }]) {
+    const invalid = await handler(request('/v1/me/profile-sharing', {
+      method: 'PUT', headers, body: JSON.stringify(body),
+    }));
+    assert.equal(invalid.status, 422);
+  }
+  assert.equal(calls.length, 4);
+  assert.equal((await handler(request('/v1/me/profile-sharing', { method: 'POST', headers }))).status, 405);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

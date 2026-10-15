@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -231,6 +231,41 @@ function profileInput(body: JsonObject): {
   };
 }
 
+function sharingInput(body: JsonObject): Record<string, unknown> {
+  const allowed = ['enabled', 'show_name', 'show_avatar', 'show_bio',
+    'show_streak', 'show_learning', 'achievement_codes', 'version'];
+  if (Object.keys(body).some(key => !allowed.includes(key))) {
+    throw new ClientBodyError(422, 'Invalid sharing settings');
+  }
+  const flags = allowed.slice(0, 6);
+  if (flags.some(key => body[key] !== undefined && typeof body[key] !== 'boolean')
+      || typeof body.version !== 'number' || !Number.isInteger(body.version) || body.version < 0
+      || (body.achievement_codes !== undefined
+          && (!Array.isArray(body.achievement_codes)
+              || body.achievement_codes.length > 32
+              || !body.achievement_codes.every(code => typeof code === 'string')))) {
+    throw new ClientBodyError(422, 'Invalid sharing settings');
+  }
+  return {
+    p_enabled: body.enabled ?? false,
+    p_show_name: body.show_name ?? false,
+    p_show_avatar: body.show_avatar ?? false,
+    p_show_bio: body.show_bio ?? false,
+    p_show_streak: body.show_streak ?? false,
+    p_show_learning: body.show_learning ?? false,
+    p_codes: body.achievement_codes ?? [],
+    p_version: body.version,
+  };
+}
+
+function sharingResponse(body: unknown, status: number, cors: Headers): Response {
+  const result = response(body, status, cors);
+  result.headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
+  result.headers.set('referrer-policy', 'no-referrer');
+  result.headers.set('x-content-type-options', 'nosniff');
+  return result;
+}
+
 function pageLimit(query: URLSearchParams): number {
   const raw = query.get('limit');
   if (raw === null) return 50;
@@ -361,6 +396,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const pushToken = path === '/v1/me/push-token';
     const stats = path === '/v1/me/stats';
     const analytics = path === '/v1/me/analytics';
+    const sharing = path === '/v1/me/profile-sharing';
     const state = path === '/v1/me/state';
     const profile = path === '/v1/me';
     const followedTopics = path === '/v1/me/topics';
@@ -372,12 +408,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
       ? request.method === 'PUT' || request.method === 'DELETE'
-      : notifications
+      : notifications || sharing
         ? request.method === 'GET' || request.method === 'PUT'
         : followedTopics
           ? request.method === 'PUT'
@@ -431,6 +467,19 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       if (analytics) {
         const data = await rpc('edge_api_analytics', { p_user_id: userId }, config, fetcher);
         return data === null ? unavailable(cors) : response(data, 200, cors);
+      }
+      if (sharing) {
+        const args = request.method === 'PUT' ? sharingInput((await readJson(request))!) : {};
+        const data = await rpc(request.method === 'PUT' ? 'edge_api_sharing_put' : 'edge_api_sharing_get',
+          { p_user_id: userId, ...args }, config, fetcher) as JsonObject | null;
+        if (data === null) return unavailable(cors);
+        if (data.error === 'version_conflict') {
+          return sharingResponse({ detail: 'Settings changed. Reload before saving.' }, 409, cors);
+        }
+        if (data.error === 'unearned_achievements') {
+          return sharingResponse({ detail: 'Only earned achievements can be shared' }, 422, cors);
+        }
+        return sharingResponse(data, 200, cors);
       }
       if (state) {
         const data = await rpc('edge_api_state', {

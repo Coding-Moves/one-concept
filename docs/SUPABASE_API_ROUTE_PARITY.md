@@ -60,7 +60,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | POST | `/v1/reviews/{review_id}/complete` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/me/achievements` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/achievements/seen` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| GET | `/v1/me/analytics` | Mobile / verified learner | Not ported |
+| GET | `/v1/me/analytics` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/quizzes/weekly` | Mobile / verified learner | Not ported |
 | POST | `/v1/quizzes/weekly/{quiz_id}/attempts` | Mobile / verified learner | Not ported |
 | GET | `/v1/quizzes/subtopics/{completion_id}` | Mobile / verified learner | Not ported |

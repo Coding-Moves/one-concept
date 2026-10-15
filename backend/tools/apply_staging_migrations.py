@@ -23,6 +23,10 @@ INCREMENTAL_PROBES = {
         "public.edge_api_history(uuid,date,integer)",
         "public.edge_api_saved(uuid,timestamp with time zone,uuid,integer)",
     ),
+    "0051_supabase_subtopic_progress_api.sql": (
+        "public.edge_api_subtopic_progress(uuid)",
+        "public.edge_api_mark_subtopics_seen(uuid,uuid[])",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select
@@ -192,7 +196,7 @@ def psql(env: dict[str, str], *args: str) -> subprocess.CompletedProcess[str]:
 
 def function_presence(env: dict[str, str], signatures: tuple[str, ...]) -> tuple[bool, ...] | None:
     """Read only the existence of reviewed RPC signatures, never application rows."""
-    if not signatures or any(not re.fullmatch(r"public\.[a-z_]+\([a-z ,]+\)", item) for item in signatures):
+    if not signatures or any(not re.fullmatch(r"public\.[a-z_]+\([a-z ,\[\]]+\)", item) for item in signatures):
         raise ValueError("Unreviewed incremental migration probe")
     expressions = ", ".join(f"to_regprocedure('{item}') is not null" for item in signatures)
     result = psql(env, "-qAt", "-F", "|", "-c", f"select {expressions}")

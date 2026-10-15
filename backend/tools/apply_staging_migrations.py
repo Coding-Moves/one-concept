@@ -89,6 +89,12 @@ INCREMENTAL_PROBES = {
     "0068_supabase_connection_unblock_api.sql": (
         "public.edge_api_connection_unblock(uuid,uuid)",
     ),
+    "0069_supabase_relationship_status_api.sql": (
+        "public.edge_api_relationship_status(uuid,text)",
+    ),
+    "0070_supabase_relationship_connect_api.sql": (
+        "public.edge_api_relationship_connect(uuid,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

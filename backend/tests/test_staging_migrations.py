@@ -166,38 +166,39 @@ def test_incremental_migration_requires_exact_reviewed_project(monkeypatch, tmp_
     assert runner.apply_incremental({}, files) == 2
 
 
+def _incremental_files(tmp_path):
+    baseline = tmp_path / runner.INCREMENTAL_BASELINE
+    pending = [tmp_path / name for name in runner.INCREMENTAL_PROBES]
+    for file in pending:
+        file.write_text("begin; select 1; commit;")
+    return [baseline, *pending]
+
+
 def test_incremental_migration_rejects_unprobed_file_or_missing_baseline(monkeypatch, tmp_path):
     monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
-    baseline = tmp_path / runner.INCREMENTAL_BASELINE
-    reviewed = tmp_path / "0050_supabase_collections_api.sql"
-    later = tmp_path / "0051_supabase_subtopic_progress_api.sql"
-    daily = tmp_path / "0052_supabase_daily_selection_api.sql"
-    unknown = tmp_path / "0053_unreviewed.sql"
+    files = _incremental_files(tmp_path)
+    unknown = tmp_path / "9999_unreviewed.sql"
     monkeypatch.setattr(runner, "function_presence", lambda *_: pytest.fail("unreviewed migration reached SQL"))
-    assert runner.apply_incremental({}, [reviewed]) == 2
-    assert runner.apply_incremental({}, [baseline, reviewed, later, daily, unknown]) == 2
+    assert runner.apply_incremental({}, files[1:]) == 2
+    assert runner.apply_incremental({}, [*files, unknown]) == 2
 
 
-@pytest.mark.parametrize("states, expected, writes, first", [
-    ([(False,)], 2, 0, None),  # The 0049 baseline was not installed.
-    ([(True,), (True, False)], 2, 0, None),  # A partial 0050 must be inspected.
-    ([(True,), (False, False), (True, True), (False, False), (True, True),
-      (False, False, False), (True, True, True)], 0, 3, "0050_supabase_collections_api.sql"),
-    ([(True,), (True, True), (False, False), (True, True),
-      (False, False, False), (True, True, True)], 0, 2, "0051_supabase_subtopic_progress_api.sql"),
-    ([(True,), (True, True), (True, True), (False, False, False),
-      (True, True, True)], 0, 1, "0052_supabase_daily_selection_api.sql"),
-    ([(True,), (True, True), (True, True), (True, True, True)], 0, 0, None),
-])
-def test_incremental_migration_probes_before_and_after_sql(monkeypatch, tmp_path, states, expected, writes, first):
+@pytest.mark.parametrize("mode", ["missing-baseline", "partial", "all-new", "all-present", "last-new"])
+def test_incremental_migration_probes_before_and_after_sql(monkeypatch, tmp_path, mode):
     monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
-    baseline = tmp_path / runner.INCREMENTAL_BASELINE
-    reviewed = tmp_path / "0050_supabase_collections_api.sql"
-    later = tmp_path / "0051_supabase_subtopic_progress_api.sql"
-    daily = tmp_path / "0052_supabase_daily_selection_api.sql"
-    reviewed.write_text("begin; select 1; commit;")
-    later.write_text("begin; select 2; commit;")
-    daily.write_text("begin; select 3; commit;")
+    files = _incremental_files(tmp_path)
+    signatures = list(runner.INCREMENTAL_PROBES.values())
+    states = [(mode != "missing-baseline",)]
+    if mode == "partial":
+        states.append((True, False))
+    elif mode in ("all-new", "last-new"):
+        for index, probes in enumerate(signatures):
+            present = mode == "last-new" and index < len(signatures) - 1
+            states.append((True,) * len(probes) if present else (False,) * len(probes))
+            if not present:
+                states.append((True,) * len(probes))
+    elif mode == "all-present":
+        states.extend((True,) * len(probes) for probes in signatures)
     probes = iter(states)
     monkeypatch.setattr(runner, "function_presence", lambda *_: next(probes))
     applied = []
@@ -207,22 +208,19 @@ def test_incremental_migration_probes_before_and_after_sql(monkeypatch, tmp_path
         return subprocess.CompletedProcess(args, 0, "", "")
 
     monkeypatch.setattr(runner, "psql", fake_psql)
-    assert runner.apply_incremental({}, [baseline, reviewed, later, daily]) == expected
-    assert len(applied) == writes
-    if writes:
-        assert applied[0][-2:] == ("-f", str(tmp_path / first))
+    expected = 2 if mode in ("missing-baseline", "partial") else 0
+    assert runner.apply_incremental({}, files) == expected
+    expected_files = files[1:] if mode == "all-new" else files[-1:] if mode == "last-new" else []
+    assert [call[-1] for call in applied] == [str(file) for file in expected_files]
 
 
 def test_incremental_migration_rejects_unreadable_postcheck(monkeypatch, tmp_path):
     monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
-    reviewed = tmp_path / "0050_supabase_collections_api.sql"
-    later = tmp_path / "0051_supabase_subtopic_progress_api.sql"
-    daily = tmp_path / "0052_supabase_daily_selection_api.sql"
-    reviewed.write_text("begin; select 1; commit;")
+    files = _incremental_files(tmp_path)
     probes = iter([(True,), (False, False), None])
     monkeypatch.setattr(runner, "function_presence", lambda *_: next(probes))
     monkeypatch.setattr(runner, "psql", lambda _env, *args: subprocess.CompletedProcess(args, 0, "", ""))
-    assert runner.apply_incremental({}, [tmp_path / runner.INCREMENTAL_BASELINE, reviewed, later, daily]) == 1
+    assert runner.apply_incremental({}, files) == 1
 
 
 @pytest.mark.asyncio

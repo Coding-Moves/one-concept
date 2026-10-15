@@ -32,6 +32,11 @@ INCREMENTAL_PROBES = {
         "public.edge_api_signal_supply(uuid,uuid,integer,integer,integer)",
         "public.edge_api_daily(uuid,integer,integer,integer,date)",
     ),
+    "0053_supabase_daily_completion_api.sql": (
+        "public.edge_api_record_subtopic_completion(uuid,uuid)",
+        "public.edge_api_award_eligible(uuid)",
+        "public.edge_api_complete_daily(uuid,date)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

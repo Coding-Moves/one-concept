@@ -64,6 +64,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_sharing_get(uuid)",
         "public.edge_api_sharing_put(uuid,boolean,boolean,boolean,boolean,boolean,boolean,text[],integer)",
     ),
+    "0061_supabase_public_profile_api.sql": (
+        "public.edge_api_public_profile(text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

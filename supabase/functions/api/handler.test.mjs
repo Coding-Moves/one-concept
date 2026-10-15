@@ -122,6 +122,70 @@ test('missing concepts return the original not-found contracts', async () => {
   assert.equal(write.status, 404);
 });
 
+test('notification preferences preserve the older-client weekly choice', async () => {
+  const calls = [];
+  const prefs = { enabled: false, weekly_quiz_enabled: true, reminder_times: ['08:00', '20:00'] };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, input: JSON.parse(init.body) });
+    return Response.json(prefs);
+  });
+  const headers = { authorization: 'Bearer account-token', 'content-type': 'application/json' };
+  const get = await handler(request('/v1/me/notifications', { headers }));
+  assert.deepEqual(await get.json(), prefs);
+  assert.match(calls[0].url, /\/rpc\/edge_api_notifications$/);
+  const put = await handler(request('/v1/me/notifications', {
+    method: 'PUT', headers,
+    body: JSON.stringify({ enabled: false, reminder_times: ['20:00', '08:00', '08:00'] }),
+  }));
+  assert.equal(put.status, 200);
+  assert.deepEqual(calls[1].input, {
+    p_user_id: userId, p_enabled: false, p_weekly: null, p_times: ['08:00', '20:00'],
+  });
+});
+
+test('invalid or excessive preference bodies fail before database access', async () => {
+  let calls = 0;
+  const handler = createHandler(config, async url => {
+    calls++;
+    return url.endsWith('/auth/v1/user') ? Response.json({ id: userId }) : Response.json({});
+  });
+  const headers = { authorization: 'Bearer account-token', 'content-type': 'application/json' };
+  const invalid = await handler(request('/v1/me/notifications', {
+    method: 'PUT', headers, body: JSON.stringify({ enabled: true, reminder_times: ['25:00'] }),
+  }));
+  assert.equal(invalid.status, 422);
+  const excessive = await handler(request('/v1/me/notifications', {
+    method: 'PUT', headers, body: JSON.stringify({ enabled: true, reminder_times: ['08:00'], filler: 'x'.repeat(5000) }),
+  }));
+  assert.equal(excessive.status, 413);
+  assert.equal(calls, 2); // Auth only; no service RPC.
+});
+
+test('push-token registration and bodyless sign-out use the verified account', async () => {
+  const calls = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push(JSON.parse(init.body));
+    return Response.json(true);
+  });
+  const headers = { authorization: 'Bearer account-token', 'content-type': 'application/json' };
+  const registered = await handler(request('/v1/me/push-token', {
+    method: 'POST', headers,
+    body: JSON.stringify({ expo_push_token: 'ExponentPushToken[test-device]', platform: 'android' }),
+  }));
+  assert.equal(registered.status, 204);
+  assert.deepEqual(calls[0], {
+    p_user_id: userId, p_token: 'ExponentPushToken[test-device]',
+    p_platform: 'android', p_register: true,
+  });
+  const removed = await handler(request('/v1/me/push-token', { method: 'DELETE', headers }));
+  assert.equal(removed.status, 204);
+  assert.deepEqual(calls[1], {
+    p_user_id: userId, p_token: null, p_platform: null, p_register: false,
+  });
+});
+
 test('upstream failures are generic and do not reveal secrets', async () => {
   const handler = createHandler(config, async () => new Response('provider-secret', { status: 500 }));
   const result = await handler(request('/health'));

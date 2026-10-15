@@ -5,6 +5,7 @@ Never pass it as a CLI argument, save it in the repository, or log it.
 """
 
 import argparse
+import json
 import os
 import re
 import shutil
@@ -15,6 +16,16 @@ from urllib.parse import unquote, urlsplit
 
 MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 PROJECT_REF = re.compile(r"^[a-z0-9]{20}$")
+INSPECT_SQL = """select json_build_object(
+  'auth_users', to_regclass('auth.users') is not null,
+  'profiles', to_regclass('public.profiles') is not null,
+  'topics', to_regclass('public.topics') is not null,
+  'daily_assignments', to_regclass('public.daily_assignments') is not null,
+  'editorial_memberships', to_regclass('public.editorial_memberships') is not null,
+  'profile_sharing', to_regclass('public.profile_sharing') is not null,
+  'edge_api_health', to_regprocedure('public.edge_api_health()') is not null,
+  'edge_api_stats', to_regprocedure('public.edge_api_stats(uuid)') is not null
+)::text"""
 
 
 def connection_environment(staging_ref: str, production_ref: str, direct_url: str) -> dict[str, str]:
@@ -61,7 +72,9 @@ def psql(env: dict[str, str], *args: str) -> subprocess.CompletedProcess[str]:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--check-only", action="store_true", help="validate target and list files without connecting")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--check-only", action="store_true", help="validate target and list files without connecting")
+    mode.add_argument("--inspect", action="store_true", help="read only staging schema presence flags")
     args = parser.parse_args()
     try:
         env = connection_environment(
@@ -82,6 +95,17 @@ def main() -> int:
     if not shutil.which("psql"):
         print("psql is required", file=sys.stderr)
         return 2
+    if args.inspect:
+        inspection = psql(env, "-At", "-c", INSPECT_SQL)
+        try:
+            flags = json.loads(inspection.stdout)
+        except json.JSONDecodeError:
+            flags = None
+        if inspection.returncode != 0 or not isinstance(flags, dict):
+            print("Could not inspect staging schema", file=sys.stderr)
+            return 1
+        print(json.dumps(flags, sort_keys=True))
+        return 0
     check = psql(env, "-At", "-c", "select to_regclass('auth.users') is not null, to_regclass('public.profiles') is null")
     if check.returncode != 0 or check.stdout.strip() != "t|t":
         print("Target is not a fresh Supabase project; inspect its schema before applying SQL", file=sys.stderr)

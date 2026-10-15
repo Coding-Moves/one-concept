@@ -62,3 +62,30 @@ def test_existing_application_schema_stops_before_any_migration(monkeypatch, tmp
     assert runner.main() == 2
     assert len(calls) == 1
     assert "-f" not in calls[0]
+
+
+def test_inspection_is_read_only_and_does_not_print_credentials(monkeypatch, tmp_path, capsys):
+    monkeypatch.setenv("STAGING_PROJECT_REF", STAGING)
+    monkeypatch.setenv("PRODUCTION_PROJECT_REF", PRODUCTION)
+    monkeypatch.setenv(
+        "STAGING_DIRECT_URL",
+        f"postgresql://postgres.{STAGING}:private-password@aws-1-ap-northeast-1.pooler.supabase.com:5432/postgres",
+    )
+    (tmp_path / "0001_schema.sql").write_text("select 1;")
+    monkeypatch.setattr(runner, "MIGRATIONS", tmp_path)
+    monkeypatch.setattr(runner.shutil, "which", lambda _: "/usr/bin/psql")
+    monkeypatch.setattr(sys, "argv", ["apply_staging_migrations.py", "--inspect"])
+    calls = []
+
+    def fake_psql(_env, *args):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, '{"auth_users":true,"profiles":true}', "")
+
+    monkeypatch.setattr(runner, "psql", fake_psql)
+    assert runner.main() == 0
+    assert len(calls) == 1
+    assert calls[0][-1] == runner.INSPECT_SQL
+    assert "-f" not in calls[0]
+    output = capsys.readouterr().out
+    assert '"profiles": true' in output
+    assert "private-password" not in output

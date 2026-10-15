@@ -3,6 +3,7 @@ name: Deploy Supabase API candidate to staging
 on:
   push:
     tags:
+      - 'supabase-api-staging-inspect-*'
       - 'supabase-api-staging-schema-*'
       - 'supabase-api-staging-deploy-*'
 
@@ -14,6 +15,23 @@ permissions:
   contents: read
 
 jobs:
+  inspect:
+    if: startsWith(github.ref_name, 'supabase-api-staging-inspect-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Inspect staging schema object presence only
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: python backend/tools/apply_staging_migrations.py --inspect
+
   migrate:
     if: startsWith(github.ref_name, 'supabase-api-staging-schema-')
     runs-on: ubuntu-latest

@@ -104,6 +104,9 @@ INCREMENTAL_PROBES = {
     "0073_supabase_relationship_list_api.sql": (
         "public.edge_api_relationships(uuid,timestamp with time zone,uuid,integer)",
     ),
+    "0074_supabase_weekly_quiz_selection_api.sql": (
+        "public.edge_api_weekly_quiz(uuid)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

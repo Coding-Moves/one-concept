@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -266,6 +266,28 @@ function sharingResponse(body: unknown, status: number, cors: Headers): Response
   return result;
 }
 
+function publicProfileFields(value: unknown): JsonObject | null {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) return null;
+  const raw = value as JsonObject;
+  if (!Array.isArray(raw.achievements) || !raw.achievements.every(item =>
+    typeof item === 'object' && item !== null && !Array.isArray(item)
+      && typeof item.name === 'string' && typeof item.description === 'string')) return null;
+  const profile: JsonObject = { achievements: raw.achievements.map(item => ({
+    name: item.name, description: item.description,
+  })) };
+  for (const key of ['display_name', 'bio'] as const) {
+    if (typeof raw[key] === 'string') profile[key] = raw[key];
+  }
+  if (typeof raw.avatar_ref === 'string'
+      && /^preset:(aurora|comet|forest|ocean|sunset|violet)$/.test(raw.avatar_ref)) {
+    profile.avatar_ref = raw.avatar_ref;
+  }
+  for (const key of ['current_streak', 'longest_streak', 'concepts_learned'] as const) {
+    if (typeof raw[key] === 'number' && Number.isSafeInteger(raw[key])) profile[key] = raw[key];
+  }
+  return profile;
+}
+
 function pageLimit(query: URLSearchParams): number {
   const raw = query.get('limit');
   if (raw === null) return 50;
@@ -391,6 +413,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const path = routePath(requestUrl.pathname);
     if (path === null) return httpError(404, 'Not Found', cors);
     const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
+    const publicProfile = /^\/v1\/public-profiles\/([^/]+)$/.exec(path);
     const reviewComplete = /^\/v1\/reviews\/([^/]+)\/complete$/.exec(path);
     const notifications = path === '/v1/me/notifications';
     const pushToken = path === '/v1/me/push-token';
@@ -408,7 +431,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -429,6 +452,22 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     try {
       if (path === '/health') {
         return response(await rpc('edge_api_health', {}, config, fetcher), 200, cors);
+      }
+      if (publicProfile) {
+        if (!/^[A-Za-z0-9_-]{43}$/.test(publicProfile[1])) {
+          return sharingResponse({ detail: 'Profile unavailable' }, 404, cors);
+        }
+        const data = await rpc('edge_api_public_profile', {
+          p_token: publicProfile[1],
+        }, config, fetcher) as JsonObject | null;
+        if (data === null) return sharingResponse({ detail: 'Profile unavailable' }, 404, cors);
+        const visible = publicProfileFields(data.profile);
+        if (visible === null) return unavailable(cors);
+        if (typeof data.avatar_owner === 'string' && UUID.test(data.avatar_owner)) {
+          const signed = await signedAvatarUrl(data.avatar_key, data.avatar_owner, config, fetcher);
+          if (signed) visible.avatar_url = signed;
+        }
+        return sharingResponse(visible, 200, cors);
       }
       const token = bearerToken(request);
       if (!token) return httpError(401, 'Missing bearer token', cors, true);

@@ -317,6 +317,56 @@ test('sharing settings are private, versioned, and reject unearned selections', 
   assert.equal((await handler(request('/v1/me/profile-sharing', { method: 'POST', headers }))).status, 405);
 });
 
+test('public profile is anonymous, field-filtered, and never exposes the private avatar key', async () => {
+  const token = 'a'.repeat(43);
+  const key = `avatars/${userId}/${'b'.repeat(32)}.jpg`;
+  const calls = [];
+  let payload = { profile: { achievements: [{ name: 'First concept', description: 'Learned one',
+    internal_code: 'concept_1' }], bio: 'Selected bio', hidden_email: 'private@example.invalid' },
+    avatar_key: key, avatar_owner: userId };
+  const handler = createHandler(config, async (url, init) => {
+    calls.push({ url, init });
+    if (url.includes('/storage/v1/object/sign/')) {
+      return Response.json({ signedURL: `/object/sign/profile-avatars/${key}?token=temporary` });
+    }
+    if (url.endsWith('/auth/v1/user')) throw Error('anonymous route must not authenticate');
+    return Response.json(payload);
+  });
+  const shown = await handler(request(`/v1/public-profiles/${token}`));
+  assert.equal(shown.status, 200);
+  assert.deepEqual(await shown.json(), { achievements: [{ name: 'First concept', description: 'Learned one' }],
+    bio: 'Selected bio', avatar_url: `${config.supabaseUrl}/storage/v1/object/sign/profile-avatars/${key}?token=temporary` });
+  assert.match(calls[0].url, /\/rpc\/edge_api_public_profile$/);
+  assert.deepEqual(JSON.parse(calls[0].init.body), { p_token: token });
+  assert.equal(shown.headers.get('cache-control'), 'no-store');
+  assert.equal(shown.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.equal(shown.headers.get('referrer-policy'), 'no-referrer');
+  assert.equal(shown.headers.get('x-content-type-options'), 'nosniff');
+
+  payload = null;
+  const revoked = await handler(request(`/v1/public-profiles/${token}`));
+  assert.equal(revoked.status, 404);
+  assert.deepEqual(await revoked.json(), { detail: 'Profile unavailable' });
+  const invalid = await handler(request('/v1/public-profiles/bad-token'));
+  assert.equal(invalid.status, 404);
+  assert.equal(calls.length, 3);
+  assert.equal((await handler(request(`/v1/public-profiles/${token}`, { method: 'POST' }))).status, 405);
+});
+
+test('public profile signs only an owner-matching private avatar key', async () => {
+  const token = 'c'.repeat(43);
+  let storageCalls = 0;
+  const handler = createHandler(config, async url => {
+    if (url.includes('/storage/v1/')) { storageCalls++; throw Error('must not sign'); }
+    return Response.json({ profile: { achievements: [] },
+      avatar_key: `avatars/${'d'.repeat(36)}/${'e'.repeat(32)}.jpg`, avatar_owner: userId });
+  });
+  const result = await handler(request(`/v1/public-profiles/${token}`));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), { achievements: [] });
+  assert.equal(storageCalls, 0);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

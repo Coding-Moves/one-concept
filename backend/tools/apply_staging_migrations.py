@@ -180,7 +180,7 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check-only", action="store_true", help="validate target and list files without connecting")
     mode.add_argument("--inspect", action="store_true", help="read only staging schema presence flags")
-    mode.add_argument("--reset-demo", action="store_true", help="remove the reviewed disposable demo schema from one staging project")
+    mode.add_argument("--reset-demo", action="store_true", help="remove the reviewed demo schema and Auth users from one staging project")
     args = parser.parse_args()
     try:
         env = connection_environment(

@@ -237,6 +237,27 @@ test('profile edit validates the input, preserves timezone errors, and deletes o
   assert.equal((await handler(request('/v1/me', { headers }))).status, 405);
 });
 
+test('analytics uses only the verified account and preserves the bounded read model', async () => {
+  const calls = [];
+  const payload = { total_concepts: 0, total_reviews: 0, weekly_quiz_attempts: 0,
+    active_days: 0, recent_concepts: [], recent_quizzes: [],
+    activity: Array.from({ length: 28 }, (_, index) => ({ day: `2026-10-${String(index + 1).padStart(2, '0')}` })),
+    topics: [], subtopics: [], achievements: [] };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const result = await handler(request('/v1/me/analytics', { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls[0].url, /\/rpc\/edge_api_analytics$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId });
+  assert.equal((await handler(request('/v1/me/analytics', { method: 'POST', headers }))).status, 405);
+  assert.equal(calls.length, 1);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

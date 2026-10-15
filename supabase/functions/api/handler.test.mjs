@@ -440,6 +440,27 @@ test('connection list scopes kind and cursor to the verified account', async () 
   assert.equal((await handler(request('/v1/me/connections', { method: 'POST', headers }))).status, 405);
 });
 
+test('connection status uses only the verified account and a valid shared token', async () => {
+  const token = 's'.repeat(43);
+  const calls = [];
+  const status = { id: null, state: 'available', retry_after: null };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(status);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  assert.equal((await handler(request(`/v1/me/connections/with/${token}`))).status, 401);
+  const result = await handler(request(`/v1/me/connections/with/${token}`, { headers }));
+  assert.equal(result.status, 200);
+  assert.equal(result.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+  assert.deepEqual(await result.json(), status);
+  assert.match(calls[0].url, /\/rpc\/edge_api_connection_status$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_token: token });
+  assert.equal((await handler(request('/v1/me/connections/with/bad', { headers }))).status, 404);
+  assert.equal(calls.length, 1);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

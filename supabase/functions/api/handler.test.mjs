@@ -85,6 +85,35 @@ test('weekly quiz selection uses the verified account and never exposes a privat
   assert.equal(calls.length, 2);
 });
 
+test('weekly attempts validate the complete answer set before account-scoped scoring', async () => {
+  const quizId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const answers = Array.from({ length: 7 }, (_, i) => ({ question_id: `question-${i}`, selected_index: i % 4 }));
+  const calls = [];
+  let resultBody = { attempt_id: quizId, quiz_id: quizId, correct_count: 5, results: [] };
+  const handler = createHandler(config, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(resultBody);
+  });
+  const path = `/v1/quizzes/weekly/${quizId}/attempts`;
+  const headers = { authorization: 'Bearer account-token', 'content-type': 'application/json' };
+  assert.equal((await handler(request(path, { method: 'POST', headers, body: JSON.stringify({ answers: [] }) }))).status, 422);
+  assert.equal(calls.length, 1);
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ answers: [...answers.slice(0, 6), answers[0]] }) }))).status, 422);
+  assert.equal(calls.length, 2);
+  const scored = await handler(request(path, { method: 'POST', headers, body: JSON.stringify({ answers }) }));
+  assert.equal(scored.status, 200);
+  assert.deepEqual(await scored.json(), resultBody);
+  assert.match(calls[3].url, /\/rpc\/edge_api_submit_weekly_quiz$/);
+  assert.deepEqual(JSON.parse(calls[3].init.body), { p_user_id: userId, p_quiz_id: quizId, p_answers: answers });
+  resultBody = { error: 'invalid' };
+  const changed = await handler(request(path, { method: 'POST', headers, body: JSON.stringify({ answers }) }));
+  assert.equal(changed.status, 400);
+  assert.deepEqual(await changed.json(), { detail: 'Answers must match this quiz exactly' });
+  assert.equal((await handler(request(path, { headers }))).status, 405);
+});
+
 test('daily returns the verified account assignment or typed unavailable state', async () => {
   const calls = [];
   let payload = {

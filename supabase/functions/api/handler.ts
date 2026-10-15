@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -178,6 +178,31 @@ function achievementCodes(body: JsonObject): string[] {
     throw new ClientBodyError(422, 'Invalid achievement codes');
   }
   return body.codes as string[];
+}
+
+function weeklyQuizAnswers(body: JsonObject): { question_id: string; selected_index: number }[] {
+  if (!Array.isArray(body.answers) || body.answers.length !== 7) {
+    throw new ClientBodyError(422, 'Invalid weekly quiz answers');
+  }
+  const answers: { question_id: string; selected_index: number }[] = [];
+  for (const value of body.answers) {
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      throw new ClientBodyError(422, 'Invalid weekly quiz answers');
+    }
+    const answer = value as JsonObject;
+    if (typeof answer.question_id !== 'string'
+        || answer.question_id.length < 1 || answer.question_id.length > 200
+        || typeof answer.selected_index !== 'number'
+        || !Number.isInteger(answer.selected_index)
+        || answer.selected_index < 0 || answer.selected_index > 3) {
+      throw new ClientBodyError(422, 'Invalid weekly quiz answers');
+    }
+    answers.push({ question_id: answer.question_id, selected_index: answer.selected_index });
+  }
+  if (new Set(answers.map(answer => answer.question_id)).size !== 7) {
+    throw new ClientBodyError(422, 'Submit one answer for each quiz question');
+  }
+  return answers;
 }
 
 function topicSlugs(body: JsonObject): string[] {
@@ -497,6 +522,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const relationshipRemove = /^\/v1\/me\/relationships\/([^/]+)$/.exec(path);
     const relationshipBlockById = /^\/v1\/me\/relationships\/([^/]+)\/block$/.exec(path);
     const reviewComplete = /^\/v1\/reviews\/([^/]+)\/complete$/.exec(path);
+    const weeklyAttempt = /^\/v1\/quizzes\/weekly\/([^/]+)\/attempts$/.exec(path);
     const notifications = path === '/v1/me/notifications';
     const pushToken = path === '/v1/me/push-token';
     const stats = path === '/v1/me/stats';
@@ -517,7 +543,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !weeklyQuiz && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !weeklyQuiz && weeklyAttempt === null && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -536,6 +562,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? request.method === 'GET' || request.method === 'POST'
         : relationshipRemove
           ? request.method === 'DELETE'
+        : weeklyAttempt
+          ? request.method === 'POST'
         : connectionUnblock
           ? request.method === 'DELETE'
           : subtopicSeen || achievementsSeen || dailyComplete || reviewComplete !== null || connectionBlock !== null || relationshipBlock !== null || relationshipBlockById !== null || connectionAction !== null
@@ -573,6 +601,17 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       if (weeklyQuiz) {
         const quiz = await rpc('edge_api_weekly_quiz', { p_user_id: userId }, config, fetcher);
         return quiz === null ? unavailable(cors) : response(quiz, 200, cors);
+      }
+      if (weeklyAttempt) {
+        if (!UUID.test(weeklyAttempt[1])) return httpError(422, 'Invalid quiz ID', cors);
+        const answers = weeklyQuizAnswers((await readJson(request))!);
+        const attempt = await rpc('edge_api_submit_weekly_quiz', {
+          p_user_id: userId, p_quiz_id: weeklyAttempt[1], p_answers: answers,
+        }, config, fetcher) as JsonObject | null;
+        if (attempt === null) return unavailable(cors);
+        if (attempt.error === 'unavailable') return httpError(400, 'Weekly quiz not found', cors);
+        if (attempt.error === 'invalid') return httpError(400, 'Answers must match this quiz exactly', cors);
+        return response(attempt, 200, cors);
       }
       if (daily) {
         const selected = await rpc('edge_api_daily', {

@@ -3,7 +3,8 @@
 The current candidate serves health, topics, concept detail, idempotent
 Like/Save, notification preferences, push-token, streak-statistics, history,
 saved-pagination, subtopic-progress, daily-selection, completion, review,
-achievement, startup-state, followed-topic, profile-edit, and analytics routes at
+achievement, startup-state, followed-topic, profile-edit, analytics, and private
+profile-sharing settings routes at
 `/functions/v1/api`. The remaining entries in
 [the route matrix](SUPABASE_API_ROUTE_PARITY.md) are not implemented. Keep Railway
 and all production clients on the existing API until #416 meets its acceptance
@@ -21,8 +22,10 @@ returned 200 with a reachable database and anonymous `/v1/topics` returned
 incremental job checks the exact staging project, the verified 0049 RPC,
 and explicit before/after RPC signatures for each later migration. The
 fresh-project runner must not be rerun against the initialized project.
-Migrations 0057–0059 and their followed-topic, profile-edit, and analytics routes are
-locally tested but are not yet applied or deployed to staging. The authenticated
+Protected SQL run `38739632606` applied and verified migrations 0057–0059 in
+staging. The matching Edge deployment is waiting at the protected gate; do not
+infer those routes are live until it succeeds. Migration 0060 and its private
+sharing-settings route are locally tested but not yet staged. The authenticated
 smoke still needs its staging test account and GitHub environment secrets.
 
 ## Local checks
@@ -30,7 +33,7 @@ smoke still needs its staging test account and GitHub environment secrets.
 - Use Node 24 and the existing locked mobile TypeScript installation:
   `mobile/node_modules/.bin/tsc -p supabase/functions/tsconfig.json` and
   `node --experimental-strip-types supabase/functions/api/handler.test.mjs`.
-- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_edge_api_achievements.py tests/test_edge_api_reviews.py tests/test_edge_api_state.py tests/test_edge_api_followed_topics.py tests/test_edge_api_profile_update.py tests/test_edge_api_analytics.py tests/test_staging_migrations.py -q -rs`
+- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_edge_api_achievements.py tests/test_edge_api_reviews.py tests/test_edge_api_state.py tests/test_edge_api_followed_topics.py tests/test_edge_api_profile_update.py tests/test_edge_api_analytics.py tests/test_edge_api_profile_sharing.py tests/test_staging_migrations.py -q -rs`
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
 - Run `backend/tests/test_staging_api_smoke.py` with the local suite. The
   protected smoke job signs in with a dedicated staging Auth user and compares

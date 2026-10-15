@@ -9,9 +9,11 @@ and all production clients on the existing API until #416 meets its acceptance
 criteria and #418 performs the cutover.
 
 The first staging schema run applied migrations 0001–0049 and deployed the
-candidate at commit `b8fddd4`. Migrations 0050–0053 and their history/saved,
-subtopic, daily-selection, and completion routes are locally tested but are not yet applied or deployed in
-staging. A protected
+candidate at commit `b8fddd4`. Protected run `38726466061` then applied and
+verified migrations 0050–0053, and run `38726754703` deployed their history/saved,
+subtopic, daily-selection, and completion routes at commit `5afbc04`. Live
+`/health` returned 200 and unauthenticated `/v1/topics` returned 401; an
+authenticated staging learner flow has not yet been checked. A protected
 incremental job now checks the exact staging project, the verified 0049 RPC,
 and explicit before/after RPC signatures for each later migration. The
 fresh-project runner must not be rerun against the initialized project.

@@ -11,16 +11,16 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/v1/editorial/owner/reviewers` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/owner/operations` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/owner/events` | Owner/reviewer site / role + capability + MFA | Not ported |
-| PATCH | `/v1/editorial/me/notification-timezone` | Owner/reviewer site / role + capability + MFA | Not ported |
+| PATCH | `/v1/editorial/me/notification-timezone` | Owner/reviewer site / current session + active membership | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/notifications` | Owner/reviewer site / role + capability + MFA | Not ported |
 | PATCH | `/v1/editorial/notifications/policy` | Owner/reviewer site / role + capability + MFA | Not ported |
 | POST | `/v1/editorial/notifications/{batch_id}/retry` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/me` | Owner/reviewer site / current session + active membership | Candidate; local handler/SQL tests, staging role checks pending |
-| PATCH | `/v1/editorial/me/profile` | Owner/reviewer site / role + capability + MFA | Not ported |
-| PATCH | `/v1/editorial/me/authenticator` | Owner/reviewer site / role + capability + MFA | Not ported |
+| PATCH | `/v1/editorial/me/profile` | Owner/reviewer site / current session + active membership | Candidate; local handler/SQL tests, staging role checks pending |
+| PATCH | `/v1/editorial/me/authenticator` | Owner/reviewer site / current session + active membership + recent TOTP to disable | Candidate; local handler/SQL tests, staging role checks pending |
 | GET, POST | `/v1/editorial/reviewers` | Owner/reviewer site / role + capability + MFA | GET candidate with local handler/SQL tests; POST not ported |
 | PATCH | `/v1/editorial/reviewers/{user_id}/access` | Owner/reviewer site / role + capability + MFA | Not ported |
-| POST | `/v1/editorial/reviewers/{user_id}/approve-profile` | Owner/reviewer site / role + capability + MFA | Not ported |
+| POST | `/v1/editorial/reviewers/{user_id}/approve-profile` | Owner/reviewer site / manage_reviewers capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/queue` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/taxonomy` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/revisions/{rid}` | Owner/reviewer site / role + capability + MFA | Not ported |

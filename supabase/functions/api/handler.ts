@@ -1,0 +1,120 @@
+/** Candidate Railway-compatible JSON routes. No production client uses these yet. */
+
+export type ApiConfig = {
+  supabaseUrl: string;
+  anonKey: string;
+  serviceRoleKey: string;
+  allowedOrigins: readonly string[];
+};
+
+type Fetcher = typeof fetch;
+type AuthUser = { id?: unknown };
+
+const METHODS = 'GET, POST, PUT, PATCH, DELETE, OPTIONS';
+const HEADERS = 'authorization, apikey, content-type, x-client-info';
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+function routePath(pathname: string): string | null {
+  for (const prefix of ['/functions/v1/api', '/api']) {
+    if (pathname === prefix) return '/';
+    if (pathname.startsWith(`${prefix}/`)) return pathname.slice(prefix.length);
+  }
+  return null;
+}
+
+function response(body: unknown, status: number, cors: Headers): Response {
+  const headers = new Headers(cors);
+  headers.set('content-type', 'application/json; charset=utf-8');
+  headers.set('cache-control', 'no-store');
+  return new Response(JSON.stringify(body), { status, headers });
+}
+
+function error(status: number, code: string, cors: Headers): Response {
+  return response({ detail: { code } }, status, cors);
+}
+
+function corsHeaders(origin: string | null, allowed: readonly string[]): Headers | null {
+  if (origin !== null && !allowed.includes(origin)) return null;
+  const headers = new Headers({ vary: 'Origin' });
+  if (origin !== null) {
+    headers.set('access-control-allow-origin', origin);
+    headers.set('access-control-allow-methods', METHODS);
+    headers.set('access-control-allow-headers', HEADERS);
+    headers.set('access-control-expose-headers', 'Retry-After');
+  }
+  return headers;
+}
+
+function bearerToken(request: Request): string | null {
+  const header = request.headers.get('authorization');
+  const match = header?.match(/^Bearer ([^\s]+)$/i);
+  return match?.[1] ?? null;
+}
+
+async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetcher): Promise<string | null> {
+  const result = await fetcher(`${config.supabaseUrl}/auth/v1/user`, {
+    method: 'GET',
+    headers: { apikey: config.anonKey, authorization: `Bearer ${token}` },
+    signal: AbortSignal.timeout(5000),
+    redirect: 'error',
+  });
+  if (result.status === 401 || result.status === 403) return null;
+  if (!result.ok) throw new Error(`Auth unavailable: ${result.status}`);
+  const user: AuthUser = await result.json();
+  return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
+}
+
+async function rpc(name: 'edge_api_health' | 'edge_api_topics', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+  const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
+    method: 'POST',
+    headers: {
+      apikey: config.serviceRoleKey,
+      authorization: `Bearer ${config.serviceRoleKey}`,
+      'content-type': 'application/json',
+    },
+    body: JSON.stringify(args),
+    signal: AbortSignal.timeout(5000),
+    redirect: 'error',
+  });
+  if (!result.ok) throw new Error(`Database unavailable: ${result.status}`);
+  return result.json();
+}
+
+export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (request: Request) => Promise<Response> {
+  const url = new URL(config.supabaseUrl);
+  if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
+    throw new Error('SUPABASE_URL must use HTTPS');
+  }
+  if (!config.anonKey || !config.serviceRoleKey) throw new Error('Supabase keys are required');
+  if (config.allowedOrigins.some(origin => {
+    const parsed = new URL(origin);
+    return parsed.origin !== origin || (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1');
+  })) throw new Error('Allowed origins must be exact HTTPS origins or local development origins');
+
+  return async request => {
+    const cors = corsHeaders(request.headers.get('origin'), config.allowedOrigins);
+    if (!cors) return error(403, 'origin_not_allowed', new Headers());
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+
+    const path = routePath(new URL(request.url).pathname);
+    if (path === null) return error(404, 'not_found', cors);
+    if (request.method !== 'GET') return error(405, 'method_not_allowed', cors);
+
+    try {
+      if (path === '/health') {
+        return response(await rpc('edge_api_health', {}, config, fetcher), 200, cors);
+      }
+      if (path === '/v1/topics') {
+        const token = bearerToken(request);
+        if (!token) return error(401, 'unauthorized', cors);
+        const userId = await authenticatedUser(token, config, fetcher);
+        if (!userId) return error(401, 'unauthorized', cors);
+        return response(await rpc('edge_api_topics', { p_user_id: userId }, config, fetcher), 200, cors);
+      }
+      return error(404, 'not_found', cors);
+    } catch {
+      // Do not echo provider errors or sensitive query details to callers.
+      return error(503, 'upstream_unavailable', cors);
+    }
+  };
+}

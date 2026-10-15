@@ -6,7 +6,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 
 | Method | Path | Consumer / authority | Candidate status |
 | --- | --- | --- | --- |
-| GET | `/health` | Operations / public probe | Not ported |
+| GET | `/health` | Operations / public probe | Candidate; local handler/SQL tests |
 | GET | `/v1/editorial/owner/overview` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/owner/reviewers` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/owner/operations` | Owner/reviewer site / role + capability + MFA | Not ported |
@@ -40,7 +40,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/v1/editorial/legacy-enrichment-eligibility/{topic_id}` | Owner/reviewer site / role + capability + MFA | Not ported |
 | POST | `/v1/editorial/legacy-enrichment-batches/{batch_id}/actions` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/legacy-enrichment-batches/{batch_id}/entries` | Owner/reviewer site / role + capability + MFA | Not ported |
-| GET | `/v1/topics` | Mobile / verified learner | Not ported |
+| GET | `/v1/topics` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/daily` | Mobile / verified learner | Not ported |
 | POST | `/v1/daily/complete` | Mobile / verified learner | Not ported |
 | GET | `/v1/concepts/{slug}` | Mobile / verified learner | Not ported |

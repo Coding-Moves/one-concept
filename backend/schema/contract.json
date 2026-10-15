@@ -75,7 +75,8 @@
     "0073_supabase_relationship_list_api.sql": "daeb2596900dfb611a1800ca2d891acff4d3a2c2b1bf01d8f5c6f36dc91456e0",
     "0074_supabase_weekly_quiz_selection_api.sql": "03757d295140fa94e9096b495b622d36c25bbf47fd83eef0664efc70437a90f0",
     "0075_supabase_weekly_quiz_attempt_api.sql": "b07656eb783dad81ce73e5066c9efbee6d0bc3e8845ca45e669480d73ed97ba1",
-    "0076_supabase_subtopic_quiz_selection_api.sql": "7f8465ff70f8d5d107362ea8b4203f65d319b10fc2b21e2556ea244b332172b2"
+    "0076_supabase_subtopic_quiz_selection_api.sql": "7f8465ff70f8d5d107362ea8b4203f65d319b10fc2b21e2556ea244b332172b2",
+    "0077_supabase_subtopic_quiz_attempt_api.sql": "1f0ca240b43b0d9a779d96ed9ba67aaad380947a33acad6af685fb4e5c21c5dd"
   },
   "schema": {
     "columns": {

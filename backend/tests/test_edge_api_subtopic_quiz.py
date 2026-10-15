@@ -53,3 +53,26 @@ async def test_subtopic_quiz_waits_for_reviewed_catalog_and_freezes(session, use
       has_function_privilege('authenticated', 'public.edge_api_subtopic_quiz(uuid,uuid)', 'EXECUTE'),
       has_function_privilege('service_role', 'public.edge_api_subtopic_quiz(uuid,uuid)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+    submit = text("select public.edge_api_submit_subtopic_quiz(:uid,:qid,cast(:answers as jsonb))")
+    answers = [{"question_id": q["id"], "selected_index": q["correct_index"]} for q in stored]
+    changed = answers.copy()
+    changed[-1] = {"question_id": "forged-question", "selected_index": 0}
+    assert _json(await session.scalar(submit, {"uid": user, "qid": result["quiz_id"],
+                                               "answers": json.dumps(changed)}))["error"] == "invalid"
+    attempt = _json(await session.scalar(submit, {"uid": user, "qid": result["quiz_id"],
+                                                  "answers": json.dumps(answers)}))
+    assert (attempt["correct_count"], attempt["question_count"]) == (3, 3)
+    assert all(item["correct"] for item in attempt["results"])
+    retry = _json(await session.scalar(submit, {"uid": user, "qid": result["quiz_id"],
+                                                "answers": json.dumps(answers)}))
+    assert retry["attempt_id"] != attempt["attempt_id"]
+    assert _json(await session.scalar(submit, {"uid": uuid.uuid4(), "qid": result["quiz_id"],
+                                               "answers": json.dumps(answers)}))["error"] == "unavailable"
+    assert await session.scalar(text("select count(*) from public.subtopic_quiz_attempts where user_id=:uid"),
+                                {"uid": user}) == 2
+    rights = (await session.execute(text("""select
+      has_function_privilege('authenticated',
+        'public.edge_api_submit_subtopic_quiz(uuid,uuid,jsonb)', 'EXECUTE'),
+      has_function_privilege('service_role',
+        'public.edge_api_submit_subtopic_quiz(uuid,uuid,jsonb)', 'EXECUTE')"""))).one()
+    assert rights == (False, True)

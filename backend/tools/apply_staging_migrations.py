@@ -113,6 +113,9 @@ INCREMENTAL_PROBES = {
     "0076_supabase_subtopic_quiz_selection_api.sql": (
         "public.edge_api_subtopic_quiz(uuid,uuid)",
     ),
+    "0077_supabase_subtopic_quiz_attempt_api.sql": (
+        "public.edge_api_submit_subtopic_quiz(uuid,uuid,jsonb)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -3,7 +3,7 @@
 The current candidate serves health, topics, concept detail, idempotent
 Like/Save, notification preferences, push-token, streak-statistics, history,
 saved-pagination, subtopic-progress, daily-selection, completion, review,
-achievement, and startup-state routes at
+achievement, startup-state, and followed-topic routes at
 `/functions/v1/api`. The remaining entries in
 [the route matrix](SUPABASE_API_ROUTE_PARITY.md) are not implemented. Keep Railway
 and all production clients on the existing API until #416 meets its acceptance
@@ -13,20 +13,24 @@ The first staging schema run applied migrations 0001–0049 and deployed the
 candidate at commit `b8fddd4`. Protected run `38726466061` then applied and
 verified migrations 0050–0053, and run `38726754703` deployed their history/saved,
 subtopic, daily-selection, and completion routes at commit `5afbc04`. Live
-`/health` returned 200 and unauthenticated `/v1/topics` returned 401; an
-authenticated staging learner flow has not yet been checked. A protected
-incremental job now checks the exact staging project, the verified 0049 RPC,
+`/health` returned 200 and unauthenticated `/v1/topics` returned 401. Protected
+SQL run `38735682216` then applied and verified migrations 0054–0056, and
+Edge run `38736653739` deployed commit `6fd67d2`. Live `/health` again
+returned 200 with a reachable database and anonymous `/v1/topics` returned
+401. An authenticated staging learner flow has not yet been checked. A protected
+incremental job checks the exact staging project, the verified 0049 RPC,
 and explicit before/after RPC signatures for each later migration. The
 fresh-project runner must not be rerun against the initialized project.
-Migrations 0054–0056 and their achievement, review, and startup-state routes
-are locally tested but are not yet applied or deployed to staging.
+Migration 0057 and its followed-topic route are locally tested but are not yet
+applied or deployed to staging. The authenticated smoke still needs its staging
+test account and GitHub environment secrets.
 
 ## Local checks
 
 - Use Node 24 and the existing locked mobile TypeScript installation:
   `mobile/node_modules/.bin/tsc -p supabase/functions/tsconfig.json` and
   `node --experimental-strip-types supabase/functions/api/handler.test.mjs`.
-- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_edge_api_achievements.py tests/test_edge_api_reviews.py tests/test_edge_api_state.py tests/test_staging_migrations.py -q -rs`
+- From `backend/`, run `.venv/bin/python -m pytest tests/test_edge_api_basics.py tests/test_edge_api_concepts.py tests/test_edge_api_notifications.py tests/test_edge_api_stats.py tests/test_edge_api_collections.py tests/test_edge_api_subtopics.py tests/test_edge_api_daily.py tests/test_edge_api_completion.py tests/test_edge_api_achievements.py tests/test_edge_api_reviews.py tests/test_edge_api_state.py tests/test_edge_api_followed_topics.py tests/test_staging_migrations.py -q -rs`
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
 - Run `backend/tests/test_staging_api_smoke.py` with the local suite. The
   protected smoke job signs in with a dedicated staging Auth user and compares

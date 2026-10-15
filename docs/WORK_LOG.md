@@ -12,6 +12,9 @@ claims as completed work.
 - Outcome: build the first of three Railway-exit PRs on `codex/supabase-api-migration` from current `develop`, without changing production clients or Railway services.
 - Chunk boundary: inventory every HTTP route, establish a secure Supabase Edge Function/SQL request path, then port and verify API contracts in focused commits. Scheduled workers belong to #417; browser/client cutover and release belong to #418.
 - Intended commits: route and consumer inventory; Edge authentication/routing foundation with tests; atomic SQL and endpoint ports with contract tests; deployment/verification guidance; final review and handoff. Keep this PR draft until #416 acceptance is met.
+- Progress: `a503f63` maps 73 OpenAPI paths and four public HTML paths; `509b302` adds service-role-only health/topics SQL RPCs and real-PostgreSQL checks; `9eef340` adds a manually authenticated Edge candidate for those two routes with eight handler regressions; `53554bd` adds staging-only manual deployment guidance/guard and CI checks. No production client or Railway service changed.
+- Validation: Edge TypeScript typecheck and eight Node handler tests passed. Two SQL tests passed on disposable PostgreSQL 16 with Podman; Ruff `F,E9` and `git diff --check` passed. No Supabase CLI/Deno packaging run or live staging deployment has occurred.
+- Remaining: 71 OpenAPI paths, browser HTML in #418, full role/MFA/avatar/daily/owner parity, staging deployment, security and load checks, and production cutover remain. Open the first PR as draft; do not use `Closes #416` until its acceptance items pass. Migration 0046 is not marked production-applied.
 
 ### v1.10.14 production migration ledger — 2026-10-10
 

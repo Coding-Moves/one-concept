@@ -359,6 +359,13 @@ private diagnostics and restore procedures.
 
 ## Backend request and service flow
 
+The Supabase API candidate for #416 lives in `supabase/functions/api/` and
+`backend/migrations/0046_supabase_api_basics.sql`. Its current health and topics
+routes are isolated from production clients. The complete route checklist and
+remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
+Migration #417 will move scheduled workers; #418 owns browser pages and client
+cutover. Until then, the FastAPI implementation below remains authoritative.
+
 `main.py` configures CORS, routes, production documentation visibility, safe SQLAlchemy and unexpected-exception responses, and a shared
 JWKS cache, and engine cleanup. Its lifespan owns `db/keepalive.py`'s configurable
 database probes; checkout/query and connection return are bounded, failures retry,

@@ -1,0 +1,4 @@
+# Health and anonymous profile reads require a public entry point. The handler
+# authenticates each private route with Supabase Auth before using service RPCs.
+[functions.api]
+verify_jwt = false

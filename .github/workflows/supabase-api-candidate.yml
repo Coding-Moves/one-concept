@@ -1,0 +1,31 @@
+name: Deploy Supabase API candidate to staging
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
+      STAGING_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Require distinct staging target and scoped token
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$STAGING_REF" ] || [ -z "$PRODUCTION_REF" ] || [ "$STAGING_REF" = "$PRODUCTION_REF" ]; then
+            echo '::error::Configure a staging-scoped token and distinct staging/production project refs.'
+            exit 1
+          fi
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: latest
+      - name: Deploy candidate API function only
+        run: supabase functions deploy api --project-ref "$STAGING_REF"

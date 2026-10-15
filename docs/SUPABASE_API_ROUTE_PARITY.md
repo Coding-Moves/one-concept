@@ -69,7 +69,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET, PUT | `/v1/me/profile-sharing` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/public-profiles/{token}` | Public visitor / filtered anonymous data | Candidate; local handler/SQL tests |
 | GET, PUT | `/v1/me/connections/settings` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| GET | `/v1/me/connections` | Mobile / verified learner | Not ported |
+| GET | `/v1/me/connections` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET, POST | `/v1/me/connections/with/{token}` | Mobile / verified learner | Not ported |
 | POST | `/v1/me/connections/with/{token}/block` | Mobile / verified learner | Not ported |
 | POST | `/v1/me/connections/{connection_id}/actions` | Mobile / verified learner | Not ported |

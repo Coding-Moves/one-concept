@@ -157,6 +157,59 @@ def test_inspection_is_read_only_and_does_not_print_credentials(monkeypatch, tmp
     assert "private-password" not in output
 
 
+def test_incremental_migration_requires_exact_reviewed_project(monkeypatch, tmp_path):
+    monkeypatch.setenv("STAGING_PROJECT_REF", STAGING)
+    files = [tmp_path / runner.INCREMENTAL_BASELINE, tmp_path / "0050_supabase_collections_api.sql"]
+    monkeypatch.setattr(runner, "function_presence", lambda *_: pytest.fail("unreviewed target reached SQL"))
+    assert runner.apply_incremental({}, files) == 2
+
+
+def test_incremental_migration_rejects_unprobed_file_or_missing_baseline(monkeypatch, tmp_path):
+    monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
+    baseline = tmp_path / runner.INCREMENTAL_BASELINE
+    reviewed = tmp_path / "0050_supabase_collections_api.sql"
+    unknown = tmp_path / "0051_unreviewed.sql"
+    monkeypatch.setattr(runner, "function_presence", lambda *_: pytest.fail("unreviewed migration reached SQL"))
+    assert runner.apply_incremental({}, [reviewed]) == 2
+    assert runner.apply_incremental({}, [baseline, reviewed, unknown]) == 2
+
+
+@pytest.mark.parametrize("states, expected, writes", [
+    ([(False,)], 2, 0),  # The 0049 baseline was not installed.
+    ([(True,), (True, False)], 2, 0),  # A partial 0050 must be inspected.
+    ([(True,), (False, False), (True, True)], 0, 1),
+    ([(True,), (True, True)], 0, 0),  # A protected job retry is harmless.
+])
+def test_incremental_migration_probes_before_and_after_sql(monkeypatch, tmp_path, states, expected, writes):
+    monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
+    baseline = tmp_path / runner.INCREMENTAL_BASELINE
+    reviewed = tmp_path / "0050_supabase_collections_api.sql"
+    reviewed.write_text("begin; select 1; commit;")
+    probes = iter(states)
+    monkeypatch.setattr(runner, "function_presence", lambda *_: next(probes))
+    applied = []
+
+    def fake_psql(_env, *args):
+        applied.append(args)
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(runner, "psql", fake_psql)
+    assert runner.apply_incremental({}, [baseline, reviewed]) == expected
+    assert len(applied) == writes
+    if writes:
+        assert applied[0][-2:] == ("-f", str(reviewed))
+
+
+def test_incremental_migration_rejects_unreadable_postcheck(monkeypatch, tmp_path):
+    monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
+    reviewed = tmp_path / "0050_supabase_collections_api.sql"
+    reviewed.write_text("begin; select 1; commit;")
+    probes = iter([(True,), (False, False), None])
+    monkeypatch.setattr(runner, "function_presence", lambda *_: next(probes))
+    monkeypatch.setattr(runner, "psql", lambda _env, *args: subprocess.CompletedProcess(args, 0, "", ""))
+    assert runner.apply_incremental({}, [tmp_path / runner.INCREMENTAL_BASELINE, reviewed]) == 1
+
+
 @pytest.mark.asyncio
 async def test_inspection_query_reads_schema_metadata_without_user_records(session):
     raw = (await session.execute(text(runner.INSPECT_SQL))).scalar_one()
@@ -165,3 +218,10 @@ async def test_inspection_query_reads_schema_metadata_without_user_records(sessi
     assert "profiles" in flags["public_relations"]
     assert {column["name"] for column in flags["profiles_columns"]} >= {"id", "timezone"}
     assert "on_auth_user_created" in flags["auth_user_triggers"]
+
+
+@pytest.mark.asyncio
+async def test_incremental_signatures_resolve_after_ordered_migrations(session):
+    signatures = ("public.edge_api_stats(uuid)", *runner.INCREMENTAL_PROBES["0050_supabase_collections_api.sql"])
+    for signature in signatures:
+        assert (await session.execute(text("select to_regprocedure(:signature) is not null"), {"signature": signature})).scalar_one()

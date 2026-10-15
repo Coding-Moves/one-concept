@@ -6,6 +6,7 @@ on:
       - 'supabase-api-staging-inspect-*'
       - 'supabase-api-staging-reset-*'
       - 'supabase-api-staging-schema-*'
+      - 'supabase-api-staging-incremental-*'
       - 'supabase-api-staging-deploy-*'
 
 concurrency:
@@ -68,6 +69,23 @@ jobs:
         run: |
           python backend/tools/apply_staging_migrations.py --check-only
           python backend/tools/apply_staging_migrations.py
+
+  migrate_incremental:
+    if: startsWith(github.ref_name, 'supabase-api-staging-incremental-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply reviewed incremental SQL to staging only
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: python backend/tools/apply_staging_migrations.py --apply-incremental
 
   deploy:
     if: startsWith(github.ref_name, 'supabase-api-staging-deploy-')

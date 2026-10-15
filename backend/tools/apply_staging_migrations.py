@@ -17,6 +17,13 @@ from urllib.parse import unquote, urlsplit
 MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 PROJECT_REF = re.compile(r"^[a-z0-9]{20}$")
 DEMO_PROJECT_REF = "zhrulokgngjceqgjkcmw"
+INCREMENTAL_BASELINE = "0049_supabase_stats_api.sql"
+INCREMENTAL_PROBES = {
+    "0050_supabase_collections_api.sql": (
+        "public.edge_api_history(uuid,date,integer)",
+        "public.edge_api_saved(uuid,timestamp with time zone,uuid,integer)",
+    ),
+}
 FRESH_SQL = """set row_security = off;
 select
   to_regclass('auth.users') is not null,
@@ -183,12 +190,60 @@ def psql(env: dict[str, str], *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def function_presence(env: dict[str, str], signatures: tuple[str, ...]) -> tuple[bool, ...] | None:
+    """Read only the existence of reviewed RPC signatures, never application rows."""
+    if not signatures or any(not re.fullmatch(r"public\.[a-z_]+\([a-z ,]+\)", item) for item in signatures):
+        raise ValueError("Unreviewed incremental migration probe")
+    expressions = ", ".join(f"to_regprocedure('{item}') is not null" for item in signatures)
+    result = psql(env, "-qAt", "-F", "|", "-c", f"select {expressions}")
+    values = result.stdout.strip().split("|")
+    if result.returncode != 0 or len(values) != len(signatures) or any(value not in ("t", "f") for value in values):
+        return None
+    return tuple(value == "t" for value in values)
+
+
+def apply_incremental(env: dict[str, str], files: list[Path]) -> int:
+    """Apply only migrations with explicit before/after RPC probes to reviewed staging."""
+    if os.environ["STAGING_PROJECT_REF"] != DEMO_PROJECT_REF:
+        print("Incremental migration refused: staging project reference does not match", file=sys.stderr)
+        return 2
+    names = [file.name for file in files]
+    if INCREMENTAL_BASELINE not in names:
+        print("Incremental migration refused: baseline file is missing", file=sys.stderr)
+        return 2
+    pending = files[names.index(INCREMENTAL_BASELINE) + 1:]
+    if {file.name for file in pending} != set(INCREMENTAL_PROBES):
+        print("Incremental migration refused: every later migration needs reviewed probes", file=sys.stderr)
+        return 2
+    baseline = function_presence(env, ("public.edge_api_stats(uuid)",))
+    if baseline != (True,):
+        print("Incremental migration refused: verified 0049 baseline is absent", file=sys.stderr)
+        return 2
+    for file in pending:
+        probes = INCREMENTAL_PROBES[file.name]
+        before = function_presence(env, probes)
+        if before is None or (any(before) and not all(before)):
+            print(f"Migration {file.name} has an incomplete or unreadable baseline", file=sys.stderr)
+            return 2
+        if all(before):
+            print(f"Already present: {file.name}")
+            continue
+        result = psql(env, "-q", "-f", str(file))
+        if result.returncode != 0 or function_presence(env, probes) != (True,) * len(probes):
+            print(f"Migration {file.name} failed or its RPC verification failed", file=sys.stderr)
+            print(result.stderr[-1200:], file=sys.stderr)
+            return 1
+        print(f"Applied and verified {file.name}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     mode = parser.add_mutually_exclusive_group()
     mode.add_argument("--check-only", action="store_true", help="validate target and list files without connecting")
     mode.add_argument("--inspect", action="store_true", help="read only staging schema presence flags")
     mode.add_argument("--reset-demo", action="store_true", help="remove the reviewed demo schema and Auth users from one staging project")
+    mode.add_argument("--apply-incremental", action="store_true", help="apply explicitly probed migrations after the verified 0049 staging baseline")
     args = parser.parse_args()
     try:
         env = connection_environment(
@@ -209,6 +264,8 @@ def main() -> int:
     if not shutil.which("psql"):
         print("psql is required", file=sys.stderr)
         return 2
+    if args.apply_incremental:
+        return apply_incremental(env, files)
     if args.reset_demo:
         if os.environ["STAGING_PROJECT_REF"] != DEMO_PROJECT_REF:
             print("Demo reset refused: staging project reference does not match", file=sys.stderr)

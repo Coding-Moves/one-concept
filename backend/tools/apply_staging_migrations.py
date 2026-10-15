@@ -49,6 +49,10 @@ INCREMENTAL_PROBES = {
     "0056_supabase_learner_state_api.sql": (
         "public.edge_api_state(uuid,boolean,boolean,integer,integer,integer,date)",
     ),
+    "0057_supabase_followed_topics_api.sql": (
+        "public.edge_api_profile_snapshot(uuid,boolean,date)",
+        "public.edge_api_set_topics(uuid,text[],boolean,date)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

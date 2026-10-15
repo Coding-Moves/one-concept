@@ -55,7 +55,8 @@
     "0053_supabase_daily_completion_api.sql": "0ddbd583835e150b50f4eae234ff073b0e75a283a4548d0f7b75b3588286efc1",
     "0054_supabase_achievements_api.sql": "4ecc14738d2b3c7957ad7fd236a33e7c7a40d0a9ab6b28a525b911a27f0a8f43",
     "0055_supabase_daily_reviews_api.sql": "3a98738c616db86d499862fe83d3d24d3bdd8bb16c9b9d20c39c4d946da42c0d",
-    "0056_supabase_learner_state_api.sql": "ed8d79f74ad04ede2c468dbffc0dee7635a03265710d8fd8f832d089bc196b84"
+    "0056_supabase_learner_state_api.sql": "ed8d79f74ad04ede2c468dbffc0dee7635a03265710d8fd8f832d089bc196b84",
+    "0057_supabase_followed_topics_api.sql": "9207df1e2af34d12887b5cc090c138217a49879d33948bd97910d915891906cd"
   },
   "schema": {
     "columns": {

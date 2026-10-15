@@ -73,7 +73,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET, POST | `/v1/me/connections/with/{token}` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/connections/with/{token}/block` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/connections/{connection_id}/actions` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| DELETE | `/v1/me/connections/blocks/{block_id}` | Mobile / verified learner | Not ported |
+| DELETE | `/v1/me/connections/blocks/{block_id}` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/me/relationships` | Mobile / verified learner | Not ported |
 | GET, POST | `/v1/me/relationships/with/{token}` | Mobile / verified learner | Not ported |
 | POST | `/v1/me/relationships/with/{token}/block` | Mobile / verified learner | Not ported |

@@ -114,6 +114,33 @@ test('weekly attempts validate the complete answer set before account-scoped sco
   assert.equal((await handler(request(path, { headers }))).status, 405);
 });
 
+test('subtopic quiz selection uses only the owned completion and hides missing events', async () => {
+  const completionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const calls = [];
+  let resultBody = { available: false, completion_id: completionId, reviewed_concepts: 1,
+    required_concepts: 3, topic_name: 'Mathematics', subtopic_name: 'Probability',
+    detail: 'This optional quiz will unlock when enough reviewed questions are available.' };
+  const handler = createHandler(config, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(resultBody);
+  });
+  const path = `/v1/quizzes/subtopics/${completionId}`;
+  assert.equal((await handler(request(path))).status, 401);
+  assert.equal(calls.length, 0);
+  const headers = { authorization: 'Bearer account-token' };
+  const result = await handler(request(path, { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), resultBody);
+  assert.match(calls[1].url, /\/rpc\/edge_api_subtopic_quiz$/);
+  assert.deepEqual(JSON.parse(calls[1].init.body), { p_user_id: userId, p_completion_id: completionId });
+  resultBody = { error: 'unavailable' };
+  const missing = await handler(request(path, { headers }));
+  assert.equal(missing.status, 404);
+  assert.deepEqual(await missing.json(), { detail: 'Completed subtopic not found' });
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
 test('daily returns the verified account assignment or typed unavailable state', async () => {
   const calls = [];
   let payload = {

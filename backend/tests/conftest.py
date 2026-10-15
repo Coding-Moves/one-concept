@@ -36,6 +36,7 @@ MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 # needs stand-ins before the schema will apply.
 AUTH_STUB = """
 create role authenticated;
+create role service_role;
 create schema auth;
 create table auth.users (
   id uuid primary key default gen_random_uuid(),

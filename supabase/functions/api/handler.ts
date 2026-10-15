@@ -86,7 +86,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -161,6 +161,49 @@ function pushInput(body: JsonObject): { token: string; platform: string | null }
   return { token, platform: typeof platform === 'string' ? platform : null };
 }
 
+function pageLimit(query: URLSearchParams): number {
+  const raw = query.get('limit');
+  if (raw === null) return 50;
+  if (!/^\d+$/.test(raw)) throw new ClientBodyError(422, 'Invalid page limit');
+  const limit = Number(raw);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+    throw new ClientBodyError(422, 'Invalid page limit');
+  }
+  return limit;
+}
+
+function historyCursor(query: URLSearchParams): string | null {
+  const raw = query.get('cursor');
+  if (raw === null) return null;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) throw new ClientBodyError(422, 'Invalid history cursor');
+  const parsed = new Date(`${raw}T00:00:00Z`);
+  if (Number.isNaN(parsed.valueOf()) || parsed.toISOString().slice(0, 10) !== raw) {
+    throw new ClientBodyError(422, 'Invalid history cursor');
+  }
+  return raw;
+}
+
+function savedCursor(query: URLSearchParams): { before: string | null; conceptId: string | null } {
+  const raw = query.get('cursor');
+  if (raw === null) return { before: null, conceptId: null };
+  if (raw.length > 200) throw new ClientBodyError(422, 'Saved cursor is too long');
+  try {
+    if (!/^[A-Za-z0-9_-]+$/.test(raw)) throw new Error('Invalid base64url');
+    const bytes = Uint8Array.from(atob(raw.replaceAll('-', '+').replaceAll('_', '/')
+      + '='.repeat((4 - raw.length % 4) % 4)), character => character.charCodeAt(0));
+    const value: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (!Array.isArray(value) || value.length !== 2
+        || typeof value[0] !== 'string' || typeof value[1] !== 'string'
+        || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(value[0])
+        || Number.isNaN(Date.parse(value[0])) || !UUID.test(value[1])) {
+      throw new Error('Invalid cursor fields');
+    }
+    return { before: value[0], conceptId: value[1] };
+  } catch {
+    throw new ClientBodyError(400, 'Invalid saved cursor');
+  }
+}
+
 function noContent(cors: Headers): Response {
   const headers = new Headers(cors);
   headers.set('cache-control', 'no-store');
@@ -183,13 +226,16 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     if (!cors) return httpError(403, 'Origin not allowed', new Headers());
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
 
-    const path = routePath(new URL(request.url).pathname);
+    const requestUrl = new URL(request.url);
+    const path = routePath(requestUrl.pathname);
     if (path === null) return httpError(404, 'Not Found', cors);
     const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
     const notifications = path === '/v1/me/notifications';
     const pushToken = path === '/v1/me/push-token';
     const stats = path === '/v1/me/stats';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && concept === null) {
+    const history = path === '/v1/me/history';
+    const saved = path === '/v1/me/saved';
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && concept === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -214,6 +260,19 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       }
       if (stats) {
         return response(await rpc('edge_api_stats', { p_user_id: userId }, config, fetcher), 200, cors);
+      }
+      if (history) {
+        return response(await rpc('edge_api_history', {
+          p_user_id: userId, p_before: historyCursor(requestUrl.searchParams),
+          p_limit: pageLimit(requestUrl.searchParams),
+        }, config, fetcher), 200, cors);
+      }
+      if (saved) {
+        const cursor = savedCursor(requestUrl.searchParams);
+        return response(await rpc('edge_api_saved', {
+          p_user_id: userId, p_before: cursor.before, p_concept_id: cursor.conceptId,
+          p_limit: pageLimit(requestUrl.searchParams),
+        }, config, fetcher), 200, cors);
       }
       if (notifications) {
         const data = request.method === 'GET'

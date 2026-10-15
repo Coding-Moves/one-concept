@@ -161,6 +161,49 @@ test('streak statistics use only the verified account', async () => {
   assert.deepEqual(calls[0].args, { p_user_id: userId });
 });
 
+test('history and saved pages use verified identity and bounded cursors', async () => {
+  const calls = [];
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json({ items: [], next_cursor: null });
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const history = await handler(request('/v1/me/history?cursor=2026-10-14&limit=2', { headers }));
+  assert.equal(history.status, 200);
+  assert.match(calls[0].url, /\/rpc\/edge_api_history$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_before: '2026-10-14', p_limit: 2 });
+
+  const cursor = Buffer.from(JSON.stringify(['2026-10-14T08:30:00.000000+00:00', userId])).toString('base64url');
+  const saved = await handler(request(`/v1/me/saved?cursor=${cursor}&limit=1`, { headers }));
+  assert.equal(saved.status, 200);
+  assert.match(calls[1].url, /\/rpc\/edge_api_saved$/);
+  assert.deepEqual(calls[1].args, {
+    p_user_id: userId, p_before: '2026-10-14T08:30:00.000000+00:00',
+    p_concept_id: userId, p_limit: 1,
+  });
+});
+
+test('invalid pagination is rejected before service-role RPC access', async () => {
+  let serviceCalls = 0;
+  const handler = createHandler(config, async url => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    serviceCalls++;
+    return Response.json({ items: [], next_cursor: null });
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  for (const [path, status] of [
+    ['/v1/me/history?cursor=2026-02-30', 422],
+    ['/v1/me/history?limit=101', 422],
+    ['/v1/me/saved?cursor=not-base64', 400],
+    ['/v1/me/saved?limit=0', 422],
+  ]) {
+    assert.equal((await handler(request(path, { headers }))).status, status);
+  }
+  assert.equal(serviceCalls, 0);
+  assert.equal((await handler(request('/v1/me/history'))).status, 401);
+});
+
 test('invalid or excessive preference bodies fail before database access', async () => {
   let calls = 0;
   const handler = createHandler(config, async url => {

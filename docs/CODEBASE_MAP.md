@@ -364,6 +364,8 @@ The Supabase API candidate for #416 lives in `supabase/functions/api/` and
 Its current health, topics, concept, notification, push-token, and statistics routes are isolated from production
 clients. The complete route checklist and
 remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
+`backend/tools/apply_staging_migrations.py` applies ordered migrations only to
+a fresh staging project after checking its project reference against the connection.
 Migration #417 will move scheduled workers; #418 owns browser pages and client
 cutover. Until then, the FastAPI implementation below remains authoritative.
 

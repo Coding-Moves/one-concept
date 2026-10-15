@@ -24,7 +24,15 @@ criteria and #418 performs the cutover.
    Do not run this candidate against live learner/reviewer accounts while most
    routes are absent. Verify the exact project reference before each command.
 2. Apply the repository's ordered migrations to that project through
-   `0049_supabase_stats_api.sql` using its **direct** PostgreSQL URL. These
+   `0049_supabase_stats_api.sql` using its port-5432 direct or session-pooler
+   PostgreSQL URL. From this branch, run
+   `python backend/tools/apply_staging_migrations.py --check-only`, then
+   `python backend/tools/apply_staging_migrations.py` with
+   `STAGING_PROJECT_REF`, `PRODUCTION_PROJECT_REF`, and `STAGING_DIRECT_URL`
+   set privately in the shell. The runner requires the connection to identify
+   the staging project, refuses a production match, and only applies the full
+   sequence to a fresh Supabase project. Do not paste the URL into chat or
+   store it in a repository file. These
    migrations are intentionally absent from `backend/migrations/applied.txt`;
    only a verified production application belongs there. Check that only
    `service_role` can execute the `edge_api_*` RPCs.

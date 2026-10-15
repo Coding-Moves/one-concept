@@ -53,6 +53,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_profile_snapshot(uuid,boolean,date)",
         "public.edge_api_set_topics(uuid,text[],boolean,date)",
     ),
+    "0058_supabase_profile_update_api.sql": (
+        "public.edge_api_patch_profile(uuid,text,boolean,text,text,text,boolean,boolean,date)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

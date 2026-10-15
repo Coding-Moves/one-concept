@@ -64,6 +64,32 @@ test('topics requires Auth verification and passes only its returned user ID to 
   assert.deepEqual(JSON.parse(calls[1].init.body), { p_user_id: userId });
 });
 
+test('daily returns the verified account assignment or typed unavailable state', async () => {
+  const calls = [];
+  let payload = {
+    assigned_for: '2026-10-15', assigned_at: '2026-10-15T08:00:00+00:00',
+    completed_at: null, learned: false, outside_followed_topics: false,
+    concept: { id: userId, slug: 'hash-tables' },
+  };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const selected = await handler(request('/v1/daily', { headers }));
+  assert.equal(selected.status, 200);
+  assert.deepEqual(await selected.json(), payload);
+  assert.match(calls[0].url, /\/rpc\/edge_api_daily$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId });
+  payload = { assigned_for: '2026-10-16', reason: 'catalog_exhausted',
+    detail: 'You have already been assigned every available concept.' };
+  const unavailable = await handler(request('/v1/daily', { headers }));
+  assert.equal(unavailable.status, 409);
+  assert.deepEqual(await unavailable.json(), payload);
+  assert.equal((await handler(request('/v1/daily', { method: 'POST', headers }))).status, 405);
+});
+
 test('rejected or malformed Auth responses cannot reach the service RPC', async () => {
   for (const authResult of [new Response(null, { status: 401 }), Response.json({ id: 'not-a-uuid' })]) {
     let calls = 0;

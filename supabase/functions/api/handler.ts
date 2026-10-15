@@ -86,7 +86,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -245,7 +245,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const saved = path === '/v1/me/saved';
     const subtopicProgress = path === '/v1/me/subtopics/progress';
     const subtopicSeen = path === '/v1/me/subtopics/completions/seen';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && concept === null) {
+    const daily = path === '/v1/daily';
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !history && !saved && !subtopicProgress && !subtopicSeen && !daily && concept === null) {
       return httpError(404, 'Not Found', cors);
     }
     const validMethod = concept?.[2]
@@ -269,6 +270,10 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       if (!userId) return httpError(401, 'Invalid or expired token', cors, true);
       if (path === '/v1/topics') {
         return response(await rpc('edge_api_topics', { p_user_id: userId }, config, fetcher), 200, cors);
+      }
+      if (daily) {
+        const selected = await rpc('edge_api_daily', { p_user_id: userId }, config, fetcher) as JsonObject;
+        return response(selected, selected.reason ? 409 : 200, cors);
       }
       if (stats) {
         return response(await rpc('edge_api_stats', { p_user_id: userId }, config, fetcher), 200, cors);

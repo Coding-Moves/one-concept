@@ -37,7 +37,7 @@ reachable database and anonymous `/v1/topics` returned 401. Protected SQL run
 `38754177200` applied and verified migrations 0066–0070 in staging; Edge run
 `38754683827` deployed their matching candidate. Live `/health` returned 200 with
 a reachable database and anonymous `/v1/topics` returned 401. Migrations
-0071–0083 and their directed relationship, quiz, and initial editorial routes are locally tested but not
+0071–0084 and their directed relationship, quiz, and initial editorial routes are locally tested but not
 staged. The three authenticated smoke secrets are saved; its protected run is
 waiting for approval.
 

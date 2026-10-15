@@ -461,6 +461,45 @@ test('connection status uses only the verified account and a valid shared token'
   assert.equal(calls.length, 1);
 });
 
+test('connection requests preserve pair status, privacy, and retry headers', async () => {
+  const token = 'r'.repeat(43);
+  const calls = [];
+  let payload = { id: '00000000-0000-4000-8000-000000000001', state: 'outgoing', retry_after: null };
+  const handler = createHandler(config, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, args: JSON.parse(init.body) });
+    return Response.json(payload);
+  });
+  const headers = { authorization: 'Bearer account-token' };
+  const path = `/v1/me/connections/with/${token}`;
+  assert.equal((await handler(request(path, { method: 'POST' }))).status, 401);
+  const sent = await handler(request(path, { method: 'POST', headers }));
+  assert.equal(sent.status, 200);
+  assert.deepEqual(await sent.json(), payload);
+  assert.match(calls[0].url, /\/rpc\/edge_api_connection_request$/);
+  assert.deepEqual(calls[0].args, { p_user_id: userId, p_token: token });
+  for (const [error, status] of [['unavailable', 404], ['self', 400], ['incoming', 409]]) {
+    payload = { error };
+    const denied = await handler(request(path, { method: 'POST', headers }));
+    assert.equal(denied.status, status);
+    assert.equal(denied.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
+    assert.ok((await denied.json()).detail);
+  }
+  payload = { error: 'cooldown', retry_after: 604800 };
+  const cooldown = await handler(request(path, { method: 'POST', headers }));
+  assert.equal(cooldown.status, 429);
+  assert.equal(cooldown.headers.get('retry-after'), '604800');
+  payload = { error: 'limit', retry_after: 86400 };
+  const limited = await handler(request(path, { method: 'POST', headers }));
+  assert.equal(limited.status, 429);
+  assert.equal(limited.headers.get('retry-after'), '86400');
+  assert.equal((await handler(request('/v1/me/connections/with/bad', {
+    method: 'POST', headers,
+  }))).status, 404);
+  assert.equal((await handler(request(path, { method: 'DELETE', headers }))).status, 405);
+  assert.equal(calls.length, 6);
+});
+
 test('achievements are account-scoped and acknowledgment validates its code list', async () => {
   const calls = [];
   const payload = { current_streak: 1, longest_streak: 2, items: [{ code: 'first-concept', seen_at: null }] };

@@ -89,7 +89,7 @@ async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetc
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
     headers: {
@@ -469,6 +469,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       ? request.method === 'PUT' || request.method === 'DELETE'
       : notifications || sharing || connectionSettings
         ? request.method === 'GET' || request.method === 'PUT'
+        : connectionStatus
+          ? request.method === 'GET' || request.method === 'POST'
         : followedTopics
           ? request.method === 'PUT'
         : profile
@@ -574,10 +576,29 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         if (!/^[A-Za-z0-9_-]{43}$/.test(connectionStatus[1])) {
           return sharingResponse({ detail: 'Profile unavailable' }, 404, cors);
         }
-        const data = await rpc('edge_api_connection_status', {
+        const data = await rpc(request.method === 'POST'
+          ? 'edge_api_connection_request' : 'edge_api_connection_status', {
           p_user_id: userId, p_token: connectionStatus[1],
-        }, config, fetcher);
-        return data === null ? unavailable(cors) : sharingResponse(data, 200, cors);
+        }, config, fetcher) as JsonObject | null;
+        if (data === null) return unavailable(cors);
+        if (request.method === 'POST' && typeof data.error === 'string') {
+          const errors: Record<string, { status: number; detail: string }> = {
+            unavailable: { status: 404, detail: 'This connection is unavailable' },
+            self: { status: 400, detail: 'You cannot connect with yourself' },
+            incoming: { status: 409, detail: 'An incoming request already exists. Accept or decline it.' },
+            cooldown: { status: 429, detail: 'Please wait before requesting again' },
+            limit: { status: 429, detail: 'Connection request limit reached. Try later.' },
+          };
+          const mapped = errors[data.error];
+          if (!mapped) return unavailable(cors);
+          const result = sharingResponse({ detail: mapped.detail }, mapped.status, cors);
+          if (mapped.status === 429 && typeof data.retry_after === 'number'
+              && data.retry_after > 0 && Number.isSafeInteger(data.retry_after)) {
+            result.headers.set('retry-after', String(data.retry_after));
+          }
+          return result;
+        }
+        return sharingResponse(data, 200, cors);
       }
       if (state) {
         const data = await rpc('edge_api_state', {

@@ -107,6 +107,9 @@ INCREMENTAL_PROBES = {
     "0074_supabase_weekly_quiz_selection_api.sql": (
         "public.edge_api_weekly_quiz(uuid)",
     ),
+    "0075_supabase_weekly_quiz_attempt_api.sql": (
+        "public.edge_api_submit_weekly_quiz(uuid,uuid,jsonb)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

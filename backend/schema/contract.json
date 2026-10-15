@@ -73,7 +73,8 @@
     "0071_supabase_relationship_remove_api.sql": "b8844b9991fa948310d232d7d333411f4d26ce06a72ab6ab8293f844bda750a8",
     "0072_supabase_relationship_block_api.sql": "263ce39a8fbbba692c255e9a21942dba50ccbb7c9e2c320fc542d1763baf4f8a",
     "0073_supabase_relationship_list_api.sql": "daeb2596900dfb611a1800ca2d891acff4d3a2c2b1bf01d8f5c6f36dc91456e0",
-    "0074_supabase_weekly_quiz_selection_api.sql": "03757d295140fa94e9096b495b622d36c25bbf47fd83eef0664efc70437a90f0"
+    "0074_supabase_weekly_quiz_selection_api.sql": "03757d295140fa94e9096b495b622d36c25bbf47fd83eef0664efc70437a90f0",
+    "0075_supabase_weekly_quiz_attempt_api.sql": "b07656eb783dad81ce73e5066c9efbee6d0bc3e8845ca45e669480d73ed97ba1"
   },
   "schema": {
     "columns": {

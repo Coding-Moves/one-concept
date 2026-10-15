@@ -52,3 +52,28 @@ async def test_weekly_quiz_matches_legacy_question_choice_and_freezes(session, u
     assert again == first
     assert _json(await session.scalar(text("select public.edge_api_weekly_quiz(:uid)"),
                                       {"uid": concepts[0].id})) is None
+    answers = [{"question_id": q["id"], "selected_index": stored[i]["correct_index"]}
+               for i, q in enumerate(first["questions"])]
+    submit = text("select public.edge_api_submit_weekly_quiz(:uid,:qid,cast(:answers as jsonb))")
+    invalid = answers.copy()
+    invalid[-1] = {"question_id": "forged-question", "selected_index": 0}
+    assert _json(await session.scalar(submit, {"uid": user, "qid": first["quiz_id"],
+                                               "answers": json.dumps(invalid)}))["error"] == "invalid"
+    assert await session.scalar(text("select count(*) from public.weekly_quiz_attempts where user_id=:uid"),
+                                {"uid": user}) == 0
+    attempt = _json(await session.scalar(submit, {"uid": user, "qid": first["quiz_id"],
+                                                  "answers": json.dumps(answers)}))
+    assert attempt["correct_count"] == 7
+    assert len(attempt["results"]) == 7
+    assert all(result["correct"] for result in attempt["results"])
+    retry = _json(await session.scalar(submit, {"uid": user, "qid": first["quiz_id"],
+                                                "answers": json.dumps(answers)}))
+    assert retry["attempt_id"] != attempt["attempt_id"]
+    assert await session.scalar(text("select count(*) from public.weekly_quiz_attempts where user_id=:uid"),
+                                {"uid": user}) == 2
+    rights = (await session.execute(text("""select
+      has_function_privilege('authenticated',
+        'public.edge_api_submit_weekly_quiz(uuid,uuid,jsonb)', 'EXECUTE'),
+      has_function_privilege('service_role',
+        'public.edge_api_submit_weekly_quiz(uuid,uuid,jsonb)', 'EXECUTE')"""))).one()
+    assert rights == (False, True)

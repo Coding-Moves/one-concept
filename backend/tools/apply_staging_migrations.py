@@ -59,6 +59,11 @@ INCREMENTAL_PROBES = {
     "0059_supabase_analytics_api.sql": (
         "public.edge_api_analytics(uuid)",
     ),
+    "0060_supabase_profile_sharing_settings_api.sql": (
+        "public.edge_api_new_profile_token()",
+        "public.edge_api_sharing_get(uuid)",
+        "public.edge_api_sharing_put(uuid,boolean,boolean,boolean,boolean,boolean,boolean,text[],integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

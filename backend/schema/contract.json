@@ -58,7 +58,8 @@
     "0056_supabase_learner_state_api.sql": "ed8d79f74ad04ede2c468dbffc0dee7635a03265710d8fd8f832d089bc196b84",
     "0057_supabase_followed_topics_api.sql": "9207df1e2af34d12887b5cc090c138217a49879d33948bd97910d915891906cd",
     "0058_supabase_profile_update_api.sql": "7b3231537c77ce43c884111f426653c53ffce9b654eb03f354ea4c679bc9a194",
-    "0059_supabase_analytics_api.sql": "97a65fe7c9ff911801fcee05cc8d1b2b4221c58a2c5bc2fffd0042f54f9ee7c6"
+    "0059_supabase_analytics_api.sql": "97a65fe7c9ff911801fcee05cc8d1b2b4221c58a2c5bc2fffd0042f54f9ee7c6",
+    "0060_supabase_profile_sharing_settings_api.sql": "f908598150ff7faf3843da5569a59a80ed68c1840d093e1ed99945d64f08dce7"
   },
   "schema": {
     "columns": {

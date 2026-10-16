@@ -30,7 +30,7 @@
     "react-native-safe-area-context": "~5.7.0",
     "react-native-screens": "~4.26.0",
     "react-native-url-polyfill": "^4.0.0",
-    "react-native-web": "^0.21.3"
+    "react-native-web": "^0.21.4"
   },
   "devDependencies": {
     "@types/markdown-it": "^14.2.0",

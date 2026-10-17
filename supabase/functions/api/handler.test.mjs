@@ -13,6 +13,34 @@ const config = {
 const request = (path, init = {}) => new Request(`https://one-concept.supabase.co/functions/v1/api${path}`, init);
 const editorialToken = (claims) => `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
 
+test('editorial correction request reaches the atomic job RPC with the receipt fingerprint', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const revisionId = 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272';
+  const bearer = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const job = { id: 'af7b4908-fd86-445f-b7d0-7191398e29f2', status: 'pending', token: 'b'.repeat(64) };
+  const handler = createHandler({ ...config, editorialEnabled: true, generationEnabled: true },
+    async (url, init) => {
+      calls.push({ url, init });
+      return url.endsWith('/auth/v1/user') ? Response.json({ id: userId }) : Response.json(job);
+    });
+  const command = { request_id: 'af7b4908-fd86-445f-b7d0-7191398e29f2',
+    note: 'Request a correction for the reviewed lesson.', expected_token: 'a'.repeat(64) };
+  const route = `/v1/editorial/revisions/${revisionId}/generation-requests`;
+  const result = await handler(request(route, { method: 'POST',
+    headers: { authorization: `Bearer ${bearer}`, 'content-type': 'application/json' },
+    body: JSON.stringify(command) }));
+  assert.equal(result.status, 202);
+  assert.deepEqual(await result.json(), job);
+  assert.match(calls.at(-1).url, /edge_api_editorial_revision_generation$/);
+  const args = JSON.parse(calls.at(-1).init.body);
+  assert.equal(args.p_revision_id, revisionId);
+  assert.equal(args.p_enabled, true);
+  assert.equal(args.p_fingerprint.length, 64);
+  assert.equal((await handler(request(route, { method: 'GET',
+    headers: { authorization: `Bearer ${bearer}` } }))).status, 405);
+});
+
 test('editorial concept detail exposes a versioned preview without raw snapshots', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';

@@ -234,6 +234,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_python_json(jsonb)",
         "public.edge_api_editorial_stage_revision(uuid,uuid,text,uuid,uuid,text,text,jsonb,text)",
     ),
+    "0113_supabase_editorial_revision_generation_api.sql": (
+        "public.edge_api_editorial_revision_generation(uuid,uuid,text,uuid,uuid,text,text,boolean,integer,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

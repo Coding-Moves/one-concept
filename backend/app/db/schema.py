@@ -123,7 +123,8 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_concept_detail_source',
             'edge_api_editorial_revision_detail_source',
             'edge_api_editorial_python_json',
-            'edge_api_editorial_stage_revision')""",
+            'edge_api_editorial_stage_revision',
+            'edge_api_editorial_revision_generation')""",
     }
     result = {}
     for kind, query in queries.items():

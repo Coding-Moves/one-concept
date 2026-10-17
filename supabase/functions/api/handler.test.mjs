@@ -396,6 +396,39 @@ test('editorial legacy eligibility checks role and passes only configuration sta
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
 });
 
+test('editorial timeline decodes opaque cursors without changing timestamp precision', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const conceptId = '00000000-0000-4000-8000-000000000003';
+  const eventId = '00000000-0000-4000-8000-000000000004';
+  const afterAt = '2026-10-17T08:00:00.123456+00:00';
+  const cursor = Buffer.from(JSON.stringify([afterAt, `w:${eventId}`])).toString('base64url');
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { items: [], next_cursor: null };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = `/v1/editorial/concepts/${conceptId}/timeline`;
+  assert.equal((await handler(request(path))).status, 401);
+  assert.equal((await handler(request('/v1/editorial/concepts/bad/timeline', { headers }))).status, 422);
+  assert.equal((await handler(request(`${path}?cursor=bad`, { headers }))).status, 422);
+  const impossible = Buffer.from(JSON.stringify(['2026-02-30T08:00:00+00:00', `w:${eventId}`])).toString('base64url');
+  assert.equal((await handler(request(`${path}?cursor=${impossible}`, { headers }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  assert.equal((await handler(request(`${path}?cursor=${cursor}&limit=1`, { headers }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_concept_timeline$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_concept_id: conceptId, p_after_at: afterAt, p_after_key: `w:${eventId}`, p_limit: 1,
+  });
+  payload = { error: 'concept_not_found' };
+  assert.equal((await handler(request(path, { headers }))).status, 404);
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

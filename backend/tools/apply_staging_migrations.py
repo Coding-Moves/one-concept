@@ -173,6 +173,9 @@ INCREMENTAL_PROBES = {
     "0093_supabase_editorial_legacy_eligibility_api.sql": (
         "public.edge_api_editorial_legacy_eligibility(uuid,uuid,text,uuid,boolean)",
     ),
+    "0094_supabase_editorial_concept_timeline_api.sql": (
+        "public.edge_api_editorial_concept_timeline(uuid,uuid,text,uuid,timestamp with time zone,text,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

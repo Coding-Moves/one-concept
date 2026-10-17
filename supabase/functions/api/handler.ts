@@ -148,7 +148,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -450,6 +450,42 @@ function relationshipPageInput(query: URLSearchParams): {
   return { created, id, limit };
 }
 
+function editorialTimelineInput(query: URLSearchParams): {
+  afterAt: string | null; afterKey: string | null; limit: number;
+} {
+  const rawLimit = query.get('limit') ?? '25';
+  const limit = Number(rawLimit);
+  if (!/^\d+$/.test(rawLimit) || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) {
+    throw new ClientBodyError(422, 'Invalid timeline page');
+  }
+  const cursor = query.get('cursor');
+  if (cursor === null) return { afterAt: null, afterKey: null, limit };
+  if (cursor.length > 256 || !/^[A-Za-z0-9_-]+$/.test(cursor)) {
+    throw new ClientBodyError(422, 'Invalid timeline cursor');
+  }
+  try {
+    const encoded = cursor.replaceAll('-', '+').replaceAll('_', '/');
+    const bytes = Uint8Array.from(atob(encoded.padEnd(Math.ceil(encoded.length / 4) * 4, '=')),
+      char => char.charCodeAt(0));
+    const parsed: unknown = JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
+    if (!Array.isArray(parsed) || parsed.length !== 2
+        || typeof parsed[0] !== 'string' || typeof parsed[1] !== 'string') throw new Error();
+    const [afterAt, afterKey] = parsed as [string, string];
+    const stamp = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d{1,6})?(?:Z|[+-](\d{2}):(\d{2}))$/.exec(afterAt);
+    const year = Number(stamp?.[1]);
+    const month = Number(stamp?.[2]);
+    const day = Number(stamp?.[3]);
+    const leap = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    const days = [31, leap ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (!stamp || year < 1 || month < 1 || month > 12 || day < 1 || day > days[month - 1]
+        || Number(stamp[4]) > 23 || Number(stamp[5]) > 59 || Number(stamp[6]) > 59
+        || (stamp[7] !== undefined && (Number(stamp[7]) > 23 || Number(stamp[8]) > 59))
+        || Number.isNaN(Date.parse(afterAt))
+        || !/^[rw]:/.test(afterKey) || !UUID.test(afterKey.slice(2))) throw new Error();
+    return { afterAt, afterKey, limit };
+  } catch { throw new ClientBodyError(422, 'Invalid timeline cursor'); }
+}
+
 function connectionActionInput(body: JsonObject): string {
   if (Object.keys(body).length !== 1 || typeof body.action !== 'string'
       || !['accept', 'decline', 'cancel', 'remove', 'block'].includes(body.action)) {
@@ -649,6 +685,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialActivity = path === '/v1/editorial/activity';
     const editorialQueue = path === '/v1/editorial/queue';
     const editorialHistory = /^\/v1\/editorial\/concepts\/([^/]+)\/revisions$/.exec(path);
+    const editorialTimeline = /^\/v1\/editorial\/concepts\/([^/]+)\/timeline$/.exec(path);
     const editorialJobs = path === '/v1/editorial/generation-jobs';
     const editorialJob = /^\/v1\/editorial\/generation-jobs\/([^/]+)$/.exec(path);
     const editorialSupply = /^\/v1\/editorial\/generation-supply\/([^/]+)$/.exec(path);
@@ -659,7 +696,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialAuthenticator = path === '/v1/editorial/me/authenticator';
     const editorialApproveProfile = /^\/v1\/editorial\/reviewers\/([^/]+)\/approve-profile$/.exec(path);
     const editorial = editorialMe || editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue
-      || editorialHistory !== null || editorialJobs || editorialJob !== null || editorialSupply !== null
+      || editorialHistory !== null || editorialTimeline !== null
+      || editorialJobs || editorialJob !== null || editorialSupply !== null
       || editorialLegacyEligibility !== null
       || editorialLegacyEntries !== null || editorialProfile
       || editorialTimezone || editorialAuthenticator || editorialApproveProfile !== null;
@@ -747,6 +785,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           : editorialActivity ? 'Invalid activity page'
           : editorialQueue ? 'Invalid editorial queue'
           : editorialHistory ? 'Invalid revision page'
+          : editorialTimeline ? 'Invalid timeline page'
           : editorialJobs ? 'Invalid generation job page' : 'Invalid reviewer page';
         const queueKind = requestUrl.searchParams.get('kind') ?? 'revisions';
         const queueStatus = requestUrl.searchParams.get('status');
@@ -783,6 +822,17 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         if (editorialHistory && !UUID.test(editorialHistory[1])) {
           return editorialResponse({ detail: 'Invalid concept ID' }, 422, cors);
         }
+        if (editorialTimeline && !UUID.test(editorialTimeline[1])) {
+          return editorialResponse({ detail: 'Invalid concept ID' }, 422, cors);
+        }
+        let timelineInput: ReturnType<typeof editorialTimelineInput> | null = null;
+        if (editorialTimeline) {
+          try { timelineInput = editorialTimelineInput(requestUrl.searchParams); }
+          catch (failure) {
+            return editorialResponse({ detail: failure instanceof ClientBodyError
+              ? failure.message : 'Invalid timeline cursor' }, 422, cors);
+          }
+        }
         if (editorialJob && !UUID.test(editorialJob[1])) {
           return editorialResponse({ detail: 'Invalid generation job ID' }, 422, cors);
         }
@@ -818,6 +868,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           : editorialLegacyEntries ? 'edge_api_editorial_legacy_entries'
           : editorialQueue ? 'edge_api_editorial_queue'
           : editorialHistory ? 'edge_api_editorial_revision_history'
+          : editorialTimeline ? 'edge_api_editorial_concept_timeline'
           : editorialJobs ? 'edge_api_editorial_generation_jobs'
           : editorialJob ? 'edge_api_editorial_generation_job'
           : editorialLegacyEligibility ? 'edge_api_editorial_legacy_eligibility'
@@ -828,6 +879,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ...(editorialActivity ? { p_topic_id: topicId } : {}),
           ...(editorialLegacyEntries ? { p_batch_id: editorialLegacyEntries[1] } : {}),
           ...(editorialHistory ? { p_concept_id: editorialHistory[1] } : {}),
+          ...(editorialTimeline ? { p_concept_id: editorialTimeline[1],
+            p_after_at: timelineInput!.afterAt, p_after_key: timelineInput!.afterKey,
+            p_limit: timelineInput!.limit } : {}),
           ...(editorialJobs ? { p_status: jobStatus, p_topic_id: topicId,
             p_concept_id: jobConcept } : {}),
           ...(editorialJob ? { p_job_id: editorialJob[1] } : {}),
@@ -869,6 +923,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           return editorialResponse({ detail: 'Complete MFA verification for editorial actions' }, 403, cors);
         }
         if (data.error === 'invalid_page') return editorialResponse({ detail: pageDetail }, 422, cors);
+        if (data.error === 'invalid_cursor') {
+          return editorialResponse({ detail: 'Invalid timeline cursor' }, 422, cors);
+        }
         if (data.error === 'invalid_filter') {
           return editorialResponse({ detail: 'Status, assignee and urgency apply to revisions only' }, 422, cors);
         }

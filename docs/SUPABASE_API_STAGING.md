@@ -2,8 +2,9 @@
 
 The current candidate implements all 73 inventoried JSON paths under
 `/functions/v1/api`. [The route matrix](SUPABASE_API_ROUTE_PARITY.md) records
-each consumer and validation state. Local route coverage is complete, while
-hosted role, avatar, privacy, and load acceptance still needs verification.
+each consumer and validation state. Local route coverage is complete; hosted
+learner, avatar, and load checks passed, while role and privacy acceptance
+still needs verification.
 Keep Railway and all production clients on the existing API until #416 meets
 its acceptance criteria and #418 performs the cutover.
 
@@ -49,6 +50,11 @@ succeeded at commit `a5ae057`. Hosted learner and avatar smoke `39028385181`
 passed at that commit. The 500-request load probe `39028577679` passed at
 commit `8b0567b`. Editorial role/MFA and privacy checks remain pending, so
 production clients stay on Railway.
+Protected SQL run `39034607694` applied and verified migration 0117 in staging.
+It grants only the three service-only editorial RPCs that read `auth.users`
+the trusted owner context needed for reviewer invitations and last-owner
+checks. A disposable PostgreSQL regression test exercises the invitation as
+`service_role`. The Edge function code was unchanged by this SQL repair.
 
 ## Local checks
 

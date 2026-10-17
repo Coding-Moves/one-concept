@@ -222,6 +222,43 @@ test('editorial legacy batch entries require review access and a valid batch ID'
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
 });
 
+test('editorial queue validates private filters and forwards all three views', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const topicId = '00000000-0000-4000-8000-000000000003';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { items: [{ id: topicId, status: 'draft' }], total: 1, next_cursor: null };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  assert.equal((await handler(request('/v1/editorial/queue'))).status, 401);
+  for (const query of ['kind=wrong', 'status=wrong', 'topic_id=bad', 'assignee_id=bad',
+    'subtopic_id=bad', 'urgency=wrong', 'cursor=bad', 'limit=101',
+    `search=${'x'.repeat(121)}`]) {
+    assert.equal((await handler(request(`/v1/editorial/queue?${query}`, { headers }))).status, 422);
+  }
+  assert.equal((await handler(request('/v1/editorial/queue?kind=legacy&status=draft', { headers }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const result = await handler(request(`/v1/editorial/queue?kind=revisions&topic_id=${topicId}&status=draft&limit=1&search=lesson`, { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_queue$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_cursor: null, p_limit: 1, p_kind: 'revisions', p_status: 'draft',
+    p_topic_id: topicId, p_assignee_id: null, p_subtopic_id: null,
+    p_urgency: null, p_search: 'lesson',
+  });
+  await handler(request('/v1/editorial/queue?kind=published', { headers }));
+  assert.equal(JSON.parse(calls.at(-1).init.body).p_kind, 'published');
+  payload = { error: 'permission' };
+  assert.equal((await handler(request('/v1/editorial/queue', { headers }))).status, 403);
+  assert.equal((await handler(request('/v1/editorial/queue', { method: 'POST', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

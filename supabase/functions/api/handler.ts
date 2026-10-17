@@ -141,7 +141,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -640,12 +640,13 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialReviewers = path === '/v1/editorial/reviewers';
     const editorialTaxonomy = path === '/v1/editorial/taxonomy';
     const editorialActivity = path === '/v1/editorial/activity';
+    const editorialQueue = path === '/v1/editorial/queue';
     const editorialLegacyEntries = /^\/v1\/editorial\/legacy-enrichment-batches\/([^/]+)\/entries$/.exec(path);
     const editorialProfile = path === '/v1/editorial/me/profile';
     const editorialTimezone = path === '/v1/editorial/me/notification-timezone';
     const editorialAuthenticator = path === '/v1/editorial/me/authenticator';
     const editorialApproveProfile = /^\/v1\/editorial\/reviewers\/([^/]+)\/approve-profile$/.exec(path);
-    const editorial = editorialMe || editorialReviewers || editorialTaxonomy || editorialActivity
+    const editorial = editorialMe || editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue
       || editorialLegacyEntries !== null || editorialProfile
       || editorialTimezone || editorialAuthenticator || editorialApproveProfile !== null;
     const state = path === '/v1/me/state';
@@ -729,12 +730,33 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         const topicId = requestUrl.searchParams.get('topic_id');
         const rawLimit = requestUrl.searchParams.get('limit') ?? (editorialTaxonomy ? '100' : '25');
         const pageDetail = editorialTaxonomy ? 'Invalid taxonomy page'
-          : editorialActivity ? 'Invalid activity page' : 'Invalid reviewer page';
-        if ((editorialReviewers || editorialTaxonomy || editorialActivity)
+          : editorialActivity ? 'Invalid activity page'
+          : editorialQueue ? 'Invalid editorial queue' : 'Invalid reviewer page';
+        const queueKind = requestUrl.searchParams.get('kind') ?? 'revisions';
+        const queueStatus = requestUrl.searchParams.get('status');
+        const queueAssignee = requestUrl.searchParams.get('assignee_id');
+        const queueSubtopic = requestUrl.searchParams.get('subtopic_id');
+        const queueUrgency = requestUrl.searchParams.get('urgency');
+        const queueSearch = requestUrl.searchParams.get('search') ?? '';
+        if ((editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue)
             && ((cursor !== null && !UUID.test(cursor))
-              || (editorialActivity && topicId !== null && !UUID.test(topicId))
+              || ((editorialActivity || editorialQueue) && topicId !== null && !UUID.test(topicId))
               || !/^\d+$/.test(rawLimit) || Number(rawLimit) < 1 || Number(rawLimit) > 100)) {
           return editorialResponse({ detail: pageDetail }, 422, cors);
+        }
+        if (editorialQueue && (
+          !['revisions', 'legacy', 'published'].includes(queueKind)
+          || (queueStatus !== null && !['generating', 'draft', 'validation_failed',
+            'pending_review', 'changes_requested', 'approved', 'rejected', 'published', 'retired'].includes(queueStatus))
+          || (queueAssignee !== null && !UUID.test(queueAssignee))
+          || (queueSubtopic !== null && !UUID.test(queueSubtopic))
+          || (queueUrgency !== null && !['overdue', 'scheduled', 'unscheduled'].includes(queueUrgency))
+          || Array.from(queueSearch).length > 120)) {
+          return editorialResponse({ detail: pageDetail }, 422, cors);
+        }
+        if (editorialQueue && queueKind !== 'revisions'
+            && (queueStatus !== null || queueAssignee !== null || queueUrgency !== null)) {
+          return editorialResponse({ detail: 'Status, assignee and urgency apply to revisions only' }, 422, cors);
         }
         if (editorialApproveProfile && !UUID.test(editorialApproveProfile[1])) {
           return editorialResponse({ detail: 'Invalid reviewer ID' }, 422, cors);
@@ -757,12 +779,16 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           : editorialReviewers ? 'edge_api_editorial_reviewers'
           : editorialTaxonomy ? 'edge_api_editorial_taxonomy'
           : editorialActivity ? 'edge_api_editorial_activity'
-          : editorialLegacyEntries ? 'edge_api_editorial_legacy_entries' : 'edge_api_editorial_me', {
+          : editorialLegacyEntries ? 'edge_api_editorial_legacy_entries'
+          : editorialQueue ? 'edge_api_editorial_queue' : 'edge_api_editorial_me', {
           p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
-          ...(editorialReviewers || editorialTaxonomy || editorialActivity
+          ...(editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue
             ? { p_cursor: cursor, p_limit: Number(rawLimit) } : {}),
           ...(editorialActivity ? { p_topic_id: topicId } : {}),
           ...(editorialLegacyEntries ? { p_batch_id: editorialLegacyEntries[1] } : {}),
+          ...(editorialQueue ? { p_kind: queueKind, p_status: queueStatus,
+            p_topic_id: topicId, p_assignee_id: queueAssignee, p_subtopic_id: queueSubtopic,
+            p_urgency: queueUrgency, p_search: queueSearch } : {}),
           ...(profileInput ? { p_expected_version: profileInput.version,
             p_registered_name: profileInput.name } : {}),
           ...(timezoneInput ? { p_expected_version: timezoneInput.version,
@@ -788,6 +814,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           return editorialResponse({ detail: 'Complete MFA verification for editorial actions' }, 403, cors);
         }
         if (data.error === 'invalid_page') return editorialResponse({ detail: pageDetail }, 422, cors);
+        if (data.error === 'invalid_filter') {
+          return editorialResponse({ detail: 'Status, assignee and urgency apply to revisions only' }, 422, cors);
+        }
         if (data.error === 'batch_not_found') {
           return editorialResponse({ detail: 'Legacy enrichment batch not found' }, 404, cors);
         }

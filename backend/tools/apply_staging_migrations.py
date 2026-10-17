@@ -149,6 +149,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_authorize_any(uuid,uuid,text,text[])",
         "public.edge_api_editorial_taxonomy(uuid,uuid,text,uuid,integer)",
     ),
+    "0087_supabase_editorial_activity_api.sql": (
+        "public.edge_api_editorial_activity(uuid,uuid,text,uuid,uuid,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

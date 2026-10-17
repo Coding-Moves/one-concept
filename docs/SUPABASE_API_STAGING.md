@@ -124,6 +124,12 @@ role/MFA and full route checks remain pending, so production clients stay on Rai
    and reviewer accounts with current Auth sessions and membership rows. Set
    it to `true` only for protected role/MFA acceptance checks; the handler
    still verifies each bearer token and the SQL gate checks the current session.
+   To test reviewer invitations, set `EDITORIAL_INVITE_REDIRECT_URL` to the
+   exact approved site callback URL. Its HTTPS origin must also appear in
+   `ALLOWED_ORIGINS` and in the staging Auth redirect allowlist. A local HTTP
+   callback is accepted only outside production. New invitations fail closed
+   until this callback is configured; existing Auth users can be enrolled
+   without sending another invitation.
    For owner notification reporting, mirror the existing server-only
    `EDITORIAL_EMAIL_ENABLED`, `EDITORIAL_EMAIL_DASHBOARD_URL`,
    `EDITORIAL_EMAIL_DAILY_CAP`, `EDITORIAL_EMAIL_FROM`, Gmail client ID/secret/

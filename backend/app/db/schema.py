@@ -98,7 +98,8 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_revision_history',
             'edge_api_editorial_utc_iso','edge_api_editorial_job_public',
             'edge_api_editorial_generation_jobs',
-            'edge_api_editorial_generation_job')""",
+            'edge_api_editorial_generation_job',
+            'edge_api_editorial_generation_supply')""",
     }
     result = {}
     for kind, query in queries.items():

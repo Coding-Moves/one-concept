@@ -167,6 +167,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_generation_jobs(uuid,uuid,text,text,uuid,uuid,uuid,integer)",
         "public.edge_api_editorial_generation_job(uuid,uuid,text,uuid)",
     ),
+    "0092_supabase_editorial_generation_supply_api.sql": (
+        "public.edge_api_editorial_generation_supply(uuid,uuid,text,uuid,integer,integer,boolean,boolean)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -27,4 +27,9 @@ Deno.serve(createHandler({
   contentReservePerTopic: optionalInteger('CONTENT_RESERVE_PER_TOPIC', 60),
   contentActiveDays: optionalInteger('CONTENT_ACTIVE_DAYS', 90),
   editorialEnabled: Deno.env.get('EDITORIAL_ENABLED') === 'true',
+  minPoolPerTopic: optionalInteger('MIN_POOL_PER_TOPIC', 25),
+  contentReviewBacklogLimit: optionalInteger('CONTENT_REVIEW_BACKLOG_LIMIT', 25),
+  generationEnabled: Deno.env.get('GENERATION_ENABLED') === 'true',
+  futureRefillEnabled: Deno.env.get('FUTURE_REFILL_ENABLED') === 'true',
+  providerConfigured: Boolean(Deno.env.get('GEMINI_API_KEY')),
 }));

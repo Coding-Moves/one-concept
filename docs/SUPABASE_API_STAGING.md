@@ -101,6 +101,25 @@ lists 500,000 monthly invocations on Free. The simple 60,000-call projection
 would be 12% of that quota before all other traffic; check the dashboard's
 actual usage and the current plan limits during #418.
 
+## Protected role workflow
+
+Create two additional confirmed Auth users in staging: one dedicated owner and
+one dedicated reviewer. Keep each email and password only in the protected
+`supabase-staging` environment secrets
+`SUPABASE_STAGING_OWNER_EMAIL`/`SUPABASE_STAGING_OWNER_PASSWORD` and
+`SUPABASE_STAGING_REVIEWER_EMAIL`/`SUPABASE_STAGING_REVIEWER_PASSWORD`.
+Set the staging Edge runtime secret `EDITORIAL_ENABLED=true` before the
+`supabase-api-staging-roles-*` run. The script refuses the production and any
+unreviewed project before it signs in or writes SQL. It first checks the
+editorial endpoint is enabled, then bootstraps only the dedicated owner with
+an account event. Through the candidate API, that owner invites the existing
+reviewer, the reviewer requests a display name, and the owner approves it.
+The probe checks that MFA blocks an unverified reviewer, records a staging-only
+MFA policy change with an account event, then checks the reviewer queue, owner
+overview, and role isolation. The dedicated learner must remain unable to
+enter editorial routes. The direct MFA policy change is test setup; production
+authenticator changes must continue through the verified user flow.
+
 ## Isolated deployment prerequisites
 
 1. Use a staging Supabase project or a test project with no production traffic.

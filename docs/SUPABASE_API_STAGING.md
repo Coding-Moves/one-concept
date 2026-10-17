@@ -42,7 +42,9 @@ were later applied in protected SQL runs, with a matching Edge deployment.
 Authenticated smoke `39013630407` passed learner state, topics, stats, and
 achievements. Protected SQL run `39017139079` applied and verified migrations
 0086–0093 only in staging; matching Edge deployment `39017303094` succeeded.
-Its authenticated learner smoke `39017399735` passed. Editorial
+Its authenticated learner smoke `39017399735` passed. Protected SQL run
+`39018239902` applied and verified migrations 0094–0096 in staging; the
+matching Edge deployment is pending a separate protected approval. Editorial
 role/MFA and full route checks remain pending, so production clients stay on Railway.
 
 ## Local checks
@@ -121,6 +123,13 @@ role/MFA and full route checks remain pending, so production clients stay on Rai
    and reviewer accounts with current Auth sessions and membership rows. Set
    it to `true` only for protected role/MFA acceptance checks; the handler
    still verifies each bearer token and the SQL gate checks the current session.
+   For owner notification reporting, mirror the existing server-only
+   `EDITORIAL_EMAIL_ENABLED`, `EDITORIAL_EMAIL_DASHBOARD_URL`,
+   `EDITORIAL_EMAIL_DAILY_CAP`, `EDITORIAL_EMAIL_FROM`, Gmail client ID/secret/
+   refresh token, and `EDITORIAL_EMAIL_TEST_RECIPIENTS` settings. The API passes
+   only a derived setup status and daily cap into the SQL overview; the Gmail
+   credentials remain in Edge secrets. Keep email disabled in staging until
+   the scheduled delivery worker in #417 has been verified there.
 4. Configure the protected GitHub `supabase-staging` environment with a scoped
    `SUPABASE_STAGING_ACCESS_TOKEN` secret granting Edge Functions write on the
    staging project, a `SUPABASE_STAGING_DATABASE_URL` secret containing only

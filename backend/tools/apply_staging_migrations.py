@@ -176,6 +176,10 @@ INCREMENTAL_PROBES = {
     "0094_supabase_editorial_concept_timeline_api.sql": (
         "public.edge_api_editorial_concept_timeline(uuid,uuid,text,uuid,timestamp with time zone,text,integer)",
     ),
+    "0095_supabase_editorial_legacy_batches_api.sql": (
+        "public.edge_api_editorial_legacy_batch_public(public.editorial_legacy_batches)",
+        "public.edge_api_editorial_legacy_batches(uuid,uuid,text,uuid)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

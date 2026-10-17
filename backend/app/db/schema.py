@@ -101,7 +101,9 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_generation_job',
             'edge_api_editorial_generation_supply',
             'edge_api_editorial_legacy_eligibility',
-            'edge_api_editorial_concept_timeline')""",
+            'edge_api_editorial_concept_timeline',
+            'edge_api_editorial_legacy_batch_public',
+            'edge_api_editorial_legacy_batches')""",
     }
     result = {}
     for kind, query in queries.items():

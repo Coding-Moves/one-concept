@@ -360,7 +360,7 @@ private diagnostics and restore procedures.
 ## Backend request and service flow
 
 The Supabase API candidate for #416 lives in `supabase/functions/api/` and
-`backend/migrations/0046_supabase_api_basics.sql`–`0090_supabase_editorial_revision_history_api.sql`.
+`backend/migrations/0046_supabase_api_basics.sql`–`0091_supabase_editorial_generation_jobs_api.sql`.
 Its current health, topics, concept, notification, push-token, statistics,
 history, saved, subtopic-progress, daily-selection, completion, review, achievement,
 startup-state, and selected private editorial read routes are isolated from production

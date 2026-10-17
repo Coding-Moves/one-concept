@@ -195,6 +195,10 @@ INCREMENTAL_PROBES = {
     "0100_supabase_editorial_owner_operations_api.sql": (
         "public.edge_api_editorial_owner_operations(uuid,uuid,text,text,boolean,boolean,boolean,boolean,boolean,boolean,integer)",
     ),
+    "0101_supabase_editorial_owner_overview_api.sql": (
+        "public.edge_api_editorial_owner_window(date,date)",
+        "public.edge_api_editorial_owner_overview(uuid,uuid,text,date,date)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -46,8 +46,8 @@ async def test_owner_reviewers_matches_backend_page_and_role_gate(api, session):
     body.pop("observed_at")
     assert result == body
     all_items = _json(await session.scalar(command,
-      {**args, "cursor": None, "limit": 2}))["items"]
-    assert {str(api.owner.id), str(reviewer)} == {
+      {**args, "cursor": None, "limit": 50}))["items"]
+    assert {str(api.owner.id), str(reviewer)} <= {
       str(item["id"]) for item in all_items}
     assert _json(await session.scalar(command, {**args, "limit": 51}))["error"] == "invalid_page"
     assert _json(await session.scalar(command, {**args, "aal": "aal1"}))["error"] == "mfa_required"

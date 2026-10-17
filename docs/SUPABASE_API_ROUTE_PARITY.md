@@ -36,7 +36,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/v1/editorial/generation-jobs/{jid}` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | POST | `/v1/editorial/generation-jobs/{jid}/cancel` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/generation-supply/{tid}` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
-| GET, POST | `/v1/editorial/legacy-enrichment-batches` | Owner/reviewer site / role + capability + MFA | Not ported |
+| GET, POST | `/v1/editorial/legacy-enrichment-batches` | Owner/reviewer site / role + capability + MFA | GET candidate with local handler/SQL tests; POST not ported |
 | GET | `/v1/editorial/legacy-enrichment-eligibility/{topic_id}` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | POST | `/v1/editorial/legacy-enrichment-batches/{batch_id}/actions` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/legacy-enrichment-batches/{batch_id}/entries` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |

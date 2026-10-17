@@ -786,9 +786,9 @@ async def test_generation_demand_is_bounded_coalesced_audited_and_kill_switched(
                 slug="next-" + draft[0],
                 topic_slug=draft[0],
                 subtopic_slug="foundations",
-                title="Next distinct lesson",
+                title="Next distinct lesson " + draft[0],
                 curriculum=body["curriculum"]
-                | {"objective": "Explain a new independent fixture concept in detail."},
+                | {"objective": "Explain the next independent fixture concept for " + draft[0] + " in detail."},
             )
         ],
     )

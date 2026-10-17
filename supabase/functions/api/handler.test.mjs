@@ -651,6 +651,49 @@ test('owner event feed validates filters and forwards exact timestamp cursors', 
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
 });
 
+test('reviewer access requires a versioned capability update and current owner', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const reviewerId = 'fb7214e4-2505-41d3-a47b-98c0d05dcf07';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { user_id: reviewerId, status: 'revoked', version: 2 };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  const path = `/v1/editorial/reviewers/${reviewerId}/access`;
+  assert.equal((await handler(request(path, { method: 'PATCH',
+    body: JSON.stringify({ expected_version: 1, status: 'revoked', capabilities: ['review'] }),
+  }))).status, 401);
+  for (const body of [
+    { expected_version: 0, status: 'revoked', capabilities: ['review'] },
+    { expected_version: 1, status: 'revoked', capabilities: ['admin'] },
+    { expected_version: 1, status: 'active', capabilities: ['review'], user_id: reviewerId },
+  ]) {
+    assert.equal((await handler(request(path, {
+      method: 'PATCH', headers, body: JSON.stringify(body),
+    }))).status, 422);
+  }
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, status: 'revoked',
+      capabilities: ['review', 'review'] }),
+  }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_reviewer_access$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_subject_id: reviewerId, p_expected_version: 1,
+    p_status: 'revoked', p_capabilities: ['review'],
+  });
+  payload = { error: 'last_admin' };
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, status: 'revoked',
+      capabilities: [] }),
+  }))).status, 409);
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

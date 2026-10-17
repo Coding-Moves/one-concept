@@ -112,7 +112,8 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_owner_window',
             'edge_api_editorial_owner_overview',
             'edge_api_editorial_owner_reviewers',
-            'edge_api_editorial_owner_events')""",
+            'edge_api_editorial_owner_events',
+            'edge_api_editorial_reviewer_access')""",
     }
     result = {}
     for kind, query in queries.items():

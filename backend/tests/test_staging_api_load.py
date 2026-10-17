@@ -32,7 +32,7 @@ def test_http_failure_does_not_include_request_url_or_token(monkeypatch):
     try:
         staging_api_load.fetch_state("https://private.invalid", "key", "private-token")
     except ValueError as exc:
-        assert str(exc) == "Staging state returned HTTP 503"
+        assert str(exc) == "http_503"
     else:
         raise AssertionError("Expected a safe status error")
 

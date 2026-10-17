@@ -29,6 +29,10 @@ WORKERS = 10
 MAX_RESPONSE_BYTES = 1_048_576
 
 
+class ProbeFailure(ValueError):
+    """A fixed, non-sensitive diagnostic for the protected staging log."""
+
+
 def percentile(values: list[float], fraction: float) -> float:
     if not values:
         raise ValueError("No successful requests")
@@ -68,26 +72,26 @@ def fetch_state(url: str, key: str, token: str) -> tuple[float, int, int]:
             body = response.read(MAX_RESPONSE_BYTES + 1)
             elapsed_ms = (monotonic() - start) * 1000
             if response.status != 200 or "application/json" not in response.headers.get("content-type", ""):
-                raise ValueError("Staging state returned an unexpected response")
+                raise ProbeFailure("state_response")
     except urllib.error.HTTPError as exc:
         if exc.code != 429:
-            raise ValueError(f"Staging state returned HTTP {exc.code}") from None
+            raise ProbeFailure(f"http_{exc.code}") from None
         body = exc.read(MAX_RESPONSE_BYTES + 1)
         elapsed_ms = (monotonic() - start) * 1000
         retry = exc.headers.get("retry-after", "")
         try:
             detail = json.loads(body)["detail"]
         except (ValueError, KeyError, TypeError):
-            raise ValueError("Staging rate limit returned invalid JSON") from None
+            raise ProbeFailure("rate_limit_json") from None
         if not retry.isdigit() or not isinstance(detail, dict) or \
                 detail.get("code") != "rate_limited" or \
                 detail.get("retry_after_seconds") != int(retry):
-            raise ValueError("Staging rate limit contract changed")
+            raise ProbeFailure("rate_limit_contract")
         if len(body) > MAX_RESPONSE_BYTES:
-            raise ValueError("Staging rate limit response exceeded the bound")
+            raise ProbeFailure("rate_limit_size")
         return elapsed_ms, len(body), 429
     if len(body) > MAX_RESPONSE_BYTES:
-        raise ValueError("Staging state exceeded the response bound")
+        raise ProbeFailure("state_size")
     return elapsed_ms, len(body), 200
 
 
@@ -112,7 +116,7 @@ def run() -> int:
         url = f"{base}/functions/v1/api/v1/me/state?compact=true"
         # Warm the assignment and HTTP path before timing the read burst.
         if fetch_state(url, key, token)[2] != 200:
-            raise ValueError("Staging load account is already rate limited")
+            raise ProbeFailure("warm_request_limited")
         baseline = connection_count(env)
         samples: list[int] = []
         sample_failures: list[Exception] = []
@@ -140,9 +144,13 @@ def run() -> int:
             stop.set()
             sampler.join(timeout=16)
         if sample_failures or not samples:
-            raise ValueError("Staging connection sampling failed")
-        if not timings or not limited or len(timings) + limited != REQUESTS:
-            raise ValueError("Staging shared rate limit was not observed")
+            raise ProbeFailure("connection_sampling")
+        if not timings:
+            raise ProbeFailure("all_requests_limited")
+        if not limited:
+            raise ProbeFailure("no_rate_limit_observed")
+        if len(timings) + limited != REQUESTS:
+            raise ProbeFailure("request_count")
         ending = connection_count(env)
         print(
             f"Staging state read burst: {REQUESTS} requests, {len(timings)} HTTP 200, "
@@ -157,7 +165,8 @@ def run() -> int:
             subprocess.TimeoutExpired, OSError) as exc:
         # Error strings from providers, psql, and network libraries may contain
         # credentials or URLs. Print only a fixed diagnostic class.
-        print(f"Staging load probe failed ({type(exc).__name__})", file=sys.stderr)
+        reason = exc.args[0] if isinstance(exc, ProbeFailure) else type(exc).__name__
+        print(f"Staging load probe failed ({reason})", file=sys.stderr)
         return 1
 
 

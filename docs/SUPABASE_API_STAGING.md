@@ -19,7 +19,7 @@ subtopic, daily-selection, and completion routes at commit `5afbc04`. Live
 SQL run `38735682216` then applied and verified migrations 0054–0056, and
 Edge run `38736653739` deployed commit `6fd67d2`. Live `/health` again
 returned 200 with a reachable database and anonymous `/v1/topics` returned
-401. An authenticated staging learner flow has not yet been checked. A protected
+401. A protected
 incremental job checks the exact staging project, the verified 0049 RPC,
 and explicit before/after RPC signatures for each later migration. The
 fresh-project runner must not be rerun against the initialized project.
@@ -37,9 +37,13 @@ reachable database and anonymous `/v1/topics` returned 401. Protected SQL run
 `38754177200` applied and verified migrations 0066–0070 in staging; Edge run
 `38754683827` deployed their matching candidate. Live `/health` returned 200 with
 a reachable database and anonymous `/v1/topics` returned 401. Migrations
-0071–0084 and their directed relationship, quiz, and initial editorial routes are locally tested but not
-staged. The three authenticated smoke secrets are saved; its protected run is
-waiting for approval.
+0071–0085 and their directed relationship, quiz, and initial editorial routes
+were later applied in protected SQL runs, with a matching Edge deployment.
+Authenticated smoke `39013630407` passed learner state, topics, stats, and
+achievements. Protected SQL run `39017139079` applied and verified migrations
+0086–0093 only in staging; matching Edge deployment `39017303094` succeeded.
+Its authenticated learner smoke `39017399735` passed. Editorial
+role/MFA and full route checks remain pending, so production clients stay on Railway.
 
 ## Local checks
 

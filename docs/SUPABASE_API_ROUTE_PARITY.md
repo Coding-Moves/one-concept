@@ -23,15 +23,15 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | POST | `/v1/editorial/reviewers/{user_id}/approve-profile` | Owner/reviewer site / manage_reviewers capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/queue` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/taxonomy` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
-| GET | `/v1/editorial/revisions/{rid}` | Owner/reviewer site / role + capability + MFA | Not ported |
-| GET | `/v1/editorial/concepts/{cid}` | Owner/reviewer site / role + capability + MFA | Not ported |
-| GET, POST | `/v1/editorial/concepts/{cid}/revisions` | Owner/reviewer site / role + capability + MFA | GET candidate with local handler/SQL tests; POST not ported |
+| GET | `/v1/editorial/revisions/{rid}` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
+| GET | `/v1/editorial/concepts/{cid}` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
+| GET, POST | `/v1/editorial/concepts/{cid}/revisions` | Owner/reviewer site / role + capability + MFA | Candidate; GET and POST local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/concepts/{cid}/timeline` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/activity` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
-| POST | `/v1/editorial/revisions/{rid}/actions` | Owner/reviewer site / role + capability + MFA | Not ported |
-| POST | `/v1/editorial/concepts/{cid}/actions` | Owner/reviewer site / role + capability + MFA | Not ported |
+| POST | `/v1/editorial/revisions/{rid}/actions` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL receipt and decision tests, staging role checks pending |
+| POST | `/v1/editorial/concepts/{cid}/actions` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL receipt and quality tests, staging role checks pending |
 | POST | `/v1/editorial/generation-requests` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL receipt and demand checks, staging pending |
-| POST | `/v1/editorial/revisions/{rid}/generation-requests` | Owner/reviewer site / role + capability + MFA | Not ported |
+| POST | `/v1/editorial/revisions/{rid}/generation-requests` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL receipt tests, staging role checks pending |
 | GET | `/v1/editorial/generation-jobs` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/generation-jobs/{jid}` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | POST | `/v1/editorial/generation-jobs/{jid}/cancel` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL replay tests, staging role checks pending |
@@ -54,7 +54,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | POST, DELETE | `/v1/me/push-token` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET, PUT | `/v1/me/notifications` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | PATCH | `/v1/me` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| PUT, DELETE | `/v1/me/avatar` | Mobile / verified learner | Not ported |
+| PUT, DELETE | `/v1/me/avatar` | Mobile / verified learner | Candidate; local handler/SQL and image conversion tests, staging Storage checks pending |
 | GET | `/v1/me/subtopics/progress` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/subtopics/completions/seen` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/reviews/{review_id}/complete` | Mobile / verified learner | Candidate; local handler/SQL tests |
@@ -84,7 +84,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/reset-password` | Browser / public HTML | #418 web cutover |
 | GET | `/p/{token}` | Browser / public HTML | #418 web cutover |
 
-Total: 73 OpenAPI paths plus four HTML paths. This counts paths, not method variants.
+Total: 73 OpenAPI paths plus four HTML paths. All 73 JSON paths now have candidate Edge handlers and local test coverage. This counts paths, not method variants. The four HTML paths remain assigned to #418. Staging role, avatar, and load checks are still pending; route presence is not production readiness.
 
 ## Required contract checks before #416 can close
 

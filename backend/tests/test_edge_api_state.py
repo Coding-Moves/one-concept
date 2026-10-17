@@ -71,9 +71,13 @@ async def test_compact_state_bounds_details_and_keeps_membership_versions(sessio
 @pytest.mark.asyncio
 async def test_exhausted_followed_topic_offers_review_only_when_requested(session, user):
     topic_id = await session.scalar(text("""
-        select topic_id from public.concepts where status='published'
-        group by topic_id order by count(*) limit 1
+        select c.topic_id from public.concepts c
+        join public.topics t on t.id=c.topic_id and t.is_active
+        join public.subtopics s on s.id=c.subtopic_id and s.is_active
+        where c.status='published'
+        group by c.topic_id order by count(*) limit 1
     """))
+    assert topic_id is not None
     await session.execute(text("delete from public.user_topics where user_id=:uid"), {"uid": user})
     await session.execute(text("insert into public.user_topics(user_id,topic_id) values (:uid,:tid)"),
                           {"uid": user, "tid": topic_id})

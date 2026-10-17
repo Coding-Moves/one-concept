@@ -1,5 +1,8 @@
 """Protected staging smoke guards its target and checks contracts without logging tokens."""
 
+import io
+import urllib.error
+
 import pytest
 
 from tools import staging_api_smoke
@@ -43,6 +46,9 @@ def test_smoke_checks_authenticated_state_and_does_not_print_secrets(monkeypatch
     staging_api_smoke.smoke("https://zhrulokgngjceqgjkcmw.supabase.co",
                             "public-key", "test@example.invalid", "private-password")
     assert len(calls) == 5
+    assert [call[1]["step"] for call in calls] == [
+        "auth sign-in", "learner state", "topics", "statistics", "achievements"
+    ]
     assert calls[0][1]["body"] == {"email": "test@example.invalid", "password": "private-password"}
     assert all(call[1].get("token") == "private-jwt" for call in calls[1:])
     assert capsys.readouterr().out == ""
@@ -60,3 +66,17 @@ def test_smoke_rejects_inconsistent_assignment(monkeypatch):
     monkeypatch.setattr(staging_api_smoke, "request_json", fake_request)
     with pytest.raises(ValueError, match="assignment pointer"):
         staging_api_smoke.smoke("https://zhrulokgngjceqgjkcmw.supabase.co", "key", "e", "p")
+
+
+def test_http_failure_reports_only_step_and_status(monkeypatch):
+    def fail(_request, **_kwargs):
+        raise urllib.error.HTTPError(
+            "https://secret.invalid/private", 403, "secret response",
+            {}, io.BytesIO(b"private provider body")
+        )
+
+    monkeypatch.setattr(staging_api_smoke.urllib.request, "urlopen", fail)
+    with pytest.raises(staging_api_smoke.StagingHTTPError) as error:
+        staging_api_smoke.request_json("https://secret.invalid/private", step="learner state",
+                                       key="private-key", token="private-token")
+    assert str(error.value) == "learner state: HTTP 403"

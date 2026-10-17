@@ -16,6 +16,13 @@ PROJECT_REF = re.compile(r"^[a-z0-9]{20}$")
 UUID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$", re.I)
 
 
+class StagingHTTPError(ValueError):
+    """A safe request label and status, without URL, response, or credentials."""
+
+    def __init__(self, step: str, status: int):
+        super().__init__(f"{step}: HTTP {status}")
+
+
 def target(staging: str, production: str) -> str:
     if not PROJECT_REF.fullmatch(staging) or not PROJECT_REF.fullmatch(production):
         raise ValueError("Both project references are required")
@@ -24,7 +31,7 @@ def target(staging: str, production: str) -> str:
     return f"https://{staging}.supabase.co"
 
 
-def request_json(url: str, *, method: str = "GET", key: str, token: str | None = None,
+def request_json(url: str, *, step: str, method: str = "GET", key: str, token: str | None = None,
                  body: dict | None = None) -> object:
     headers = {"apikey": key}
     if token is not None:
@@ -34,15 +41,19 @@ def request_json(url: str, *, method: str = "GET", key: str, token: str | None =
         headers["content-type"] = "application/json"
         data = json.dumps(body).encode("utf-8")
     req = urllib.request.Request(url, data=data, headers=headers, method=method)
-    with urllib.request.urlopen(req, timeout=15) as response:
-        if response.status != 200:
-            raise ValueError(f"Unexpected HTTP {response.status}")
-        return json.load(response)
+    try:
+        with urllib.request.urlopen(req, timeout=15) as response:
+            if response.status != 200:
+                raise StagingHTTPError(step, response.status)
+            return json.load(response)
+    except urllib.error.HTTPError as exc:
+        raise StagingHTTPError(step, exc.code) from None
 
 
 def smoke(base: str, key: str, email: str, password: str) -> None:
     session = request_json(f"{base}/auth/v1/token?grant_type=password", method="POST",
-                           key=key, body={"email": email, "password": password})
+                           step="auth sign-in", key=key,
+                           body={"email": email, "password": password})
     if not isinstance(session, dict) or not isinstance(session.get("access_token"), str):
         raise ValueError("Staging sign-in did not return an access token")
     user = session.get("user")
@@ -50,10 +61,12 @@ def smoke(base: str, key: str, email: str, password: str) -> None:
         raise ValueError("Staging sign-in returned no valid user")
     token = session["access_token"]
     api = f"{base}/functions/v1/api"
-    state = request_json(f"{api}/v1/me/state?compact=true&reviews=true", key=key, token=token)
-    topics = request_json(f"{api}/v1/topics", key=key, token=token)
-    stats = request_json(f"{api}/v1/me/stats", key=key, token=token)
-    achievements = request_json(f"{api}/v1/me/achievements", key=key, token=token)
+    state = request_json(f"{api}/v1/me/state?compact=true&reviews=true",
+                         step="learner state", key=key, token=token)
+    topics = request_json(f"{api}/v1/topics", step="topics", key=key, token=token)
+    stats = request_json(f"{api}/v1/me/stats", step="statistics", key=key, token=token)
+    achievements = request_json(f"{api}/v1/me/achievements", step="achievements",
+                                key=key, token=token)
     if not isinstance(state, dict) or not isinstance(state.get("followed_topics"), list) \
        or state.get("daily_availability") not in {
            "available", "review_available", "catalog_exhausted", "personalization_required"
@@ -78,6 +91,9 @@ def main() -> int:
         smoke(base, os.environ["SUPABASE_STAGING_PUBLISHABLE_KEY"],
               os.environ["SUPABASE_STAGING_TEST_EMAIL"],
               os.environ["SUPABASE_STAGING_TEST_PASSWORD"])
+    except StagingHTTPError as exc:
+        print(f"Staging API smoke failed ({exc})", file=sys.stderr)
+        return 1
     except (KeyError, ValueError, urllib.error.URLError, TimeoutError, OSError) as exc:
         # Never print provider responses, credentials, JWTs, or request URLs.
         print(f"Staging API smoke failed ({type(exc).__name__})", file=sys.stderr)

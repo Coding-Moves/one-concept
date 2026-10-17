@@ -14,7 +14,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | PATCH | `/v1/editorial/me/notification-timezone` | Owner/reviewer site / current session + active membership | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/notifications` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging owner checks pending |
 | PATCH | `/v1/editorial/notifications/policy` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging owner checks pending |
-| POST | `/v1/editorial/notifications/{batch_id}/retry` | Owner/reviewer site / role + capability + MFA | Not ported |
+| POST | `/v1/editorial/notifications/{batch_id}/retry` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging owner checks pending |
 | GET | `/v1/editorial/me` | Owner/reviewer site / current session + active membership | Candidate; local handler/SQL tests, staging role checks pending |
 | PATCH | `/v1/editorial/me/profile` | Owner/reviewer site / current session + active membership | Candidate; local handler/SQL tests, staging role checks pending |
 | PATCH | `/v1/editorial/me/authenticator` | Owner/reviewer site / current session + active membership + recent TOTP to disable | Candidate; local handler/SQL tests, staging role checks pending |

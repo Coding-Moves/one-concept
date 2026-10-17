@@ -43,8 +43,9 @@ Authenticated smoke `39013630407` passed learner state, topics, stats, and
 achievements. Protected SQL run `39017139079` applied and verified migrations
 0086–0093 only in staging; matching Edge deployment `39017303094` succeeded.
 Its authenticated learner smoke `39017399735` passed. Protected SQL run
-`39018239902` applied and verified migrations 0094–0096 in staging; the
-matching Edge deployment is pending a separate protected approval. Editorial
+`39018239902` applied and verified migrations 0094–0096 in staging; matching
+Edge deployment `39018413405` succeeded on the same commit. The authenticated
+learner smoke is waiting at a separate protected gate. Editorial
 role/MFA and full route checks remain pending, so production clients stay on Railway.
 
 ## Local checks

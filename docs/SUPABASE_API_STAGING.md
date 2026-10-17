@@ -3,8 +3,8 @@
 The current candidate implements all 73 inventoried JSON paths under
 `/functions/v1/api`. [The route matrix](SUPABASE_API_ROUTE_PARITY.md) records
 each consumer and validation state. Local route coverage is complete; hosted
-learner, avatar, and load checks passed, while role and privacy acceptance
-still needs verification.
+learner, avatar, load, role, and public privacy checks passed on the staged
+candidate. The shared rate-limit follow-up still needs staging verification.
 Keep Railway and all production clients on the existing API until #416 meets
 its acceptance criteria and #418 performs the cutover.
 
@@ -48,13 +48,25 @@ succeeded at commit `111a560`. Protected SQL run `39028009783` applied and
 verified migrations 0110–0116. The matching Edge deployment `39028248776`
 succeeded at commit `a5ae057`. Hosted learner and avatar smoke `39028385181`
 passed at that commit. The 500-request load probe `39028577679` passed at
-commit `8b0567b`. Editorial role/MFA and privacy checks remain pending, so
-production clients stay on Railway.
+commit `8b0567b`. Production clients stay on Railway.
 Protected SQL run `39034607694` applied and verified migration 0117 in staging.
 It grants only the three service-only editorial RPCs that read `auth.users`
 the trusted owner context needed for reviewer invitations and last-owner
 checks. A disposable PostgreSQL regression test exercises the invitation as
 `service_role`. The Edge function code was unchanged by this SQL repair.
+Protected [role run 39034796873](https://github.com/Coding-Moves/one-concept/actions/runs/39034796873)
+then passed owner invitation, reviewer onboarding, MFA denial, role isolation,
+queue access, and anonymous public-profile field and link privacy with three
+distinct staging Auth test accounts.
+
+Migration 0118 adds one read and one write token bucket per verified account
+in PostgreSQL, so concurrent Edge instances share the FastAPI defaults of 120
+reads and 60 writes per minute. The Edge handler calls that service-only RPC
+after Auth verification and returns the existing structured HTTP 429 response
+and `Retry-After` header. Configure `RATE_LIMIT_READS_PER_MINUTE` and
+`RATE_LIMIT_WRITES_PER_MINUTE` only if the Railway deployment overrides those
+defaults. This migration and its matching Edge revision need protected staging
+verification before they are considered deployed.
 
 ## Local checks
 
@@ -82,8 +94,10 @@ daily assignment, then sends 500 authenticated `GET /v1/me/state?compact=true`
 requests through 10 workers. It records p50/p95 request latency, median and
 maximum response bytes, and baseline, sampled peak, and end counts from
 `pg_stat_activity`. The guard validates both the HTTPS project reference and
-the port-5432 PostgreSQL connection before making requests. The job fails on
-non-200 responses, oversize replies, or database sample failure, and prints no
+the port-5432 PostgreSQL connection before making requests. With the shared
+limiter, the job requires both successful reads and correctly shaped HTTP 429
+responses. It fails on other responses, oversize replies, or database sample
+failure, and prints no
 tokens, URLs, passwords, or response bodies.
 
 This is a 500-request burst by **one** test identity, not a simulation of 500
@@ -95,7 +109,7 @@ Function Compute, database size, and connection usage in its dashboard before
 the #418 production switch. Add other app, public profile, and editorial
 traffic to that estimate; the protected probe measures only the state route.
 
-On 2026-10-17, [protected run 39028577679](https://github.com/Coding-Moves/one-concept/actions/runs/39028577679)
+On 2026-10-17, before the shared limiter, [protected run 39028577679](https://github.com/Coding-Moves/one-concept/actions/runs/39028577679)
 completed 500 state reads through 10 workers in 43.0 seconds with no HTTP
 failure. Request latency was p50 853 ms and p95 1,198 ms; median and maximum
 responses were both 1,516 bytes. `pg_stat_activity` showed 11 database

@@ -43,6 +43,22 @@ def test_same_project_ref_is_rejected():
         connection_environment(STAGING, STAGING, url)
 
 
+def test_schema_cache_reload_requires_reviewed_staging_and_uses_only_notify(monkeypatch):
+    calls = []
+
+    def fake_psql(_env, *args):
+        calls.append(args)
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(runner, "psql", fake_psql)
+    monkeypatch.setenv("STAGING_PROJECT_REF", STAGING)
+    assert runner.reload_schema_cache({}) == 2
+    assert calls == []
+    monkeypatch.setenv("STAGING_PROJECT_REF", runner.DEMO_PROJECT_REF)
+    assert runner.reload_schema_cache({}) == 0
+    assert calls == [("-q", "-c", "NOTIFY pgrst, 'reload schema'")]
+
+
 def test_existing_application_schema_stops_before_any_migration(monkeypatch, tmp_path):
     monkeypatch.setenv("STAGING_PROJECT_REF", STAGING)
     monkeypatch.setenv("PRODUCTION_PROJECT_REF", PRODUCTION)
@@ -232,7 +248,10 @@ def test_incremental_migration_probes_before_and_after_sql(monkeypatch, tmp_path
     expected = 2 if mode in ("missing-baseline", "partial") else 0
     assert runner.apply_incremental({}, files) == expected
     expected_files = files[1:] if mode == "all-new" else files[-1:] if mode == "last-new" else []
-    assert [call[-1] for call in applied] == [str(file) for file in expected_files]
+    expected_calls = [str(file) for file in expected_files]
+    if expected == 0:
+        expected_calls.append("NOTIFY pgrst, 'reload schema'")
+    assert [call[-1] for call in applied] == expected_calls
 
 
 def test_incremental_migration_rejects_unreadable_postcheck(monkeypatch, tmp_path):

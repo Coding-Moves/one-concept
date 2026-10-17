@@ -351,6 +351,19 @@ def apply_incremental(env: dict[str, str], files: list[Path]) -> int:
             print(result.stderr[-1200:], file=sys.stderr)
             return 1
         print(f"Applied and verified {file.name}")
+    return reload_schema_cache(env)
+
+
+def reload_schema_cache(env: dict[str, str]) -> int:
+    """Tell staging PostgREST to recognize newly installed RPC signatures."""
+    if os.environ["STAGING_PROJECT_REF"] != DEMO_PROJECT_REF:
+        print("Schema cache reload refused: staging project reference does not match", file=sys.stderr)
+        return 2
+    result = psql(env, "-q", "-c", "NOTIFY pgrst, 'reload schema'")
+    if result.returncode != 0:
+        print("Could not request staging PostgREST schema reload", file=sys.stderr)
+        return 1
+    print("Requested staging PostgREST schema reload")
     return 0
 
 
@@ -361,6 +374,7 @@ def main() -> int:
     mode.add_argument("--inspect", action="store_true", help="read only staging schema presence flags")
     mode.add_argument("--reset-demo", action="store_true", help="remove the reviewed demo schema and Auth users from one staging project")
     mode.add_argument("--apply-incremental", action="store_true", help="apply explicitly probed migrations after the verified 0049 staging baseline")
+    mode.add_argument("--reload-cache", action="store_true", help="notify staging PostgREST to reload its schema cache")
     args = parser.parse_args()
     try:
         env = connection_environment(
@@ -383,6 +397,8 @@ def main() -> int:
         return 2
     if args.apply_incremental:
         return apply_incremental(env, files)
+    if args.reload_cache:
+        return reload_schema_cache(env)
     if args.reset_demo:
         if os.environ["STAGING_PROJECT_REF"] != DEMO_PROJECT_REF:
             print("Demo reset refused: staging project reference does not match", file=sys.stderr)
@@ -431,7 +447,7 @@ def main() -> int:
         print("Final staging schema verification failed", file=sys.stderr)
         return 1
     print("Staging schema installed and final API RPC verified")
-    return 0
+    return reload_schema_cache(env)
 
 
 if __name__ == "__main__":

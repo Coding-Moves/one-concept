@@ -59,3 +59,31 @@ async def test_invite_existing_identity_rechecks_authority_and_audits(api, sessi
     await session.execute(text("delete from public.editorial_account_events where subject_id=:reviewer"), args)
     await session.execute(text("delete from auth.users where id=:reviewer"), args)
     await session.commit()
+
+
+@pytest.mark.asyncio
+async def test_existing_reviewer_invite_reads_auth_as_service_role(api, session):
+    reviewer, _, email = await auth_account(session)
+    args = {"uid": api.owner.id, "sid": api.owner.session_id,
+            "aal": "aal2", "email": email, "reviewer": reviewer,
+            "caps": ["review"]}
+    try:
+        await session.execute(text("set local role service_role"))
+        prepared = _json(await session.scalar(text("""select public.edge_api_editorial_invite_prepare(
+          :uid,:sid,:aal,:email)"""), args))
+        assert prepared == {"user_id": str(reviewer), "needs_invite": False}
+        enrolled = _json(await session.scalar(text("""select public.edge_api_editorial_invite_finish(
+          :uid,:sid,:aal,:email,:reviewer,:caps)"""), args))
+        assert enrolled["user_id"] == str(reviewer)
+        assert enrolled["capabilities"] == ["review"]
+    finally:
+        await session.execute(text("reset role"))
+    for signature in (
+        "public.edge_api_editorial_reviewer_access(uuid,uuid,text,uuid,integer,text,text[])",
+        "public.edge_api_editorial_invite_prepare(uuid,uuid,text,text)",
+        "public.edge_api_editorial_invite_finish(uuid,uuid,text,text,uuid,text[])",
+    ):
+        assert await session.scalar(text("""select prosecdef and
+          proconfig @> array['search_path=""']::text[] from pg_proc
+          where oid=to_regprocedure(:signature)"""), {"signature": signature}) is True
+    await session.commit()

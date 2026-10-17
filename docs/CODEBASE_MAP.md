@@ -375,7 +375,8 @@ checks; protected reset and migration tags are separate jobs.
 For the initialized staging project, `--apply-incremental` requires the verified
 0049 RPC baseline and explicit before/after probes for every later migration.
 The protected incremental tag runs this path separately from the fresh-schema
-and Edge deploy jobs.
+and Edge deploy jobs. It reloads PostgREST's RPC schema cache after verified
+SQL; `--reload-cache` is the guarded staging-only repair path for stale cache.
 Migration #417 will move scheduled workers; #418 owns browser pages and client
 cutover. Until then, the FastAPI implementation below remains authoritative.
 

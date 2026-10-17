@@ -96,8 +96,13 @@ waiting for approval.
    new migration, then push a unique `supabase-api-staging-incremental-*` tag.
    Its protected job runs `--apply-incremental`; it refuses an unknown project,
    a missing 0049 baseline, an unlisted later migration, or partially present
-   RPCs. It verifies the new RPCs after SQL. A retry skips an already complete
-   migration. Add explicit probes and tests when adding each later migration.
+   RPCs. It verifies the new RPCs after SQL and asks PostgREST to reload its
+   schema cache. A retry skips an already complete migration. Add explicit
+   probes and tests when adding each later migration. If previously installed
+   RPCs work in SQL but return errors over HTTP, a separate protected
+   `supabase-api-staging-reload-*` tag runs only the PostgREST cache notification
+   against this exact staging project; it does not apply migrations or deploy
+   the Edge function. Rerun the authenticated smoke afterward.
    Approve that job separately before deploying an updated Edge candidate.
 3. In the staging project, set `ALLOWED_ORIGINS` to exact HTTPS website origins
    needed for browser testing. No wildcard is accepted. `SUPABASE_URL`,

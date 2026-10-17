@@ -23,6 +23,13 @@ class StagingHTTPError(ValueError):
         super().__init__(f"{step}: HTTP {status}")
 
 
+class StagingProbeErrors(ValueError):
+    """Only fixed request labels and HTTP statuses from multiple probes."""
+
+    def __init__(self, failures: list[StagingHTTPError]):
+        super().__init__(", ".join(str(failure) for failure in failures))
+
+
 def target(staging: str, production: str) -> str:
     if not PROJECT_REF.fullmatch(staging) or not PROJECT_REF.fullmatch(production):
         raise ValueError("Both project references are required")
@@ -61,12 +68,25 @@ def smoke(base: str, key: str, email: str, password: str) -> None:
         raise ValueError("Staging sign-in returned no valid user")
     token = session["access_token"]
     api = f"{base}/functions/v1/api"
-    state = request_json(f"{api}/v1/me/state?compact=true&reviews=true",
-                         step="learner state", key=key, token=token)
-    topics = request_json(f"{api}/v1/topics", step="topics", key=key, token=token)
-    stats = request_json(f"{api}/v1/me/stats", step="statistics", key=key, token=token)
-    achievements = request_json(f"{api}/v1/me/achievements", step="achievements",
-                                key=key, token=token)
+    probes = (
+        ("learner state", f"{api}/v1/me/state?compact=true&reviews=true"),
+        ("topics", f"{api}/v1/topics"),
+        ("statistics", f"{api}/v1/me/stats"),
+        ("achievements", f"{api}/v1/me/achievements"),
+    )
+    results = {}
+    failures = []
+    for step, url in probes:
+        try:
+            results[step] = request_json(url, step=step, key=key, token=token)
+        except StagingHTTPError as exc:
+            failures.append(exc)
+    if failures:
+        raise StagingProbeErrors(failures)
+    state = results["learner state"]
+    topics = results["topics"]
+    stats = results["statistics"]
+    achievements = results["achievements"]
     if not isinstance(state, dict) or not isinstance(state.get("followed_topics"), list) \
        or state.get("daily_availability") not in {
            "available", "review_available", "catalog_exhausted", "personalization_required"
@@ -91,7 +111,7 @@ def main() -> int:
         smoke(base, os.environ["SUPABASE_STAGING_PUBLISHABLE_KEY"],
               os.environ["SUPABASE_STAGING_TEST_EMAIL"],
               os.environ["SUPABASE_STAGING_TEST_PASSWORD"])
-    except StagingHTTPError as exc:
+    except (StagingHTTPError, StagingProbeErrors) as exc:
         print(f"Staging API smoke failed ({exc})", file=sys.stderr)
         return 1
     except (KeyError, ValueError, urllib.error.URLError, TimeoutError, OSError) as exc:

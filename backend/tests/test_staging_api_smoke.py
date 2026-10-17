@@ -80,3 +80,24 @@ def test_http_failure_reports_only_step_and_status(monkeypatch):
         staging_api_smoke.request_json("https://secret.invalid/private", step="learner state",
                                        key="private-key", token="private-token")
     assert str(error.value) == "learner state: HTTP 403"
+
+
+def test_smoke_reports_all_failed_endpoints_without_response_data(monkeypatch):
+    calls = []
+
+    def fake_request(url, **kwargs):
+        calls.append(kwargs["step"])
+        if kwargs["step"] == "auth sign-in":
+            return {"access_token": "private-jwt", "user": {
+                "id": "b5a94932-62e0-4780-91c7-af48b93e27ab"
+            }}
+        if kwargs["step"] in {"learner state", "statistics"}:
+            raise staging_api_smoke.StagingHTTPError(kwargs["step"], 503)
+        return [] if kwargs["step"] == "topics" else {"items": []}
+
+    monkeypatch.setattr(staging_api_smoke, "request_json", fake_request)
+    with pytest.raises(staging_api_smoke.StagingProbeErrors) as error:
+        staging_api_smoke.smoke("https://zhrulokgngjceqgjkcmw.supabase.co",
+                                "public-key", "test@example.invalid", "private-password")
+    assert str(error.value) == "learner state: HTTP 503, statistics: HTTP 503"
+    assert calls == ["auth sign-in", "learner state", "topics", "statistics", "achievements"]

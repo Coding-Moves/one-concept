@@ -250,6 +250,11 @@ INCREMENTAL_PROBES = {
     "0116_supabase_profile_avatar_api.sql": (
         "public.edge_api_set_avatar(uuid,text,boolean,date)",
     ),
+    "0117_supabase_editorial_auth_read_privileges.sql": (
+        "definer:public.edge_api_editorial_reviewer_access(uuid,uuid,text,uuid,integer,text,text[])",
+        "definer:public.edge_api_editorial_invite_prepare(uuid,uuid,text,text)",
+        "definer:public.edge_api_editorial_invite_finish(uuid,uuid,text,text,uuid,text[])",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

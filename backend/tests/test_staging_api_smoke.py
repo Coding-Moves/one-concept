@@ -1,6 +1,7 @@
 """Protected staging smoke guards its target and checks contracts without logging tokens."""
 
 import io
+import json
 import urllib.error
 
 import pytest
@@ -101,3 +102,78 @@ def test_smoke_reports_all_failed_endpoints_without_response_data(monkeypatch):
                                 "public-key", "test@example.invalid", "private-password")
     assert str(error.value) == "learner state: HTTP 503, statistics: HTTP 503"
     assert calls == ["auth sign-in", "learner state", "topics", "statistics", "achievements"]
+
+
+def test_avatar_smoke_checks_private_signed_photo_and_removes_it(monkeypatch):
+    base = "https://zhrulokgngjceqgjkcmw.supabase.co"
+    uid = "b5a94932-62e0-4780-91c7-af48b93e27ab"
+    ref = f"avatars/{uid}/{'a' * 32}.jpg"
+    signed = f"{base}/storage/v1/object/sign/profile-avatars/{ref}?token=short"
+    calls = []
+
+    def fake_json(_url, **kwargs):
+        calls.append(kwargs["step"])
+        return {"avatar_ref": None}
+
+    class Reply:
+        def __init__(self, body, content_type):
+            self.body = io.BytesIO(body)
+            self.status = 200
+            self.headers = type("Headers", (), {"get_content_type": lambda self: content_type})()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            self.body.close()
+
+        def read(self, length=-1):
+            return self.body.read(length)
+
+    def fake_open(req, timeout):
+        if isinstance(req, str):
+            assert req == signed
+            return Reply(b"\xff\xd8JPEG", "image/jpeg")
+        assert req.method == "PUT"
+        assert req.headers["Authorization"] == "Bearer private-token"
+        return Reply(json.dumps({"avatar_ref": ref, "avatar_url": signed}).encode(), "application/json")
+
+    monkeypatch.setattr(staging_api_smoke, "request_json", fake_json)
+    monkeypatch.setattr(staging_api_smoke.urllib.request, "urlopen", fake_open)
+    staging_api_smoke.avatar_smoke(base, "public-key", "private-token", uid)
+    assert calls == ["avatar preflight", "avatar removal"]
+
+
+def test_avatar_smoke_rejects_external_delivery_url_but_still_removes_photo(monkeypatch):
+    uid = "b5a94932-62e0-4780-91c7-af48b93e27ab"
+    ref = f"avatars/{uid}/{'b' * 32}.jpg"
+    calls = []
+
+    def fake_json(_url, **kwargs):
+        calls.append(kwargs["step"])
+        return {"avatar_ref": None}
+
+    class Reply:
+        status = 200
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            pass
+
+        def read(self, *_args):
+            return json.dumps({"avatar_ref": ref,
+                               "avatar_url": "https://elsewhere.invalid/image?token=private"}).encode()
+
+    def fake_open(req, timeout):
+        assert not isinstance(req, str), "External signed URL must never be fetched"
+        return Reply()
+
+    monkeypatch.setattr(staging_api_smoke, "request_json", fake_json)
+    monkeypatch.setattr(staging_api_smoke.urllib.request, "urlopen", fake_open)
+    with pytest.raises(ValueError, match="escaped its private Storage path"):
+        staging_api_smoke.avatar_smoke(
+            "https://zhrulokgngjceqgjkcmw.supabase.co", "key", "token", uid
+        )
+    assert calls == ["avatar preflight", "avatar removal"]

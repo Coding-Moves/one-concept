@@ -4,12 +4,14 @@ Credentials are read from GitHub environment secrets and are never printed.
 The state request may create that test user's daily assignment in staging.
 """
 
+import base64
 import json
 import os
 import re
 import sys
 import urllib.error
 import urllib.request
+from urllib.parse import urlsplit
 
 
 PROJECT_REF = re.compile(r"^[a-z0-9]{20}$")
@@ -57,7 +59,58 @@ def request_json(url: str, *, step: str, method: str = "GET", key: str, token: s
         raise StagingHTTPError(step, exc.code) from None
 
 
-def smoke(base: str, key: str, email: str, password: str) -> None:
+def avatar_smoke(base: str, key: str, token: str, user_id: str) -> None:
+    """Upload a tiny source photo, inspect its signed JPEG, then remove it."""
+    api = f"{base}/functions/v1/api"
+    initial = request_json(f"{api}/v1/me/state?compact=true", step="avatar preflight",
+                           key=key, token=token)
+    if not isinstance(initial, dict) or initial.get("avatar_ref") is not None:
+        raise ValueError("Staging avatar test user must start without a photo")
+    png = base64.b64decode(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJ"
+        "AAAADUlEQVQI12P4////fwAJ+wP90YOM8AAAAABJRU5ErkJggg=="
+    )
+    req = urllib.request.Request(
+        f"{api}/v1/me/avatar?compact=true", data=png, method="PUT",
+        headers={"apikey": key, "authorization": f"Bearer {token}",
+                 "content-type": "image/png"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as response:
+            if response.status != 200:
+                raise StagingHTTPError("avatar upload", response.status)
+            uploaded = json.load(response)
+    except urllib.error.HTTPError as exc:
+        raise StagingHTTPError("avatar upload", exc.code) from None
+    try:
+        if not isinstance(uploaded, dict):
+            raise ValueError("Staging avatar upload returned no state")
+        ref = uploaded.get("avatar_ref")
+        signed = uploaded.get("avatar_url")
+        if not isinstance(ref, str) or not re.fullmatch(
+            rf"avatars/{user_id}/[a-f0-9]{{32}}[.]jpg", ref
+        ):
+            raise ValueError("Staging avatar upload returned an invalid private key")
+        if not isinstance(signed, str):
+            raise ValueError("Staging avatar upload returned no signed URL")
+        parsed = urlsplit(signed)
+        if parsed.scheme != "https" or parsed.netloc != urlsplit(base).netloc or \
+                parsed.path != f"/storage/v1/object/sign/profile-avatars/{ref}" or \
+                not parsed.query.startswith("token="):
+            raise ValueError("Staging avatar URL escaped its private Storage path")
+        with urllib.request.urlopen(signed, timeout=15) as response:
+            photo = response.read(262_145)
+            if response.status != 200 or response.headers.get_content_type() != "image/jpeg" \
+                    or len(photo) > 262_144 or not photo.startswith(b"\xff\xd8"):
+                raise ValueError("Staging avatar is not a bounded JPEG")
+    finally:
+        removed = request_json(f"{api}/v1/me/avatar", method="DELETE",
+                               step="avatar removal", key=key, token=token)
+        if not isinstance(removed, dict) or removed.get("avatar_ref") is not None:
+            raise ValueError("Staging avatar removal did not clear the private key")
+
+
+def smoke(base: str, key: str, email: str, password: str, *, check_avatar: bool = False) -> None:
     session = request_json(f"{base}/auth/v1/token?grant_type=password", method="POST",
                            step="auth sign-in", key=key,
                            body={"email": email, "password": password})
@@ -103,6 +156,8 @@ def smoke(base: str, key: str, email: str, password: str) -> None:
         raise ValueError("Staging learner API contract is unavailable")
     if state.get("stats") != stats:
         raise ValueError("State and statistics disagree")
+    if check_avatar:
+        avatar_smoke(base, key, token, user["id"])
 
 
 def main() -> int:
@@ -110,7 +165,7 @@ def main() -> int:
         base = target(os.environ["STAGING_PROJECT_REF"], os.environ["PRODUCTION_PROJECT_REF"])
         smoke(base, os.environ["SUPABASE_STAGING_PUBLISHABLE_KEY"],
               os.environ["SUPABASE_STAGING_TEST_EMAIL"],
-              os.environ["SUPABASE_STAGING_TEST_PASSWORD"])
+              os.environ["SUPABASE_STAGING_TEST_PASSWORD"], check_avatar=True)
     except (StagingHTTPError, StagingProbeErrors) as exc:
         print(f"Staging API smoke failed ({exc})", file=sys.stderr)
         return 1

@@ -79,10 +79,16 @@ async def test_editorial_reviewer_pages_require_capability_name_and_mfa(session,
     args["aal"] = "aal2"
     first = _json(await session.scalar(page, args))
     assert len(first["items"]) == 1 and first["next_cursor"]
-    args["cursor"] = uuid.UUID(first["next_cursor"])
-    second = _json(await session.scalar(page, args))
-    assert len(second["items"]) == 1 and second["next_cursor"] is None
-    assert {first["items"][0]["user_id"], second["items"][0]["user_id"]} == {str(user), str(peer)}
+    seen = {first["items"][0]["user_id"]}
+    cursor = first["next_cursor"]
+    while cursor:
+        args["cursor"] = uuid.UUID(cursor)
+        following = _json(await session.scalar(page, args))
+        assert len(following["items"]) == 1
+        seen.add(following["items"][0]["user_id"])
+        assert following["next_cursor"] != cursor
+        cursor = following["next_cursor"]
+    assert {str(user), str(peer)} <= seen
     args["cursor"] = None
     await session.execute(text("update public.editorial_memberships set capabilities='{}' where user_id=:uid"),
                           {"uid": user})

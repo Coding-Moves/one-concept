@@ -1,15 +1,11 @@
 # Supabase API candidate staging (#416)
 
-The current candidate serves health, topics, concept detail, idempotent
-Like/Save, notification preferences, push-token, streak-statistics, history,
-saved-pagination, subtopic-progress, daily-selection, completion, review,
-achievement, startup-state, followed-topic, profile-edit, analytics, and private
-profile-sharing settings, filtered public-profile, connection-preference,
-connection-list, connection-status/request, and connection action/block routes at
-`/functions/v1/api`. The remaining entries in
-[the route matrix](SUPABASE_API_ROUTE_PARITY.md) are not implemented. Keep Railway
-and all production clients on the existing API until #416 meets its acceptance
-criteria and #418 performs the cutover.
+The current candidate implements all 73 inventoried JSON paths under
+`/functions/v1/api`. [The route matrix](SUPABASE_API_ROUTE_PARITY.md) records
+each consumer and validation state. Local route coverage is complete, while
+hosted role, avatar, privacy, and load acceptance still needs verification.
+Keep Railway and all production clients on the existing API until #416 meets
+its acceptance criteria and #418 performs the cutover.
 
 The first staging schema run applied migrations 0001–0049 and deployed the
 candidate at commit `b8fddd4`. Protected run `38726466061` then applied and
@@ -45,7 +41,10 @@ achievements. Protected SQL run `39017139079` applied and verified migrations
 Its authenticated learner smoke `39017399735` passed. Protected SQL run
 `39018239902` applied and verified migrations 0094–0096 in staging; matching
 Edge deployment `39018413405` succeeded on the same commit. Authenticated
-learner smoke `39018579596` passed. Editorial
+learner smoke `39018579596` passed. Protected SQL run `39025372409` applied
+and verified migrations 0106–0109; matching Edge deployment `39025589698`
+succeeded at commit `111a560`. Migrations 0110–0116 and the avatar handler are
+only on the candidate branch until their protected staging runs pass. Editorial
 role/MFA and full route checks remain pending, so production clients stay on Railway.
 
 ## Local checks
@@ -57,9 +56,10 @@ role/MFA and full route checks remain pending, so production clients stay on Rai
   against the disposable PostgreSQL 16 fixture. A skip is not a pass.
 - Run `backend/tests/test_staging_api_smoke.py` with the local suite. The
   protected smoke job signs in with a dedicated staging Auth user and compares
-  the startup, topic, statistics, and achievement responses; it never logs the
-  account credentials or access token. Its startup request may create that
-  test user's daily assignment.
+  the startup, topic, statistics, and achievement responses. The latest smoke
+  also uploads a tiny PNG to private Storage, reads its short-lived JPEG link,
+  and removes it. It never logs account credentials, access tokens, or signed
+  URLs. Its startup request may create that test user's daily assignment.
 - For runtime parity, serve the function with the Supabase CLI and an isolated
   local stack when available. TypeScript/Node tests do not prove Deno runtime
   packaging or hosted behavior.
@@ -141,6 +141,14 @@ role/MFA and full route checks remain pending, so production clients stay on Rai
    `OWNER_TELEMETRY_ENABLED`, `EDITORIAL_AUTO_CORRECTION_ENABLED`, and
    `GENERATION_DAILY_CALL_CAP`; mirror any current FastAPI overrides before
    comparing owner reports. It returns only aggregates and recent worker status.
+   In staging Storage, create a private bucket named `profile-avatars` if it
+   does not exist. Set its file limit to 256 KiB and allow `image/jpeg`.
+   The API accepts JPEG/PNG/WebP input but stores only normalized JPEG. Keep
+   the dedicated smoke user's avatar empty before its upload/removal test.
+   The candidate bundles a pinned 15 MB ImageMagick WASM file via
+   `supabase/config.toml`; the deploy job must use the CLI's Docker builder,
+   not `--use-api`. A successful TypeScript build alone does not validate
+   the hosted WASM file path or CPU use.
 4. Configure the protected GitHub `supabase-staging` environment with a scoped
    `SUPABASE_STAGING_ACCESS_TOKEN` secret granting Edge Functions write on the
    staging project, a `SUPABASE_STAGING_DATABASE_URL` secret containing only
@@ -169,8 +177,8 @@ role/MFA and full route checks remain pending, so production clients stay on Rai
    repository or chat. After the SQL and Edge deployment jobs succeed, push a
    unique `supabase-api-staging-smoke-*` tag on the same commit and approve its
    protected job. Its project-reference guard rejects production and other
-   projects. A successful smoke covers only the listed learner reads, not the
-   remaining route, role, privacy, and load checks.
+   projects. A successful smoke covers the listed learner reads and avatar
+   upload/read/removal, not the remaining role, privacy, and load checks.
    `supabase/config.toml` disables
    gateway JWT verification because health is public; the handler verifies a
    bearer token through Supabase Auth before any private RPC. A route added

@@ -360,11 +360,11 @@ private diagnostics and restore procedures.
 ## Backend request and service flow
 
 The Supabase API candidate for #416 lives in `supabase/functions/api/` and
-`backend/migrations/0046_supabase_api_basics.sql`–`0109_supabase_editorial_generation_request_api.sql`.
-Its current health, topics, concept, notification, push-token, statistics,
-history, saved, subtopic-progress, daily-selection, completion, review, achievement,
-startup-state, and private editorial read and command routes are isolated from production
-clients. The complete route checklist and
+`backend/migrations/0046_supabase_api_basics.sql`–`0116_supabase_profile_avatar_api.sql`.
+All 73 JSON paths have candidate handlers, including private avatar upload,
+short-lived Storage signing, and editorial read/command routes. The avatar
+image module bundles a pinned ImageMagick WASM file for 512px JPEG conversion.
+These candidate routes remain isolated from production clients. The complete route checklist and
 remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
 `backend/tools/apply_staging_migrations.py` applies ordered migrations only to
 a fresh staging project after checking its project reference against the connection.

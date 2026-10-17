@@ -8,7 +8,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | --- | --- | --- | --- |
 | GET | `/health` | Operations / public probe | Candidate; local handler/SQL tests |
 | GET | `/v1/editorial/owner/overview` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging owner checks pending |
-| GET | `/v1/editorial/owner/reviewers` | Owner/reviewer site / role + capability + MFA | Not ported |
+| GET | `/v1/editorial/owner/reviewers` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging owner checks pending |
 | GET | `/v1/editorial/owner/operations` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging owner checks pending |
 | GET | `/v1/editorial/owner/events` | Owner/reviewer site / role + capability + MFA | Not ported |
 | PATCH | `/v1/editorial/me/notification-timezone` | Owner/reviewer site / current session + active membership | Candidate; local handler/SQL tests, staging role checks pending |

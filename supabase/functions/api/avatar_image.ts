@@ -90,10 +90,5 @@ export function inspectAvatar(bytes: Uint8Array, contentType: string): void {
 export async function normalizeAvatar(bytes: Uint8Array, contentType: string): Promise<Uint8Array> {
   inspectAvatar(bytes, contentType);
   const { normalizeWithMagick } = await import('./avatar_magick.ts');
-  try {
-    return await normalizeWithMagick(bytes);
-  } catch (error) {
-    if (error instanceof AvatarInputError) throw error;
-    throw new AvatarInputError(422, 'Choose a valid photo in JPEG, PNG, or WebP format');
-  }
+  return normalizeWithMagick(bytes);
 }

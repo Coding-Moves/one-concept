@@ -20,21 +20,25 @@ export async function normalizeWithMagick(bytes: Uint8Array): Promise<Uint8Array
     .catch(error => { initialized = undefined; throw error; });
   await initialized;
   let normalized: Uint8Array | undefined;
-  ImageMagick.read(bytes, (image: AvatarMagickImage) => {
-    image.autoOrient();
-    image.backgroundColor = MagickColors.White;
-    image.alpha(AlphaAction.Remove);
-    const side = Math.min(image.width, image.height);
-    image.crop(new MagickGeometry(Math.floor((image.width - side) / 2),
-      Math.floor((image.height - side) / 2), side, side));
-    image.resize(512, 512);
-    image.strip();
-    for (const quality of [85, 78, 70, 62, 54]) {
-      image.quality = quality;
-      image.write(MagickFormat.Jpeg, (output: Uint8Array) => { normalized = Uint8Array.from(output); });
-      if (normalized && normalized.length <= 262_144) return;
-    }
-  });
+  try {
+    ImageMagick.read(bytes, (image: AvatarMagickImage) => {
+      image.autoOrient();
+      image.backgroundColor = MagickColors.White;
+      image.alpha(AlphaAction.Remove);
+      const side = Math.min(image.width, image.height);
+      image.crop(new MagickGeometry(Math.floor((image.width - side) / 2),
+        Math.floor((image.height - side) / 2), side, side));
+      image.resize(512, 512);
+      image.strip();
+      for (const quality of [85, 78, 70, 62, 54]) {
+        image.quality = quality;
+        image.write(MagickFormat.Jpeg, (output: Uint8Array) => { normalized = Uint8Array.from(output); });
+        if (normalized && normalized.length <= 262_144) return;
+      }
+    });
+  } catch {
+    throw new AvatarInputError(422, 'Choose a valid photo in JPEG, PNG, or WebP format');
+  }
   if (!normalized || normalized.length > 262_144) {
     throw new AvatarInputError(422, 'That photo cannot be reduced enough. Choose a simpler image.');
   }

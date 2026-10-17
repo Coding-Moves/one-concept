@@ -21,7 +21,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET, POST | `/v1/editorial/reviewers` | Owner/reviewer site / role + capability + MFA | GET candidate with local handler/SQL tests; POST not ported |
 | PATCH | `/v1/editorial/reviewers/{user_id}/access` | Owner/reviewer site / role + capability + MFA | Not ported |
 | POST | `/v1/editorial/reviewers/{user_id}/approve-profile` | Owner/reviewer site / manage_reviewers capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
-| GET | `/v1/editorial/queue` | Owner/reviewer site / role + capability + MFA | Not ported |
+| GET | `/v1/editorial/queue` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/taxonomy` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/revisions/{rid}` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/concepts/{cid}` | Owner/reviewer site / role + capability + MFA | Not ported |

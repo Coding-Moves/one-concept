@@ -170,6 +170,9 @@ INCREMENTAL_PROBES = {
     "0092_supabase_editorial_generation_supply_api.sql": (
         "public.edge_api_editorial_generation_supply(uuid,uuid,text,uuid,integer,integer,boolean,boolean)",
     ),
+    "0093_supabase_editorial_legacy_eligibility_api.sql": (
+        "public.edge_api_editorial_legacy_eligibility(uuid,uuid,text,uuid,boolean)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -99,7 +99,8 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_utc_iso','edge_api_editorial_job_public',
             'edge_api_editorial_generation_jobs',
             'edge_api_editorial_generation_job',
-            'edge_api_editorial_generation_supply')""",
+            'edge_api_editorial_generation_supply',
+            'edge_api_editorial_legacy_eligibility')""",
     }
     result = {}
     for kind, query in queries.items():

@@ -32,4 +32,6 @@ Deno.serve(createHandler({
   generationEnabled: Deno.env.get('GENERATION_ENABLED') === 'true',
   futureRefillEnabled: Deno.env.get('FUTURE_REFILL_ENABLED') === 'true',
   providerConfigured: Boolean(Deno.env.get('GEMINI_API_KEY')),
+  legacyEnrichmentEnabled: Deno.env.get('LEGACY_ENRICHMENT_ENABLED') === 'true',
+  geminiModel: Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
 }));

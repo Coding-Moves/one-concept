@@ -133,6 +133,35 @@ test('editorial reviewer pages pass a current session and enforce private pagina
   assert.equal(denied.headers.get('x-content-type-options'), 'nosniff');
 });
 
+test('editorial taxonomy requires a current session and validates its bounded page', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { items: [{ id: sessionId, name: 'Core', topic_name: 'Software' }], next_cursor: null };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  assert.equal((await handler(request('/v1/editorial/taxonomy'))).status, 401);
+  assert.equal((await handler(request('/v1/editorial/taxonomy?limit=101', { headers }))).status, 422);
+  assert.equal((await handler(request('/v1/editorial/taxonomy?cursor=bad', { headers }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const result = await handler(request(`/v1/editorial/taxonomy?cursor=${sessionId}&limit=1`, { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_taxonomy$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2', p_cursor: sessionId, p_limit: 1,
+  });
+  await handler(request('/v1/editorial/taxonomy', { headers }));
+  assert.equal(JSON.parse(calls.at(-1).init.body).p_limit, 100);
+  payload = { error: 'permission' };
+  assert.equal((await handler(request('/v1/editorial/taxonomy', { headers }))).status, 403);
+  assert.equal((await handler(request('/v1/editorial/taxonomy', { method: 'POST', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

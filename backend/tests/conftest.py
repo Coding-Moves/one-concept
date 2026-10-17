@@ -37,7 +37,7 @@ MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 AUTH_STUB = """
 create role anon;
 create role authenticated;
-create role service_role;
+create role service_role bypassrls;
 create schema auth;
 create table auth.users (
   id uuid primary key default gen_random_uuid(),

@@ -145,6 +145,10 @@ INCREMENTAL_PROBES = {
         "definer:public.edge_api_subtopic_quiz(uuid,uuid)",
         "definer:public.edge_api_editorial_me(uuid,uuid,text)",
     ),
+    "0086_supabase_editorial_taxonomy_api.sql": (
+        "public.edge_api_editorial_authorize_any(uuid,uuid,text,text[])",
+        "public.edge_api_editorial_taxonomy(uuid,uuid,text,uuid,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

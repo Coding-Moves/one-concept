@@ -158,6 +158,9 @@ INCREMENTAL_PROBES = {
     "0089_supabase_editorial_queue_api.sql": (
         "public.edge_api_editorial_queue(uuid,uuid,text,text,text,uuid,uuid,uuid,text,text,uuid,integer)",
     ),
+    "0090_supabase_editorial_revision_history_api.sql": (
+        "public.edge_api_editorial_revision_history(uuid,uuid,text,uuid,uuid,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

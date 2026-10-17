@@ -259,6 +259,37 @@ test('editorial queue validates private filters and forwards all three views', a
   assert.equal((await handler(request('/v1/editorial/queue', { method: 'POST', headers }))).status, 405);
 });
 
+test('editorial revision history validates concept and cursor before private reads', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const conceptId = '00000000-0000-4000-8000-000000000003';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { items: [{ id: conceptId, base_version: 1 }], next_cursor: null };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = `/v1/editorial/concepts/${conceptId}/revisions`;
+  assert.equal((await handler(request(path))).status, 401);
+  assert.equal((await handler(request('/v1/editorial/concepts/bad/revisions', { headers }))).status, 422);
+  assert.equal((await handler(request(`${path}?cursor=bad`, { headers }))).status, 422);
+  assert.equal((await handler(request(`${path}?limit=101`, { headers }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const result = await handler(request(`${path}?cursor=${sessionId}&limit=1`, { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_revision_history$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_concept_id: conceptId, p_cursor: sessionId, p_limit: 1,
+  });
+  payload = { error: 'concept_not_found' };
+  assert.equal((await handler(request(path, { headers }))).status, 404);
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

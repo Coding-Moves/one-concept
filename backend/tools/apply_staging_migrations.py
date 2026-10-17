@@ -247,6 +247,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_revision_token(uuid)",
         "public.edge_api_editorial_revision_action(uuid,uuid,text,uuid,uuid,text,text,text,jsonb,uuid,timestamptz,boolean,boolean,boolean,boolean,integer,text)",
     ),
+    "0116_supabase_profile_avatar_api.sql": (
+        "public.edge_api_set_avatar(uuid,text,boolean,date)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

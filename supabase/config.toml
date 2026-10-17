@@ -2,3 +2,4 @@
 # authenticates each private route with Supabase Auth before using service RPCs.
 [functions.api]
 verify_jwt = false
+static_files = ["./functions/api/magick.wasm"]

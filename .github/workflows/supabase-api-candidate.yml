@@ -112,6 +112,8 @@ jobs:
         with:
           version: latest
       - name: Deploy candidate API function only
+        # Bundled WASM static_files require the CLI's Docker builder (the default).
+        # Do not add --use-api here.
         run: supabase functions deploy api --project-ref "$STAGING_REF"
 
   smoke:

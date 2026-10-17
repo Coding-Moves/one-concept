@@ -22,6 +22,10 @@ Deno.serve(createHandler({
   supabaseUrl: required('SUPABASE_URL').replace(/\/$/, ''),
   anonKey: required('SUPABASE_ANON_KEY'),
   serviceRoleKey: required('SUPABASE_SERVICE_ROLE_KEY'),
+  rateLimit: {
+    readsPerMinute: optionalInteger('RATE_LIMIT_READS_PER_MINUTE', 120),
+    writesPerMinute: optionalInteger('RATE_LIMIT_WRITES_PER_MINUTE', 60),
+  },
   allowedOrigins: (Deno.env.get('ALLOWED_ORIGINS') ?? '').split(',').map(value => value.trim()).filter(Boolean),
   contentLowWatermark: optionalInteger('CONTENT_LOW_WATERMARK', 10),
   contentReservePerTopic: optionalInteger('CONTENT_RESERVE_PER_TOPIC', 60),

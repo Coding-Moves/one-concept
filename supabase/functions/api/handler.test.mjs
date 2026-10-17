@@ -328,6 +328,39 @@ test('topics requires Auth verification and passes only its returned user ID to 
   assert.deepEqual(JSON.parse(calls[1].init.body), { p_user_id: userId });
 });
 
+test('verified accounts share a server rate budget before private routes run', async () => {
+  const calls = [];
+  let retry = 0;
+  const handler = createHandler({ ...config, rateLimit: {
+    readsPerMinute: 120, writesPerMinute: 60,
+  } }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.endsWith('/edge_api_request_retry_after')) return Response.json(retry);
+    return Response.json([]);
+  });
+  const headers = { authorization: 'Bearer user-access-token' };
+  const accepted = await handler(request('/v1/topics', { headers }));
+  assert.equal(accepted.status, 200);
+  assert.match(calls[1].url, /edge_api_request_retry_after$/);
+  assert.deepEqual(JSON.parse(calls[1].init.body), {
+    p_user_id: userId, p_method: 'GET', p_read_limit: 120, p_write_limit: 60,
+  });
+  assert.match(calls[2].url, /edge_api_topics$/);
+  retry = 15;
+  calls.length = 0;
+  const denied = await handler(request('/v1/topics', { headers }));
+  assert.equal(denied.status, 429);
+  assert.equal(denied.headers.get('retry-after'), '15');
+  assert.deepEqual(await denied.json(), {
+    detail: { code: 'rate_limited', retry_after_seconds: 15 },
+  });
+  assert.equal(calls.length, 2);
+  calls.length = 0;
+  assert.equal((await handler(request('/v1/topics'))).status, 401);
+  assert.equal(calls.length, 0);
+});
+
 test('editorial me rechecks an Auth-verified session and server membership', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

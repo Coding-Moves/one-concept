@@ -45,8 +45,10 @@ learner smoke `39018579596` passed. Protected SQL run `39025372409` applied
 and verified migrations 0106–0109; matching Edge deployment `39025589698`
 succeeded at commit `111a560`. Protected SQL run `39028009783` applied and
 verified migrations 0110–0116. The matching Edge deployment `39028248776`
-succeeded at commit `a5ae057`. Hosted avatar, editorial role/MFA, privacy,
-and load checks remain pending, so production clients stay on Railway.
+succeeded at commit `a5ae057`. Hosted learner and avatar smoke `39028385181`
+passed at that commit. The 500-request load probe `39028577679` passed at
+commit `8b0567b`. Editorial role/MFA and privacy checks remain pending, so
+production clients stay on Railway.
 
 ## Local checks
 
@@ -86,6 +88,18 @@ burst result and inspect the Supabase project's Function Invocations,
 Function Compute, database size, and connection usage in its dashboard before
 the #418 production switch. Add other app, public profile, and editorial
 traffic to that estimate; the protected probe measures only the state route.
+
+On 2026-10-17, [protected run 39028577679](https://github.com/Coding-Moves/one-concept/actions/runs/39028577679)
+completed 500 state reads through 10 workers in 43.0 seconds with no HTTP
+failure. Request latency was p50 853 ms and p95 1,198 ms; median and maximum
+responses were both 1,516 bytes. `pg_stat_activity` showed 11 database
+connections before the burst, a sampled peak of 30, and 24 immediately after.
+The runner was in Azure westus2 and the Supabase project is in ap-northeast-1,
+so these timings include long-distance network latency and should not be used
+as mobile-device latency predictions. [Supabase's current Edge pricing](https://supabase.com/docs/guides/functions/pricing)
+lists 500,000 monthly invocations on Free. The simple 60,000-call projection
+would be 12% of that quota before all other traffic; check the dashboard's
+actual usage and the current plan limits during #418.
 
 ## Isolated deployment prerequisites
 

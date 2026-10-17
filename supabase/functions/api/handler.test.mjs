@@ -619,6 +619,38 @@ test('owner reviewer metrics pass the bounded cursor and UTC window', async () =
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
 });
 
+test('owner event feed validates filters and forwards exact timestamp cursors', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json({ items: [], next_cursor: null });
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = '/v1/editorial/owner/events';
+  for (const query of ['limit=51', 'source=invalid', 'cursor=garbage',
+    'cursor=2026-02-30T12:00:00Z~operation:1', 'correlation=bad']) {
+    assert.equal((await handler(request(`${path}?${query}`, { headers }))).status, 422);
+  }
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const correlation = '9c9a46a2d9ad469f84dfdfb7d6b54ae2';
+  const cursor = '2026-10-16T12:00:00.123450+00:00~operation:1';
+  const query = new URLSearchParams({ source: 'api', severity: 'error', search: 'fail',
+    correlation, cursor, limit: '1' });
+  assert.equal((await handler(request(`${path}?${query}`, { headers }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_owner_events$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_start: null, p_end: null, p_source: 'api', p_severity: 'error',
+    p_search: 'fail', p_correlation: correlation,
+    p_before_time: '2026-10-16T12:00:00.123450+00:00',
+    p_before_key: 'operation:1', p_limit: 1,
+  });
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

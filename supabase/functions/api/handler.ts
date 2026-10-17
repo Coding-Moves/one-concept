@@ -157,7 +157,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -661,6 +661,24 @@ function ownerDateInput(query: URLSearchParams, name: string): string | null {
   return value;
 }
 
+function ownerEventCursorInput(query: URLSearchParams): { time: string | null; key: string | null } {
+  const raw = query.get('cursor');
+  if (raw === null) return { time: null, key: null };
+  const split = raw.indexOf('~');
+  if (raw.length > 140 || split < 0 || Array.from(raw.slice(split + 1)).length > 80) {
+    throw new ClientBodyError(422, 'Invalid event cursor');
+  }
+  const stamp = raw.slice(0, split);
+  const day = stamp.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/.test(stamp)
+    || Number.isNaN(Date.parse(stamp))
+    || Number.isNaN(Date.parse(`${day}T00:00:00Z`))
+    || new Date(`${day}T00:00:00Z`).toISOString().slice(0, 10) !== day) {
+    throw new ClientBodyError(422, 'Invalid event cursor');
+  }
+  return { time: stamp, key: raw.slice(split + 1) };
+}
+
 function savedCursor(query: URLSearchParams): { before: string | null; conceptId: string | null } {
   const raw = query.get('cursor');
   if (raw === null) return { before: null, conceptId: null };
@@ -766,6 +784,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialOwnerOperations = path === '/v1/editorial/owner/operations';
     const editorialOwnerOverview = path === '/v1/editorial/owner/overview';
     const editorialOwnerReviewers = path === '/v1/editorial/owner/reviewers';
+    const editorialOwnerEvents = path === '/v1/editorial/owner/events';
     const editorialProfile = path === '/v1/editorial/me/profile';
     const editorialTimezone = path === '/v1/editorial/me/notification-timezone';
     const editorialAuthenticator = path === '/v1/editorial/me/authenticator';
@@ -776,6 +795,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       || editorialLegacyEligibility !== null || editorialLegacyBatches
       || editorialNotifications || editorialNotificationPolicy || editorialNotificationRetry !== null
       || editorialOwnerOperations || editorialOwnerOverview || editorialOwnerReviewers
+      || editorialOwnerEvents
       || editorialLegacyEntries !== null || editorialProfile
       || editorialTimezone || editorialAuthenticator || editorialApproveProfile !== null;
     const state = path === '/v1/me/state';
@@ -864,19 +884,21 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           : editorialNotifications ? 'Invalid notification page'
           : editorialHistory ? 'Invalid revision page'
           : editorialTimeline ? 'Invalid timeline page'
-          : editorialJobs ? 'Invalid generation job page' : 'Invalid reviewer page';
+          : editorialJobs ? 'Invalid generation job page'
+          : editorialOwnerEvents ? 'Invalid event page' : 'Invalid reviewer page';
         const queueKind = requestUrl.searchParams.get('kind') ?? 'revisions';
         const queueStatus = requestUrl.searchParams.get('status');
         const queueAssignee = requestUrl.searchParams.get('assignee_id');
         const queueSubtopic = requestUrl.searchParams.get('subtopic_id');
         const queueUrgency = requestUrl.searchParams.get('urgency');
         const queueSearch = requestUrl.searchParams.get('search') ?? '';
-        if ((editorialReviewers || editorialOwnerReviewers || editorialTaxonomy || editorialActivity || editorialQueue
+        if ((editorialReviewers || editorialOwnerReviewers || editorialOwnerEvents
+          || editorialTaxonomy || editorialActivity || editorialQueue
           || editorialHistory || editorialJobs || editorialNotifications)
-            && ((cursor !== null && !UUID.test(cursor))
+            && ((cursor !== null && !editorialOwnerEvents && !UUID.test(cursor))
               || ((editorialActivity || editorialQueue || editorialJobs) && topicId !== null && !UUID.test(topicId))
               || !/^\d+$/.test(rawLimit) || Number(rawLimit) < 1
-              || Number(rawLimit) > (editorialOwnerReviewers ? 50 : 100))) {
+              || Number(rawLimit) > (editorialOwnerReviewers || editorialOwnerEvents ? 50 : 100))) {
           return editorialResponse({ detail: pageDetail }, 422, cors);
         }
         if (editorialQueue && (
@@ -948,10 +970,27 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? editorialPolicyInput((await readJson(request))!) : null;
         const retryVersion = editorialNotificationRetry
           ? editorialVersionInput((await readJson(request))!) : null;
-        const ownerDates = (editorialOwnerOverview || editorialOwnerReviewers) ? {
+        const ownerDates = (editorialOwnerOverview || editorialOwnerReviewers
+          || editorialOwnerEvents) ? {
           start: ownerDateInput(requestUrl.searchParams, 'start'),
           end: ownerDateInput(requestUrl.searchParams, 'end'),
         } : null;
+        const ownerEventCursor = editorialOwnerEvents
+          ? ownerEventCursorInput(requestUrl.searchParams) : null;
+        const ownerEventSource = editorialOwnerEvents ? requestUrl.searchParams.get('source') : null;
+        const ownerEventSeverity = editorialOwnerEvents ? requestUrl.searchParams.get('severity') : null;
+        const ownerEventSearch = editorialOwnerEvents ? requestUrl.searchParams.get('search') : null;
+        const ownerEventCorrelation = editorialOwnerEvents
+          ? requestUrl.searchParams.get('correlation') : null;
+        if (editorialOwnerEvents && (
+          (ownerEventSource !== null && !['api', 'reminders', 'pool_topup',
+            'review', 'workflow', 'account'].includes(ownerEventSource))
+          || (ownerEventSeverity !== null && !['info', 'error'].includes(ownerEventSeverity))
+          || (ownerEventSearch !== null && Array.from(ownerEventSearch).length > 80)
+          || (ownerEventCorrelation !== null && !(/^[0-9a-f]{32}$/i.test(ownerEventCorrelation)
+            || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(ownerEventCorrelation))))) {
+          return editorialResponse({ detail: 'Invalid event page' }, 422, cors);
+        }
         const data = await rpc(editorialApproveProfile ? 'edge_api_editorial_approve_profile'
           : editorialNotificationPolicy ? 'edge_api_editorial_notification_policy'
           : editorialNotifications ? 'edge_api_editorial_notifications_overview'
@@ -959,6 +998,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           : editorialOwnerOperations ? 'edge_api_editorial_owner_operations'
           : editorialOwnerOverview ? 'edge_api_editorial_owner_overview'
           : editorialOwnerReviewers ? 'edge_api_editorial_owner_reviewers'
+          : editorialOwnerEvents ? 'edge_api_editorial_owner_events'
           : editorialAuthenticator ? 'edge_api_editorial_authenticator'
           : editorialTimezone ? 'edge_api_editorial_notification_timezone'
           : editorialProfile ? 'edge_api_editorial_request_profile'
@@ -1031,6 +1071,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           } : {}),
           ...(ownerDates ? { p_start: ownerDates.start, p_end: ownerDates.end } : {}),
           ...(editorialOwnerReviewers ? { p_cursor: cursor, p_limit: Number(rawLimit) } : {}),
+          ...(editorialOwnerEvents ? {
+            p_source: ownerEventSource, p_severity: ownerEventSeverity,
+            p_search: ownerEventSearch, p_correlation: ownerEventCorrelation,
+            p_before_time: ownerEventCursor!.time, p_before_key: ownerEventCursor!.key,
+            p_limit: Number(rawLimit),
+          } : {}),
         }, config, fetcher) as JsonObject | null;
         if (data === null) return unavailable(cors);
         if (data.error === 'session_required') {
@@ -1054,7 +1100,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           return editorialResponse({ detail: 'Choose an ordered UTC range of at most 90 days, ending no later than today' }, 422, cors);
         }
         if (data.error === 'invalid_cursor') {
-          return editorialResponse({ detail: 'Invalid timeline cursor' }, 422, cors);
+          return editorialResponse({ detail: editorialOwnerEvents
+            ? 'Invalid event cursor' : 'Invalid timeline cursor' }, 422, cors);
         }
         if (data.error === 'invalid_filter') {
           return editorialResponse({ detail: 'Status, assignee and urgency apply to revisions only' }, 422, cors);

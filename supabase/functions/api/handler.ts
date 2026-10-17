@@ -157,7 +157,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -765,6 +765,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialNotificationRetry = /^\/v1\/editorial\/notifications\/([^/]+)\/retry$/.exec(path);
     const editorialOwnerOperations = path === '/v1/editorial/owner/operations';
     const editorialOwnerOverview = path === '/v1/editorial/owner/overview';
+    const editorialOwnerReviewers = path === '/v1/editorial/owner/reviewers';
     const editorialProfile = path === '/v1/editorial/me/profile';
     const editorialTimezone = path === '/v1/editorial/me/notification-timezone';
     const editorialAuthenticator = path === '/v1/editorial/me/authenticator';
@@ -774,7 +775,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       || editorialJobs || editorialJob !== null || editorialSupply !== null
       || editorialLegacyEligibility !== null || editorialLegacyBatches
       || editorialNotifications || editorialNotificationPolicy || editorialNotificationRetry !== null
-      || editorialOwnerOperations || editorialOwnerOverview
+      || editorialOwnerOperations || editorialOwnerOverview || editorialOwnerReviewers
       || editorialLegacyEntries !== null || editorialProfile
       || editorialTimezone || editorialAuthenticator || editorialApproveProfile !== null;
     const state = path === '/v1/me/state';
@@ -870,11 +871,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         const queueSubtopic = requestUrl.searchParams.get('subtopic_id');
         const queueUrgency = requestUrl.searchParams.get('urgency');
         const queueSearch = requestUrl.searchParams.get('search') ?? '';
-        if ((editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue
+        if ((editorialReviewers || editorialOwnerReviewers || editorialTaxonomy || editorialActivity || editorialQueue
           || editorialHistory || editorialJobs || editorialNotifications)
             && ((cursor !== null && !UUID.test(cursor))
               || ((editorialActivity || editorialQueue || editorialJobs) && topicId !== null && !UUID.test(topicId))
-              || !/^\d+$/.test(rawLimit) || Number(rawLimit) < 1 || Number(rawLimit) > 100)) {
+              || !/^\d+$/.test(rawLimit) || Number(rawLimit) < 1
+              || Number(rawLimit) > (editorialOwnerReviewers ? 50 : 100))) {
           return editorialResponse({ detail: pageDetail }, 422, cors);
         }
         if (editorialQueue && (
@@ -946,7 +948,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? editorialPolicyInput((await readJson(request))!) : null;
         const retryVersion = editorialNotificationRetry
           ? editorialVersionInput((await readJson(request))!) : null;
-        const ownerDates = editorialOwnerOverview ? {
+        const ownerDates = (editorialOwnerOverview || editorialOwnerReviewers) ? {
           start: ownerDateInput(requestUrl.searchParams, 'start'),
           end: ownerDateInput(requestUrl.searchParams, 'end'),
         } : null;
@@ -956,6 +958,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           : editorialNotificationRetry ? 'edge_api_editorial_notification_retry'
           : editorialOwnerOperations ? 'edge_api_editorial_owner_operations'
           : editorialOwnerOverview ? 'edge_api_editorial_owner_overview'
+          : editorialOwnerReviewers ? 'edge_api_editorial_owner_reviewers'
           : editorialAuthenticator ? 'edge_api_editorial_authenticator'
           : editorialTimezone ? 'edge_api_editorial_notification_timezone'
           : editorialProfile ? 'edge_api_editorial_request_profile'
@@ -1027,6 +1030,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
             p_generation_daily_cap: config.generationDailyCallCap ?? 200,
           } : {}),
           ...(ownerDates ? { p_start: ownerDates.start, p_end: ownerDates.end } : {}),
+          ...(editorialOwnerReviewers ? { p_cursor: cursor, p_limit: Number(rawLimit) } : {}),
         }, config, fetcher) as JsonObject | null;
         if (data === null) return unavailable(cors);
         if (data.error === 'session_required') {

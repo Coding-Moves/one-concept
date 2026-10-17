@@ -594,6 +594,31 @@ test('owner overview accepts only calendar dates and current session identity', 
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
 });
 
+test('owner reviewer metrics pass the bounded cursor and UTC window', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json({ items: [], next_cursor: null });
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = '/v1/editorial/owner/reviewers';
+  assert.equal((await handler(request(`${path}?limit=51`, { headers }))).status, 422);
+  assert.equal((await handler(request(`${path}?cursor=invalid`, { headers }))).status, 422);
+  assert.equal((await handler(request(`${path}?start=2026-02-30`, { headers }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  assert.equal((await handler(request(`${path}?limit=1&cursor=${userId}&start=2001-01-02`,
+    { headers }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_owner_reviewers$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_start: '2001-01-02', p_end: null, p_cursor: userId, p_limit: 1,
+  });
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

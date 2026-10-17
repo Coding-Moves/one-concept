@@ -199,6 +199,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_owner_window(date,date)",
         "public.edge_api_editorial_owner_overview(uuid,uuid,text,date,date)",
     ),
+    "0102_supabase_editorial_owner_reviewers_api.sql": (
+        "public.edge_api_editorial_owner_reviewers(uuid,uuid,text,date,date,uuid,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

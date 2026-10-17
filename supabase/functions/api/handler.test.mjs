@@ -541,6 +541,34 @@ test('editorial notification retry sends one version and no sender secrets', asy
   }))).status, 409);
 });
 
+test('owner operations passes server configuration flags to a private aggregate', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true,
+    environment: 'staging', ownerTelemetryEnabled: false,
+    generationEnabled: true, futureRefillEnabled: false,
+    legacyEnrichmentEnabled: false, editorialAutoCorrectionEnabled: true,
+    editorialEmailEnabled: false, generationDailyCallCap: 200 }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json({ api: 'reachable', database: 'reachable', workers: [] });
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = '/v1/editorial/owner/operations';
+  assert.equal((await handler(request(path))).status, 401);
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+  assert.equal((await handler(request(path, { headers }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_owner_operations$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_environment: 'staging', p_telemetry_enabled: false,
+    p_generation_enabled: true, p_future_refill_enabled: false,
+    p_legacy_enrichment_enabled: false, p_auto_correction_enabled: true,
+    p_email_enabled: false, p_generation_daily_cap: 200,
+  });
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

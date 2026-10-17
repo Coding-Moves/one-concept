@@ -44,4 +44,7 @@ Deno.serve(createHandler({
     .split(',').map(value => value.trim()).filter(Boolean).length),
   editorialEmailDailyCap: optionalInteger('EDITORIAL_EMAIL_DAILY_CAP', 40),
   environment: Deno.env.get('ENVIRONMENT') ?? 'development',
+  ownerTelemetryEnabled: Deno.env.get('OWNER_TELEMETRY_ENABLED') === 'true',
+  editorialAutoCorrectionEnabled: Deno.env.get('EDITORIAL_AUTO_CORRECTION_ENABLED') !== 'false',
+  generationDailyCallCap: optionalInteger('GENERATION_DAILY_CALL_CAP', 200),
 }));

@@ -117,8 +117,11 @@ reviewer, the reviewer requests a display name, and the owner approves it.
 The probe checks that MFA blocks an unverified reviewer, records a staging-only
 MFA policy change with an account event, then checks the reviewer queue, owner
 overview, and role isolation. The dedicated learner must remain unable to
-enter editorial routes. The direct MFA policy change is test setup; production
-authenticator changes must continue through the verified user flow.
+enter editorial routes. It also enables the owner's public profile with every
+private field unselected, verifies the anonymous allowlist, disables sharing,
+and verifies the old link returns 404. The direct MFA policy change is test
+setup; production authenticator changes must continue through the verified
+user flow.
 
 ## Isolated deployment prerequisites
 

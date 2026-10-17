@@ -2545,15 +2545,26 @@ test('upstream failures are generic and do not reveal secrets', async () => {
     assert.equal(result.headers.get('retry-after'), '30');
     assert.match(result.headers.get('x-incident-id'), /^[0-9a-f]{32}$/);
     assert.equal(JSON.parse(body).error.code, 'service_unavailable');
-    assert.deepEqual(logs, [`Candidate API incident ${result.headers.get('x-incident-id')}: database:500`]);
+    assert.deepEqual(logs, [`Candidate API incident ${result.headers.get('x-incident-id')}: database:500:edge_api_health:status`]);
     const authHandler = createHandler(config, async () => new Response('private-auth-detail', { status: 502 }));
     const authResult = await authHandler(request('/v1/topics', {
       headers: { authorization: 'Bearer private-user-token' },
     }));
     assert.equal(authResult.status, 503);
-    assert.equal(logs[1], `Candidate API incident ${authResult.headers.get('x-incident-id')}: auth:502`);
+    assert.equal(logs[1], `Candidate API incident ${authResult.headers.get('x-incident-id')}: auth:502:unknown:status`);
+    const timeoutHandler = createHandler({ ...config,
+      rateLimit: { readsPerMinute: 120, writesPerMinute: 60 } }, async url => {
+      if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+      throw Object.assign(new Error('private-upstream-url'), { name: 'TimeoutError' });
+    });
+    const timeoutResult = await timeoutHandler(request('/v1/topics', {
+      headers: { authorization: 'Bearer private-user-token' },
+    }));
+    assert.equal(timeoutResult.status, 503);
+    assert.equal(logs[2], `Candidate API incident ${timeoutResult.headers.get('x-incident-id')}: database:0:edge_api_request_retry_after:timeout`);
     assert.equal(logs.join(' ').includes('private-user-token'), false);
     assert.equal(logs.join(' ').includes('provider-secret'), false);
+    assert.equal(logs.join(' ').includes('private-upstream-url'), false);
   } finally {
     console.error = originalLog;
   }

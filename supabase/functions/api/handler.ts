@@ -55,10 +55,15 @@ class ClientBodyError extends Error {
 class UpstreamError extends Error {
   readonly component: 'auth' | 'database';
   readonly status: number;
-  constructor(component: 'auth' | 'database', status: number) {
+  readonly operation?: string;
+  readonly reason?: 'timeout' | 'network';
+  constructor(component: 'auth' | 'database', status: number,
+    operation?: string, reason?: 'timeout' | 'network') {
     super('Upstream unavailable');
     this.component = component;
     this.status = status;
+    this.operation = operation;
+    this.reason = reason;
   }
 }
 
@@ -175,11 +180,16 @@ async function rpc(name: 'edge_api_request_retry_after' | 'edge_api_health' | 'e
         'content-type': 'application/json',
       },
       body: JSON.stringify(args),
-      signal: AbortSignal.timeout(5000),
+      signal: AbortSignal.timeout(name === 'edge_api_request_retry_after' ? 8000 : 5000),
       redirect: 'error',
     });
-  } catch { throw new UpstreamError('database', 0); }
-  if (!result.ok) throw new UpstreamError('database', result.status);
+  } catch (failure) {
+    const reason = failure instanceof Error &&
+      (failure.name === 'TimeoutError' || failure.name === 'AbortError')
+      ? 'timeout' : 'network';
+    throw new UpstreamError('database', 0, name, reason);
+  }
+  if (!result.ok) throw new UpstreamError('database', result.status, name);
   return result.json();
 }
 
@@ -2381,7 +2391,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
       // Do not echo provider errors or sensitive query details to callers.
       const result = unavailable(cors);
       const source = failure instanceof UpstreamError
-        ? `${failure.component}:${failure.status}` : 'internal';
+        ? `${failure.component}:${failure.status}:${failure.operation ?? 'unknown'}:${failure.reason ?? 'status'}`
+        : 'internal';
       console.error(`Candidate API incident ${result.headers.get('x-incident-id')}: ${source}`);
       return result;
     }

@@ -1,6 +1,6 @@
 /** ImageMagick WASM is loaded only for an authenticated, bounded photo upload. */
 // @ts-ignore Deno resolves npm: imports when bundling this Edge Function.
-import { AlphaAction, ImageMagick, MagickColors, MagickFormat, MagickGeometry, initializeImageMagick } from 'npm:@imagemagick/magick-wasm@0.0.44';
+import { AlphaAction, ImageMagick, MagickColors, MagickFormat, MagickGeometry, MagickReadSettings, initializeImageMagick } from 'npm:@imagemagick/magick-wasm@0.0.44';
 import { AvatarInputError } from './avatar_image.ts';
 
 declare const Deno: { readFile(path: URL): Promise<Uint8Array> };
@@ -20,8 +20,12 @@ export async function normalizeWithMagick(bytes: Uint8Array): Promise<Uint8Array
     .catch(error => { initialized = undefined; throw error; });
   await initialized;
   let normalized: Uint8Array | undefined;
+  // JPEG's decoder can downsample before allocating the full 25 MP raster.
+  // PNG and WebP lack that shortcut, so the upload gate caps them at 8 MP.
+  const readSettings = new MagickReadSettings();
+  readSettings.setDefine(MagickFormat.Jpeg, 'size', '1024x1024');
   try {
-    ImageMagick.read(bytes, (image: AvatarMagickImage) => {
+    ImageMagick.read(bytes, readSettings, (image: AvatarMagickImage) => {
       image.autoOrient();
       image.backgroundColor = MagickColors.White;
       image.alpha(AlphaAction.Remove);

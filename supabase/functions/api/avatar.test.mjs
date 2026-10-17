@@ -90,4 +90,12 @@ test('avatar headers reject huge dimensions and mismatched image types', () => {
   huge.set([0, 0, 0x20, 0], 20);
   assert.throws(() => inspectAvatar(huge, 'image/png'), error =>
     error instanceof AvatarInputError && error.status === 422);
+  const nineMegapixels = new Uint8Array(png);
+  nineMegapixels.set([0, 0, 0x0b, 0xb8], 16);
+  nineMegapixels.set([0, 0, 0x0b, 0xb8], 20);
+  assert.throws(() => inspectAvatar(nineMegapixels, 'image/png'), error =>
+    error instanceof AvatarInputError && /8 million pixels/.test(error.message));
+  const jpeg = new Uint8Array(21);
+  jpeg.set([0xff, 0xd8, 0xff, 0xc0, 0, 17, 8, 0x13, 0x88, 0x13, 0x88]);
+  assert.doesNotThrow(() => inspectAvatar(jpeg, 'image/jpeg'));
 });

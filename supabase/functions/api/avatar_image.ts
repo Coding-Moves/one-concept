@@ -9,6 +9,7 @@ export class AvatarInputError extends Error {
 
 const MAX_INPUT = 5 * 1024 * 1024;
 const MAX_PIXELS = 25_000_000;
+const MAX_LOSSLESS_PIXELS = 8_000_000;
 const ACCEPTED = new Set(['image/jpeg', 'image/png', 'image/webp']);
 
 function u16be(bytes: Uint8Array, offset: number): number {
@@ -84,6 +85,9 @@ export function inspectAvatar(bytes: Uint8Array, contentType: string): void {
   }
   if (found.width * found.height > MAX_PIXELS) {
     throw new AvatarInputError(422, 'Choose a photo with fewer than 25 million pixels');
+  }
+  if (found.mime !== 'image/jpeg' && found.width * found.height > MAX_LOSSLESS_PIXELS) {
+    throw new AvatarInputError(422, 'Choose a PNG or WebP photo with fewer than 8 million pixels');
   }
 }
 

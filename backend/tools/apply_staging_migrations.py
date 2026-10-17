@@ -255,6 +255,9 @@ INCREMENTAL_PROBES = {
         "definer:public.edge_api_editorial_invite_prepare(uuid,uuid,text,text)",
         "definer:public.edge_api_editorial_invite_finish(uuid,uuid,text,text,uuid,text[])",
     ),
+    "0118_supabase_api_request_rate_limit.sql": (
+        "public.edge_api_request_retry_after(uuid,text,integer,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

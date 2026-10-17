@@ -14,6 +14,7 @@ from sqlalchemy import text
 ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATH = ROOT / "schema" / "contract.json"
 TABLES = (
+    "edge_api_request_buckets",
     "owner_operation_events",
     "editorial_notification_policy", "editorial_notification_outbox",
     "editorial_email_batches", "editorial_email_attempts",
@@ -131,7 +132,7 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_concept_action',
             'edge_api_editorial_revision_token',
             'edge_api_editorial_revision_action',
-            'edge_api_set_avatar')""",
+            'edge_api_set_avatar','edge_api_request_retry_after')""",
     }
     result = {}
     for kind, query in queries.items():

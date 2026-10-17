@@ -116,7 +116,8 @@
     "0114_supabase_editorial_concept_actions.sql": "66b09cae2459d5b07f05e0f17d05154d13c3b64f9872c7c8b7a487498df732b4",
     "0115_supabase_editorial_revision_actions.sql": "01ad4354af6b207f60b8f60bef60e05adfa235eb8d177225e07257c7b22727b5",
     "0116_supabase_profile_avatar_api.sql": "984989bd10dcd423fa18722f1b9d1173463760e67e1eab85bf5d072382016a0a",
-    "0117_supabase_editorial_auth_read_privileges.sql": "5e4aab9ca03ea17cf309ff5ac842dc9be6d0696ecd80c1e6935971f204904c5e"
+    "0117_supabase_editorial_auth_read_privileges.sql": "5e4aab9ca03ea17cf309ff5ac842dc9be6d0696ecd80c1e6935971f204904c5e",
+    "0118_supabase_api_request_rate_limit.sql": "a94885feb8340b8729e64df72bba8bf52c02956b053557d5b56210d06d18a180"
   },
   "schema": {
     "columns": {
@@ -811,6 +812,30 @@
         "type": "text"
       },
       "device_tokens.user_id": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "uuid"
+      },
+      "edge_api_request_buckets.kind": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "text"
+      },
+      "edge_api_request_buckets.tokens": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "double precision"
+      },
+      "edge_api_request_buckets.updated_at": {
+        "default": null,
+        "identity": "",
+        "not_null": true,
+        "type": "timestamp with time zone"
+      },
+      "edge_api_request_buckets.user_id": {
         "default": null,
         "identity": "",
         "not_null": true,
@@ -2496,6 +2521,18 @@
         "definition": "FOREIGN KEY (user_id) REFERENCES public.profiles(id) ON DELETE CASCADE",
         "validated": true
       },
+      "edge_api_request_buckets.edge_api_request_buckets_kind_check": {
+        "definition": "CHECK ((kind = ANY (ARRAY['read'::text, 'write'::text])))",
+        "validated": true
+      },
+      "edge_api_request_buckets.edge_api_request_buckets_pkey": {
+        "definition": "PRIMARY KEY (user_id, kind)",
+        "validated": true
+      },
+      "edge_api_request_buckets.edge_api_request_buckets_user_id_fkey": {
+        "definition": "FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE",
+        "validated": true
+      },
       "editorial_account_events.editorial_account_events_action_check": {
         "definition": "CHECK ((action = ANY (ARRAY['bootstrap'::text, 'invite'::text, 'profile_requested'::text, 'profile_approved'::text, 'access_changed'::text, 'notification_policy'::text, 'notification_timezone'::text, 'notification_retry'::text, 'authenticator_choice'::text])))",
         "validated": true
@@ -3331,6 +3368,9 @@
       "edge_api_record_subtopic_completion": {
         "definition": "CREATE OR REPLACE FUNCTION public.edge_api_record_subtopic_completion(p_user_id uuid, p_concept_id uuid)\n RETURNS jsonb\n LANGUAGE sql\n SET search_path TO ''\nAS $function$\n  with target as (\n    select s.id, s.slug as subtopic_slug, s.name as subtopic_name,\n           t.slug as topic_slug, t.name as topic_name\n      from public.concepts focus\n      join public.subtopics s on s.id = focus.subtopic_id and s.is_active\n      join public.topics t on t.id = s.topic_id and t.is_active\n     where focus.id = p_concept_id\n  ), catalog as (\n    select target.*, array_agg(c.id order by c.id) as ids, count(*)::integer as available\n      from target join public.concepts c on c.subtopic_id = target.id and c.status = 'published'\n     group by target.id, target.subtopic_slug, target.subtopic_name,\n              target.topic_slug, target.topic_name\n  ), covered as (\n    select catalog.*, count(done.concept_id)::integer as completed\n      from catalog left join public.user_concept_completions done\n        on done.user_id = p_user_id and done.concept_id = any(catalog.ids)\n     group by catalog.id, catalog.subtopic_slug, catalog.subtopic_name,\n              catalog.topic_slug, catalog.topic_name, catalog.ids, catalog.available\n  ), inserted as (\n    insert into public.user_subtopic_completions\n      (user_id, subtopic_id, catalog_signature, catalog_concept_ids)\n    select p_user_id, id,\n           md5(array_to_string(covered.ids, ',')) ||\n             md5('one-concept-subtopic-v1:' || array_to_string(covered.ids, ',')),\n           ids from covered where available > 0 and completed = available\n    on conflict(user_id, subtopic_id, catalog_signature) do nothing\n    returning id, subtopic_id, completed_at\n  )\n  select jsonb_build_object(\n    'id', inserted.id, 'topic_slug', covered.topic_slug,\n    'topic_name', covered.topic_name,\n    'subtopic_slug', covered.subtopic_slug,\n    'subtopic_name', covered.subtopic_name,\n    'completed_at', inserted.completed_at)\n    from inserted join covered on covered.id = inserted.subtopic_id\n$function$\n"
       },
+      "edge_api_request_retry_after": {
+        "definition": "CREATE OR REPLACE FUNCTION public.edge_api_request_retry_after(p_user_id uuid, p_method text, p_read_limit integer, p_write_limit integer)\n RETURNS integer\n LANGUAGE plpgsql\n SET search_path TO ''\nAS $function$\ndeclare\n  v_kind text;\n  v_limit integer;\n  v_tokens double precision;\n  v_updated timestamptz;\n  v_now timestamptz;\n  v_retry integer;\nbegin\n  if p_user_id is null or p_method is null or\n     p_read_limit is null or p_write_limit is null or\n     p_read_limit not between 1 and 10000 or\n     p_write_limit not between 1 and 10000 then\n    raise exception 'Invalid API rate limit configuration';\n  end if;\n  v_kind := case when p_method in ('GET', 'HEAD', 'OPTIONS')\n    then 'read' else 'write' end;\n  v_limit := case when v_kind = 'read' then p_read_limit else p_write_limit end;\n  v_now := clock_timestamp();\n  insert into public.edge_api_request_buckets(user_id, kind, tokens, updated_at)\n    values (p_user_id, v_kind, v_limit, v_now)\n    on conflict (user_id, kind) do nothing;\n  select tokens, updated_at into strict v_tokens, v_updated\n    from public.edge_api_request_buckets\n   where user_id = p_user_id and kind = v_kind for update;\n  v_now := clock_timestamp();\n  v_tokens := least(v_limit::double precision,\n    v_tokens + greatest(0, extract(epoch from v_now - v_updated)) * v_limit / 60.0);\n  if v_tokens < 1 then\n    v_retry := greatest(1, ceil((1 - v_tokens) * 60.0 / v_limit)::integer);\n  else\n    v_tokens := v_tokens - 1;\n    v_retry := 0;\n  end if;\n  update public.edge_api_request_buckets\n     set tokens = v_tokens, updated_at = v_now\n   where user_id = p_user_id and kind = v_kind;\n  return v_retry;\nend\n$function$\n"
+      },
       "edge_api_review_payload": {
         "definition": "CREATE OR REPLACE FUNCTION public.edge_api_review_payload(p_user_id uuid, p_day date)\n RETURNS jsonb\n LANGUAGE sql\n STABLE\n SET search_path TO ''\nAS $function$\n  select jsonb_build_object(\n    'review_id', r.id, 'assigned_for', r.assigned_for,\n    'assigned_at', r.assigned_at, 'completed_at', r.completed_at,\n    'learned', r.completed_at is not null, 'outside_followed_topics', false,\n    'concept', public.edge_api_concept(p_user_id, c.slug)\n  )\n    from public.daily_reviews r\n    join public.concepts c on c.id = r.concept_id and c.status = 'published'\n   where r.user_id = p_user_id and r.assigned_for = p_day\n$function$\n"
       },
@@ -3597,6 +3637,11 @@
       },
       "device_tokens_user_idx": {
         "definition": "CREATE INDEX device_tokens_user_idx ON public.device_tokens USING btree (user_id)",
+        "ready": true,
+        "valid": true
+      },
+      "edge_api_request_buckets_pkey": {
+        "definition": "CREATE UNIQUE INDEX edge_api_request_buckets_pkey ON public.edge_api_request_buckets USING btree (user_id, kind)",
         "ready": true,
         "valid": true
       },
@@ -4235,6 +4280,9 @@
         "rls": true
       },
       "device_tokens": {
+        "rls": true
+      },
+      "edge_api_request_buckets": {
         "rls": true
       },
       "editorial_account_events": {

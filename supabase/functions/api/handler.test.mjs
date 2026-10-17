@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { createHandler } from './handler.ts';
 
 const userId = 'b5a94932-62e0-4780-91c7-af48b93e27ab';
@@ -11,6 +12,57 @@ const config = {
 };
 const request = (path, init = {}) => new Request(`https://one-concept.supabase.co/functions/v1/api${path}`, init);
 const editorialToken = (claims) => `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
+
+test('editorial concept detail exposes a versioned preview without raw snapshots', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const snapshot = { title: 'Valid lesson' };
+  const raw = {
+    id: conceptId, slug: 'valid-lesson', status: 'draft', content_version: 0,
+    title: 'Valid lesson', summary: 'A'.repeat(110), example: 'B'.repeat(45),
+    curriculum: { objective: 'Explain a useful and distinct lesson objective.',
+      difficulty: 1, prerequisites: [], references: [{ title: 'Documentation',
+        url: 'https://example.com/reference' }] },
+    flashcard: { front: 'What is the important lesson?', back: 'It is the clear answer to the question.' },
+    mcqs: [1, 2, 3].map(i => ({ question: `Which answer is correct for question ${i}?`,
+      options: [`Answer ${i} A`, `Answer ${i} B`, `Answer ${i} C`, `Answer ${i} D`],
+      correct_index: 0 })),
+    subtopic_slug: 'foundations', topic_active: true, subtopic_active: true,
+    snapshot, legacy_snapshot: null, provenance: null,
+  };
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    return url.endsWith('/auth/v1/user') ? Response.json({ id: userId }) : Response.json(raw);
+  });
+  const result = await handler(request(`/v1/editorial/concepts/${conceptId}`, {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  assert.equal(result.status, 200);
+  const body = await result.json();
+  assert.equal(body.validation.valid, true);
+  assert.equal(body.id, conceptId);
+  assert.equal(body.snapshot, undefined);
+  assert.equal(body.legacy_snapshot, undefined);
+  assert.deepEqual(body.source_links, [{ title: 'Documentation', url: 'https://example.com/reference' }]);
+  const canonical = '{"snapshot":{"title":"Valid lesson"},"status":"draft","subtopic_active":true,"subtopic_slug":"foundations","topic_active":true}';
+  assert.equal(body.token, createHash('sha256').update(canonical).digest('hex'));
+  assert.match(calls.at(-1).url, /edge_api_editorial_concept_detail_source$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2', p_concept_id: conceptId,
+  });
+  raw.mcqs[0].options = ['Same answer', 'Same answer', 'Different', 'Another'];
+  const malformed = await handler(request(`/v1/editorial/concepts/${conceptId}`, {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  assert.equal((await malformed.json()).validation.valid, false);
+  raw.error = 'permission';
+  const denied = await handler(request(`/v1/editorial/concepts/${conceptId}`, {
+    headers: { authorization: `Bearer ${token}` },
+  }));
+  assert.equal(denied.status, 403);
+});
 
 test('health probes the database and sets exact-origin CORS', async () => {
   const calls = [];

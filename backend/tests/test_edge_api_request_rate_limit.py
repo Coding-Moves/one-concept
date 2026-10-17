@@ -1,5 +1,9 @@
 """The Edge request budget is shared and atomic in PostgreSQL."""
 
+import asyncio
+from math import ceil
+from time import monotonic
+
 import pytest
 from sqlalchemy import text
 
@@ -35,3 +39,21 @@ async def test_request_budget_is_service_only(session, user):
           :uid,'GET',120,60)"""), {"uid": user}) == 0
     finally:
         await session.execute(text("reset role"))
+
+
+@pytest.mark.asyncio
+async def test_concurrent_requests_share_one_account_budget(sessionmaker_for_test, user):
+    gate = asyncio.Semaphore(10)
+    query = text("select public.edge_api_request_retry_after(:uid,'GET',120,60)")
+
+    async def attempt() -> int:
+        async with gate, sessionmaker_for_test() as session:
+            retry = await session.scalar(query, {"uid": user})
+            await session.commit()
+            return retry
+
+    started = monotonic()
+    retries = await asyncio.gather(*(attempt() for _ in range(500)))
+    admitted = retries.count(0)
+    assert 120 <= admitted <= 120 + ceil((monotonic() - started) * 2) + 1
+    assert all(value == 0 or value >= 1 for value in retries)

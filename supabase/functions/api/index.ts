@@ -34,4 +34,14 @@ Deno.serve(createHandler({
   providerConfigured: Boolean(Deno.env.get('GEMINI_API_KEY')),
   legacyEnrichmentEnabled: Deno.env.get('LEGACY_ENRICHMENT_ENABLED') === 'true',
   geminiModel: Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
+  editorialEmailEnabled: Deno.env.get('EDITORIAL_EMAIL_ENABLED') === 'true',
+  editorialEmailDashboardUrl: Deno.env.get('EDITORIAL_EMAIL_DASHBOARD_URL') ?? '',
+  editorialEmailSenderConfigured: Boolean(Deno.env.get('EDITORIAL_GMAIL_CLIENT_ID')
+    && Deno.env.get('EDITORIAL_GMAIL_CLIENT_SECRET')
+    && Deno.env.get('EDITORIAL_GMAIL_REFRESH_TOKEN')
+    && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(Deno.env.get('EDITORIAL_EMAIL_FROM') ?? '')),
+  editorialEmailTestRecipientsConfigured: Boolean((Deno.env.get('EDITORIAL_EMAIL_TEST_RECIPIENTS') ?? '')
+    .split(',').map(value => value.trim()).filter(Boolean).length),
+  editorialEmailDailyCap: optionalInteger('EDITORIAL_EMAIL_DAILY_CAP', 40),
+  environment: Deno.env.get('ENVIRONMENT') ?? 'development',
 }));

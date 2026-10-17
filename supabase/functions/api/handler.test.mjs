@@ -481,6 +481,32 @@ test('editorial notification policy requires bounded versioned owner input', asy
     body: JSON.stringify({ expected_version: 1, deadline_hours: 48, reminder_hours: 24, max_reminders: 2 }) }))).status, 409);
 });
 
+test('editorial notifications overview passes only status flags and bounded page input', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const cursor = '00000000-0000-4000-8000-000000000003';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true,
+    editorialEmailEnabled: true, editorialEmailDashboardUrl: 'https://review.example.com',
+    editorialEmailSenderConfigured: true, editorialEmailTestRecipientsConfigured: true,
+    editorialEmailDailyCap: 40, environment: 'staging' }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json({ items: [], policy: {}, setup_status: 'ready' });
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = '/v1/editorial/notifications';
+  assert.equal((await handler(request(`${path}?cursor=bad`, { headers }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  assert.equal((await handler(request(`${path}?cursor=${cursor}&limit=1`, { headers }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_notifications_overview$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_cursor: cursor, p_limit: 1, p_setup_status: 'ready', p_daily_cap: 40,
+  });
+  assert.equal((await handler(request(path, { method: 'PATCH', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

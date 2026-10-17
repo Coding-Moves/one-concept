@@ -164,6 +164,42 @@ function bodyErrors(body: ObjectValue): Array<{ field: string; message: string }
   return errors;
 }
 
+/** Apply the same defaults and string cleanup as the strict FastAPI body model. */
+export function stageLessonBody(raw: unknown): ObjectValue | null {
+  const body = object(raw);
+  if (!body || bodyErrors(body).length) return null;
+  const curriculum = object(body.curriculum)!;
+  const learning = object(body.learning_package)!;
+  const flashcard = object(learning.flashcard)!;
+  return {
+    title: (body.title as string).trim(),
+    summary: (body.summary as string).trim(),
+    example: (body.example as string).trim(),
+    subtopic_slug: (body.subtopic_slug as string).trim(),
+    model: typeof body.model === 'string' ? body.model.trim() : null,
+    prompt_version: typeof body.prompt_version === 'string'
+      ? body.prompt_version.trim() : null,
+    curriculum: {
+      objective: (curriculum.objective as string).trim(),
+      difficulty: curriculum.difficulty,
+      prerequisites: ((curriculum.prerequisites ?? []) as string[]).map(value => value.trim()),
+      references: (curriculum.references as ObjectValue[]).map(item => ({
+        title: (item.title as string).trim(),
+        url: new URL((item.url as string).trim()).href,
+      })),
+    },
+    learning_package: {
+      flashcard: { front: (flashcard.front as string).trim(),
+        back: (flashcard.back as string).trim() },
+      mcqs: (learning.mcqs as ObjectValue[]).map(item => ({
+        question: (item.question as string).trim(),
+        options: (item.options as string[]).map(value => value.trim()),
+        correct_index: item.correct_index,
+      })),
+    },
+  };
+}
+
 export async function conceptPreview(raw: unknown): Promise<ObjectValue | null> {
   const source = object(raw);
   if (!source || typeof source.id !== 'string' || typeof source.slug !== 'string'

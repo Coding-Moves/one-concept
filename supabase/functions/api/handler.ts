@@ -1,6 +1,6 @@
 /** Candidate Railway-compatible JSON routes. No production client uses these yet. */
 
-import { conceptPreview, revisionPreview } from './editorial_preview.ts';
+import { conceptPreview, editorialDigest, revisionPreview, stageLessonBody } from './editorial_preview.ts';
 
 export type ApiConfig = {
   supabaseUrl: string;
@@ -161,7 +161,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_stage_revision' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -217,9 +217,10 @@ async function inviteAuthUser(email: string, redirect: string,
   } catch { return null; }
 }
 
-async function readJson(request: Request, optional = false): Promise<JsonObject | null> {
+async function readJson(request: Request, optional = false,
+  maxBytes = MAX_JSON_BYTES): Promise<JsonObject | null> {
   const length = request.headers.get('content-length');
-  if (length !== null && (Number.isNaN(Number(length)) || Number(length) > MAX_JSON_BYTES)) {
+  if (length !== null && (Number.isNaN(Number(length)) || Number(length) > maxBytes)) {
     throw new ClientBodyError(413, 'Request body is too large');
   }
   const reader = request.body?.getReader();
@@ -233,7 +234,7 @@ async function readJson(request: Request, optional = false): Promise<JsonObject 
     const { value, done } = await reader.read();
     if (done) break;
     size += value.byteLength;
-    if (size > MAX_JSON_BYTES) {
+    if (size > maxBytes) {
       await reader.cancel();
       throw new ClientBodyError(413, 'Request body is too large');
     }
@@ -988,6 +989,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? request.method === 'PATCH'
         : editorialReviewers
           ? request.method === 'GET' || request.method === 'POST'
+        : editorialHistory
+          ? request.method === 'GET' || request.method === 'POST'
         : editorialLegacyBatches
           ? request.method === 'GET' || request.method === 'POST'
         : editorialProfile || editorialTimezone || editorialAuthenticator
@@ -1094,6 +1097,60 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           }
           const preview = await revisionPreview(data);
           return preview ? editorialResponse(preview, 200, cors) : unavailable(cors);
+        }
+        if (editorialHistory && request.method === 'POST') {
+          if (!UUID.test(editorialHistory[1])) {
+            return editorialResponse({ detail: 'Invalid concept ID' }, 422, cors);
+          }
+          const command = (await readJson(request, false, 65536))!;
+          const body = stageLessonBody(command.body);
+          if (Object.keys(command).some(key => !['request_id', 'note', 'expected_token', 'body'].includes(key))
+            || typeof command.request_id !== 'string' || !UUID.test(command.request_id)
+            || typeof command.note !== 'string'
+            || [...command.note.trim()].length < 10 || [...command.note.trim()].length > 4000
+            || typeof command.expected_token !== 'string'
+            || !/^[a-f0-9]{64}$/.test(command.expected_token) || !body) {
+            return editorialResponse({ detail: 'Invalid revision stage request' }, 422, cors);
+          }
+          const normalized = { request_id: command.request_id.toLowerCase(),
+            note: command.note.trim(), expected_token: command.expected_token, body };
+          const staged = await rpc('edge_api_editorial_stage_revision', {
+            p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
+            p_concept_id: editorialHistory[1], p_request_id: normalized.request_id,
+            p_note: normalized.note, p_expected_token: normalized.expected_token,
+            p_body: body,
+            p_fingerprint: await editorialDigest({ resource: `stage:${editorialHistory[1]}`,
+              command: normalized }),
+          }, config, fetcher) as JsonObject | null;
+          if (staged === null) return unavailable(cors);
+          if (typeof staged.error === 'string') {
+            const denied: Record<string, [number, string]> = {
+              session_required: [401, 'A confirmed account and current session are required'],
+              unavailable: [403, 'Editorial access is unavailable'],
+              permission: [403, 'Editorial permission required'],
+              profile_required: [403, 'Complete profile setup and obtain name approval'],
+              mfa_required: [403, 'Complete MFA verification for editorial actions'],
+              invalid: [422, 'Invalid revision stage request'],
+              concept_not_found: [404, 'Concept not found'],
+              receipt_conflict: [409, 'Request ID was already used for a different command'],
+            };
+            if (staged.error === 'stale_revision') return editorialResponse({ detail: {
+              code: 'stale_revision', message: 'Content or review state changed. Reload before acting.',
+            } }, 409, cors);
+            if (staged.error === 'review_conflict' && typeof staged.message === 'string') {
+              return editorialResponse({ detail: { code: 'review_conflict',
+                message: staged.message } }, 409, cors);
+            }
+            const mapped = denied[staged.error];
+            return mapped ? editorialResponse({ detail: mapped[1] }, mapped[0], cors)
+              : unavailable(cors);
+          }
+          if (typeof staged.revision_id !== 'string' || !UUID.test(staged.revision_id)
+            || staged.status !== 'draft' || typeof staged.token !== 'string'
+            || !/^[a-f0-9]{64}$/.test(staged.token)) {
+            return unavailable(cors);
+          }
+          return editorialResponse(staged, 201, cors);
         }
         if (editorialCancelJob) {
           if (!UUID.test(editorialCancelJob[1])) {

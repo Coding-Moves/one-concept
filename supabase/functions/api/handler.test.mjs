@@ -101,6 +101,51 @@ test('editorial revision detail keeps a private versioned diff and stale warning
   assert.equal((await stale.json()).validation.errors.at(-1).field, 'base_version');
 });
 
+test('staging a revision normalizes the lesson and delegates the atomic receipt to SQL', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';
+  const revisionId = 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const command = { request_id: revisionId, note: ' Stage the corrected learning package. ',
+    expected_token: 'a'.repeat(64), body: {
+      title: ' Updated lesson ', summary: 'S'.repeat(110), example: 'E'.repeat(45),
+      subtopic_slug: 'foundations', curriculum: {
+        objective: 'Explain one safe and distinct revision objective.',
+        difficulty: 1, references: [{ title: ' Documentation ', url: 'https://example.com' }],
+      },
+      learning_package: { flashcard: {
+        front: 'What is the updated important lesson?', back: 'It is the clear new answer to the question.',
+      }, mcqs: [1, 2, 3].map(i => ({ question: `Which revision answer is correct ${i}?`,
+        options: [`Choice ${i} A`, `Choice ${i} B`, `Choice ${i} C`, `Choice ${i} D`],
+        correct_index: 0 })) },
+    } };
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    return url.endsWith('/auth/v1/user') ? Response.json({ id: userId })
+      : Response.json({ revision_id: revisionId, status: 'draft', token: 'b'.repeat(64) });
+  });
+  const path = `/v1/editorial/concepts/${conceptId}/revisions`;
+  const result = await handler(request(path, { method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(command) }));
+  assert.equal(result.status, 201);
+  assert.deepEqual(await result.json(), {
+    revision_id: revisionId, status: 'draft', token: 'b'.repeat(64),
+  });
+  assert.equal(calls.length, 2);
+  assert.match(calls[1].url, /edge_api_editorial_stage_revision$/);
+  const args = JSON.parse(calls[1].init.body);
+  assert.equal(args.p_user_id, userId);
+  assert.equal(args.p_session_id, sessionId);
+  assert.equal(args.p_note, 'Stage the corrected learning package.');
+  assert.equal(args.p_expected_token, command.expected_token);
+  assert.equal(args.p_body.title, 'Updated lesson');
+  assert.deepEqual(args.p_body.curriculum.prerequisites, []);
+  assert.equal(args.p_body.curriculum.references[0].url, 'https://example.com/');
+  assert.match(args.p_fingerprint, /^[a-f0-9]{64}$/);
+});
+
 test('health probes the database and sets exact-origin CORS', async () => {
   const calls = [];
   const handler = createHandler(config, async (url, init) => {
@@ -375,7 +420,7 @@ test('editorial revision history validates concept and cursor before private rea
   });
   payload = { error: 'concept_not_found' };
   assert.equal((await handler(request(path, { headers }))).status, 404);
-  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 422);
 });
 
 test('editorial generation jobs return only validated private pages and detail', async () => {

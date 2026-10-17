@@ -230,6 +230,10 @@ INCREMENTAL_PROBES = {
     "0111_supabase_editorial_revision_detail_api.sql": (
         "public.edge_api_editorial_revision_detail_source(uuid,uuid,text,uuid)",
     ),
+    "0112_supabase_editorial_stage_revision_api.sql": (
+        "public.edge_api_editorial_python_json(jsonb)",
+        "public.edge_api_editorial_stage_revision(uuid,uuid,text,uuid,uuid,text,text,jsonb,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

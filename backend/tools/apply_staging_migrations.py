@@ -180,6 +180,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_legacy_batch_public(public.editorial_legacy_batches)",
         "public.edge_api_editorial_legacy_batches(uuid,uuid,text,uuid)",
     ),
+    "0096_supabase_editorial_timestamp_precision.sql": (
+        "public.edge_api_editorial_utc_iso_exact(timestamp with time zone)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

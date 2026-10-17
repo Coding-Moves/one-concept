@@ -103,7 +103,8 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_legacy_eligibility',
             'edge_api_editorial_concept_timeline',
             'edge_api_editorial_legacy_batch_public',
-            'edge_api_editorial_legacy_batches')""",
+            'edge_api_editorial_legacy_batches',
+            'edge_api_editorial_utc_iso_exact')""",
     }
     result = {}
     for kind, query in queries.items():

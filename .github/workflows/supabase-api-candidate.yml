@@ -9,6 +9,7 @@ on:
       - 'supabase-api-staging-incremental-*'
       - 'supabase-api-staging-deploy-*'
       - 'supabase-api-staging-smoke-*'
+      - 'supabase-api-staging-diagnose-*'
 
 concurrency:
   group: supabase-api-staging
@@ -128,3 +129,21 @@ jobs:
           SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
           SUPABASE_STAGING_TEST_PASSWORD: ${{ secrets.SUPABASE_STAGING_TEST_PASSWORD }}
         run: python backend/tools/staging_api_smoke.py
+
+  diagnose_learner:
+    if: startsWith(github.ref_name, 'supabase-api-staging-diagnose-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Probe staging learner SQL inside rollback transaction
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+          SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
+        run: PYTHONPATH=backend python backend/tools/diagnose_staging_learner.py

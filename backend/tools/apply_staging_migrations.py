@@ -161,6 +161,12 @@ INCREMENTAL_PROBES = {
     "0090_supabase_editorial_revision_history_api.sql": (
         "public.edge_api_editorial_revision_history(uuid,uuid,text,uuid,uuid,integer)",
     ),
+    "0091_supabase_editorial_generation_jobs_api.sql": (
+        "public.edge_api_editorial_utc_iso(timestamp with time zone)",
+        "public.edge_api_editorial_job_public(public.editorial_generation_jobs)",
+        "public.edge_api_editorial_generation_jobs(uuid,uuid,text,text,uuid,uuid,uuid,integer)",
+        "public.edge_api_editorial_generation_job(uuid,uuid,text,uuid)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

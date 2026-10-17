@@ -128,7 +128,9 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_quality_valid',
             'edge_api_editorial_concept_token',
             'edge_api_editorial_candidate_problem',
-            'edge_api_editorial_concept_action')""",
+            'edge_api_editorial_concept_action',
+            'edge_api_editorial_revision_token',
+            'edge_api_editorial_revision_action')""",
     }
     result = {}
     for kind, query in queries.items():

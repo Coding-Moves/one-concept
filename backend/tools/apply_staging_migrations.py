@@ -243,6 +243,10 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_candidate_problem(uuid,text,jsonb)",
         "public.edge_api_editorial_concept_action(uuid,uuid,text,uuid,uuid,text,text,text,jsonb,boolean,text)",
     ),
+    "0115_supabase_editorial_revision_actions.sql": (
+        "public.edge_api_editorial_revision_token(uuid)",
+        "public.edge_api_editorial_revision_action(uuid,uuid,text,uuid,uuid,text,text,text,jsonb,uuid,timestamptz,boolean,boolean,boolean,boolean,integer,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

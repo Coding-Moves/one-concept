@@ -107,6 +107,40 @@ test('attestation retry can replay its receipt after concept content changes', a
   assert.equal(JSON.parse(calls.at(-1).init.body).p_body_valid, false);
 });
 
+test('revision actions pass versioned decisions and complete quality through one RPC', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const revisionId = 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272';
+  const bearer = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const resultBody = { revision_id: revisionId, status: 'pending_review',
+    token: 'b'.repeat(64), published_version: null, generation_status: null };
+  const handler = createHandler({ ...config, editorialEnabled: true },
+    async (url, init) => {
+      calls.push({ url, init });
+      return url.endsWith('/auth/v1/user') ? Response.json({ id: userId })
+        : Response.json(resultBody);
+    });
+  const route = `/v1/editorial/revisions/${revisionId}/actions`;
+  const headers = { authorization: `Bearer ${bearer}`, 'content-type': 'application/json' };
+  const command = { request_id: 'af7b4908-fd86-445f-b7d0-7191398e29f2',
+    note: 'Submit this complete revision to a reviewer.',
+    expected_token: 'a'.repeat(64), action: 'comment' };
+  const response = await handler(request(route, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), resultBody);
+  assert.match(calls.at(-1).url, /edge_api_editorial_revision_action$/);
+  const args = JSON.parse(calls.at(-1).init.body);
+  assert.equal(args.p_action, 'comment');
+  assert.equal(args.p_quality, null);
+  assert.equal(args.p_body_valid, true);
+  assert.equal(args.p_fingerprint.length, 64);
+  const invalid = await handler(request(route, { method: 'POST', headers,
+    body: JSON.stringify({ ...command, action: 'approved', quality: {} }) }));
+  assert.equal(invalid.status, 422);
+  assert.equal((await handler(request(route, { method: 'GET', headers }))).status, 405);
+});
+
 test('editorial concept detail exposes a versioned preview without raw snapshots', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';

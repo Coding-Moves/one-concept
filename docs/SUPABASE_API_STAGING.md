@@ -43,9 +43,10 @@ Its authenticated learner smoke `39017399735` passed. Protected SQL run
 Edge deployment `39018413405` succeeded on the same commit. Authenticated
 learner smoke `39018579596` passed. Protected SQL run `39025372409` applied
 and verified migrations 0106–0109; matching Edge deployment `39025589698`
-succeeded at commit `111a560`. Migrations 0110–0116 and the avatar handler are
-only on the candidate branch until their protected staging runs pass. Editorial
-role/MFA and full route checks remain pending, so production clients stay on Railway.
+succeeded at commit `111a560`. Protected SQL run `39028009783` applied and
+verified migrations 0110–0116. The matching Edge deployment `39028248776`
+succeeded at commit `a5ae057`. Hosted avatar, editorial role/MFA, privacy,
+and load checks remain pending, so production clients stay on Railway.
 
 ## Local checks
 
@@ -63,6 +64,28 @@ role/MFA and full route checks remain pending, so production clients stay on Rai
 - For runtime parity, serve the function with the Supabase CLI and an isolated
   local stack when available. TypeScript/Node tests do not prove Deno runtime
   packaging or hosted behavior.
+
+## Staging load evidence
+
+The protected `supabase-api-staging-load-*` job runs
+`backend/tools/staging_api_load.py` only against project
+`zhrulokgngjceqgjkcmw`. It signs in with the dedicated test account, warms its
+daily assignment, then sends 500 authenticated `GET /v1/me/state?compact=true`
+requests through 10 workers. It records p50/p95 request latency, median and
+maximum response bytes, and baseline, sampled peak, and end counts from
+`pg_stat_activity`. The guard validates both the HTTPS project reference and
+the port-5432 PostgreSQL connection before making requests. The job fails on
+non-200 responses, oversize replies, or database sample failure, and prints no
+tokens, URLs, passwords, or response bodies.
+
+This is a 500-request burst by **one** test identity, not a simulation of 500
+independent user profiles or a Free-tier capacity guarantee. For planning,
+500 daily users making one state call each imply about 15,000 state calls in
+30 days; four API calls each imply about 60,000 calls. Record the measured
+burst result and inspect the Supabase project's Function Invocations,
+Function Compute, database size, and connection usage in its dashboard before
+the #418 production switch. Add other app, public profile, and editorial
+traffic to that estimate; the protected probe measures only the state route.
 
 ## Isolated deployment prerequisites
 

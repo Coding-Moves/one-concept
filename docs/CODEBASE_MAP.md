@@ -360,9 +360,10 @@ private diagnostics and restore procedures.
 ## Backend request and service flow
 
 The Supabase API candidate for #416 lives in `supabase/functions/api/` and
-`backend/migrations/0046_supabase_api_basics.sql`–`0056_supabase_learner_state_api.sql`.
+`backend/migrations/0046_supabase_api_basics.sql`–`0088_supabase_editorial_legacy_entries_api.sql`.
 Its current health, topics, concept, notification, push-token, statistics,
-history, saved, subtopic-progress, daily-selection, completion, review, achievement, and startup-state routes are isolated from production
+history, saved, subtopic-progress, daily-selection, completion, review, achievement,
+startup-state, and selected private editorial read routes are isolated from production
 clients. The complete route checklist and
 remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
 `backend/tools/apply_staging_migrations.py` applies ordered migrations only to

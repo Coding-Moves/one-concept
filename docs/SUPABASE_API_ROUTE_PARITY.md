@@ -22,12 +22,12 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | PATCH | `/v1/editorial/reviewers/{user_id}/access` | Owner/reviewer site / role + capability + MFA | Not ported |
 | POST | `/v1/editorial/reviewers/{user_id}/approve-profile` | Owner/reviewer site / manage_reviewers capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/queue` | Owner/reviewer site / role + capability + MFA | Not ported |
-| GET | `/v1/editorial/taxonomy` | Owner/reviewer site / role + capability + MFA | Not ported |
+| GET | `/v1/editorial/taxonomy` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/editorial/revisions/{rid}` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/concepts/{cid}` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET, POST | `/v1/editorial/concepts/{cid}/revisions` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/concepts/{cid}/timeline` | Owner/reviewer site / role + capability + MFA | Not ported |
-| GET | `/v1/editorial/activity` | Owner/reviewer site / role + capability + MFA | Not ported |
+| GET | `/v1/editorial/activity` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | POST | `/v1/editorial/revisions/{rid}/actions` | Owner/reviewer site / role + capability + MFA | Not ported |
 | POST | `/v1/editorial/concepts/{cid}/actions` | Owner/reviewer site / role + capability + MFA | Not ported |
 | POST | `/v1/editorial/generation-requests` | Owner/reviewer site / role + capability + MFA | Not ported |
@@ -39,7 +39,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET, POST | `/v1/editorial/legacy-enrichment-batches` | Owner/reviewer site / role + capability + MFA | Not ported |
 | GET | `/v1/editorial/legacy-enrichment-eligibility/{topic_id}` | Owner/reviewer site / role + capability + MFA | Not ported |
 | POST | `/v1/editorial/legacy-enrichment-batches/{batch_id}/actions` | Owner/reviewer site / role + capability + MFA | Not ported |
-| GET | `/v1/editorial/legacy-enrichment-batches/{batch_id}/entries` | Owner/reviewer site / role + capability + MFA | Not ported |
+| GET | `/v1/editorial/legacy-enrichment-batches/{batch_id}/entries` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
 | GET | `/v1/topics` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET | `/v1/daily` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/daily/complete` | Mobile / verified learner | Candidate; local handler/SQL tests |

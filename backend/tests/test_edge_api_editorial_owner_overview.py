@@ -71,3 +71,5 @@ async def test_owner_overview_matches_backend_window_and_role_gate(api, session)
       has_function_privilege('service_role',
         'public.edge_api_editorial_owner_overview(uuid,uuid,text,date,date)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+    await session.execute(text("delete from auth.users where id=:uid"), {"uid": learner})
+    await session.commit()

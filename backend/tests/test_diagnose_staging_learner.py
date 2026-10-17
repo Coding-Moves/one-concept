@@ -13,6 +13,8 @@ def test_probe_rejects_unquoted_email_and_rolls_back():
     sql = probe.diagnostic_sql("tester@example.invalid")
     assert sql.strip().endswith("rollback;")
     assert "perform public.edge_api_state" in sql
+    assert "set local role service_role;" in sql
+    assert "perform public.edge_api_achievements" in sql
 
 
 def test_probe_redacts_psql_output_and_uses_guarded_connection(monkeypatch, capsys):
@@ -35,12 +37,13 @@ def test_probe_redacts_psql_output_and_uses_guarded_connection(monkeypatch, caps
             "NOTICE: diagnostic=history:ok",
             "NOTICE: diagnostic=saved:ok",
             "NOTICE: diagnostic=stats:ok",
+            "NOTICE: diagnostic=achievements:42501",
             "private provider detail",
         ]))
 
     monkeypatch.setattr(probe.subprocess, "run", fake_run)
     assert probe.main() == 0
-    assert capsys.readouterr().out == "state: 42703\ndaily: ok\nhistory: ok\nsaved: ok\nstats: ok\n"
+    assert capsys.readouterr().out == "state: 42703\ndaily: ok\nhistory: ok\nsaved: ok\nstats: ok\nachievements: 42501\n"
 
 
 def test_probe_rejects_other_project_before_psql(monkeypatch, capsys):

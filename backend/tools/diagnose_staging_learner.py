@@ -14,7 +14,7 @@ from tools.apply_staging_migrations import DEMO_PROJECT_REF, connection_environm
 
 
 EMAIL = re.compile(r"^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+$")
-RESULT = re.compile(r"diagnostic=(state|daily|history|saved|stats|user):((?:[A-Z0-9]{5})|ok|missing)")
+RESULT = re.compile(r"diagnostic=(state|daily|history|saved|stats|achievements|user):((?:[A-Z0-9]{5})|ok|missing)")
 
 
 def diagnostic_sql(email: str) -> str:
@@ -23,15 +23,23 @@ def diagnostic_sql(email: str) -> str:
     # The constrained email alphabet has no SQL quote or backslash.
     return f"""
 begin;
-do $diagnostic$
+do $lookup$
 declare v_user uuid;
 begin
   select id into v_user from auth.users where lower(email) = lower('{email}') limit 1;
   if v_user is null then
     raise notice 'diagnostic=user:missing';
-    return;
+    v_user := '00000000-0000-0000-0000-000000000000'::uuid;
+  else
+    raise notice 'diagnostic=user:ok';
   end if;
-  raise notice 'diagnostic=user:ok';
+  perform set_config('diagnostic.user_id', v_user::text, true);
+end
+$lookup$;
+set local role service_role;
+do $diagnostic$
+declare v_user uuid := current_setting('diagnostic.user_id')::uuid;
+begin
   begin
     perform public.edge_api_state(v_user, true, true, 10, 60, 90, null);
     raise notice 'diagnostic=state:ok';
@@ -52,6 +60,10 @@ begin
     perform public.edge_api_stats(v_user);
     raise notice 'diagnostic=stats:ok';
   exception when others then raise notice 'diagnostic=stats:%', sqlstate; end;
+  begin
+    perform public.edge_api_achievements(v_user);
+    raise notice 'diagnostic=achievements:ok';
+  exception when others then raise notice 'diagnostic=achievements:%', sqlstate; end;
 end
 $diagnostic$;
 rollback;
@@ -80,7 +92,7 @@ def main() -> int:
             return 1
         for label, status in results[1:]:
             print(f"{label}: {status}")
-        return 0 if len(results) == 6 else 1
+        return 0 if len(results) == 7 else 1
     except (KeyError, ValueError, OSError, subprocess.TimeoutExpired):
         print("Staging learner diagnostic setup failed", file=sys.stderr)
         return 1

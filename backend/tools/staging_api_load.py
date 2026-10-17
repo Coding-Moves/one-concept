@@ -6,6 +6,7 @@ Only aggregate timings, sizes, and connection counts are printed.
 """
 
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 from math import ceil
 import os
 import subprocess
@@ -57,7 +58,7 @@ def sample_connections(env: dict[str, str], stop: Event, samples: list[int],
         stop.wait(1)
 
 
-def fetch_state(url: str, key: str, token: str) -> tuple[float, int]:
+def fetch_state(url: str, key: str, token: str) -> tuple[float, int, int]:
     request = urllib.request.Request(
         url, headers={"apikey": key, "authorization": f"Bearer {token}"},
     )
@@ -69,10 +70,25 @@ def fetch_state(url: str, key: str, token: str) -> tuple[float, int]:
             if response.status != 200 or "application/json" not in response.headers.get("content-type", ""):
                 raise ValueError("Staging state returned an unexpected response")
     except urllib.error.HTTPError as exc:
-        raise ValueError(f"Staging state returned HTTP {exc.code}") from None
+        if exc.code != 429:
+            raise ValueError(f"Staging state returned HTTP {exc.code}") from None
+        body = exc.read(MAX_RESPONSE_BYTES + 1)
+        elapsed_ms = (monotonic() - start) * 1000
+        retry = exc.headers.get("retry-after", "")
+        try:
+            detail = json.loads(body)["detail"]
+        except (ValueError, KeyError, TypeError):
+            raise ValueError("Staging rate limit returned invalid JSON") from None
+        if not retry.isdigit() or not isinstance(detail, dict) or \
+                detail.get("code") != "rate_limited" or \
+                detail.get("retry_after_seconds") != int(retry):
+            raise ValueError("Staging rate limit contract changed")
+        if len(body) > MAX_RESPONSE_BYTES:
+            raise ValueError("Staging rate limit response exceeded the bound")
+        return elapsed_ms, len(body), 429
     if len(body) > MAX_RESPONSE_BYTES:
         raise ValueError("Staging state exceeded the response bound")
-    return elapsed_ms, len(body)
+    return elapsed_ms, len(body), 200
 
 
 def run() -> int:
@@ -95,7 +111,8 @@ def run() -> int:
         token = session["access_token"]
         url = f"{base}/functions/v1/api/v1/me/state?compact=true"
         # Warm the assignment and HTTP path before timing the read burst.
-        fetch_state(url, key, token)
+        if fetch_state(url, key, token)[2] != 200:
+            raise ValueError("Staging load account is already rate limited")
         baseline = connection_count(env)
         samples: list[int] = []
         sample_failures: list[Exception] = []
@@ -105,14 +122,18 @@ def run() -> int:
         sampler.start()
         timings: list[float] = []
         sizes: list[int] = []
+        limited = 0
         started = monotonic()
         pool = ThreadPoolExecutor(max_workers=WORKERS)
         try:
             futures = [pool.submit(fetch_state, url, key, token) for _ in range(REQUESTS)]
             for future in as_completed(futures):
-                elapsed_ms, size = future.result()
-                timings.append(elapsed_ms)
-                sizes.append(size)
+                elapsed_ms, size, status = future.result()
+                if status == 429:
+                    limited += 1
+                else:
+                    timings.append(elapsed_ms)
+                    sizes.append(size)
             duration_s = monotonic() - started
         finally:
             pool.shutdown(wait=True, cancel_futures=True)
@@ -120,10 +141,13 @@ def run() -> int:
             sampler.join(timeout=16)
         if sample_failures or not samples:
             raise ValueError("Staging connection sampling failed")
+        if not timings or not limited or len(timings) + limited != REQUESTS:
+            raise ValueError("Staging shared rate limit was not observed")
         ending = connection_count(env)
         print(
-            f"Staging state read burst: {REQUESTS} requests, {WORKERS} workers, "
-            f"{duration_s:.1f}s; latency p50={percentile(timings, .50):.0f}ms "
+            f"Staging state read burst: {REQUESTS} requests, {len(timings)} HTTP 200, "
+            f"{limited} HTTP 429, {WORKERS} workers, {duration_s:.1f}s; "
+            f"successful latency p50={percentile(timings, .50):.0f}ms "
             f"p95={percentile(timings, .95):.0f}ms; response "
             f"median={percentile(sizes, .50):.0f}B max={max(sizes)}B; "
             f"database connections baseline={baseline} sampled_peak={max(samples)} end={ending}"

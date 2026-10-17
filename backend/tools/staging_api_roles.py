@@ -26,7 +26,7 @@ class ProbeFailure(ValueError):
 
 def api_call(url: str, *, label: str, key: str, token: str | None = None,
              method: str = "GET", body: dict | None = None,
-             expected: int = 200) -> object:
+             expected: int | tuple[int, ...] = 200) -> object:
     headers = {"apikey": key}
     if token:
         headers["authorization"] = f"Bearer {token}"
@@ -42,7 +42,8 @@ def api_call(url: str, *, label: str, key: str, token: str | None = None,
     except urllib.error.HTTPError as exc:
         status = exc.code
         result = None
-    if status != expected:
+    allowed = (expected,) if isinstance(expected, int) else expected
+    if status not in allowed:
         raise ProbeFailure(f"{label}: HTTP {status}, expected {expected}")
     return result
 
@@ -154,37 +155,51 @@ def run() -> int:
         api_call(f"{editorial}/me", label="anonymous editorial", key=key, expected=401)
         # Fail before any SQL write if the staging Edge config is still disabled.
         api_call(f"{editorial}/me", label="staging editorial availability",
-                 key=key, token=owner_token, expected=403)
+                 key=key, token=owner_token, expected=(200, 403))
         bootstrap_owner(env, owner_id, reviewer_id, learner_id)
         owner = api_call(f"{editorial}/me", label="owner profile", key=key,
                          token=owner_token)
         if not isinstance(owner, dict) or owner.get("onboarding_required") is not False:
             raise ProbeFailure("Owner profile is not ready")
         reviewer_email = os.environ["SUPABASE_STAGING_REVIEWER_EMAIL"].strip().lower()
-        invitation = api_call(f"{editorial}/reviewers", label="owner invite",
-                              key=key, token=owner_token, method="POST", expected=201,
-                              body={"email": reviewer_email, "capabilities": ["review"]})
-        if not isinstance(invitation, dict) or invitation.get("user_id") != reviewer_id \
-                or not isinstance(invitation.get("version"), int):
-            raise ProbeFailure("Owner invite returned the wrong reviewer")
         reviewer = api_call(f"{editorial}/me", label="reviewer onboarding",
-                            key=key, token=reviewer_token)
-        if not isinstance(reviewer, dict) or reviewer.get("onboarding_required") is not True:
-            raise ProbeFailure("Reviewer onboarding was not required")
-        requested = api_call(f"{editorial}/me/profile", label="reviewer name request",
-                             key=key, token=reviewer_token, method="PATCH",
-                             body={"expected_version": invitation["version"],
-                                   "registered_name": "Staging Reviewer"})
-        if not isinstance(requested, dict) or not isinstance(requested.get("version"), int):
-            raise ProbeFailure("Reviewer name request failed")
-        approved = api_call(f"{editorial}/reviewers/{reviewer_id}/approve-profile",
-                            label="owner name approval", key=key, token=owner_token,
-                            method="POST", body={"expected_version": requested["version"]})
-        if not isinstance(approved, dict) or approved.get("approved_name") != "Staging Reviewer":
-            raise ProbeFailure("Owner name approval failed")
-        api_call(f"{editorial}/queue", label="reviewer MFA gate", key=key,
-                 token=reviewer_token, expected=403)
-        relax_reviewer_mfa(env, reviewer_id)
+                            key=key, token=reviewer_token, expected=(200, 403))
+        if reviewer is None:
+            invitation = api_call(f"{editorial}/reviewers", label="owner invite",
+                                  key=key, token=owner_token, method="POST", expected=201,
+                                  body={"email": reviewer_email, "capabilities": ["review"]})
+            if not isinstance(invitation, dict) or invitation.get("user_id") != reviewer_id:
+                raise ProbeFailure("Owner invite returned the wrong reviewer")
+            reviewer = api_call(f"{editorial}/me", label="reviewer onboarding",
+                                key=key, token=reviewer_token)
+        if not isinstance(reviewer, dict) or not isinstance(reviewer.get("member"), dict):
+            raise ProbeFailure("Reviewer membership is unavailable")
+        member = reviewer["member"]
+        capabilities = member.get("capabilities")
+        if member.get("user_id") != reviewer_id or not isinstance(capabilities, list) \
+                or "review" not in capabilities or not isinstance(member.get("version"), int):
+            raise ProbeFailure("Reviewer membership differs from the test role")
+        if member.get("requested_name") is None:
+            requested = api_call(f"{editorial}/me/profile", label="reviewer name request",
+                                 key=key, token=reviewer_token, method="PATCH",
+                                 body={"expected_version": member["version"],
+                                       "registered_name": "Staging Reviewer"})
+            if not isinstance(requested, dict) or requested.get("requested_name") != "Staging Reviewer":
+                raise ProbeFailure("Reviewer name request failed")
+            member = requested
+        if member.get("requested_name") != "Staging Reviewer":
+            raise ProbeFailure("Reviewer name differs from the test setup")
+        if member.get("approved_name") != "Staging Reviewer":
+            approved = api_call(f"{editorial}/reviewers/{reviewer_id}/approve-profile",
+                                label="owner name approval", key=key, token=owner_token,
+                                method="POST", body={"expected_version": member["version"]})
+            if not isinstance(approved, dict) or approved.get("approved_name") != "Staging Reviewer":
+                raise ProbeFailure("Owner name approval failed")
+            member = approved
+        if member.get("require_mfa") is True:
+            api_call(f"{editorial}/queue", label="reviewer MFA gate", key=key,
+                     token=reviewer_token, expected=403)
+            relax_reviewer_mfa(env, reviewer_id)
         queue = api_call(f"{editorial}/queue", label="reviewer queue", key=key,
                          token=reviewer_token)
         if not isinstance(queue, dict) or not isinstance(queue.get("items"), list):

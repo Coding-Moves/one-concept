@@ -197,7 +197,9 @@ def test_incremental_probe_accepts_all_reviewed_signatures_without_accepting_sql
         assert runner.function_presence({}, (signature,)) == (True,)
     assert "public.edge_api_new_profile_token()" in signatures
     assert "public.edge_api_saved(uuid,timestamp with time zone,uuid,integer)" in signatures
-    assert all(call[-1].startswith("select to_regprocedure('public.edge_api_") for call in calls)
+    assert all(call[-1].startswith("select to_regprocedure('public.edge_api_")
+               or call[-1].startswith("select coalesce((select prosecdef from pg_proc")
+               for call in calls)
     with pytest.raises(ValueError, match="Unreviewed"):
         runner.function_presence({}, ("public.edge_api_new_profile_token();drop table users",))
     assert len(calls) == len(signatures)
@@ -279,4 +281,10 @@ async def test_incremental_signatures_resolve_after_ordered_migrations(session):
         signature for probes in runner.INCREMENTAL_PROBES.values() for signature in probes
     ))
     for signature in signatures:
-        assert (await session.execute(text("select to_regprocedure(:signature) is not null"), {"signature": signature})).scalar_one()
+        if signature.startswith("definer:"):
+            assert (await session.execute(text("""select prosecdef from pg_proc
+                where oid = to_regprocedure(:signature)"""),
+                {"signature": signature[8:]})).scalar_one()
+        else:
+            assert (await session.execute(text("select to_regprocedure(:signature) is not null"),
+                {"signature": signature})).scalar_one()

@@ -91,7 +91,8 @@ async def snapshot(connection) -> dict:
             'edge_api_complete_daily','edge_api_achievements',
             'edge_api_achievements_seen','edge_api_review_payload',
             'edge_api_choose_review','edge_api_complete_review',
-            'edge_api_state')""",
+            'edge_api_state','edge_api_weekly_quiz','edge_api_subtopic_quiz',
+            'edge_api_editorial_me')""",
     }
     result = {}
     for kind, query in queries.items():

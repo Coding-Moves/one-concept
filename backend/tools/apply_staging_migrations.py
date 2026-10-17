@@ -138,6 +138,13 @@ INCREMENTAL_PROBES = {
     "0084_supabase_editorial_profile_approval_api.sql": (
         "public.edge_api_editorial_approve_profile(uuid,uuid,text,uuid,integer)",
     ),
+    "0085_supabase_auth_read_rpc_privileges.sql": (
+        "definer:public.edge_api_daily(uuid,integer,integer,integer,date)",
+        "definer:public.edge_api_achievements(uuid)",
+        "definer:public.edge_api_weekly_quiz(uuid)",
+        "definer:public.edge_api_subtopic_quiz(uuid,uuid)",
+        "definer:public.edge_api_editorial_me(uuid,uuid,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select
@@ -311,7 +318,11 @@ def function_presence(env: dict[str, str], signatures: tuple[str, ...]) -> tuple
     reviewed.update(signature for probes in INCREMENTAL_PROBES.values() for signature in probes)
     if not signatures or any(item not in reviewed for item in signatures):
         raise ValueError("Unreviewed incremental migration probe")
-    expressions = ", ".join(f"to_regprocedure('{item}') is not null" for item in signatures)
+    expressions = ", ".join(
+        f"coalesce((select prosecdef from pg_proc where oid = to_regprocedure('{item[8:]}')), false)"
+        if item.startswith("definer:") else f"to_regprocedure('{item}') is not null"
+        for item in signatures
+    )
     result = psql(env, "-qAt", "-F", "|", "-c", f"select {expressions}")
     values = result.stdout.strip().split("|")
     if result.returncode != 0 or len(values) != len(signatures) or any(value not in ("t", "f") for value in values):

@@ -89,6 +89,7 @@ claims as completed work.
 - Migration 0101 ports the owner overview with the FastAPI UTC date window, historical learner completion counts, review and queue metrics, and role/MFA checks. Focused disposable-PostgreSQL parity and schema contract tests, Edge TypeScript, and 71 handler tests passed. Candidate parity is 59 of 73 paths, with 14 remaining; migrations 0097–0101 are not staged.
 - Migration 0102 ports the owner reviewer metrics page with bounded UUID pagination, historical approval/publication counts, attribution snapshots, and private evidence protection. Local FastAPI/SQL parity, privilege and role/MFA checks, schema contract, Edge TypeScript, and 72 handler tests passed. Candidate parity is 60 of 73 paths, with 13 remaining; migrations 0097–0102 are not staged.
 - Migration 0103 ports the owner event feed with bounded UTC cursor pagination and allowlisted service, review, workflow, and account event fields. Local FastAPI/SQL filter/cursor parity, role/MFA and privilege checks, schema contract, Edge TypeScript, and 73 handler tests passed. Candidate parity is 61 of 73 paths, with 12 remaining; migrations 0097–0103 are not staged.
+- Migration 0104 ports versioned reviewer access changes with account locking, audit evidence, MFA, and last confirmed administrator protection. Focused disposable-PostgreSQL, schema contract, Edge TypeScript, and 74 handler tests passed. Candidate parity is 62 of 73 paths, with 11 remaining; migrations 0097–0104 are not staged.
 
 ### v1.10.14 production migration ledger — 2026-10-10
 

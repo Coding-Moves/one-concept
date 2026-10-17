@@ -161,7 +161,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_stage_revision' | 'edge_api_editorial_revision_generation' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_stage_revision' | 'edge_api_editorial_revision_generation' | 'edge_api_editorial_concept_action' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -463,6 +463,44 @@ function generationCancelInput(body: JsonObject): {
   }
   return { requestId: body.request_id.toLowerCase(), note: body.note,
     expectedToken: body.expected_token };
+}
+
+function editorialQuality(value: unknown): JsonObject | null {
+  if (value === undefined || value === null) return null;
+  if (typeof value !== 'object' || Array.isArray(value)) {
+    throw new ClientBodyError(422, 'Invalid quality checklist');
+  }
+  const quality = value as JsonObject;
+  const checks = ['factual_accuracy', 'usefulness', 'clarity',
+    'topic_subtopic_accuracy', 'example_quality', 'flashcard_quality',
+    'mcq_quality', 'references_checked'];
+  if (Object.keys(quality).length !== 9 || checks.some(key => quality[key] !== true)
+    || typeof quality.sensitive_topic_handling !== 'string'
+    || !['not_applicable', 'reviewed'].includes(quality.sensitive_topic_handling)) {
+    throw new ClientBodyError(422, 'Complete the quality checklist before approval');
+  }
+  return quality;
+}
+
+function conceptActionInput(body: JsonObject): {
+  requestId: string; note: string; expectedToken: string;
+  action: 'comment' | 'retire' | 'attest'; quality: JsonObject | null;
+} {
+  if (Object.keys(body).some(key => !['request_id', 'note', 'expected_token', 'action', 'quality'].includes(key))
+    || typeof body.request_id !== 'string' || !UUID.test(body.request_id)
+    || typeof body.note !== 'string' || Array.from(body.note).length < 10
+    || Array.from(body.note).length > 4000
+    || typeof body.expected_token !== 'string' || !/^[a-f0-9]{64}$/.test(body.expected_token)
+    || !['comment', 'retire', 'attest'].includes(String(body.action))) {
+    throw new ClientBodyError(422, 'Invalid concept action');
+  }
+  const quality = editorialQuality(body.quality);
+  if ((body.action === 'attest') !== (quality !== null)) {
+    throw new ClientBodyError(422, 'Invalid concept action');
+  }
+  return { requestId: body.request_id.toLowerCase(), note: body.note,
+    expectedToken: body.expected_token,
+    action: body.action as 'comment' | 'retire' | 'attest', quality };
 }
 
 function legacyBatchActionInput(body: JsonObject): ReturnType<typeof generationCancelInput> & { action: string } {
@@ -929,6 +967,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialQueue = path === '/v1/editorial/queue';
     const editorialHistory = /^\/v1\/editorial\/concepts\/([^/]+)\/revisions$/.exec(path);
     const editorialConcept = /^\/v1\/editorial\/concepts\/([^/]+)$/.exec(path);
+    const editorialConceptAction = /^\/v1\/editorial\/concepts\/([^/]+)\/actions$/.exec(path);
     const editorialRevision = /^\/v1\/editorial\/revisions\/([^/]+)$/.exec(path);
     const editorialRevisionGeneration = /^\/v1\/editorial\/revisions\/([^/]+)\/generation-requests$/.exec(path);
     const editorialTimeline = /^\/v1\/editorial\/concepts\/([^/]+)\/timeline$/.exec(path);
@@ -954,7 +993,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialApproveProfile = /^\/v1\/editorial\/reviewers\/([^/]+)\/approve-profile$/.exec(path);
     const editorialReviewerAccess = /^\/v1\/editorial\/reviewers\/([^/]+)\/access$/.exec(path);
     const editorial = editorialMe || editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue
-      || editorialHistory !== null || editorialConcept !== null || editorialRevision !== null
+      || editorialHistory !== null || editorialConcept !== null || editorialConceptAction !== null
+      || editorialRevision !== null
       || editorialRevisionGeneration !== null
       || editorialTimeline !== null
       || editorialJobs || editorialGenerationRequests || editorialJob !== null || editorialCancelJob !== null || editorialSupply !== null
@@ -999,7 +1039,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           || editorialNotificationPolicy || editorialReviewerAccess
           ? request.method === 'PATCH'
         : editorialApproveProfile || editorialNotificationRetry || editorialCancelJob || editorialLegacyAction
-          || editorialRevisionGeneration
+          || editorialRevisionGeneration || editorialConceptAction
           || editorialGenerationRequests
           ? request.method === 'POST'
         : pushToken
@@ -1051,6 +1091,57 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         if (!config.editorialEnabled) return editorialResponse({ detail: 'Editorial access is disabled' }, 503, cors);
         const claims = editorialClaims(token, userId);
         if (!claims) return editorialResponse({ detail: 'A current Supabase session is required' }, 401, cors, true);
+        if (editorialConceptAction) {
+          if (!UUID.test(editorialConceptAction[1])) {
+            return editorialResponse({ detail: 'Invalid concept ID' }, 422, cors);
+          }
+          const conceptId = editorialConceptAction[1].toLowerCase();
+          const input = conceptActionInput((await readJson(request))!);
+          let bodyValid = true;
+          if (input.action === 'attest') {
+            const source = await rpc('edge_api_editorial_concept_detail_source', {
+              p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
+              p_concept_id: conceptId,
+            }, config, fetcher) as JsonObject | null;
+            if (!source) return unavailable(cors);
+            const preview = typeof source.error === 'string' ? null : await conceptPreview(source);
+            bodyValid = Boolean(preview && (preview.validation as JsonObject).valid);
+          }
+          const data = await rpc('edge_api_editorial_concept_action', {
+            p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
+            p_concept_id: conceptId, p_request_id: input.requestId,
+            p_note: input.note, p_expected_token: input.expectedToken,
+            p_action: input.action, p_quality: input.quality, p_body_valid: bodyValid,
+            p_fingerprint: await editorialDigest({ resource: `concept:${conceptId}`,
+              command: { request_id: input.requestId, note: input.note,
+                expected_token: input.expectedToken, action: input.action,
+                quality: input.quality } }),
+          }, config, fetcher) as JsonObject | null;
+          if (data === null) return unavailable(cors);
+          if (typeof data.error === 'string') {
+            const denial: Record<string, [number, string]> = {
+              session_required: [401, 'A confirmed account and current session are required'],
+              unavailable: [403, 'Editorial access is unavailable'],
+              permission: [403, 'Editorial permission required'],
+              profile_required: [403, 'Complete profile setup and obtain name approval'],
+              mfa_required: [403, 'Complete MFA verification for editorial actions'],
+              invalid: [422, 'Invalid concept action'],
+              concept_not_found: [404, 'Concept not found'],
+              receipt_conflict: [409, 'Request ID was already used for a different command'],
+            };
+            if (data.error === 'stale_revision') return editorialResponse({ detail: {
+              code: 'stale_revision', message: 'Content or review state changed. Reload before acting.',
+            } }, 409, cors);
+            if (data.error === 'review_conflict' && typeof data.message === 'string') {
+              return editorialResponse({ detail: { code: 'review_conflict',
+                message: data.message } }, 409, cors);
+            }
+            const mapped = denial[data.error];
+            return mapped ? editorialResponse({ detail: mapped[1] }, mapped[0], cors)
+              : unavailable(cors);
+          }
+          return editorialResponse(data, 200, cors);
+        }
         if (editorialRevisionGeneration) {
           if (!UUID.test(editorialRevisionGeneration[1])) {
             return editorialResponse({ detail: 'Invalid revision ID' }, 422, cors);

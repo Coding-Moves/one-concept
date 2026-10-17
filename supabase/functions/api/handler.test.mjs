@@ -41,6 +41,72 @@ test('editorial correction request reaches the atomic job RPC with the receipt f
     headers: { authorization: `Bearer ${bearer}` } }))).status, 405);
 });
 
+test('editorial concept actions validate quality and delegate audited mutations', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';
+  const bearer = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const expected = { concept_id: conceptId, status: 'archived',
+    content_version: 1, token: 'b'.repeat(64) };
+  const handler = createHandler({ ...config, editorialEnabled: true },
+    async (url, init) => {
+      calls.push({ url, init });
+      return url.endsWith('/auth/v1/user') ? Response.json({ id: userId })
+        : Response.json(expected);
+    });
+  const route = `/v1/editorial/concepts/${conceptId}/actions`;
+  const headers = { authorization: `Bearer ${bearer}`, 'content-type': 'application/json' };
+  const command = { request_id: 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272',
+    note: 'Retire the superseded lesson with an audit note.',
+    expected_token: 'a'.repeat(64), action: 'retire' };
+  const result = await handler(request(route, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), expected);
+  assert.match(calls.at(-1).url, /edge_api_editorial_concept_action$/);
+  const args = JSON.parse(calls.at(-1).init.body);
+  assert.equal(args.p_action, 'retire');
+  assert.equal(args.p_quality, null);
+  assert.equal(args.p_fingerprint.length, 64);
+  const incomplete = await handler(request(route, { method: 'POST', headers,
+    body: JSON.stringify({ ...command, action: 'attest', quality: {} }) }));
+  assert.equal(incomplete.status, 422);
+  assert.equal((await handler(request(route, { method: 'GET', headers }))).status, 405);
+});
+
+test('attestation retry can replay its receipt after concept content changes', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';
+  const bearer = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const oldReceipt = { concept_id: conceptId, status: 'published',
+    content_version: 1, token: 'b'.repeat(64) };
+  const handler = createHandler({ ...config, editorialEnabled: true },
+    async (url, init) => {
+      calls.push({ url, init });
+      if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+      if (url.endsWith('edge_api_editorial_concept_detail_source')) {
+        return Response.json({ error: 'concept_not_found' });
+      }
+      return Response.json(oldReceipt);
+    });
+  const quality = Object.fromEntries([
+    'factual_accuracy', 'usefulness', 'clarity', 'topic_subtopic_accuracy',
+    'example_quality', 'flashcard_quality', 'mcq_quality', 'references_checked',
+  ].map(key => [key, true]));
+  quality.sensitive_topic_handling = 'reviewed';
+  const result = await handler(request(`/v1/editorial/concepts/${conceptId}/actions`, {
+    method: 'POST', headers: { authorization: `Bearer ${bearer}`,
+      'content-type': 'application/json' },
+    body: JSON.stringify({ request_id: 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272',
+      note: 'Authenticated attestation for the legacy lesson.',
+      expected_token: 'a'.repeat(64), action: 'attest', quality }),
+  }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), oldReceipt);
+  assert.equal(JSON.parse(calls.at(-1).init.body).p_body_valid, false);
+});
+
 test('editorial concept detail exposes a versioned preview without raw snapshots', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';

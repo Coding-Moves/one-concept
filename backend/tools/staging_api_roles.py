@@ -7,6 +7,7 @@ their name, and the reviewer opens the queue. No identities or tokens are logged
 
 import json
 import os
+import re
 import subprocess
 import sys
 import urllib.error
@@ -134,6 +135,40 @@ commit;
     staging_sql(env, sql, "reviewer MFA test setup")
 
 
+def check_public_profile_privacy(base: str, key: str, token: str) -> None:
+    api = f"{base}/functions/v1/api"
+    settings_url = f"{api}/v1/me/profile-sharing"
+    original = api_call(settings_url, label="private sharing settings", key=key, token=token)
+    if not isinstance(original, dict) or original.get("enabled") is not False \
+            or not isinstance(original.get("version"), int):
+        raise ProbeFailure("Dedicated owner profile must start with sharing disabled")
+    enabled = api_call(settings_url, label="enable private-field test", key=key,
+                       token=token, method="PUT",
+                       body={"version": original["version"], "enabled": True})
+    if not isinstance(enabled, dict) or not isinstance(enabled.get("version"), int):
+        raise ProbeFailure("Sharing change returned no version")
+    old_token = None
+    try:
+        path = enabled.get("public_path")
+        if not isinstance(path, str) or not re.fullmatch(r"/p/[A-Za-z0-9_-]{43}", path):
+            raise ProbeFailure("Sharing returned no private public token")
+        old_token = path[3:]
+        visible = api_call(f"{api}/v1/public-profiles/{old_token}",
+                           label="anonymous public profile", key=key)
+        if visible != {"achievements": []}:
+            raise ProbeFailure("Unselected private profile fields were exposed")
+    finally:
+        disabled = api_call(settings_url, label="disable public profile", key=key,
+                            token=token, method="PUT",
+                            body={"version": enabled["version"], "enabled": False})
+        if not isinstance(disabled, dict) or disabled.get("enabled") is not False:
+            raise ProbeFailure("Public profile did not turn off")
+    if old_token is None:
+        raise ProbeFailure("Public profile token was not checked")
+    api_call(f"{api}/v1/public-profiles/{old_token}", label="revoked public link",
+             key=key, expected=404)
+
+
 def run() -> int:
     try:
         staging_ref = os.environ["STAGING_PROJECT_REF"]
@@ -210,7 +245,8 @@ def run() -> int:
                  key=key, token=reviewer_token, expected=403)
         api_call(f"{editorial}/me", label="learner editorial isolation",
                  key=key, token=learner_token, expected=403)
-        print("Staging owner invite, reviewer onboarding, MFA denial, role isolation, and queue passed")
+        check_public_profile_privacy(base, key, owner_token)
+        print("Staging owner invite, reviewer onboarding, MFA denial, role isolation, queue, and public privacy passed")
         return 0
     except (KeyError, ProbeFailure, ValueError, urllib.error.URLError,
             subprocess.TimeoutExpired, TimeoutError, OSError) as exc:

@@ -36,3 +36,28 @@ def test_role_probe_refuses_production_before_sign_in(monkeypatch, capsys):
                         lambda *_args: pytest.fail("Auth must not be called"))
     assert staging_api_roles.run() == 1
     assert "private-connection" not in capsys.readouterr().err
+
+
+def test_public_profile_probe_disables_share_and_checks_revoked_token(monkeypatch):
+    token = "a" * 43
+    calls = []
+
+    def fake_api(url, **kwargs):
+        calls.append((url, kwargs))
+        if kwargs["label"] == "private sharing settings":
+            return {"enabled": False, "version": 0}
+        if kwargs["label"] == "enable private-field test":
+            return {"enabled": True, "version": 1, "public_path": f"/p/{token}"}
+        if kwargs["label"] == "anonymous public profile":
+            return {"achievements": []}
+        if kwargs["label"] == "disable public profile":
+            return {"enabled": False, "version": 2}
+        assert kwargs["label"] == "revoked public link"
+        assert kwargs["expected"] == 404
+        return None
+
+    monkeypatch.setattr(staging_api_roles, "api_call", fake_api)
+    staging_api_roles.check_public_profile_privacy("https://staging.invalid", "public", "jwt")
+    assert len(calls) == 5
+    assert calls[2][1].get("token") is None
+    assert calls[3][1]["body"] == {"version": 1, "enabled": False}

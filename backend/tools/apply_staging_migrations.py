@@ -208,6 +208,10 @@ INCREMENTAL_PROBES = {
     "0104_supabase_editorial_reviewer_access_api.sql": (
         "public.edge_api_editorial_reviewer_access(uuid,uuid,text,uuid,integer,text,text[])",
     ),
+    "0105_supabase_editorial_reviewer_invite_api.sql": (
+        "public.edge_api_editorial_invite_prepare(uuid,uuid,text,text)",
+        "public.edge_api_editorial_invite_finish(uuid,uuid,text,text,uuid,text[])",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

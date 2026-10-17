@@ -21,6 +21,7 @@ export type ApiConfig = {
   editorialEmailSenderConfigured?: boolean;
   editorialEmailTestRecipientsConfigured?: boolean;
   editorialEmailDailyCap?: number;
+  editorialInviteRedirectUrl?: string;
   environment?: string;
   ownerTelemetryEnabled?: boolean;
   editorialAutoCorrectionEnabled?: boolean;
@@ -157,7 +158,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -174,6 +175,43 @@ async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_conce
   } catch { throw new UpstreamError('database', 0); }
   if (!result.ok) throw new UpstreamError('database', result.status);
   return result.json();
+}
+
+function invitationRedirect(config: ApiConfig): string | null {
+  const raw = config.editorialInviteRedirectUrl ?? '';
+  let url: URL;
+  try { url = new URL(raw); }
+  catch { return null; }
+  const local = ['localhost', '127.0.0.1'].includes(url.hostname)
+    && !(config.environment ?? '').toLowerCase().startsWith('prod');
+  if (!url.hostname || url.username || url.password || url.search || url.hash
+    || (url.protocol !== 'https:' && !(local && url.protocol === 'http:'))
+    || !config.allowedOrigins.includes(url.origin)) return null;
+  return raw;
+}
+
+async function inviteAuthUser(email: string, redirect: string,
+  config: ApiConfig, fetcher: Fetcher): Promise<string | null> {
+  try {
+    const url = new URL(`${config.supabaseUrl}/auth/v1/invite`);
+    url.searchParams.set('redirect_to', redirect);
+    const result = await fetcher(url.toString(), {
+      method: 'POST',
+      headers: { apikey: config.serviceRoleKey,
+        authorization: `Bearer ${config.serviceRoleKey}`,
+        'content-type': 'application/json' },
+      body: JSON.stringify({ email }),
+      signal: AbortSignal.timeout(10000),
+      redirect: 'error',
+    });
+    if (!result.ok) return null;
+    const invited: unknown = await result.json();
+    if (typeof invited !== 'object' || invited === null || Array.isArray(invited)) return null;
+    const identity = invited as JsonObject;
+    return typeof identity.id === 'string' && UUID.test(identity.id)
+      && typeof identity.email === 'string' && identity.email.toLowerCase() === email
+      ? identity.id : null;
+  } catch { return null; }
 }
 
 async function readJson(request: Request, optional = false): Promise<JsonObject | null> {
@@ -389,6 +427,23 @@ function editorialAccessInput(body: JsonObject): {
   }
   return { version: body.expected_version, status: body.status,
     capabilities: [...new Set(body.capabilities)].sort() };
+}
+
+function editorialInviteInput(body: JsonObject): { email: string; capabilities: string[] } {
+  const allowed = ['email', 'capabilities'];
+  const caps = ['review', 'approve', 'publish', 'request_generation', 'manage_reviewers'];
+  if (Object.keys(body).some(key => !allowed.includes(key))
+    || typeof body.email !== 'string' || [...body.email].length > 254) {
+    throw new ClientBodyError(422, 'Invalid reviewer invitation');
+  }
+  const email = body.email.trim().toLowerCase();
+  const capabilities = body.capabilities === undefined ? ['review'] : body.capabilities;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email) || /\p{C}/u.test(email)
+    || !Array.isArray(capabilities) || capabilities.length > 5
+    || !capabilities.every(cap => typeof cap === 'string' && caps.includes(cap))) {
+    throw new ClientBodyError(422, 'Invalid reviewer invitation');
+  }
+  return { email, capabilities: [...new Set(capabilities)].sort() };
 }
 
 function editorialPolicyInput(body: JsonObject): {
@@ -841,6 +896,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? request.method === 'PUT'
         : profile
           ? request.method === 'PATCH'
+        : editorialReviewers
+          ? request.method === 'GET' || request.method === 'POST'
         : editorialProfile || editorialTimezone || editorialAuthenticator
           || editorialNotificationPolicy || editorialReviewerAccess
           ? request.method === 'PATCH'
@@ -895,6 +952,50 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         if (!config.editorialEnabled) return editorialResponse({ detail: 'Editorial access is disabled' }, 503, cors);
         const claims = editorialClaims(token, userId);
         if (!claims) return editorialResponse({ detail: 'A current Supabase session is required' }, 401, cors, true);
+        if (editorialReviewers && request.method === 'POST') {
+          const input = editorialInviteInput((await readJson(request))!);
+          const identity = { p_user_id: userId, p_session_id: claims.sessionId,
+            p_aal: claims.aal, p_email: input.email };
+          const failure = (data: JsonObject): Response | null => {
+            const detail: Record<string, [number, string]> = {
+              session_required: [401, 'A confirmed account and current session are required'],
+              unavailable: [403, 'Editorial access is unavailable'],
+              permission: [403, 'Editorial permission required'],
+              profile_required: [403, 'Complete profile setup and obtain name approval'],
+              mfa_required: [403, 'Complete MFA verification for editorial actions'],
+              invalid: [422, 'Invalid reviewer invitation'],
+              duplicate_identity: [409, 'Resolve duplicate Auth email identities before inviting'],
+              reviewer_exists: [409, 'Reviewer already exists; use their versioned access settings'],
+              identity_not_ready: [502, 'Invited identity is not yet available; retry after checking Auth'],
+            };
+            if (typeof data.error !== 'string') return null;
+            const mapped = detail[data.error];
+            return mapped ? editorialResponse({ detail: mapped[1] }, mapped[0], cors)
+              : unavailable(cors);
+          };
+          const prepared = await rpc('edge_api_editorial_invite_prepare', identity,
+            config, fetcher) as JsonObject | null;
+          if (prepared === null) return unavailable(cors);
+          const prepareFailure = failure(prepared);
+          if (prepareFailure) return prepareFailure;
+          let invitedId = prepared.user_id;
+          if (prepared.needs_invite === true) {
+            const redirect = invitationRedirect(config);
+            if (!redirect) return editorialResponse({ detail:
+              'Configure an exact permitted editorial invitation callback' }, 503, cors);
+            invitedId = await inviteAuthUser(input.email, redirect, config, fetcher);
+            if (!invitedId) return editorialResponse({ detail:
+              'Invitation not confirmed; inspect Auth before retrying' }, 502, cors);
+          }
+          if (typeof invitedId !== 'string' || !UUID.test(invitedId)) return unavailable(cors);
+          const result = await rpc('edge_api_editorial_invite_finish', {
+            ...identity, p_invited_id: invitedId, p_capabilities: input.capabilities,
+          }, config, fetcher) as JsonObject | null;
+          if (result === null) return unavailable(cors);
+          const finishFailure = failure(result);
+          if (finishFailure) return finishFailure;
+          return editorialResponse(result, 201, cors);
+        }
         const cursor = requestUrl.searchParams.get('cursor');
         const topicId = requestUrl.searchParams.get('topic_id');
         const rawLimit = requestUrl.searchParams.get('limit') ?? (editorialTaxonomy ? '100' : '25');

@@ -43,6 +43,7 @@ Deno.serve(createHandler({
   editorialEmailTestRecipientsConfigured: Boolean((Deno.env.get('EDITORIAL_EMAIL_TEST_RECIPIENTS') ?? '')
     .split(',').map(value => value.trim()).filter(Boolean).length),
   editorialEmailDailyCap: optionalInteger('EDITORIAL_EMAIL_DAILY_CAP', 40),
+  editorialInviteRedirectUrl: Deno.env.get('EDITORIAL_INVITE_REDIRECT_URL') ?? '',
   environment: Deno.env.get('ENVIRONMENT') ?? 'development',
   ownerTelemetryEnabled: Deno.env.get('OWNER_TELEMETRY_ENABLED') === 'true',
   editorialAutoCorrectionEnabled: Deno.env.get('EDITORIAL_AUTO_CORRECTION_ENABLED') !== 'false',

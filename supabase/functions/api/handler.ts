@@ -1,6 +1,7 @@
 /** Candidate Railway-compatible JSON routes. No production client uses these yet. */
 
 import { conceptPreview, editorialDigest, revisionPreview, stageLessonBody } from './editorial_preview.ts';
+import { AvatarInputError, normalizeAvatar } from './avatar_image.ts';
 
 export type ApiConfig = {
   supabaseUrl: string;
@@ -32,6 +33,7 @@ export type ApiConfig = {
 };
 
 type Fetcher = typeof fetch;
+type AvatarNormalizer = (bytes: Uint8Array, contentType: string) => Promise<Uint8Array>;
 type AuthUser = { id?: unknown };
 type JsonObject = Record<string, unknown>;
 
@@ -161,7 +163,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_stage_revision' | 'edge_api_editorial_revision_generation' | 'edge_api_editorial_concept_action' | 'edge_api_editorial_revision_action' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_set_avatar' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_stage_revision' | 'edge_api_editorial_revision_generation' | 'edge_api_editorial_concept_action' | 'edge_api_editorial_revision_action' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -879,6 +881,50 @@ async function deleteOldAvatar(ref: unknown, userId: string, config: ApiConfig, 
   } catch { /* A failed old-object cleanup must not undo the saved profile. */ }
 }
 
+async function readAvatar(request: Request): Promise<Uint8Array> {
+  const length = request.headers.get('content-length');
+  if (length !== null && (!/^\d+$/.test(length) || Number(length) > 5 * 1024 * 1024)) {
+    throw new AvatarInputError(413, 'Choose an image smaller than 5 MB');
+  }
+  if (!request.body) throw new AvatarInputError(422, 'Choose a valid photo in JPEG, PNG, or WebP format');
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.length;
+    if (total > 5 * 1024 * 1024) {
+      await reader.cancel();
+      throw new AvatarInputError(413, 'Choose an image smaller than 5 MB');
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
+  return bytes;
+}
+
+async function uploadAvatar(key: string, bytes: Uint8Array,
+  config: ApiConfig, fetcher: Fetcher): Promise<boolean> {
+  try {
+    const result = await fetcher(config.supabaseUrl + '/storage/v1/object/profile-avatars/' + key, {
+      method: 'POST',
+      headers: {
+        apikey: config.serviceRoleKey,
+        authorization: 'Bearer ' + config.serviceRoleKey,
+        'content-type': 'image/jpeg',
+        'x-upsert': 'false',
+      },
+      body: new Blob([new Uint8Array(bytes)], { type: 'image/jpeg' }),
+      signal: AbortSignal.timeout(15000),
+      redirect: 'error',
+    });
+    return result.ok;
+  } catch { return false; }
+}
+
 function historyCursor(query: URLSearchParams): string | null {
   const raw = query.get('cursor');
   if (raw === null) return null;
@@ -948,7 +994,8 @@ function noContent(cors: Headers): Response {
   return new Response(null, { status: 204, headers });
 }
 
-export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (request: Request) => Promise<Response> {
+export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
+  avatarNormalizer: AvatarNormalizer = normalizeAvatar): (request: Request) => Promise<Response> {
   const url = new URL(config.supabaseUrl);
   if (url.protocol !== 'https:' && url.hostname !== 'localhost' && url.hostname !== '127.0.0.1') {
     throw new Error('SUPABASE_URL must use HTTPS');
@@ -1055,6 +1102,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       || editorialReviewerAccess !== null;
     const state = path === '/v1/me/state';
     const profile = path === '/v1/me';
+    const avatar = path === '/v1/me/avatar';
     const followedTopics = path === '/v1/me/topics';
     const history = path === '/v1/me/history';
     const saved = path === '/v1/me/saved';
@@ -1064,10 +1112,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const achievementsSeen = path === '/v1/me/achievements/seen';
     const daily = path === '/v1/daily';
     const dailyComplete = path === '/v1/daily/complete';
-    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !weeklyQuiz && !editorial && weeklyAttempt === null && subtopicQuiz === null && subtopicAttempt === null && !state && !profile && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
+    if (path !== '/health' && path !== '/v1/topics' && !notifications && !pushToken && !stats && !analytics && !sharing && !connectionSettings && !connectionList && !relationshipList && !weeklyQuiz && !editorial && weeklyAttempt === null && subtopicQuiz === null && subtopicAttempt === null && !state && !profile && !avatar && !followedTopics && !history && !saved && !subtopicProgress && !subtopicSeen && !achievements && !achievementsSeen && !daily && !dailyComplete && concept === null && publicProfile === null && connectionStatus === null && connectionBlock === null && connectionAction === null && connectionUnblock === null && relationshipStatus === null && relationshipBlock === null && relationshipRemove === null && relationshipBlockById === null && reviewComplete === null) {
       return httpError(404, 'Not Found', cors);
     }
-    const validMethod = concept?.[2]
+    const validMethod = avatar
+      ? request.method === 'PUT' || request.method === 'DELETE'
+      : concept?.[2]
       ? request.method === 'PUT' || request.method === 'DELETE'
       : notifications || sharing || connectionSettings
         ? request.method === 'GET' || request.method === 'PUT'
@@ -2194,6 +2244,34 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         state.avatar_url = await signedAvatarUrl(state.avatar_ref, userId, config, fetcher);
         return response(state, 200, cors);
       }
+      if (avatar) {
+        const compact = queryBoolean(requestUrl.searchParams, 'compact');
+        let key: string | null = null;
+        if (request.method === 'PUT') {
+          const contentType = request.headers.get('content-type') ?? '';
+          if (!['image/jpeg', 'image/png', 'image/webp'].includes(contentType.split(';', 1)[0].toLowerCase())) {
+            throw new AvatarInputError(415, 'Choose a JPEG, PNG, or WebP photo');
+          }
+          const bytes = await readAvatar(request);
+          const normalized = await avatarNormalizer(bytes, contentType);
+          key = 'avatars/' + userId + '/' + crypto.randomUUID().replaceAll('-', '') + '.jpg';
+          if (!await uploadAvatar(key, normalized, config, fetcher)) {
+            return httpError(503, 'We could not save your photo. Please try again.', cors);
+          }
+        }
+        const data = await rpc('edge_api_set_avatar', {
+          p_user_id: userId, p_avatar_key: key, p_compact: compact, p_today: null,
+        }, config, fetcher) as JsonObject | null;
+        if (data === null || data.error === 'invalid'
+          || typeof data.state !== 'object' || data.state === null || Array.isArray(data.state)) {
+          if (key) await deleteOldAvatar(key, userId, config, fetcher);
+          return unavailable(cors);
+        }
+        await deleteOldAvatar(data.old_avatar_ref, userId, config, fetcher);
+        const updated = data.state as JsonObject;
+        updated.avatar_url = await signedAvatarUrl(updated.avatar_ref, userId, config, fetcher);
+        return response(updated, 200, cors);
+      }
       if (history) {
         return response(await rpc('edge_api_history', {
           p_user_id: userId, p_before: historyCursor(requestUrl.searchParams),
@@ -2274,7 +2352,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
       }
       return httpError(404, 'Not Found', cors);
     } catch (failure) {
-      if (failure instanceof ClientBodyError) return httpError(failure.status, failure.message, cors);
+      if (failure instanceof ClientBodyError || failure instanceof AvatarInputError) {
+        return httpError(failure.status, failure.message, cors);
+      }
       // Do not echo provider errors or sensitive query details to callers.
       const result = unavailable(cors);
       const source = failure instanceof UpstreamError

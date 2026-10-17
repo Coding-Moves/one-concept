@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { createHandler } from './handler.ts';
+import './avatar.test.mjs';
 
 const userId = 'b5a94932-62e0-4780-91c7-af48b93e27ab';
 const config = {

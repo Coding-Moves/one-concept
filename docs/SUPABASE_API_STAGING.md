@@ -148,7 +148,17 @@ role/MFA and full route checks remain pending, so production clients stay on Rai
    The candidate bundles a pinned 15 MB ImageMagick WASM file via
    `supabase/config.toml`; the deploy job must use the CLI's Docker builder,
    not `--use-api`. A successful TypeScript build alone does not validate
-   the hosted WASM file path or CPU use.
+   the hosted WASM file path or CPU use. To stay inside the hosted
+   [256 MB memory and 2-second CPU limits](https://supabase.com/docs/guides/functions/limits),
+   JPEG input uses a decoder downsample hint and retains the 25 MP ceiling;
+   PNG/WebP input now returns 422 above 8 MP. This is a deliberate difference
+   from FastAPI's 25 MP cap for all formats. Step #418 must keep the mobile
+   error message and photo selection compatible with that format limit.
+   On the local Node/WASM probe, a 25 MP JPEG used about 149 MB peak RSS and
+   0.6 seconds, while 8 MP PNG/WebP used about 209/192 MB and 1.6/1.4
+   seconds. Those are process measurements on the development host, not proof
+   of Supabase's hosted CPU or memory use; the staging upload validates the
+   hosted path with a small PNG.
 4. Configure the protected GitHub `supabase-staging` environment with a scoped
    `SUPABASE_STAGING_ACCESS_TOKEN` secret granting Edge Functions write on the
    staging project, a `SUPABASE_STAGING_DATABASE_URL` secret containing only

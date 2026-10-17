@@ -8,12 +8,21 @@ import pytest
 from tools import staging_api_roles
 
 
-def test_bootstrap_rejects_duplicate_identities_before_sql(monkeypatch):
-    user = "b5a94932-62e0-4780-91c7-af48b93e27ab"
+@pytest.mark.parametrize("owner,reviewer,learner,pair", [
+    ("a", "a", "b", "Owner and reviewer"),
+    ("a", "b", "a", "Owner and learner"),
+    ("a", "b", "b", "Reviewer and learner"),
+])
+def test_bootstrap_rejects_duplicate_identities_before_sql(
+        monkeypatch, owner, reviewer, learner, pair):
+    ids = {
+        "a": "b5a94932-62e0-4780-91c7-af48b93e27ab",
+        "b": "eafc792e-d606-4f61-84e8-a6d07532da48",
+    }
     monkeypatch.setattr(staging_api_roles, "staging_sql",
                         lambda *_args: pytest.fail("SQL must not run"))
-    with pytest.raises(staging_api_roles.ProbeFailure, match="distinct"):
-        staging_api_roles.bootstrap_owner({}, user, user, user)
+    with pytest.raises(staging_api_roles.ProbeFailure, match=pair):
+        staging_api_roles.bootstrap_owner({}, ids[owner], ids[reviewer], ids[learner])
 
 
 def test_api_error_reports_only_fixed_label_and_status(monkeypatch):

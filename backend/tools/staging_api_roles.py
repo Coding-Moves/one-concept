@@ -70,9 +70,14 @@ def staging_sql(env: dict[str, str], sql: str, label: str) -> None:
 
 def bootstrap_owner(env: dict[str, str], owner_id: str, reviewer_id: str,
                     learner_id: str) -> None:
-    if len({owner_id, reviewer_id, learner_id}) != 3 or \
-            not all(UUID.fullmatch(value) for value in (owner_id, reviewer_id, learner_id)):
-        raise ProbeFailure("Role identities must be three distinct Auth users")
+    if not all(UUID.fullmatch(value) for value in (owner_id, reviewer_id, learner_id)):
+        raise ProbeFailure("Role identities must be valid Auth users")
+    if owner_id == reviewer_id:
+        raise ProbeFailure("Owner and reviewer credentials resolve to the same Auth user")
+    if owner_id == learner_id:
+        raise ProbeFailure("Owner and learner credentials resolve to the same Auth user")
+    if reviewer_id == learner_id:
+        raise ProbeFailure("Reviewer and learner credentials resolve to the same Auth user")
     sql = f"""
 begin;
 do $$

@@ -1,6 +1,6 @@
 /** Candidate Railway-compatible JSON routes. No production client uses these yet. */
 
-import { conceptPreview } from './editorial_preview.ts';
+import { conceptPreview, revisionPreview } from './editorial_preview.ts';
 
 export type ApiConfig = {
   supabaseUrl: string;
@@ -161,7 +161,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -928,6 +928,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialQueue = path === '/v1/editorial/queue';
     const editorialHistory = /^\/v1\/editorial\/concepts\/([^/]+)\/revisions$/.exec(path);
     const editorialConcept = /^\/v1\/editorial\/concepts\/([^/]+)$/.exec(path);
+    const editorialRevision = /^\/v1\/editorial\/revisions\/([^/]+)$/.exec(path);
     const editorialTimeline = /^\/v1\/editorial\/concepts\/([^/]+)\/timeline$/.exec(path);
     const editorialJobs = path === '/v1/editorial/generation-jobs';
     const editorialGenerationRequests = path === '/v1/editorial/generation-requests';
@@ -951,7 +952,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialApproveProfile = /^\/v1\/editorial\/reviewers\/([^/]+)\/approve-profile$/.exec(path);
     const editorialReviewerAccess = /^\/v1\/editorial\/reviewers\/([^/]+)\/access$/.exec(path);
     const editorial = editorialMe || editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue
-      || editorialHistory !== null || editorialConcept !== null || editorialTimeline !== null
+      || editorialHistory !== null || editorialConcept !== null || editorialRevision !== null
+      || editorialTimeline !== null
       || editorialJobs || editorialGenerationRequests || editorialJob !== null || editorialCancelJob !== null || editorialSupply !== null
       || editorialLegacyEligibility !== null || editorialLegacyBatches || editorialLegacyAction !== null
       || editorialNotifications || editorialNotificationPolicy || editorialNotificationRetry !== null
@@ -1066,6 +1068,31 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
               : unavailable(cors);
           }
           const preview = await conceptPreview(data);
+          return preview ? editorialResponse(preview, 200, cors) : unavailable(cors);
+        }
+        if (editorialRevision) {
+          if (!UUID.test(editorialRevision[1])) {
+            return editorialResponse({ detail: 'Invalid revision ID' }, 422, cors);
+          }
+          const data = await rpc('edge_api_editorial_revision_detail_source', {
+            p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
+            p_revision_id: editorialRevision[1],
+          }, config, fetcher) as JsonObject | null;
+          if (data === null) return unavailable(cors);
+          const denied: Record<string, [number, string]> = {
+            session_required: [401, 'A confirmed account and current session are required'],
+            unavailable: [403, 'Editorial access is unavailable'],
+            permission: [403, 'Editorial permission required'],
+            profile_required: [403, 'Complete profile setup and obtain name approval'],
+            mfa_required: [403, 'Complete MFA verification for editorial actions'],
+            revision_not_found: [404, 'Revision not found'],
+          };
+          if (typeof data.error === 'string') {
+            const mapped = denied[data.error];
+            return mapped ? editorialResponse({ detail: mapped[1] }, mapped[0], cors)
+              : unavailable(cors);
+          }
+          const preview = await revisionPreview(data);
           return preview ? editorialResponse(preview, 200, cors) : unavailable(cors);
         }
         if (editorialCancelJob) {

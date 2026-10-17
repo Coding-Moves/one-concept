@@ -177,17 +177,17 @@ export async function conceptPreview(raw: unknown): Promise<ObjectValue | null> 
     learning_package: { flashcard: source.flashcard, mcqs: source.mcqs },
   };
   const errors = bodyErrors(body);
-  if (source.status === 'archived' || !source.topic_active || !source.subtopic_active) {
+  if (errors.length === 0 && (source.status === 'archived' || !source.topic_active || !source.subtopic_active)) {
     errors.push({ field: 'publication', message: 'Content or taxonomy is retired' });
-  } else if (body.subtopic_slug !== source.subtopic_slug) {
+  } else if (errors.length === 0 && body.subtopic_slug !== source.subtopic_slug) {
     errors.push({ field: 'publication', message: 'Subtopic does not match the concept' });
-  } else if (typeof source.unknown_prerequisite === 'string') {
+  } else if (errors.length === 0 && typeof source.unknown_prerequisite === 'string') {
     errors.push({ field: 'publication', message:
       `Unknown prerequisite ${source.unknown_prerequisite}` });
-  } else if (typeof source.unpublished_prerequisite === 'string') {
+  } else if (errors.length === 0 && typeof source.unpublished_prerequisite === 'string') {
     errors.push({ field: 'publication', message:
       `Publish prerequisite ${source.unpublished_prerequisite} in an active topic and subtopic first` });
-  } else if (typeof source.duplicate_slug === 'string') {
+  } else if (errors.length === 0 && typeof source.duplicate_slug === 'string') {
     errors.push({ field: 'publication', message:
       `Exact duplicate of ${source.duplicate_slug}; resolve overlap before publication` });
   }
@@ -203,5 +203,90 @@ export async function conceptPreview(raw: unknown): Promise<ObjectValue | null> 
     validation: { valid: errors.length === 0, errors,
       human_review_required: true, checklist_version: 1 },
     source_links: sourceLinks(body), text_format: 'markdown',
+  };
+}
+
+function snapshotBody(snapshot: ObjectValue | null, subtopicSlug: unknown): ObjectValue | null {
+  if (!snapshot) return null;
+  return {
+    title: snapshot.title ?? null, summary: snapshot.summary ?? null,
+    example: snapshot.example ?? null, curriculum: snapshot.curriculum ?? null,
+    subtopic_slug: subtopicSlug, model: snapshot.model ?? null,
+    prompt_version: snapshot.prompt_version ?? null,
+    learning_package: { flashcard: snapshot.flashcard ?? null, mcqs: snapshot.mcqs ?? null },
+  };
+}
+
+export async function revisionPreview(raw: unknown): Promise<ObjectValue | null> {
+  const source = object(raw);
+  const revision = object(source?.revision);
+  if (!source || !revision || typeof revision.id !== 'string'
+    || typeof revision.concept_id !== 'string' || typeof revision.status !== 'string'
+    || typeof revision.base_version !== 'number' || typeof source.content_version !== 'number'
+    || typeof source.concept_status !== 'string' || typeof source.topic_active !== 'boolean'
+    || typeof source.subtopic_active !== 'boolean' || typeof source.subtopic_slug !== 'string'
+    || !object(source.source_snapshot) || !object(source.source_body)) return null;
+  const historical = revision.status === 'published' || revision.status === 'retired';
+  const rawBody = object(revision.body);
+  const body = historical && rawBody && !('learning_package' in rawBody)
+    && 'flashcard' in rawBody && 'mcqs' in rawBody
+    ? (Object.fromEntries(Object.entries(rawBody).filter(
+      ([key]) => key !== 'flashcard' && key !== 'mcqs')) as ObjectValue) : revision.body;
+  if (historical && body !== revision.body) {
+    (body as ObjectValue).learning_package = {
+      flashcard: rawBody?.flashcard, mcqs: rawBody?.mcqs,
+    };
+  }
+  const fields = object(body) ?? {};
+  const historicalSlug = rawBody && 'subtopic_slug' in rawBody
+    ? rawBody.subtopic_slug : source.subtopic_slug;
+  const before = historical
+    ? snapshotBody(object(source.base_snapshot), historicalSlug)
+    : source.source_body as ObjectValue;
+  const errors = bodyErrors(fields);
+  if (!historical && errors.length === 0) {
+    if (source.concept_status === 'archived' || !source.topic_active || !source.subtopic_active) {
+      errors.push({ field: 'publication', message: 'Content or taxonomy is retired' });
+    } else if (fields.subtopic_slug !== source.subtopic_slug) {
+      errors.push({ field: 'publication', message: 'Subtopic does not match the concept' });
+    } else if (typeof source.unknown_prerequisite === 'string') {
+      errors.push({ field: 'publication', message: `Unknown prerequisite ${source.unknown_prerequisite}` });
+    } else if (typeof source.unpublished_prerequisite === 'string') {
+      errors.push({ field: 'publication', message:
+        `Publish prerequisite ${source.unpublished_prerequisite} in an active topic and subtopic first` });
+    } else if (typeof source.duplicate_slug === 'string') {
+      errors.push({ field: 'publication', message:
+        `Exact duplicate of ${source.duplicate_slug}; resolve overlap before publication` });
+    }
+  }
+  if (!historical && revision.base_version !== source.content_version) {
+    errors.push({ field: 'base_version', message: 'Revision is stale; stage a new revision' });
+  }
+  const token = await editorialDigest({
+    id: revision.id, concept_id: revision.concept_id,
+    base_version: revision.base_version, body: revision.body,
+    status: revision.status, assigned_to: revision.assigned_to,
+    review_due_at: revision.review_due_at,
+    source_snapshot: source.source_snapshot,
+    concept_status: source.concept_status,
+    topic_active: source.topic_active, subtopic_active: source.subtopic_active,
+    subtopic_slug: source.subtopic_slug,
+  });
+  const diff = before === null ? [] :
+    [...new Set([...Object.keys(before), ...Object.keys(fields)])].sort()
+      .filter(key => before[key] !== fields[key]
+        && pythonJson(before[key] ?? null) !== pythonJson(fields[key] ?? null))
+      .map(key => ({ field: key, before: before[key] ?? null, after: fields[key] ?? null }));
+  return {
+    id: revision.id, concept_id: revision.concept_id, status: revision.status,
+    base_version: revision.base_version, assigned_to: revision.assigned_to,
+    review_due_at: revision.review_due_at, approved_by: source.approved_by,
+    token, body,
+    source_status: historical ? (revision.base_version ? 'published' : 'draft')
+      : source.concept_status,
+    source_body: before, diff,
+    validation: { valid: errors.length === 0, errors,
+      human_review_required: true, checklist_version: 1 },
+    source_links: sourceLinks(fields), text_format: 'markdown',
   };
 }

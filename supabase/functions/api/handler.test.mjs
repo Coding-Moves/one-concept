@@ -64,6 +64,43 @@ test('editorial concept detail exposes a versioned preview without raw snapshots
   assert.equal(denied.status, 403);
 });
 
+test('editorial revision detail keeps a private versioned diff and stale warning', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const revisionId = 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const body = {
+    title: 'Updated lesson', summary: 'S'.repeat(110), example: 'E'.repeat(45),
+    subtopic_slug: 'foundations', model: null, prompt_version: null,
+    curriculum: { objective: 'Explain one safe and distinct revision objective.',
+      difficulty: 1, prerequisites: [], references: [{ title: 'Documentation',
+        url: 'https://example.com/reference' }] },
+    learning_package: { flashcard: {
+      front: 'What is the updated important lesson?', back: 'It is the clear new answer to the question.',
+    }, mcqs: [1, 2, 3].map(i => ({ question: `Which revision answer is correct ${i}?`,
+      options: [`Choice ${i} A`, `Choice ${i} B`, `Choice ${i} C`, `Choice ${i} D`],
+      correct_index: 0 })) },
+  };
+  const raw = { revision: { id: revisionId, concept_id: userId, status: 'draft',
+    base_version: 1, body, assigned_to: null, review_due_at: null },
+  content_version: 1, concept_status: 'published', topic_active: true,
+  subtopic_active: true, subtopic_slug: 'foundations', source_snapshot: { title: 'Old lesson' },
+  source_body: { ...body, title: 'Old lesson' }, base_snapshot: null, approved_by: null };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async url =>
+    url.endsWith('/auth/v1/user') ? Response.json({ id: userId }) : Response.json(raw));
+  const route = `/v1/editorial/revisions/${revisionId}`;
+  const headers = { authorization: `Bearer ${token}` };
+  const result = await handler(request(route, { headers }));
+  assert.equal(result.status, 200);
+  const view = await result.json();
+  assert.equal(view.validation.valid, true);
+  assert.equal(view.token.length, 64);
+  assert.deepEqual(view.diff, [{ field: 'title', before: 'Old lesson', after: 'Updated lesson' }]);
+  assert.equal(view.source_snapshot, undefined);
+  raw.content_version = 2;
+  const stale = await handler(request(route, { headers }));
+  assert.equal((await stale.json()).validation.errors.at(-1).field, 'base_version');
+});
+
 test('health probes the database and sets exact-origin CORS', async () => {
   const calls = [];
   const handler = createHandler(config, async (url, init) => {

@@ -21,7 +21,7 @@ async def test_cutover_preserves_catalog_and_progress_without_inventing_reviews(
         await db.execute(
             AUTH_STUB.replace("create role anon;", "")
             .replace("create role authenticated;", "")
-            .replace("create role service_role;", "")
+            .replace("create role service_role bypassrls;", "")
         )
         for migration in sorted(MIGRATIONS.glob("0*.sql")):
             if migration.name < "0033_editorial_provenance.sql":

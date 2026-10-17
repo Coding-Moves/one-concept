@@ -54,7 +54,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | POST, DELETE | `/v1/me/push-token` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | GET, PUT | `/v1/me/notifications` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | PATCH | `/v1/me` | Mobile / verified learner | Candidate; local handler/SQL tests |
-| PUT, DELETE | `/v1/me/avatar` | Mobile / verified learner | Candidate; local handler/SQL and image conversion tests, staging Storage checks pending |
+| PUT, DELETE | `/v1/me/avatar` | Mobile / verified learner | Candidate; local handler/SQL and image conversion tests, hosted private Storage upload/read/delete smoke passed |
 | GET | `/v1/me/subtopics/progress` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/me/subtopics/completions/seen` | Mobile / verified learner | Candidate; local handler/SQL tests |
 | POST | `/v1/reviews/{review_id}/complete` | Mobile / verified learner | Candidate; local handler/SQL tests |
@@ -84,7 +84,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/reset-password` | Browser / public HTML | #418 web cutover |
 | GET | `/p/{token}` | Browser / public HTML | #418 web cutover |
 
-Total: 73 OpenAPI paths plus four HTML paths. All 73 JSON paths now have candidate Edge handlers and local test coverage. This counts paths, not method variants. The four HTML paths remain assigned to #418. Staging role, avatar, and load checks are still pending; route presence is not production readiness.
+Total: 73 OpenAPI paths plus four HTML paths. All 73 JSON paths now have candidate Edge handlers and local test coverage. This counts paths, not method variants. The four HTML paths remain assigned to #418. The hosted learner and avatar smoke and 500-request load probe passed in staging; role and public privacy checks remain pending. Route presence is not production readiness.
 
 ## Required contract checks before #416 can close
 

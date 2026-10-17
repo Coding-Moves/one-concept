@@ -507,6 +507,40 @@ test('editorial notifications overview passes only status flags and bounded page
   assert.equal((await handler(request(path, { method: 'PATCH', headers }))).status, 405);
 });
 
+test('editorial notification retry sends one version and no sender secrets', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const batchId = '00000000-0000-4000-8000-000000000003';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { status: 'pending' };
+  const handler = createHandler({ ...config, editorialEnabled: true,
+    editorialEmailEnabled: true, editorialEmailDashboardUrl: 'https://review.example.com',
+    editorialEmailSenderConfigured: true, editorialEmailTestRecipientsConfigured: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = `/v1/editorial/notifications/${batchId}/retry`;
+  assert.equal((await handler(request(path, { headers }))).status, 405);
+  assert.equal((await handler(request('/v1/editorial/notifications/bad/retry', {
+    method: 'POST', headers, body: JSON.stringify({ expected_version: 1 }),
+  }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  assert.equal((await handler(request(path, {
+    method: 'POST', headers, body: JSON.stringify({ expected_version: 1 }),
+  }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_notification_retry$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_batch_id: batchId, p_expected_version: 1, p_setup_status: 'ready',
+  });
+  payload = { error: 'delivery_conflict' };
+  assert.equal((await handler(request(path, {
+    method: 'POST', headers, body: JSON.stringify({ expected_version: 1 }),
+  }))).status, 409);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

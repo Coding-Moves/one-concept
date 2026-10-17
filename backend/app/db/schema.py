@@ -106,7 +106,8 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_legacy_batches',
             'edge_api_editorial_utc_iso_exact',
             'edge_api_editorial_notification_policy',
-            'edge_api_editorial_notifications_overview')""",
+            'edge_api_editorial_notifications_overview',
+            'edge_api_editorial_notification_retry')""",
     }
     result = {}
     for kind, query in queries.items():

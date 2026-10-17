@@ -189,6 +189,9 @@ INCREMENTAL_PROBES = {
     "0098_supabase_editorial_notifications_overview_api.sql": (
         "public.edge_api_editorial_notifications_overview(uuid,uuid,text,uuid,integer,text,integer)",
     ),
+    "0099_supabase_editorial_notification_retry_api.sql": (
+        "public.edge_api_editorial_notification_retry(uuid,uuid,text,uuid,integer,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

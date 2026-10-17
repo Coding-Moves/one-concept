@@ -215,6 +215,12 @@ INCREMENTAL_PROBES = {
     "0106_supabase_editorial_generation_cancel_api.sql": (
         "public.edge_api_editorial_cancel_generation_job(uuid,uuid,text,uuid,uuid,text,text,text)",
     ),
+    "0107_supabase_editorial_legacy_batch_action_api.sql": (
+        "public.edge_api_editorial_legacy_batch_action(uuid,uuid,text,uuid,uuid,text,text,text,text)",
+    ),
+    "0108_supabase_editorial_legacy_batch_create_api.sql": (
+        "public.edge_api_editorial_create_legacy_batch(uuid,uuid,text,uuid,uuid,text,text,integer,text,boolean,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -488,7 +488,86 @@ test('editorial legacy batch list validates its optional subject filter', async 
   assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
     p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2', p_topic_id: topicId,
   });
-  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+  assert.equal((await handler(request(path, { method: 'DELETE', headers }))).status, 405);
+});
+
+test('legacy batch creation validates quota and sends a Python-compatible receipt', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const topicId = '00000000-0000-4000-8000-000000000003';
+  const requestId = '00000000-0000-4000-8000-000000000004';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { id: requestId, status: 'queued' };
+  const handler = createHandler({ ...config, editorialEnabled: true,
+    generationEnabled: true, legacyEnrichmentEnabled: true,
+    providerConfigured: true, geminiModel: 'gemini-3.1-flash-lite' }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const path = '/v1/editorial/legacy-enrichment-batches';
+  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  const command = { request_id: requestId, note: 'Create the batch 🧪 for review',
+    topic_id: topicId, name: 'legacy-one', quota_limit: 2 };
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ ...command, quota_limit: 0 }) }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const result = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(result.status, 201);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_create_legacy_batch$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_topic_id: topicId, p_request_id: requestId, p_note: command.note,
+    p_name: 'legacy-one', p_quota_limit: 2, p_model: 'gemini-3.1-flash-lite',
+    p_configured: true,
+    p_fingerprint: '878ce75f7fd692e0fc78121bf33170fe62bf5ac82693aa76bc45632b02c3caeb',
+  });
+  payload = { error: 'review_conflict', message: 'Quota limit is below this subject’s eligible lesson count' };
+  const denied = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(denied.status, 409);
+  assert.deepEqual((await denied.json()).detail, { code: 'review_conflict',
+    message: payload.message });
+});
+
+test('legacy batch actions keep version, action, and Python-compatible receipt identity', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const batchId = '00000000-0000-4000-8000-000000000003';
+  const requestId = '00000000-0000-4000-8000-000000000004';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { id: batchId, status: 'paused', token: 'b'.repeat(64) };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const path = `/v1/editorial/legacy-enrichment-batches/${batchId}/actions`;
+  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  const command = { request_id: requestId, note: 'Pause batch 🧪 for review',
+    expected_token: 'a'.repeat(64), action: 'pause' };
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ ...command, action: 'unknown' }) }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const result = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_legacy_batch_action$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_batch_id: batchId, p_request_id: requestId, p_note: command.note,
+    p_expected_token: command.expected_token, p_action: 'pause',
+    p_fingerprint: '9668131f5b85a3646682c5b2c527c9eaca66b66992013ad57fe757fe1ae02451',
+  });
+  payload = { error: 'review_conflict', message: 'This batch cannot make that transition' };
+  const denied = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(denied.status, 409);
+  assert.deepEqual((await denied.json()).detail, { code: 'review_conflict',
+    message: 'This batch cannot make that transition' });
 });
 
 test('editorial notification policy requires bounded versioned owner input', async () => {

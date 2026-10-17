@@ -330,6 +330,47 @@ test('editorial generation jobs return only validated private pages and detail',
   assert.equal((await handler(request('/v1/editorial/generation-jobs', { method: 'POST', headers }))).status, 405);
 });
 
+test('generation cancellation sends a Python-compatible receipt fingerprint and handles replay errors', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const jobId = '00000000-0000-4000-8000-000000000003';
+  const requestId = '00000000-0000-4000-8000-000000000004';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { id: jobId, status: 'cancelled', token: 'b'.repeat(64) };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  const path = `/v1/editorial/generation-jobs/${jobId}/cancel`;
+  const command = { request_id: requestId, note: 'Please cancel this job 🧪',
+    expected_token: 'a'.repeat(64) };
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ ...command, extra: true }) }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const result = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_cancel_generation_job$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_job_id: jobId, p_request_id: requestId, p_note: command.note,
+    p_expected_token: command.expected_token,
+    p_fingerprint: '7065f1839e036463c1065a9c5e6368356ab2047a43e49673c34ee419e5726c75',
+  });
+  payload = { error: 'stale_revision' };
+  const stale = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(stale.status, 409);
+  assert.deepEqual((await stale.json()).detail, { code: 'stale_revision',
+    message: 'Content or review state changed. Reload before acting.' });
+  payload = { error: 'receipt_conflict' };
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }))).status, 409);
+});
+
 test('editorial generation supply uses verified role and bounded configuration values', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const topicId = '00000000-0000-4000-8000-000000000003';

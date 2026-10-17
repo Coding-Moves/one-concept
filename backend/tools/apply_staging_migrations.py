@@ -212,6 +212,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_invite_prepare(uuid,uuid,text,text)",
         "public.edge_api_editorial_invite_finish(uuid,uuid,text,text,uuid,text[])",
     ),
+    "0106_supabase_editorial_generation_cancel_api.sql": (
+        "public.edge_api_editorial_cancel_generation_job(uuid,uuid,text,uuid,uuid,text,text,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

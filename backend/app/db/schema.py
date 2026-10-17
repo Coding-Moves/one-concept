@@ -118,7 +118,8 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_invite_finish',
             'edge_api_editorial_cancel_generation_job',
             'edge_api_editorial_legacy_batch_action',
-            'edge_api_editorial_create_legacy_batch')""",
+            'edge_api_editorial_create_legacy_batch',
+            'edge_api_editorial_request_generation')""",
     }
     result = {}
     for kind, query in queries.items():

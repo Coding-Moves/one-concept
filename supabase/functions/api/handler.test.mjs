@@ -532,6 +532,46 @@ test('legacy batch creation validates quota and sends a Python-compatible receip
     message: payload.message });
 });
 
+test('generation requests validate demand and send a Python-compatible receipt', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const topicId = '00000000-0000-4000-8000-000000000003';
+  const requestId = '00000000-0000-4000-8000-000000000004';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { event_id: requestId, status: 'demand_recorded', target: 3 };
+  const handler = createHandler({ ...config, editorialEnabled: true,
+    generationEnabled: true, futureRefillEnabled: true,
+    contentReviewBacklogLimit: 25, contentGenerationBatch: 5,
+    contentActiveDays: 90 }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const path = '/v1/editorial/generation-requests';
+  const headers = { authorization: `Bearer ${token}`, 'content-type': 'application/json' };
+  const command = { request_id: requestId,
+    note: 'Generate a lesson 🧪 after review', topic_id: topicId, count: 2 };
+  assert.equal((await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify({ ...command, count: 11 }) }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const result = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(result.status, 202);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_request_generation$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_topic_id: topicId, p_request_id: requestId, p_note: command.note,
+    p_count: 2, p_enabled: true, p_review_limit: 25, p_batch_limit: 5,
+    p_active_days: 90,
+    p_fingerprint: '6bd69eb325c4ef888aa8165ab5736d0bb1275fa247a44d35882e97e6108b58ed',
+  });
+  payload = { error: 'generation_disabled' };
+  const disabled = await handler(request(path, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(disabled.status, 409);
+});
+
 test('legacy batch actions keep version, action, and Python-compatible receipt identity', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const batchId = '00000000-0000-4000-8000-000000000003';

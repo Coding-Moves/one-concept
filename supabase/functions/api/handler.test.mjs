@@ -451,6 +451,36 @@ test('editorial legacy batch list validates its optional subject filter', async 
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
 });
 
+test('editorial notification policy requires bounded versioned owner input', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { singleton: true, version: 2, deadline_hours: 48,
+    reminder_hours: 24, max_reminders: 2 };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = '/v1/editorial/notifications/policy';
+  assert.equal((await handler(request(path, { headers }))).status, 405);
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, deadline_hours: 0, reminder_hours: 24, max_reminders: 2 }) }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, deadline_hours: 48, reminder_hours: 24, max_reminders: 2 }) }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_notification_policy$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2',
+    p_expected_version: 1, p_deadline_hours: 48,
+    p_reminder_hours: 24, p_max_reminders: 2,
+  });
+  payload = { error: 'policy_conflict' };
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 1, deadline_hours: 48, reminder_hours: 24, max_reminders: 2 }) }))).status, 409);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

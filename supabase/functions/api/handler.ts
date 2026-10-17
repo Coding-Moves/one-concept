@@ -148,7 +148,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -363,6 +363,25 @@ function editorialVersionInput(body: JsonObject): number {
     throw new ClientBodyError(422, 'Invalid editorial account version');
   }
   return body.expected_version;
+}
+
+function editorialPolicyInput(body: JsonObject): {
+  version: number; deadline: number; reminder: number; maxReminders: number;
+} {
+  const allowed = ['expected_version', 'deadline_hours', 'reminder_hours', 'max_reminders'];
+  if (Object.keys(body).some(key => !allowed.includes(key))) {
+    throw new ClientBodyError(422, 'Invalid editorial notification policy');
+  }
+  const fields = [body.expected_version, body.deadline_hours, body.reminder_hours, body.max_reminders];
+  if (!fields.every(value => typeof value === 'number' && Number.isInteger(value))
+      || (body.expected_version as number) < 1 || (body.expected_version as number) > 2147483647
+      || (body.deadline_hours as number) < 1 || (body.deadline_hours as number) > 720
+      || (body.reminder_hours as number) < 1 || (body.reminder_hours as number) > 168
+      || (body.max_reminders as number) < 0 || (body.max_reminders as number) > 10) {
+    throw new ClientBodyError(422, 'Invalid editorial notification policy');
+  }
+  return { version: body.expected_version as number, deadline: body.deadline_hours as number,
+    reminder: body.reminder_hours as number, maxReminders: body.max_reminders as number };
 }
 
 function sharingInput(body: JsonObject): Record<string, unknown> {
@@ -692,6 +711,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorialLegacyEligibility = /^\/v1\/editorial\/legacy-enrichment-eligibility\/([^/]+)$/.exec(path);
     const editorialLegacyBatches = path === '/v1/editorial/legacy-enrichment-batches';
     const editorialLegacyEntries = /^\/v1\/editorial\/legacy-enrichment-batches\/([^/]+)\/entries$/.exec(path);
+    const editorialNotificationPolicy = path === '/v1/editorial/notifications/policy';
     const editorialProfile = path === '/v1/editorial/me/profile';
     const editorialTimezone = path === '/v1/editorial/me/notification-timezone';
     const editorialAuthenticator = path === '/v1/editorial/me/authenticator';
@@ -699,7 +719,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     const editorial = editorialMe || editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue
       || editorialHistory !== null || editorialTimeline !== null
       || editorialJobs || editorialJob !== null || editorialSupply !== null
-      || editorialLegacyEligibility !== null || editorialLegacyBatches
+      || editorialLegacyEligibility !== null || editorialLegacyBatches || editorialNotificationPolicy
       || editorialLegacyEntries !== null || editorialProfile
       || editorialTimezone || editorialAuthenticator || editorialApproveProfile !== null;
     const state = path === '/v1/me/state';
@@ -726,7 +746,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? request.method === 'PUT'
         : profile
           ? request.method === 'PATCH'
-        : editorialProfile || editorialTimezone || editorialAuthenticator
+        : editorialProfile || editorialTimezone || editorialAuthenticator || editorialNotificationPolicy
           ? request.method === 'PATCH'
         : editorialApproveProfile
           ? request.method === 'POST'
@@ -862,7 +882,10 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
           ? editorialAuthenticatorInput((await readJson(request))!) : null;
         const approvalVersion = editorialApproveProfile
           ? editorialVersionInput((await readJson(request))!) : null;
+        const policyInput = editorialNotificationPolicy
+          ? editorialPolicyInput((await readJson(request))!) : null;
         const data = await rpc(editorialApproveProfile ? 'edge_api_editorial_approve_profile'
+          : editorialNotificationPolicy ? 'edge_api_editorial_notification_policy'
           : editorialAuthenticator ? 'edge_api_editorial_authenticator'
           : editorialTimezone ? 'edge_api_editorial_notification_timezone'
           : editorialProfile ? 'edge_api_editorial_request_profile'
@@ -913,6 +936,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
             p_mfa_verified_at: claims.mfaVerifiedAt } : {}),
           ...(editorialApproveProfile ? { p_subject_id: editorialApproveProfile[1],
             p_expected_version: approvalVersion } : {}),
+          ...(policyInput ? { p_expected_version: policyInput.version,
+            p_deadline_hours: policyInput.deadline, p_reminder_hours: policyInput.reminder,
+            p_max_reminders: policyInput.maxReminders } : {}),
         }, config, fetcher) as JsonObject | null;
         if (data === null) return unavailable(cors);
         if (data.error === 'session_required') {
@@ -968,6 +994,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
         }
         if (data.error === 'version_conflict') {
           return editorialResponse({ detail: 'Account changed; reload before saving' }, 409, cors);
+        }
+        if (data.error === 'policy_conflict') {
+          return editorialResponse({ detail: 'Policy changed; refresh before saving' }, 409, cors);
+        }
+        if (data.error === 'invalid_policy') {
+          return editorialResponse({ detail: 'Invalid editorial notification policy' }, 422, cors);
         }
         return editorialResponse(data, 200, cors);
       }

@@ -183,6 +183,9 @@ INCREMENTAL_PROBES = {
     "0096_supabase_editorial_timestamp_precision.sql": (
         "public.edge_api_editorial_utc_iso_exact(timestamp with time zone)",
     ),
+    "0097_supabase_editorial_notification_policy_api.sql": (
+        "public.edge_api_editorial_notification_policy(uuid,uuid,text,integer,integer,integer,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -66,3 +66,9 @@ async def test_revision_generation_matches_existing_receipt_and_source_token(api
       has_function_privilege('service_role',
         'public.edge_api_editorial_revision_generation(uuid,uuid,text,uuid,uuid,text,text,boolean,integer,text)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+    # The shared integration database retains evidence between tests. Leave
+    # this test job inactive so later worker tests claim only their own work.
+    await session.execute(text("""update editorial_generation_jobs
+      set status='cancelled' where id=:id and status='pending'"""),
+      {"id": result["id"]})
+    await session.commit()

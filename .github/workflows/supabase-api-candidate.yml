@@ -10,6 +10,7 @@ on:
       - 'supabase-api-staging-deploy-*'
       - 'supabase-api-staging-smoke-*'
       - 'supabase-api-staging-load-*'
+      - 'supabase-api-staging-roles-*'
       - 'supabase-api-staging-diagnose-*'
       - 'supabase-api-staging-reload-*'
 
@@ -154,6 +155,31 @@ jobs:
           SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
           SUPABASE_STAGING_TEST_PASSWORD: ${{ secrets.SUPABASE_STAGING_TEST_PASSWORD }}
         run: python backend/tools/staging_api_load.py
+
+  roles:
+    if: startsWith(github.ref_name, 'supabase-api-staging-roles-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Check protected owner and reviewer workflows in staging
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+          SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
+          SUPABASE_STAGING_TEST_PASSWORD: ${{ secrets.SUPABASE_STAGING_TEST_PASSWORD }}
+          SUPABASE_STAGING_REVIEWER_EMAIL: ${{ secrets.SUPABASE_STAGING_REVIEWER_EMAIL }}
+          SUPABASE_STAGING_REVIEWER_PASSWORD: ${{ secrets.SUPABASE_STAGING_REVIEWER_PASSWORD }}
+          SUPABASE_STAGING_OWNER_EMAIL: ${{ secrets.SUPABASE_STAGING_OWNER_EMAIL }}
+          SUPABASE_STAGING_OWNER_PASSWORD: ${{ secrets.SUPABASE_STAGING_OWNER_PASSWORD }}
+        run: python backend/tools/staging_api_roles.py
 
   diagnose_learner:
     if: startsWith(github.ref_name, 'supabase-api-staging-diagnose-')

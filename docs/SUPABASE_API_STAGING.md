@@ -91,7 +91,9 @@ The protected `supabase-api-staging-load-*` job runs
 `backend/tools/staging_api_load.py` only against project
 `zhrulokgngjceqgjkcmw`. It signs in with the dedicated test account, warms its
 daily assignment, then sends 500 authenticated `GET /v1/me/state?compact=true`
-requests through 10 workers. It records p50/p95 request latency, median and
+requests through five workers. This single-account rate-limit probe uses less
+concurrency than the earlier unthrottled baseline; it still fails on any HTTP
+503. It records p50/p95 request latency, median and
 maximum response bytes, and baseline, sampled peak, and end counts from
 `pg_stat_activity`. The guard validates both the HTTPS project reference and
 the port-5432 PostgreSQL connection before making requests. With the shared

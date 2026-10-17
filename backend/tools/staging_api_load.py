@@ -25,7 +25,9 @@ else:
 
 
 REQUESTS = 500
-WORKERS = 10
+# One test account shares one serialized request-budget row. Keep this probe
+# below the concurrency used for the earlier, unthrottled state-read baseline.
+WORKERS = 5
 MAX_RESPONSE_BYTES = 1_048_576
 
 

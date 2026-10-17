@@ -194,6 +194,34 @@ test('editorial activity passes only validated owner filters to the private RPC'
   assert.equal((await handler(request('/v1/editorial/activity', { method: 'POST', headers }))).status, 405);
 });
 
+test('editorial legacy batch entries require review access and a valid batch ID', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const batchId = '00000000-0000-4000-8000-000000000003';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  let payload = { items: [{ id: batchId, title: 'Reviewed lesson', status: 'queued' }] };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = `/v1/editorial/legacy-enrichment-batches/${batchId}/entries`;
+  assert.equal((await handler(request(path))).status, 401);
+  assert.equal((await handler(request('/v1/editorial/legacy-enrichment-batches/bad/entries', { headers }))).status, 422);
+  assert.equal(calls.filter(call => call.url.includes('/rpc/')).length, 0);
+  const result = await handler(request(path, { headers }));
+  assert.equal(result.status, 200);
+  assert.deepEqual(await result.json(), payload);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_legacy_entries$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal2', p_batch_id: batchId,
+  });
+  payload = { error: 'batch_not_found' };
+  assert.equal((await handler(request(path, { headers }))).status, 404);
+  assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

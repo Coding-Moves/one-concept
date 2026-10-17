@@ -29,6 +29,16 @@ class ClientBodyError extends Error {
   }
 }
 
+class UpstreamError extends Error {
+  readonly component: 'auth' | 'database';
+  readonly status: number;
+  constructor(component: 'auth' | 'database', status: number) {
+    super('Upstream unavailable');
+    this.component = component;
+    this.status = status;
+  }
+}
+
 function routePath(pathname: string): string | null {
   for (const prefix of ['/functions/v1/api', '/api']) {
     if (pathname === prefix) return '/';
@@ -87,14 +97,17 @@ function bearerToken(request: Request): string | null {
 }
 
 async function authenticatedUser(token: string, config: ApiConfig, fetcher: Fetcher): Promise<string | null> {
-  const result = await fetcher(`${config.supabaseUrl}/auth/v1/user`, {
-    method: 'GET',
-    headers: { apikey: config.anonKey, authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(5000),
-    redirect: 'error',
-  });
+  let result: Response;
+  try {
+    result = await fetcher(`${config.supabaseUrl}/auth/v1/user`, {
+      method: 'GET',
+      headers: { apikey: config.anonKey, authorization: `Bearer ${token}` },
+      signal: AbortSignal.timeout(5000),
+      redirect: 'error',
+    });
+  } catch { throw new UpstreamError('auth', 0); }
   if (result.status === 401 || result.status === 403) return null;
-  if (!result.ok) throw new Error(`Auth unavailable: ${result.status}`);
+  if (!result.ok) throw new UpstreamError('auth', result.status);
   const user: AuthUser = await result.json();
   return typeof user.id === 'string' && UUID.test(user.id) ? user.id : null;
 }
@@ -129,18 +142,21 @@ function editorialClaims(token: string, verifiedUserId: string): {
 }
 
 async function rpc(name: 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_analytics' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
-  const result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
-    method: 'POST',
-    headers: {
-      apikey: config.serviceRoleKey,
-      authorization: `Bearer ${config.serviceRoleKey}`,
-      'content-type': 'application/json',
-    },
-    body: JSON.stringify(args),
-    signal: AbortSignal.timeout(5000),
-    redirect: 'error',
-  });
-  if (!result.ok) throw new Error(`Database unavailable: ${result.status}`);
+  let result: Response;
+  try {
+    result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
+      method: 'POST',
+      headers: {
+        apikey: config.serviceRoleKey,
+        authorization: `Bearer ${config.serviceRoleKey}`,
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify(args),
+      signal: AbortSignal.timeout(5000),
+      redirect: 'error',
+    });
+  } catch { throw new UpstreamError('database', 0); }
+  if (!result.ok) throw new UpstreamError('database', result.status);
   return result.json();
 }
 
@@ -1165,7 +1181,11 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch): (req
     } catch (failure) {
       if (failure instanceof ClientBodyError) return httpError(failure.status, failure.message, cors);
       // Do not echo provider errors or sensitive query details to callers.
-      return unavailable(cors);
+      const result = unavailable(cors);
+      const source = failure instanceof UpstreamError
+        ? `${failure.component}:${failure.status}` : 'internal';
+      console.error(`Candidate API incident ${result.headers.get('x-incident-id')}: ${source}`);
+      return result;
     }
   };
 }

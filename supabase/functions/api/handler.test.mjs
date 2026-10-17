@@ -1432,15 +1432,31 @@ test('push-token registration and bodyless sign-out use the verified account', a
 });
 
 test('upstream failures are generic and do not reveal secrets', async () => {
-  const handler = createHandler(config, async () => new Response('provider-secret', { status: 500 }));
-  const result = await handler(request('/health'));
-  assert.equal(result.status, 503);
-  const body = await result.text();
-  assert.equal(body.includes('provider-secret'), false);
-  assert.equal(body.includes(config.serviceRoleKey), false);
-  assert.equal(result.headers.get('retry-after'), '30');
-  assert.match(result.headers.get('x-incident-id'), /^[0-9a-f]{32}$/);
-  assert.equal(JSON.parse(body).error.code, 'service_unavailable');
+  const logs = [];
+  const originalLog = console.error;
+  console.error = line => logs.push(line);
+  try {
+    const handler = createHandler(config, async () => new Response('provider-secret', { status: 500 }));
+    const result = await handler(request('/health'));
+    assert.equal(result.status, 503);
+    const body = await result.text();
+    assert.equal(body.includes('provider-secret'), false);
+    assert.equal(body.includes(config.serviceRoleKey), false);
+    assert.equal(result.headers.get('retry-after'), '30');
+    assert.match(result.headers.get('x-incident-id'), /^[0-9a-f]{32}$/);
+    assert.equal(JSON.parse(body).error.code, 'service_unavailable');
+    assert.deepEqual(logs, [`Candidate API incident ${result.headers.get('x-incident-id')}: database:500`]);
+    const authHandler = createHandler(config, async () => new Response('private-auth-detail', { status: 502 }));
+    const authResult = await authHandler(request('/v1/topics', {
+      headers: { authorization: 'Bearer private-user-token' },
+    }));
+    assert.equal(authResult.status, 503);
+    assert.equal(logs[1], `Candidate API incident ${authResult.headers.get('x-incident-id')}: auth:502`);
+    assert.equal(logs.join(' ').includes('private-user-token'), false);
+    assert.equal(logs.join(' ').includes('provider-secret'), false);
+  } finally {
+    console.error = originalLog;
+  }
 });
 
 test('only exact API path and method combinations are served', async () => {

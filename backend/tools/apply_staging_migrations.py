@@ -268,6 +268,12 @@ INCREMENTAL_PROBES = {
         "public.edge_worker_dispatch(text)",
         "public.edge_worker_poll_http()",
     ),
+    "0121_supabase_daily_reminder_outbox.sql": (
+        "public.edge_worker_enqueue_reminders(timestamp with time zone,integer)",
+        "public.edge_worker_claim_reminders(integer,timestamp with time zone)",
+        "public.edge_worker_record_reminders(jsonb)",
+        "public.edge_worker_expire_reminders()",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

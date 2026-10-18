@@ -197,7 +197,8 @@ def test_incremental_probe_accepts_all_reviewed_signatures_without_accepting_sql
         assert runner.function_presence({}, (signature,)) == (True,)
     assert "public.edge_api_new_profile_token()" in signatures
     assert "public.edge_api_saved(uuid,timestamp with time zone,uuid,integer)" in signatures
-    assert all(call[-1].startswith("select to_regprocedure('public.edge_api_")
+    assert all(call[-1].startswith(("select to_regprocedure('public.edge_api_",
+                                         "select to_regprocedure('public.edge_worker_"))
                or call[-1].startswith("select coalesce((select prosecdef from pg_proc")
                for call in calls)
     with pytest.raises(ValueError, match="Unreviewed"):

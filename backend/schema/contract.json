@@ -119,7 +119,8 @@
     "0117_supabase_editorial_auth_read_privileges.sql": "5e4aab9ca03ea17cf309ff5ac842dc9be6d0696ecd80c1e6935971f204904c5e",
     "0118_supabase_api_request_rate_limit.sql": "a94885feb8340b8729e64df72bba8bf52c02956b053557d5b56210d06d18a180",
     "0119_supabase_worker_run_ledger.sql": "b37579bb456895015b9477aa16a50b30cbf0a82b7b972f7429917bfdbc17ad90",
-    "0120_supabase_worker_transport.sql": "8ecd7bd921f0cb19a1dfdbcc37c1d1acbf24e625b0722b73a7f39804513e6673"
+    "0120_supabase_worker_transport.sql": "8ecd7bd921f0cb19a1dfdbcc37c1d1acbf24e625b0722b73a7f39804513e6673",
+    "0121_supabase_daily_reminder_outbox.sql": "282fc3340b28e2319498515fa850118282a9faedbc4893afdd4f558915ba1e08"
   },
   "schema": {
     "columns": {

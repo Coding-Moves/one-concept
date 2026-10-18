@@ -4,9 +4,8 @@ The current candidate implements all 73 inventoried JSON paths under
 `/functions/v1/api`. [The route matrix](SUPABASE_API_ROUTE_PARITY.md) records
 each consumer and validation state. Local route coverage is complete; hosted
 learner, avatar, load, role, and public privacy checks passed on the staged
-candidate. The shared rate-limit follow-up still needs staging verification.
-Keep Railway and all production clients on the existing API until #416 meets
-its acceptance criteria and #418 performs the cutover.
+candidate, including the shared rate limit. Keep Railway and all production
+clients on the existing API until #418 performs the cutover.
 
 The first staging schema run applied migrations 0001–0049 and deployed the
 candidate at commit `b8fddd4`. Protected run `38726466061` then applied and
@@ -65,8 +64,14 @@ reads and 60 writes per minute. The Edge handler calls that service-only RPC
 after Auth verification and returns the existing structured HTTP 429 response
 and `Retry-After` header. Configure `RATE_LIMIT_READS_PER_MINUTE` and
 `RATE_LIMIT_WRITES_PER_MINUTE` only if the Railway deployment overrides those
-defaults. This migration and its matching Edge revision need protected staging
-verification before they are considered deployed.
+defaults. Protected SQL run `39079447842` applied and verified migration 0118;
+Edge runs `39079676651` and `39081462372` deployed the limiter and its targeted
+state-read timeout correction to staging. Disposable PostgreSQL verified 500
+concurrent calls against one bucket without an over-budget admission. The
+state RPC has an eight-second upstream timeout after the five-second limit
+caused intermittent 503s during the single-account burst. The mobile client
+has a 15-second total fetch timeout, so sustained overload can still surface
+as a retryable request failure rather than a delayed success.
 
 ## Local checks
 
@@ -110,6 +115,15 @@ burst result and inspect the Supabase project's Function Invocations,
 Function Compute, database size, and connection usage in its dashboard before
 the #418 production switch. Add other app, public profile, and editorial
 traffic to that estimate; the protected probe measures only the state route.
+
+On 2026-10-18, with the limiter and targeted timeout, [protected run 39081564483](https://github.com/Coding-Moves/one-concept/actions/runs/39081564483)
+completed 500 requests through five workers in 168.5 seconds: 450 HTTP 200,
+50 expected HTTP 429 with valid `Retry-After`, and no other status. Successful
+read latency was p50 1,329 ms and p95 4,195 ms; median and maximum response
+size were both 1,404 bytes. Database connections were 19 before the burst, 21
+at sampled peak, and 20 after. Earlier attempts with a five-second state RPC
+timeout produced intermittent 503s; the passing measurement does not promise
+500 simultaneous users or stable Free-tier capacity under other workloads.
 
 On 2026-10-17, before the shared limiter, [protected run 39028577679](https://github.com/Coding-Moves/one-concept/actions/runs/39028577679)
 completed 500 state reads through 10 workers in 43.0 seconds with no HTTP

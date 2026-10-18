@@ -84,7 +84,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | GET | `/reset-password` | Browser / public HTML | #418 web cutover |
 | GET | `/p/{token}` | Browser / public HTML | #418 web cutover |
 
-Total: 73 OpenAPI paths plus four HTML paths. All 73 JSON paths now have candidate Edge handlers and local test coverage. This counts paths, not method variants. The four HTML paths remain assigned to #418. Hosted learner/avatar, pre-limiter 500-request load, and role/public privacy checks passed in staging. The shared limiter awaits staged verification. Route presence is not production readiness.
+Total: 73 OpenAPI paths plus four HTML paths. All 73 JSON paths now have candidate Edge handlers and local test coverage. This counts paths, not method variants. The four HTML paths remain assigned to #418. Hosted learner/avatar, role/public privacy, and shared-rate-limit checks passed in staging. The final 500-request single-account burst returned 450 successful reads and 50 expected 429s without 503; it is not a 500-user capacity guarantee. Route presence is not production readiness.
 
 ## Required contract checks before #416 can close
 

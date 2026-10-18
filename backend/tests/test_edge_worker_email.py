@@ -11,6 +11,21 @@ def decoded(value):
     return json.loads(value) if isinstance(value, str) else value
 
 
+@pytest.fixture(autouse=True)
+async def isolate_mail_queue(session):
+    # This global worker claims the oldest batch. Earlier editorial tests may
+    # have left other pending recipients in the disposable integration DB.
+    async def clear():
+        await session.execute(text("delete from public.editorial_email_attempts"))
+        await session.execute(text("delete from public.editorial_notification_outbox"))
+        await session.execute(text("delete from public.editorial_email_batches"))
+        await session.commit()
+    await clear()
+    yield
+    await session.rollback()
+    await clear()
+
+
 async def assigned_revision(session, user):
     email = f"{user}@example.invalid"
     await session.execute(text("""update auth.users set email_confirmed_at=now()
@@ -19,7 +34,10 @@ async def assigned_revision(session, user):
       user_id,invited_email,capabilities,requested_name,approved_name)
       values (:uid,:email,array['review']::text[],'Test Reviewer','Test Reviewer')"""),
       {"uid": user, "email": email})
-    topic = await session.scalar(text("select topic_id from public.concepts limit 1"))
+    topic = await session.scalar(text("""select c.topic_id from public.concepts c
+      join public.topics t on t.id=c.topic_id and t.is_active
+      join public.subtopics s on s.id=c.subtopic_id and s.is_active
+      where c.status='published' limit 1"""))
     concept = await session.scalar(text("""insert into public.concepts(
       topic_id,slug,title,summary,status) values
       (:tid,:slug,'Email worker test','A test concept','published') returning id"""),

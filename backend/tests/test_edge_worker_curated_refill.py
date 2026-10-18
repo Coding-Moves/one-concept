@@ -12,6 +12,39 @@ def decoded(value):
     return json.loads(value) if isinstance(value, str) else value
 
 
+@pytest.fixture(autouse=True)
+async def isolate_curated_topics(session):
+    yield
+    await session.rollback()
+    await session.execute(text("""delete from public.daily_assignments a
+      using public.concepts c,public.topics t where a.concept_id=c.id
+      and c.topic_id=t.id and t.slug like 'worker-refill-%'"""))
+    await session.execute(text("""delete from public.concept_revisions r
+      using public.concepts c,public.topics t where r.concept_id=c.id
+      and c.topic_id=t.id and t.slug like 'worker-refill-%'"""))
+    await session.execute(text("""delete from public.content_supply_targets s
+      using public.topics t where s.topic_id=t.id
+      and t.slug like 'worker-refill-%'"""))
+    await session.execute(text("""delete from public.future_refill_topic_daily_usage u
+      using public.topics t where u.topic_id=t.id
+      and t.slug like 'worker-refill-%'"""))
+    await session.execute(text("""delete from public.user_topics u
+      using public.topics t where u.topic_id=t.id
+      and t.slug like 'worker-refill-%'"""))
+    await session.execute(text("""delete from public.concept_backlog b
+      using public.topics t where b.topic_id=t.id
+      and t.slug like 'worker-refill-%'"""))
+    await session.execute(text("""delete from public.concepts c
+      using public.topics t where c.topic_id=t.id
+      and t.slug like 'worker-refill-%'"""))
+    await session.execute(text("""delete from public.subtopics s
+      using public.topics t where s.topic_id=t.id
+      and t.slug like 'worker-refill-%'"""))
+    await session.execute(text("""delete from public.topics
+      where slug like 'worker-refill-%'"""))
+    await session.commit()
+
+
 async def seeded_topic(session, user):
     suffix = uuid4().hex[:10]
     topic = await session.scalar(text("""insert into public.topics(slug,name)

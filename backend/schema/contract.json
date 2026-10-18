@@ -125,7 +125,8 @@
     "0123_supabase_editorial_email_worker.sql": "2322dbab45632a1a3746ff179be1d71c3dad1bfc39e807775cf05d4e2c77f891",
     "0124_supabase_active_reader_supply.sql": "2d4d29be20370cceb62480755dc926ec4de3c294c95ed01ae0df24dc7bcbe30f",
     "0125_supabase_curated_refill_worker.sql": "1e4b12a75deb33dfcf3c845d65b3c701733cfe4fea53503fe62236460411ad08",
-    "0126_supabase_editorial_revision_worker.sql": "d9193b087a0890dc160a4d7dd35e72e3127ed6c85af29b29194758da307ec14c"
+    "0126_supabase_editorial_revision_worker.sql": "d9193b087a0890dc160a4d7dd35e72e3127ed6c85af29b29194758da307ec14c",
+    "0127_supabase_legacy_enrichment_worker.sql": "6cbd73098ab8cc42c85a9c2d6584c27f2d76cc0484217f25da9db02209f18e55"
   },
   "schema": {
     "columns": {

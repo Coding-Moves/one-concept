@@ -302,6 +302,11 @@ INCREMENTAL_PROBES = {
         "public.edge_worker_claim_editorial_revision(integer,integer)",
         "public.edge_worker_finish_editorial_revision(uuid,uuid,boolean,text,text,text,jsonb,text,text)",
     ),
+    "0127_supabase_legacy_enrichment_worker.sql": (
+        "public.edge_worker_legacy_finish_empty(uuid)",
+        "public.edge_worker_claim_legacy_enrichment(integer,integer,integer)",
+        "public.edge_worker_finish_legacy_enrichment(uuid,uuid,boolean,text,jsonb)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -55,6 +55,72 @@ masked in the owner's capture and are not recorded here.
   accounts/recipients. Production scheduled jobs stay inactive until the
   third PR's cutover. Record every activation, rollback and last successful run.
 
+## Scheduler foundation and inactive installation
+
+Migrations 0119–0120 create a service-only run ledger, one-use claim and
+completion RPCs, a signed dispatch function, and HTTP result reconciliation.
+The candidate `worker` Edge Function rejects unsigned, stale, oversized, or
+unregistered work before any service-role RPC. Daily reminders are the first
+registered task; the other six provider tasks remain unavailable. No task can
+run until its job is explicitly enabled.
+
+`backend/ops/supabase_workers/0001_install_inactive_cron.sql` creates eight
+named Cron jobs in one transaction, then verifies all eight are inactive. It
+requires Supabase's `pg_cron`, `pg_net`, and `pgcrypto` extensions. The
+application's separate `edge_worker_jobs.enabled` flag is also false by
+default, so both gates must be deliberately opened for a job to dispatch.
+
+| Cron job | Proposed UTC schedule | Existing Railway source |
+| --- | --- | --- |
+| `daily_reminders` | Every minute | Reminders every 15 minutes; shorter drain interval is needed for bounded Expo batches. |
+| `weekly_quiz` | 02, 17, 32, 47 each hour | Part of the reminders worker. |
+| `editorial_email` | 04, 19, 34, 49 each hour | Part of the reminders worker. |
+| `editorial_generation` | 22:00 daily | First stage of pool-topup. |
+| `legacy_enrichment` | 22:05 daily | Second stage of pool-topup. |
+| `content_pool` | 22:10 daily | Final stage of pool-topup. |
+| `prefetch` | Every five minutes | Demand signal is durable in `content_supply_targets`; the former process-local task cannot survive an Edge response. |
+| `http-reconcile` | Every minute | New transport observation; checks HTTP status and expires stale dispatches. |
+
+Before an inactive staging installation, configure these *only in staging*:
+
+1. Database Vault secret `one_concept_worker_url` with the staging project's
+   exact `https://<project-ref>.supabase.co/functions/v1/worker` URL.
+2. A different, random secret of at least 32 characters saved as Database
+   Vault `one_concept_worker_signing_key` and Edge Function secret
+   `WORKER_DISPATCH_SIGNING_KEY`. The values must match exactly. Keep the
+   secret out of SQL files, shell history, logs, GitHub comments and chat.
+3. Apply migrations 0119–0120, deploy the `worker` function, then install the
+   inactive Cron SQL. Do not enable a job until its provider task and staging
+   canary pass. Production uses its own different signing key and stays off
+   until issue #418's cutover.
+
+The request queue contains a run ID, job, issue time and HMAC. It contains no
+Supabase service-role key or signing key. A readable queued signature can at
+most race the legitimate request for that already-enqueued, one-use run; it
+cannot authorize a new run. The Edge function stores only bounded counters.
+`cron.job_run_details` means the SQL dispatch ran; `edge_worker_runs` records
+the separate HTTP status and actual Edge completion. A 2xx HTTP result does
+not mark a run succeeded unless the worker called its completion RPC.
+
+Daily reminders use migration 0121's outbox. One Cron invocation enqueues due
+local-time slots and sends at most 100 Expo tokens. It commits each token claim
+before the network call; an unknown provider outcome stays unknown and is not
+automatically resent. The claim checks the learner's current completion,
+notification choice, active follows and handset ownership. A staging function
+can reach Expo only for tokens listed in its `WORKER_PUSH_TEST_TOKENS` secret.
+The list must contain test handsets only; unlisted tokens are blocked and
+recorded without contacting Expo.
+
+Read-only operator checks after installation:
+
+```sql
+select jobname, schedule, active from cron.job
+where jobname like 'one-concept-%' order by jobname;
+
+select job, scheduled_for, status, http_status, error_code, result
+from public.edge_worker_runs order by scheduled_for desc limit 30;
+```
+
 ## Evidence still needed
 
 - Railway Cron Runs and latest full deployed Git SHA for both services.

@@ -60,8 +60,8 @@ masked in the owner's capture and are not recorded here.
 Migrations 0119–0120 create a service-only run ledger, one-use claim and
 completion RPCs, a signed dispatch function, and HTTP result reconciliation.
 The candidate `worker` Edge Function rejects unsigned, stale, oversized, or
-unregistered work before any service-role RPC. Daily reminders and weekly quiz
-pushes are registered tasks; the other five provider tasks remain unavailable. No task can
+unregistered work before any service-role RPC. Daily reminders, weekly quiz
+pushes, and editorial email are registered tasks; the other four provider tasks remain unavailable. No task can
 run until its job is explicitly enabled.
 
 `backend/ops/supabase_workers/0001_install_inactive_cron.sql` creates eight
@@ -89,8 +89,10 @@ Before an inactive staging installation, configure these *only in staging*:
    Vault `one_concept_worker_signing_key` and Edge Function secret
    `WORKER_DISPATCH_SIGNING_KEY`. The values must match exactly. Keep the
    secret out of SQL files, shell history, logs, GitHub comments and chat.
-3. Apply migrations 0119–0120, deploy the `worker` function, then install the
-   inactive Cron SQL. Do not enable a job until its provider task and staging
+3. Run the protected `supabase-worker-staging-batch-*` workflow once the worker
+   code is ready. One approval applies and verifies the worker migrations,
+   deploys only the `worker` function, and installs eight inactive Cron jobs.
+   Do not enable a job until its provider task and staging
    canary pass. Production uses its own different signing key and stays off
    until issue #418's cutover.
 
@@ -119,6 +121,22 @@ only an explicit rejection can retry, while a send timeout remains unknown.
 The task obeys `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED=true`, and the same staging
 handset allowlist applies. This cap assumes the average learner has no more
 than one active token; extra tokens can continue sending until local 20:00.
+
+Editorial Gmail uses migration 0123's existing assignment outbox. Each Cron
+invocation groups at most ten reviewers, claims at most two batches, and honors
+the rolling 24-hour `EDITORIAL_EMAIL_DAILY_CAP`. The send runs inside a direct
+PostgreSQL transaction that holds the same account, catalog, and notification
+locks as editorial access changes. A revocation therefore wins before send or
+waits until the already-started send finishes. The Edge function needs a
+`WORKER_DATABASE_URL` secret set to this project's **session pooler** URL on
+port 5432. It rejects a URL for another project or pooler mode. The address,
+password, Gmail OAuth values, and test recipient list belong only in Edge
+secrets, never in Git or logs. `EDITORIAL_ENABLED` and
+`EDITORIAL_EMAIL_ENABLED` must both be true before this task runs; in staging,
+`EDITORIAL_EMAIL_TEST_RECIPIENTS` must name only controlled addresses and the
+dashboard origin must be listed in `ALLOWED_ORIGINS`. Gmail has no send
+idempotency key, so an unknown acceptance remains a bounded at-least-once
+retry with a stable Message-ID.
 
 Read-only operator checks after installation:
 

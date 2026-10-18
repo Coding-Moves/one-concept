@@ -173,6 +173,43 @@ select job, scheduled_for, status, http_status, error_code, result
 from public.edge_worker_runs order by scheduled_for desc limit 30;
 ```
 
+For a single redacted status snapshot, run
+`backend/ops/supabase_workers/0002_operator_status.sql` in the target project's
+SQL Editor. It reports both scheduler and application gates, last completed
+run, HTTP result, 24-hour failures, queue counts, and Pacific-day Gemini use.
+Inspect the corresponding Edge Function logs when a run has `task_failed`,
+`ledger_unavailable`, a non-2xx HTTP status, or no success across two expected
+schedule intervals. Do not treat a green Cron row as evidence that push, email,
+or generation completed. Alert on persistent failed/timed-out run counts,
+`sending` entries older than their lease, `failed` or `blocked` generation
+entries, and any production worker job active before the cutover.
+
+During step 2, all eight staging Cron rows and seven application jobs remain
+disabled. The step-3 operator will enable each reviewed job deliberately after
+Railway ownership is stopped. To stop new work quickly, deactivate the named
+Cron jobs and set the corresponding `edge_worker_jobs.enabled=false` in one
+reviewed SQL transaction; check `active_run_id` and recent runs before treating
+an already-started provider call as stopped. Turning a gate back on does not
+replay unknown Expo/Gmail outcomes. Retrying a rejected weekly push or a failed
+editorial mail batch follows their existing bounded outbox states; a `sending`
+timeout marked `unknown` requires human investigation before any retry.
+Generation failures retain durable attempt counts and an explicit reviewer or
+owner action can request a new job; never reset a failed entry directly in SQL.
+
+The two scheduled Railway processes inspected so far are `reminders` and
+`pool-topup`. The separate maintainer CLIs are **manual**:
+`app.workers.content` imports curriculum, reports health, stages a revision,
+and requests a bounded retry; `app.workers.editorial_review` invokes
+authenticated editorial API actions; `app.workers.editorial_accounts` bootstraps
+owner membership; `app.workers.rewrite_catalog` is a one-off rewrite; and
+`app.workers.schema_check` verifies schema. They are not Cron jobs. An operator
+can run their existing protected commands from a local checkout against the
+selected Supabase database after confirming the project ref; no Railway service
+is needed. Publication and rejection must use the authenticated editorial
+actions, as the content CLI itself refuses free-text decisions. The working
+commands and data paths must be rechecked against the live Railway inventory
+before closing issue #417.
+
 ## Evidence still needed
 
 - Railway Cron Runs and latest full deployed Git SHA for both services.

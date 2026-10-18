@@ -6,6 +6,8 @@ Learners may choose a built-in avatar, select a library photo, or take a camera 
 
 `profiles.avatar_url` is the only avatar reference. It contains either `preset:<name>` or a private `profile-avatars` object key. It never contains a device URI, data URI, arbitrary URL, or a service credential. The API converts uploaded JPEG, PNG, or WebP images to a 512px JPEG below 256 KiB, removing embedded metadata in the resulting file. The bucket is private; display links expire after two minutes.
 
+The Supabase Edge candidate for #416 retains the 25 MP JPEG limit and applies an 8 MP limit to PNG/WebP because those formats must be decoded at full size within the hosted memory limit. A larger PNG/WebP returns 422; the mobile client can ask for a smaller photo or JPEG during the #418 cutover.
+
 The photo picker stores only the initiating account ID until it returns. Sign-out clears that marker; a result recovered after Android activity recreation appears as a preview only for the initiating account. The selected photo stays in memory until Save or Cancel, and an upload failure preserves the last confirmed avatar for retry.
 
 Public-profile sharing remains private by default. The dedicated **Profile avatar** choice must be reviewed and published before a visitor receives a short-lived delivery URL. Turning that choice off removes it from future public responses immediately.

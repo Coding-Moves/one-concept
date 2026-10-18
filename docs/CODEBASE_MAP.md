@@ -359,6 +359,28 @@ private diagnostics and restore procedures.
 
 ## Backend request and service flow
 
+The Supabase API candidate for #416 lives in `supabase/functions/api/` and
+`backend/migrations/0046_supabase_api_basics.sql`–`0116_supabase_profile_avatar_api.sql`.
+All 73 JSON paths have candidate handlers, including private avatar upload,
+short-lived Storage signing, and editorial read/command routes. The avatar
+image module bundles a pinned ImageMagick WASM file for 512px JPEG conversion.
+These candidate routes remain isolated from production clients. The complete route checklist and
+remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
+`backend/tools/apply_staging_migrations.py` applies ordered migrations only to
+a fresh staging project after checking its project reference against the connection.
+Its `--inspect` mode reports staging schema metadata and profile row presence
+when the fresh-project gate rejects an existing application schema.
+Its one-project `--reset-demo` mode removes only the reviewed disposable demo
+schema, its event trigger, and Auth users after exact object and empty-Storage
+checks; protected reset and migration tags are separate jobs.
+For the initialized staging project, `--apply-incremental` requires the verified
+0049 RPC baseline and explicit before/after probes for every later migration.
+The protected incremental tag runs this path separately from the fresh-schema
+and Edge deploy jobs. It reloads PostgREST's RPC schema cache after verified
+SQL; `--reload-cache` is the guarded staging-only repair path for stale cache.
+Migration #417 will move scheduled workers; #418 owns browser pages and client
+cutover. Until then, the FastAPI implementation below remains authoritative.
+
 `main.py` configures CORS, routes, production documentation visibility, safe SQLAlchemy and unexpected-exception responses, and a shared
 JWKS cache, and engine cleanup. Its lifespan owns `db/keepalive.py`'s configurable
 database probes; checkout/query and connection return are bounded, failures retry,
@@ -471,6 +493,8 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 ## Schema and migrations
 
 `db/schema.py` compares actual catalog metadata against `backend/schema/contract.json`.
+The contract records migration hashes and the candidate Edge API RPC definitions
+alongside the reviewed application schema.
 `workers/schema_check.py` performs the bounded read-only target check using
 `DIRECT_URL`; `docs/SCHEMA_VERIFICATION.md` covers contract maintenance and
 Railway/GitHub setup. No SQL is applied by verification.

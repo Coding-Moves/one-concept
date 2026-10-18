@@ -1,0 +1,217 @@
+name: Deploy Supabase API candidate to staging
+
+on:
+  push:
+    tags:
+      - 'supabase-api-staging-inspect-*'
+      - 'supabase-api-staging-reset-*'
+      - 'supabase-api-staging-schema-*'
+      - 'supabase-api-staging-incremental-*'
+      - 'supabase-api-staging-deploy-*'
+      - 'supabase-api-staging-smoke-*'
+      - 'supabase-api-staging-load-*'
+      - 'supabase-api-staging-roles-*'
+      - 'supabase-api-staging-diagnose-*'
+      - 'supabase-api-staging-reload-*'
+
+concurrency:
+  group: supabase-api-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  reset_demo:
+    if: startsWith(github.ref_name, 'supabase-api-staging-reset-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Reset reviewed staging demo schema and Auth users
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: python backend/tools/apply_staging_migrations.py --reset-demo
+
+  inspect:
+    if: startsWith(github.ref_name, 'supabase-api-staging-inspect-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Inspect staging schema object presence only
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: python backend/tools/apply_staging_migrations.py --inspect
+
+  migrate:
+    if: startsWith(github.ref_name, 'supabase-api-staging-schema-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply ordered SQL to fresh staging project
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: |
+          python backend/tools/apply_staging_migrations.py --check-only
+          python backend/tools/apply_staging_migrations.py
+
+  migrate_incremental:
+    if: startsWith(github.ref_name, 'supabase-api-staging-incremental-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Apply reviewed incremental SQL to staging only
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: python backend/tools/apply_staging_migrations.py --apply-incremental
+
+  deploy:
+    if: startsWith(github.ref_name, 'supabase-api-staging-deploy-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    env:
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
+      STAGING_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Require distinct staging target and scoped token
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ] || [ -z "$STAGING_REF" ] || [ -z "$PRODUCTION_REF" ] || [ "$STAGING_REF" = "$PRODUCTION_REF" ]; then
+            echo '::error::Configure a staging-scoped token and distinct staging/production project refs.'
+            exit 1
+          fi
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: latest
+      - name: Deploy candidate API function only
+        # Bundled WASM static_files require the CLI's Docker builder (the default).
+        # Do not add --use-api here.
+        run: supabase functions deploy api --project-ref "$STAGING_REF"
+
+  smoke:
+    if: startsWith(github.ref_name, 'supabase-api-staging-smoke-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check authenticated staging learner contract
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+          SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
+          SUPABASE_STAGING_TEST_PASSWORD: ${{ secrets.SUPABASE_STAGING_TEST_PASSWORD }}
+        run: python backend/tools/staging_api_smoke.py
+
+  load:
+    if: startsWith(github.ref_name, 'supabase-api-staging-load-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Measure bounded staging read burst and database connections
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+          SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
+          SUPABASE_STAGING_TEST_PASSWORD: ${{ secrets.SUPABASE_STAGING_TEST_PASSWORD }}
+        run: python backend/tools/staging_api_load.py
+
+  roles:
+    if: startsWith(github.ref_name, 'supabase-api-staging-roles-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Check protected owner and reviewer workflows in staging
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+          SUPABASE_STAGING_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_STAGING_PUBLISHABLE_KEY }}
+          SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
+          SUPABASE_STAGING_TEST_PASSWORD: ${{ secrets.SUPABASE_STAGING_TEST_PASSWORD }}
+          SUPABASE_STAGING_REVIEWER_EMAIL: ${{ secrets.SUPABASE_STAGING_REVIEWER_EMAIL }}
+          SUPABASE_STAGING_REVIEWER_PASSWORD: ${{ secrets.SUPABASE_STAGING_REVIEWER_PASSWORD }}
+          SUPABASE_STAGING_OWNER_EMAIL: ${{ secrets.SUPABASE_STAGING_OWNER_EMAIL }}
+          SUPABASE_STAGING_OWNER_PASSWORD: ${{ secrets.SUPABASE_STAGING_OWNER_PASSWORD }}
+        run: python backend/tools/staging_api_roles.py
+
+  diagnose_learner:
+    if: startsWith(github.ref_name, 'supabase-api-staging-diagnose-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Probe staging learner SQL inside rollback transaction
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+          SUPABASE_STAGING_TEST_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
+        run: PYTHONPATH=backend python backend/tools/diagnose_staging_learner.py
+
+  reload_cache:
+    if: startsWith(github.ref_name, 'supabase-api-staging-reload-')
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Refresh staging PostgREST schema cache
+        env:
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+        run: python backend/tools/apply_staging_migrations.py --reload-cache

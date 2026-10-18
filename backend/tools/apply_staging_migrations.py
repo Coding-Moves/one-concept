@@ -274,6 +274,14 @@ INCREMENTAL_PROBES = {
         "public.edge_worker_record_reminders(jsonb)",
         "public.edge_worker_expire_reminders()",
     ),
+    "0122_supabase_weekly_quiz_worker.sql": (
+        "public.edge_worker_enqueue_weekly(timestamp with time zone,integer,integer)",
+        "public.edge_worker_claim_weekly(timestamp with time zone,integer)",
+        "public.edge_worker_record_weekly(jsonb,timestamp with time zone)",
+        "public.edge_worker_claim_weekly_receipts(timestamp with time zone,integer)",
+        "public.edge_worker_record_weekly_receipts(jsonb,timestamp with time zone)",
+        "public.edge_worker_expire_weekly_sends()",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

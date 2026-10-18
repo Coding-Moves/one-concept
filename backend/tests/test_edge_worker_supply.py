@@ -9,7 +9,8 @@ from sqlalchemy import text
 @pytest.mark.asyncio
 async def test_active_reader_target_advances_only_with_consumption(session, user):
     topic = await session.scalar(text("""select topic_id from public.concepts
-      where status='published' group by topic_id order by count(*),topic_id limit 1"""))
+      where status='published' group by topic_id having count(*)>=2
+      order by count(*),topic_id limit 1"""))
     concepts = (await session.execute(text("""select id from public.concepts
       where topic_id=:tid and status='published' order by id"""),
       {"tid": topic})).scalars().all()

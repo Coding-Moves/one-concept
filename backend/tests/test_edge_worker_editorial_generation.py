@@ -72,9 +72,10 @@ async def seeded_job(session, user):
         'UTF8')),'hex')"""), {"rid": revision, "cid": concept})
     job = await session.scalar(text("""insert into public.editorial_generation_jobs(
       source_revision_id,concept_id,topic_id,feedback_event_id,
-      request_event_id,requested_by,source_token,source_body,feedback)
+      request_event_id,requested_by,source_token,source_body,feedback,available_at)
       values(:rid,:cid,:tid,:fid,:eid,:uid,:token,cast(:body as jsonb),
-        'Clarify the failed payment example before approval.') returning id"""),
+        'Clarify the failed payment example before approval.',
+        now()-interval '2 years') returning id"""),
       {"rid": revision, "cid": concept, "tid": topic, "fid": feedback,
        "eid": request, "uid": user, "token": source_token,
        "body": json.dumps(body)})

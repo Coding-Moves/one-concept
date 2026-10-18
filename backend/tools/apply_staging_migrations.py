@@ -296,6 +296,12 @@ INCREMENTAL_PROBES = {
         "public.edge_worker_release_curated_refill(uuid,uuid,text)",
         "public.edge_worker_complete_curated_refill(uuid,uuid,text,text,jsonb,text,text)",
     ),
+    "0126_supabase_editorial_revision_worker.sql": (
+        "public.edge_worker_editorial_requester_active(uuid,uuid)",
+        "public.edge_worker_editorial_source_current(uuid)",
+        "public.edge_worker_claim_editorial_revision(integer,integer)",
+        "public.edge_worker_finish_editorial_revision(uuid,uuid,boolean,text,text,text,jsonb,text,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

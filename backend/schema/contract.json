@@ -124,7 +124,8 @@
     "0122_supabase_weekly_quiz_worker.sql": "35b1861f2054fe86daa606c2da4b83cdfae1e52d5168d837285a70f9500b05b8",
     "0123_supabase_editorial_email_worker.sql": "2322dbab45632a1a3746ff179be1d71c3dad1bfc39e807775cf05d4e2c77f891",
     "0124_supabase_active_reader_supply.sql": "2d4d29be20370cceb62480755dc926ec4de3c294c95ed01ae0df24dc7bcbe30f",
-    "0125_supabase_curated_refill_worker.sql": "1e4b12a75deb33dfcf3c845d65b3c701733cfe4fea53503fe62236460411ad08"
+    "0125_supabase_curated_refill_worker.sql": "1e4b12a75deb33dfcf3c845d65b3c701733cfe4fea53503fe62236460411ad08",
+    "0126_supabase_editorial_revision_worker.sql": "d9193b087a0890dc160a4d7dd35e72e3127ed6c85af29b29194758da307ec14c"
   },
   "schema": {
     "columns": {

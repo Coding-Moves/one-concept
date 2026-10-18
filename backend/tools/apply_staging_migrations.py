@@ -288,6 +288,14 @@ INCREMENTAL_PROBES = {
         "public.edge_worker_prepare_email(boolean,text[],text,integer)",
         "public.edge_worker_claim_email(integer)",
     ),
+    "0124_supabase_active_reader_supply.sql": (
+        "public.edge_worker_plan_active_readers(integer,integer,integer)",
+    ),
+    "0125_supabase_curated_refill_worker.sql": (
+        "public.edge_worker_claim_curated_refill(uuid,boolean,integer,integer,integer,integer,integer,integer,integer)",
+        "public.edge_worker_release_curated_refill(uuid,uuid,text)",
+        "public.edge_worker_complete_curated_refill(uuid,uuid,text,text,jsonb,text,text)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

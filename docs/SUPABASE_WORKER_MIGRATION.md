@@ -84,18 +84,18 @@ default, so both gates must be deliberately opened for a job to dispatch.
 
 Before an inactive staging installation, configure these *only in staging*:
 
-1. Database Vault secret `one_concept_worker_url` with the staging project's
-   exact `https://<project-ref>.supabase.co/functions/v1/worker` URL.
-2. A different, random secret of at least 32 characters saved as Database
-   Vault `one_concept_worker_signing_key` and Edge Function secret
-   `WORKER_DISPATCH_SIGNING_KEY`. The values must match exactly. Keep the
-   secret out of SQL files, shell history, logs, GitHub comments and chat.
-3. Run the protected `supabase-worker-staging-batch-*` workflow once the worker
-   code is ready. One approval applies and verifies the worker migrations,
-   deploys only the `worker` function, and installs eight inactive Cron jobs.
-   Do not enable a job until its provider task and staging
-   canary pass. Production uses its own different signing key and stays off
-   until issue #418's cutover.
+1. Save a new random 48-character value as GitHub environment secret
+   `SUPABASE_STAGING_WORKER_SIGNING_KEY` in `supabase-staging`. Keep the value
+   out of SQL files, shell history, logs, GitHub comments and chat.
+2. Run the protected `supabase-worker-staging-batch-*` workflow. One approval
+   applies and verifies the worker migrations, writes the key to staging Vault
+   and Edge secrets, deploys only the `worker` function, and installs eight
+   inactive Cron jobs. It sets the staging worker URL, existing session-pooler
+   URL, `ENVIRONMENT=staging`, and `WORKER_GENERATION_TEST_ENABLED=false`.
+   It then temporarily opens one disabled-provider job to prove signed dispatch
+   and closes that gate again. No production secret is reused.
+3. Keep provider jobs off until controlled staging canaries pass. Production
+   uses its own different signing key and stays off until issue #418's cutover.
 
 The request queue contains a run ID, job, issue time and HMAC. It contains no
 Supabase service-role key or signing key. A readable queued signature can at
@@ -116,6 +116,10 @@ published lesson. `GENERATION_ENABLED` and `FUTURE_REFILL_ENABLED` must both
 be true to run. `FUTURE_REFILL_URGENT_ENABLED` independently controls the
 critical-supply pass. Keep these three switches false in staging until the
 provider test uses a dedicated test key and curated test titles.
+All three generation tasks also require worker-only
+`WORKER_GENERATION_TEST_ENABLED=true` outside production. The staging
+deployment sets it to `false`, so a shared API flag cannot spend Gemini calls
+through the worker before a controlled canary.
 
 Editorial correction and legacy enrichment use migrations 0126–0127. Each
 claim rechecks the requester's current membership and a shared Pacific-day

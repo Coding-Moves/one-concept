@@ -49,3 +49,5 @@ jobs:
         run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF"
       - name: Install all worker schedules inactive in staging
         run: python backend/tools/install_staging_worker_cron.py
+      - name: Verify one signed disabled-provider dispatch
+        run: python backend/tools/smoke_staging_worker.py

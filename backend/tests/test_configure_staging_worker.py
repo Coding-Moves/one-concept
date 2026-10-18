@@ -47,6 +47,7 @@ def test_configures_vault_and_edge_without_printing_secrets(monkeypatch, capsys)
             assert f"WORKER_DISPATCH_SIGNING_KEY={SIGNING_KEY}\n" in content
             assert f"WORKER_DATABASE_URL={DATABASE_URL}\n" in content
             assert "ENVIRONMENT=staging\n" in content
+            assert "WORKER_GENERATION_TEST_ENABLED=false\n" in content
         return subprocess.CompletedProcess(args, 0, "", "")
 
     monkeypatch.setattr(setup.subprocess, "run", fake_run)

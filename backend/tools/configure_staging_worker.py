@@ -84,6 +84,7 @@ commit;"""
             handle.write(f"WORKER_DISPATCH_SIGNING_KEY={key}\n")
             handle.write(f"WORKER_DATABASE_URL={database_url}\n")
             handle.write("ENVIRONMENT=staging\n")
+            handle.write("WORKER_GENERATION_TEST_ENABLED=false\n")
         result = subprocess.run(
             ["supabase", "secrets", "set", "--env-file", str(env_file),
              "--project-ref", staging],

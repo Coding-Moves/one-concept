@@ -38,11 +38,18 @@ jobs:
           fi
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Apply and verify reviewed worker migrations
-        run: python backend/tools/apply_staging_migrations.py --apply-incremental
       - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
         with:
           version: latest
+      - name: Require staging token's Edge secret permissions before SQL
+        run: |
+          if ! supabase secrets set WORKER_GENERATION_TEST_ENABLED=false \
+              --project-ref "$STAGING_PROJECT_REF" > /dev/null 2>&1; then
+            echo '::error::The staging token needs Edge Function Secrets read and read-write permissions.'
+            exit 1
+          fi
+      - name: Apply and verify reviewed worker migrations
+        run: python backend/tools/apply_staging_migrations.py --apply-incremental
       - name: Configure staging-only Vault and Edge secrets
         run: python backend/tools/configure_staging_worker.py
       - name: Deploy candidate worker only to staging

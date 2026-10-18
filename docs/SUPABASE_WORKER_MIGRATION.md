@@ -87,6 +87,9 @@ Before an inactive staging installation, configure these *only in staging*:
 1. Save a new random 48-character value as GitHub environment secret
    `SUPABASE_STAGING_WORKER_SIGNING_KEY` in `supabase-staging`. Keep the value
    out of SQL files, shell history, logs, GitHub comments and chat.
+   The staging `SUPABASE_STAGING_ACCESS_TOKEN` must be scoped only to this
+   project with Edge Functions read/write and Edge Function Secrets read and
+   read/write; the original deploy-only token cannot set Edge secrets.
 2. Run the protected `supabase-worker-staging-batch-*` workflow. One approval
    applies and verifies the worker migrations, writes the key to staging Vault
    and Edge secrets, deploys only the `worker` function, and installs eight

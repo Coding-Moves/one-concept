@@ -18,8 +18,8 @@ begin
     ('daily_reminders', '*/1 * * * *'),
     ('weekly_quiz', '* * * * *'),
     ('editorial_email', '4,19,34,49 * * * *'),
-    ('editorial_generation', '0 22 * * *'),
-    ('legacy_enrichment', '5 22 * * *'),
+    ('editorial_generation', '*/2 * * * *'),
+    ('legacy_enrichment', '1-59/2 * * * *'),
     ('content_pool', '*/5 * * * *'),
     ('prefetch', '2-59/5 * * * *')
   ) as schedules(job, expression) loop

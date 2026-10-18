@@ -61,9 +61,9 @@ Migrations 0119–0120 create a service-only run ledger, one-use claim and
 completion RPCs, a signed dispatch function, and HTTP result reconciliation.
 The candidate `worker` Edge Function rejects unsigned, stale, oversized, or
 unregistered work before any service-role RPC. Daily reminders, weekly quiz
-pushes, editorial email, and curated refill are registered tasks. Editorial
-revision and legacy enrichment remain unavailable. No task can run until its
-job is explicitly enabled.
+pushes, editorial email, curated refill, editorial correction, and legacy
+enrichment are registered tasks. No task can run until its job is explicitly
+enabled.
 
 `backend/ops/supabase_workers/0001_install_inactive_cron.sql` creates eight
 named Cron jobs in one transaction, then verifies all eight are inactive. It
@@ -76,8 +76,8 @@ default, so both gates must be deliberately opened for a job to dispatch.
 | `daily_reminders` | Every minute | Reminders every 15 minutes; shorter drain interval is needed for bounded Expo batches. |
 | `weekly_quiz` | Every minute | Part of the reminders worker; up to 50 due learners and 100 Expo tokens per invocation. |
 | `editorial_email` | 04, 19, 34, 49 each hour | Part of the reminders worker. |
-| `editorial_generation` | 22:00 daily | First stage of pool-topup. |
-| `legacy_enrichment` | 22:05 daily | Second stage of pool-topup. |
+| `editorial_generation` | Every two minutes | First stage of pool-topup, drained one private revision per invocation. |
+| `legacy_enrichment` | Every two minutes, offset by one minute | Second stage of pool-topup, drained one owner-selected batch entry per invocation. |
 | `content_pool` | Every five minutes | Plans active-reader demand and claims at most one curated title. The Pacific-day global and topic caps bound total provider calls. |
 | `prefetch` | Every five minutes, offset by two minutes | Optional critical-supply pass. Demand is durable in `content_supply_targets`; the former process-local task cannot survive an Edge response. |
 | `http-reconcile` | Every minute | New transport observation; checks HTTP status and expires stale dispatches. |
@@ -116,6 +116,18 @@ published lesson. `GENERATION_ENABLED` and `FUTURE_REFILL_ENABLED` must both
 be true to run. `FUTURE_REFILL_URGENT_ENABLED` independently controls the
 critical-supply pass. Keep these three switches false in staging until the
 provider test uses a dedicated test key and curated test titles.
+
+Editorial correction and legacy enrichment use migrations 0126–0127. Each
+claim rechecks the requester's current membership and a shared Pacific-day
+generation cap before a single provider call. Completion rechecks revocation,
+source version and competing revisions under the account and catalog locks.
+Only a complete private draft is staged; the existing human approval and
+publication steps remain required. Legacy enrichment also requires an
+owner-created running batch and Google grounding metadata with safe HTTPS
+references; model-written reference URLs are ignored. The short recurring
+schedules drain bounded work while its normal feature switches and per-batch
+quota remain authoritative. A stopped worker is recovered by the 30-minute
+claim reaper without allowing an old result to overwrite a newer claim.
 
 Daily reminders use migration 0121's outbox. One Cron invocation enqueues due
 local-time slots and sends at most 100 Expo tokens. It commits each token claim

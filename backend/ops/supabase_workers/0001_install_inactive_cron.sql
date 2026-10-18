@@ -16,7 +16,7 @@ declare
 begin
   for item in select * from (values
     ('daily_reminders', '*/1 * * * *'),
-    ('weekly_quiz', '2,17,32,47 * * * *'),
+    ('weekly_quiz', '* * * * *'),
     ('editorial_email', '4,19,34,49 * * * *'),
     ('editorial_generation', '0 22 * * *'),
     ('legacy_enrichment', '5 22 * * *'),

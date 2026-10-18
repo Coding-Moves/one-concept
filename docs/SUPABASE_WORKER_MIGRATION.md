@@ -60,8 +60,8 @@ masked in the owner's capture and are not recorded here.
 Migrations 0119–0120 create a service-only run ledger, one-use claim and
 completion RPCs, a signed dispatch function, and HTTP result reconciliation.
 The candidate `worker` Edge Function rejects unsigned, stale, oversized, or
-unregistered work before any service-role RPC. Daily reminders are the first
-registered task; the other six provider tasks remain unavailable. No task can
+unregistered work before any service-role RPC. Daily reminders and weekly quiz
+pushes are registered tasks; the other five provider tasks remain unavailable. No task can
 run until its job is explicitly enabled.
 
 `backend/ops/supabase_workers/0001_install_inactive_cron.sql` creates eight
@@ -73,7 +73,7 @@ default, so both gates must be deliberately opened for a job to dispatch.
 | Cron job | Proposed UTC schedule | Existing Railway source |
 | --- | --- | --- |
 | `daily_reminders` | Every minute | Reminders every 15 minutes; shorter drain interval is needed for bounded Expo batches. |
-| `weekly_quiz` | 02, 17, 32, 47 each hour | Part of the reminders worker. |
+| `weekly_quiz` | Every minute | Part of the reminders worker; up to 50 due learners and 100 Expo tokens per invocation. |
 | `editorial_email` | 04, 19, 34, 49 each hour | Part of the reminders worker. |
 | `editorial_generation` | 22:00 daily | First stage of pool-topup. |
 | `legacy_enrichment` | 22:05 daily | Second stage of pool-topup. |
@@ -110,6 +110,15 @@ notification choice, active follows and handset ownership. A staging function
 can reach Expo only for tokens listed in its `WORKER_PUSH_TEST_TOKENS` secret.
 The list must contain test handsets only; unlisted tokens are blocked and
 recorded without contacting Expo.
+
+Weekly quiz pushes use migration 0122's existing quiz outbox and immutable
+seven-question snapshot. The task enqueues at most 50 due learners and claims
+at most 100 device tokens per minute, so a 500-learner due cohort can drain
+within the 15-minute local 09:00 window. It checks Expo receipts separately;
+only an explicit rejection can retry, while a send timeout remains unknown.
+The task obeys `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED=true`, and the same staging
+handset allowlist applies. This cap assumes the average learner has no more
+than one active token; extra tokens can continue sending until local 20:00.
 
 Read-only operator checks after installation:
 

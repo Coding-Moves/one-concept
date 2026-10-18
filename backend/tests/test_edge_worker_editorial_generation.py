@@ -137,3 +137,8 @@ async def test_editorial_worker_cancels_after_requester_revocation(session, user
     assert state == "cancelled"
     assert await session.scalar(text("""select count(*) from public.concept_revisions
       where concept_id=:cid"""), {"cid": concept}) == 1
+    await session.commit()
+    assert await session.scalar(text("""select count(*)
+      from public.editorial_generation_jobs j join public.concepts c
+        on c.id=j.concept_id where c.slug like 'editorial-job-%'
+        and j.claim_token is not null""")) == 0

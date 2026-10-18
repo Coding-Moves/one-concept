@@ -5,6 +5,7 @@ import { createEditorialEmailTask } from './editorial_email.ts';
 import type { EmailTransaction } from './editorial_email.ts';
 import { createCuratedRefillTask } from './curated_refill.ts';
 import { createEditorialGenerationTask } from './editorial_generation.ts';
+import { createLegacyEnrichmentTask } from './legacy_enrichment.ts';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -123,6 +124,14 @@ Deno.serve(createHandler({
       model: Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
       dailyCap: integerSetting('GENERATION_DAILY_CALL_CAP', 200),
       maxConcurrent: integerSetting('GENERATION_MAX_CONCURRENT', 3),
+    }),
+    legacy_enrichment: createLegacyEnrichmentTask(serviceRpc, fetch, {
+      enabled: Deno.env.get('GENERATION_ENABLED') === 'true' &&
+        Deno.env.get('LEGACY_ENRICHMENT_ENABLED') === 'true',
+      apiKey: Deno.env.get('GEMINI_API_KEY') ?? '',
+      dailyCap: integerSetting('GENERATION_DAILY_CALL_CAP', 200),
+      maxConcurrent: integerSetting('GENERATION_MAX_CONCURRENT', 3),
+      reviewLimit: integerSetting('CONTENT_REVIEW_BACKLOG_LIMIT', 25),
     }),
   },
 }));

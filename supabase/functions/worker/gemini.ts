@@ -94,11 +94,14 @@ function onlyKeys(value: Record<string, unknown>, keys: string[]): boolean {
   return Object.keys(value).every(key => keys.includes(key));
 }
 
-export function validateGenerated(value: unknown): GeneratedConcept {
+export function validateGenerated(value: unknown,
+  bounds: { summaryMax: number; exampleMax: number } =
+    { summaryMax: 420, exampleMax: 300 }): GeneratedConcept {
   const payload = object(value);
   const summary = typeof payload.summary === 'string' ? payload.summary.trim() : '';
   const example = typeof payload.example === 'string' ? payload.example.trim() : '';
-  if (!textInRange(summary, 100, 420) || !textInRange(example, 40, 300) ||
+  if (!textInRange(summary, 100, bounds.summaryMax) ||
+      !textInRange(example, 40, bounds.exampleMax) ||
       summary === example || summary.includes('```') || example.includes('```')) {
     throw new GeminiError('validation_failed');
   }

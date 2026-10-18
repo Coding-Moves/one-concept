@@ -258,6 +258,12 @@ INCREMENTAL_PROBES = {
     "0118_supabase_api_request_rate_limit.sql": (
         "public.edge_api_request_retry_after(uuid,text,integer,integer)",
     ),
+    "0119_supabase_worker_run_ledger.sql": (
+        "public.edge_worker_enqueue_run(text,timestamp with time zone)",
+        "public.edge_worker_start_run(uuid,text)",
+        "public.edge_worker_finish_run(uuid,boolean,jsonb,text)",
+        "public.edge_worker_expire_runs()",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

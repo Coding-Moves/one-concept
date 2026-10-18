@@ -1,5 +1,6 @@
 import { createHandler } from './handler.ts';
 import { createDailyReminderTask } from './daily_reminders.ts';
+import { createWeeklyQuizTask } from './weekly_quiz.ts';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -14,6 +15,11 @@ function required(name: string): string {
 
 const supabaseUrl = required('SUPABASE_URL').replace(/\/$/, '');
 const serviceRoleKey = required('SUPABASE_SERVICE_ROLE_KEY');
+const pushOptions = {
+  environment: Deno.env.get('ENVIRONMENT') ?? 'development',
+  testTokens: new Set((Deno.env.get('WORKER_PUSH_TEST_TOKENS') ?? '')
+    .split(',').map(token => token.trim()).filter(Boolean)),
+};
 const serviceRpc = async (name: string, args: Record<string, unknown>): Promise<unknown> => {
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
@@ -32,10 +38,10 @@ Deno.serve(createHandler({
   serviceRoleKey,
   signingKey: required('WORKER_DISPATCH_SIGNING_KEY'),
   tasks: {
-    daily_reminders: createDailyReminderTask(serviceRpc, fetch, {
-      environment: Deno.env.get('ENVIRONMENT') ?? 'development',
-      testTokens: new Set((Deno.env.get('WORKER_PUSH_TEST_TOKENS') ?? '')
-        .split(',').map(token => token.trim()).filter(Boolean)),
+    daily_reminders: createDailyReminderTask(serviceRpc, fetch, pushOptions),
+    weekly_quiz: createWeeklyQuizTask(serviceRpc, fetch, {
+      ...pushOptions,
+      enabled: Deno.env.get('WEEKLY_QUIZ_NOTIFICATIONS_ENABLED') === 'true',
     }),
   },
 }));

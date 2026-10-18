@@ -3,3 +3,8 @@
 [functions.api]
 verify_jwt = false
 static_files = ["./functions/api/magick.wasm"]
+
+# Cron uses a one-use HMAC dispatch rather than a user JWT. The handler checks
+# the signature before calling any service-role RPC or provider.
+[functions.worker]
+verify_jwt = false

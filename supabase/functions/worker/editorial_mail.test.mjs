@@ -7,7 +7,8 @@ const batch = { id: '11111111-1111-4111-8111-111111111111',
   subject: 'One Concept: assigned lessons to review',
   body: 'One lesson to review.\nhttps://review.example.test/?view=review&kind=revisions&id=22222222-2222-4222-8222-222222222222' };
 const config = { enabled: true, environment: 'production', testRecipients: new Set(),
-  dashboardOrigin: 'https://review.example.test', from: 'editor@example.test',
+  dashboardOrigin: 'https://review.example.test',
+  allowedOrigins: new Set(['https://review.example.test']), from: 'editor@example.test',
   clientId: 'test-client', clientSecret: 'test-secret', refreshToken: 'test-refresh' };
 
 test('Gmail OAuth then MIME send succeeds without leaking credentials into body', async () => {

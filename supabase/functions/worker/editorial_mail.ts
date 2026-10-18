@@ -10,6 +10,7 @@ export type MailConfig = {
   environment: string;
   testRecipients: ReadonlySet<string>;
   dashboardOrigin: string;
+  allowedOrigins: ReadonlySet<string>;
   from: string;
   clientId: string;
   clientSecret: string;
@@ -32,7 +33,8 @@ export function mailSetupStatus(config: MailConfig): string {
     const url = new URL(config.dashboardOrigin);
     if (url.protocol !== 'https:' || url.username || url.password || url.search ||
         url.hash || url.pathname !== '/' ||
-        config.dashboardOrigin.replace(/\/$/, '') !== url.origin) {
+        config.dashboardOrigin.replace(/\/$/, '') !== url.origin ||
+        !config.allowedOrigins.has(url.origin)) {
       return 'dashboard_setup_required';
     }
   } catch { return 'dashboard_setup_required'; }

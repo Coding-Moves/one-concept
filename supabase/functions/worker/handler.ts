@@ -19,6 +19,7 @@ type Fetcher = typeof fetch;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HEX_SHA256 = /^[0-9a-f]{64}$/;
 const encoder = new TextEncoder();
+const decoder = new TextDecoder('utf-8', { fatal: true });
 
 function json(status: number, data: Record<string, unknown>): Response {
   return new Response(JSON.stringify(data), {
@@ -46,6 +47,30 @@ function sameHex(a: string, b: string): boolean {
   let delta = 0;
   for (let i = 0; i < a.length; i++) delta |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return delta === 0;
+}
+
+async function readBoundedBody(request: Request): Promise<string | null> {
+  if (!request.body) return '';
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.byteLength;
+    if (size > 512) {
+      try { await reader.cancel(); } catch { /* response still rejects the body */ }
+      return null;
+    }
+    chunks.push(value);
+  }
+  const bytes = new Uint8Array(size);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return decoder.decode(bytes);
 }
 
 async function rpc(
@@ -87,8 +112,8 @@ export function createHandler(
     }
     let data: unknown;
     try {
-      const body = await request.text();
-      if (encoder.encode(body).byteLength > 512) return json(413, { error: 'request_too_large' });
+      const body = await readBoundedBody(request);
+      if (body === null) return json(413, { error: 'request_too_large' });
       data = JSON.parse(body);
     } catch { return json(400, { error: 'invalid_request' }); }
     if (typeof data !== 'object' || data === null || Array.isArray(data)) {

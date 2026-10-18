@@ -87,4 +87,11 @@ test('body limit and method guard reject public misuse before RPC', async () => 
   assert.equal((await handler(new Request('https://staging.example.invalid/functions/v1/worker', {
     method: 'POST', body: 'x'.repeat(513),
   }))).status, 413);
+  const streamed = new Request('https://staging.example.invalid/functions/v1/worker', {
+    method: 'POST', duplex: 'half', body: new ReadableStream({
+      start(controller) { controller.enqueue(new Uint8Array(513)); controller.close(); },
+    }),
+  });
+  assert.equal(streamed.headers.get('content-length'), null);
+  assert.equal((await handler(streamed)).status, 413);
 });

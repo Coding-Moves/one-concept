@@ -6,6 +6,7 @@ import type { EmailTransaction } from './editorial_email.ts';
 import { createCuratedRefillTask } from './curated_refill.ts';
 import { createEditorialGenerationTask } from './editorial_generation.ts';
 import { createLegacyEnrichmentTask } from './legacy_enrichment.ts';
+import { generationAllowed } from './provider_gate.ts';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -56,13 +57,15 @@ const pushOptions = {
   testTokens: new Set((Deno.env.get('WORKER_PUSH_TEST_TOKENS') ?? '')
     .split(',').map(token => token.trim()).filter(Boolean)),
 };
+const canGenerate = generationAllowed(pushOptions.environment,
+  Deno.env.get('WORKER_GENERATION_TEST_ENABLED'));
 const integerSetting = (name: string, fallback: number): number => {
   const raw = Deno.env.get(name);
   return raw === undefined ? fallback : Number(raw);
 };
 const refillOptions = {
   enabled: Deno.env.get('GENERATION_ENABLED') === 'true' &&
-    Deno.env.get('FUTURE_REFILL_ENABLED') === 'true',
+    Deno.env.get('FUTURE_REFILL_ENABLED') === 'true' && canGenerate,
   urgentEnabled: Deno.env.get('FUTURE_REFILL_URGENT_ENABLED') === 'true',
   apiKey: Deno.env.get('GEMINI_API_KEY') ?? '',
   model: Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
@@ -119,7 +122,7 @@ Deno.serve(createHandler({
     prefetch: createCuratedRefillTask(serviceRpc, fetch, refillOptions, true),
     editorial_generation: createEditorialGenerationTask(serviceRpc, fetch, {
       enabled: Deno.env.get('EDITORIAL_ENABLED') === 'true' &&
-        Deno.env.get('GENERATION_ENABLED') === 'true',
+        Deno.env.get('GENERATION_ENABLED') === 'true' && canGenerate,
       apiKey: Deno.env.get('GEMINI_API_KEY') ?? '',
       model: Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
       dailyCap: integerSetting('GENERATION_DAILY_CALL_CAP', 200),
@@ -127,7 +130,7 @@ Deno.serve(createHandler({
     }),
     legacy_enrichment: createLegacyEnrichmentTask(serviceRpc, fetch, {
       enabled: Deno.env.get('GENERATION_ENABLED') === 'true' &&
-        Deno.env.get('LEGACY_ENRICHMENT_ENABLED') === 'true',
+        Deno.env.get('LEGACY_ENRICHMENT_ENABLED') === 'true' && canGenerate,
       apiKey: Deno.env.get('GEMINI_API_KEY') ?? '',
       dailyCap: integerSetting('GENERATION_DAILY_CALL_CAP', 200),
       maxConcurrent: integerSetting('GENERATION_MAX_CONCURRENT', 3),

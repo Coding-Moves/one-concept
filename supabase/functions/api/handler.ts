@@ -180,7 +180,10 @@ async function rpc(name: 'edge_api_request_retry_after' | 'edge_api_health' | 'e
         'content-type': 'application/json',
       },
       body: JSON.stringify(args),
-      signal: AbortSignal.timeout(name === 'edge_api_request_retry_after' ? 8000 : 5000),
+      // These two calls share the learner read path; staging showed the state
+      // RPC crossing five seconds only during a sustained single-account burst.
+      signal: AbortSignal.timeout(
+        name === 'edge_api_request_retry_after' || name === 'edge_api_state' ? 8000 : 5000),
       redirect: 'error',
     });
   } catch (failure) {

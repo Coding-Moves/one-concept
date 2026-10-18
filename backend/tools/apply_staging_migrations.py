@@ -264,6 +264,10 @@ INCREMENTAL_PROBES = {
         "public.edge_worker_finish_run(uuid,boolean,jsonb,text)",
         "public.edge_worker_expire_runs()",
     ),
+    "0120_supabase_worker_transport.sql": (
+        "public.edge_worker_dispatch(text)",
+        "public.edge_worker_poll_http()",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -46,6 +46,7 @@ async def test_dispatch_requires_explicit_enable_and_one_use(session):
     )
     assert status == "succeeded"
     await session.execute(text("update public.edge_worker_jobs set enabled=false where name='daily_reminders'"))
+    await session.execute(text("delete from public.edge_worker_runs where job='daily_reminders'"))
     await session.commit()
 
 
@@ -91,6 +92,7 @@ async def test_overlapping_claims_and_expired_dispatch(sessionmaker_for_test):
             text("select public.edge_worker_finish_run(:id, true)"), {"id": winner},
         )
         await session.execute(text("update public.edge_worker_jobs set enabled=false where name='weekly_quiz'"))
+        await session.execute(text("delete from public.edge_worker_runs where job='weekly_quiz'"))
         await session.commit()
 
 

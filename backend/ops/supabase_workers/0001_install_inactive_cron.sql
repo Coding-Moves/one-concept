@@ -20,8 +20,8 @@ begin
     ('editorial_email', '4,19,34,49 * * * *'),
     ('editorial_generation', '0 22 * * *'),
     ('legacy_enrichment', '5 22 * * *'),
-    ('content_pool', '10 22 * * *'),
-    ('prefetch', '*/5 * * * *')
+    ('content_pool', '*/5 * * * *'),
+    ('prefetch', '2-59/5 * * * *')
   ) as schedules(job, expression) loop
     installed_job := cron.schedule(
       'one-concept-' || item.job,

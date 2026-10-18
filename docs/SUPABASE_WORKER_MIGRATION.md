@@ -61,8 +61,9 @@ Migrations 0119–0120 create a service-only run ledger, one-use claim and
 completion RPCs, a signed dispatch function, and HTTP result reconciliation.
 The candidate `worker` Edge Function rejects unsigned, stale, oversized, or
 unregistered work before any service-role RPC. Daily reminders, weekly quiz
-pushes, and editorial email are registered tasks; the other four provider tasks remain unavailable. No task can
-run until its job is explicitly enabled.
+pushes, editorial email, and curated refill are registered tasks. Editorial
+revision and legacy enrichment remain unavailable. No task can run until its
+job is explicitly enabled.
 
 `backend/ops/supabase_workers/0001_install_inactive_cron.sql` creates eight
 named Cron jobs in one transaction, then verifies all eight are inactive. It
@@ -77,8 +78,8 @@ default, so both gates must be deliberately opened for a job to dispatch.
 | `editorial_email` | 04, 19, 34, 49 each hour | Part of the reminders worker. |
 | `editorial_generation` | 22:00 daily | First stage of pool-topup. |
 | `legacy_enrichment` | 22:05 daily | Second stage of pool-topup. |
-| `content_pool` | 22:10 daily | Final stage of pool-topup. |
-| `prefetch` | Every five minutes | Demand signal is durable in `content_supply_targets`; the former process-local task cannot survive an Edge response. |
+| `content_pool` | Every five minutes | Plans active-reader demand and claims at most one curated title. The Pacific-day global and topic caps bound total provider calls. |
+| `prefetch` | Every five minutes, offset by two minutes | Optional critical-supply pass. Demand is durable in `content_supply_targets`; the former process-local task cannot survive an Edge response. |
 | `http-reconcile` | Every minute | New transport observation; checks HTTP status and expires stale dispatches. |
 
 Before an inactive staging installation, configure these *only in staging*:
@@ -103,6 +104,18 @@ cannot authorize a new run. The Edge function stores only bounded counters.
 `cron.job_run_details` means the SQL dispatch ran; `edge_worker_runs` records
 the separate HTTP status and actual Edge completion. A 2xx HTTP result does
 not mark a run succeeded unless the worker called its completion RPC.
+
+Curated refill uses migrations 0124–0125. The normal pass refreshes durable
+active-reader targets; the optional urgent pass uses the same targets and
+separate higher daily caps. Both reserve Pacific-day global and topic
+allowances, check shared generation and review capacity, then fence one
+backlog title before a single Gemini call. A timeout or failed call releases
+the title for a bounded retry; a late completion cannot overwrite a newer
+claim. Successful output is a private concept and revision draft, never a
+published lesson. `GENERATION_ENABLED` and `FUTURE_REFILL_ENABLED` must both
+be true to run. `FUTURE_REFILL_URGENT_ENABLED` independently controls the
+critical-supply pass. Keep these three switches false in staging until the
+provider test uses a dedicated test key and curated test titles.
 
 Daily reminders use migration 0121's outbox. One Cron invocation enqueues due
 local-time slots and sends at most 100 Expo tokens. It commits each token claim

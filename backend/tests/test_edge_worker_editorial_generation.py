@@ -21,7 +21,9 @@ async def seeded_job(session, user):
         'Worker Reviewer','Worker Reviewer')"""), {"uid": user})
     topic, subtopic, subslug = (await session.execute(text("""select c.topic_id,
       c.subtopic_id,s.slug from public.concepts c
-      join public.subtopics s on s.id=c.subtopic_id limit 1"""))).one()
+      join public.subtopics s on s.id=c.subtopic_id and s.is_active
+      join public.topics t on t.id=c.topic_id and t.is_active
+      limit 1"""))).one()
     suffix = uuid4().hex[:10]
     concept = await session.scalar(text("""insert into public.concepts(
       topic_id,subtopic_id,slug,title,summary,example,status,curriculum)

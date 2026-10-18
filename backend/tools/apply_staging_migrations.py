@@ -282,6 +282,12 @@ INCREMENTAL_PROBES = {
         "public.edge_worker_record_weekly_receipts(jsonb,timestamp with time zone)",
         "public.edge_worker_expire_weekly_sends()",
     ),
+    "0123_supabase_editorial_email_worker.sql": (
+        "public.edge_worker_email_entry_eligible(uuid)",
+        "public.edge_worker_email_batch_eligible(uuid)",
+        "public.edge_worker_prepare_email(boolean,text[],text,integer)",
+        "public.edge_worker_claim_email(integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

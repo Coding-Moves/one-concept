@@ -121,7 +121,8 @@
     "0119_supabase_worker_run_ledger.sql": "b37579bb456895015b9477aa16a50b30cbf0a82b7b972f7429917bfdbc17ad90",
     "0120_supabase_worker_transport.sql": "8ecd7bd921f0cb19a1dfdbcc37c1d1acbf24e625b0722b73a7f39804513e6673",
     "0121_supabase_daily_reminder_outbox.sql": "282fc3340b28e2319498515fa850118282a9faedbc4893afdd4f558915ba1e08",
-    "0122_supabase_weekly_quiz_worker.sql": "35b1861f2054fe86daa606c2da4b83cdfae1e52d5168d837285a70f9500b05b8"
+    "0122_supabase_weekly_quiz_worker.sql": "35b1861f2054fe86daa606c2da4b83cdfae1e52d5168d837285a70f9500b05b8",
+    "0123_supabase_editorial_email_worker.sql": "2322dbab45632a1a3746ff179be1d71c3dad1bfc39e807775cf05d4e2c77f891"
   },
   "schema": {
     "columns": {

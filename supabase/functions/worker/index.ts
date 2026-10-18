@@ -3,6 +3,7 @@ import { createDailyReminderTask } from './daily_reminders.ts';
 import { createWeeklyQuizTask } from './weekly_quiz.ts';
 import { createEditorialEmailTask } from './editorial_email.ts';
 import type { EmailTransaction } from './editorial_email.ts';
+import { createCuratedRefillTask } from './curated_refill.ts';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -53,6 +54,28 @@ const pushOptions = {
   testTokens: new Set((Deno.env.get('WORKER_PUSH_TEST_TOKENS') ?? '')
     .split(',').map(token => token.trim()).filter(Boolean)),
 };
+const integerSetting = (name: string, fallback: number): number => {
+  const raw = Deno.env.get(name);
+  return raw === undefined ? fallback : Number(raw);
+};
+const refillOptions = {
+  enabled: Deno.env.get('GENERATION_ENABLED') === 'true' &&
+    Deno.env.get('FUTURE_REFILL_ENABLED') === 'true',
+  urgentEnabled: Deno.env.get('FUTURE_REFILL_URGENT_ENABLED') === 'true',
+  apiKey: Deno.env.get('GEMINI_API_KEY') ?? '',
+  model: Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
+  activeDays: integerSetting('CONTENT_ACTIVE_DAYS', 90),
+  reserve: integerSetting('CONTENT_RESERVE_PER_TOPIC', 60),
+  low: integerSetting('CONTENT_LOW_WATERMARK', 10),
+  critical: integerSetting('CONTENT_CRITICAL_WATERMARK', 3),
+  minPool: integerSetting('MIN_POOL_PER_TOPIC', 25),
+  dailyCap: integerSetting('FUTURE_REFILL_DAILY_CALL_CAP', 5),
+  topicCap: integerSetting('FUTURE_REFILL_TOPIC_DAILY_CAP', 1),
+  urgentDailyCap: integerSetting('FUTURE_REFILL_URGENT_DAILY_CALL_CAP', 10),
+  urgentTopicCap: integerSetting('FUTURE_REFILL_URGENT_TOPIC_DAILY_CAP', 2),
+  maxConcurrent: integerSetting('GENERATION_MAX_CONCURRENT', 3),
+  reviewLimit: integerSetting('CONTENT_REVIEW_BACKLOG_LIMIT', 25),
+};
 const serviceRpc = async (name: string, args: Record<string, unknown>): Promise<unknown> => {
   const response = await fetch(`${supabaseUrl}/rest/v1/rpc/${name}`, {
     method: 'POST',
@@ -90,5 +113,7 @@ Deno.serve(createHandler({
       dailyCap: Number(Deno.env.get('EDITORIAL_EMAIL_DAILY_CAP') ?? '40'),
       databaseReady: workerDatabaseUrl.length > 0,
     }),
+    content_pool: createCuratedRefillTask(serviceRpc, fetch, refillOptions, false),
+    prefetch: createCuratedRefillTask(serviceRpc, fetch, refillOptions, true),
   },
 }));

@@ -43,6 +43,7 @@ const HEADERS = 'authorization, apikey, content-type, x-client-info';
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const HH_MM = /^([01][0-9]|2[0-3]):[0-5][0-9]$/;
 const MAX_JSON_BYTES = 4096;
+const MAX_EDITORIAL_JSON_BYTES = 64 * 1024;
 
 class ClientBodyError extends Error {
   readonly status: number;
@@ -265,6 +266,12 @@ async function readJson(request: Request, optional = false,
     if (value !== null && typeof value === 'object' && !Array.isArray(value)) return value as JsonObject;
   } catch { /* invalid JSON */ }
   throw new ClientBodyError(422, 'Invalid request body');
+}
+
+// An editorial note can contain 4,000 Unicode characters. Its valid UTF-8
+// request body may exceed the smaller limit used for ordinary learner writes.
+function readEditorialJson(request: Request): Promise<JsonObject | null> {
+  return readJson(request, false, MAX_EDITORIAL_JSON_BYTES);
 }
 
 function notificationInput(body: JsonObject): { enabled: boolean; weekly: boolean | null; times: string[] } {
@@ -1230,7 +1237,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
             return editorialResponse({ detail: 'Invalid revision ID' }, 422, cors);
           }
           const revisionId = editorialRevisionAction[1].toLowerCase();
-          const input = revisionActionInput((await readJson(request))!);
+          const input = revisionActionInput((await readEditorialJson(request))!);
           let bodyValid = true;
           if (['submit', 'approved', 'approve_and_publish', 'publish',
             'changes_requested'].includes(input.action)) {
@@ -1288,7 +1295,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
             return editorialResponse({ detail: 'Invalid concept ID' }, 422, cors);
           }
           const conceptId = editorialConceptAction[1].toLowerCase();
-          const input = conceptActionInput((await readJson(request))!);
+          const input = conceptActionInput((await readEditorialJson(request))!);
           let bodyValid = true;
           if (input.action === 'attest') {
             const source = await rpc('edge_api_editorial_concept_detail_source', {
@@ -1338,7 +1345,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
           if (!UUID.test(editorialRevisionGeneration[1])) {
             return editorialResponse({ detail: 'Invalid revision ID' }, 422, cors);
           }
-          const input = generationCancelInput((await readJson(request))!);
+          const input = generationCancelInput((await readEditorialJson(request))!);
           const revisionId = editorialRevisionGeneration[1].toLowerCase();
           const data = await rpc('edge_api_editorial_revision_generation', {
             p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
@@ -1430,7 +1437,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
           if (!UUID.test(editorialHistory[1])) {
             return editorialResponse({ detail: 'Invalid concept ID' }, 422, cors);
           }
-          const command = (await readJson(request, false, 65536))!;
+          const command = (await readEditorialJson(request))!;
           const body = stageLessonBody(command.body);
           if (Object.keys(command).some(key => !['request_id', 'note', 'expected_token', 'body'].includes(key))
             || typeof command.request_id !== 'string' || !UUID.test(command.request_id)
@@ -1484,7 +1491,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
           if (!UUID.test(editorialCancelJob[1])) {
             return editorialResponse({ detail: 'Invalid generation job ID' }, 422, cors);
           }
-          const input = generationCancelInput((await readJson(request))!);
+          const input = generationCancelInput((await readEditorialJson(request))!);
           const data = await rpc('edge_api_editorial_cancel_generation_job', {
             p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
             p_job_id: editorialCancelJob[1], p_request_id: input.requestId,
@@ -1520,7 +1527,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
           if (!UUID.test(editorialLegacyAction[1])) {
             return editorialResponse({ detail: 'Invalid legacy batch ID' }, 422, cors);
           }
-          const input = legacyBatchActionInput((await readJson(request))!);
+          const input = legacyBatchActionInput((await readEditorialJson(request))!);
           const data = await rpc('edge_api_editorial_legacy_batch_action', {
             p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
             p_batch_id: editorialLegacyAction[1], p_request_id: input.requestId,
@@ -1558,7 +1565,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
           return editorialResponse(data, 200, cors);
         }
         if (editorialGenerationRequests) {
-          const input = generationRequestInput((await readJson(request))!);
+          const input = generationRequestInput((await readEditorialJson(request))!);
           const data = await rpc('edge_api_editorial_request_generation', {
             p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
             p_topic_id: input.topicId, p_request_id: input.requestId,
@@ -1595,7 +1602,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
           return editorialResponse(data, 202, cors);
         }
         if (editorialLegacyBatches && request.method === 'POST') {
-          const input = legacyBatchCreateInput((await readJson(request))!);
+          const input = legacyBatchCreateInput((await readEditorialJson(request))!);
           const data = await rpc('edge_api_editorial_create_legacy_batch', {
             p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
             p_topic_id: input.topicId, p_request_id: input.requestId,

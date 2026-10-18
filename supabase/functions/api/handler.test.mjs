@@ -75,6 +75,33 @@ test('editorial concept actions validate quality and delegate audited mutations'
   assert.equal((await handler(request(route, { method: 'GET', headers }))).status, 405);
 });
 
+test('editorial commands accept a valid 4,000-character Unicode audit note', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';
+  const bearer = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    calls.push({ url, init });
+    return Response.json({ concept_id: conceptId, status: 'draft' });
+  });
+  const route = `/v1/editorial/concepts/${conceptId}/actions`;
+  const headers = { authorization: `Bearer ${bearer}`, 'content-type': 'application/json' };
+  const note = '🧪'.repeat(4000);
+  const command = { request_id: 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272',
+    note, expected_token: 'a'.repeat(64), action: 'comment' };
+  assert.ok(new TextEncoder().encode(JSON.stringify(command)).length > 4096);
+  const accepted = await handler(request(route, { method: 'POST', headers,
+    body: JSON.stringify(command) }));
+  assert.equal(accepted.status, 200);
+  assert.match(calls.at(-1).url, /edge_api_editorial_concept_action$/);
+  assert.equal(JSON.parse(calls.at(-1).init.body).p_note, note);
+  const oversized = await handler(request(route, { method: 'POST', headers,
+    body: JSON.stringify({ ...command, filler: 'x'.repeat(65536) }) }));
+  assert.equal(oversized.status, 413);
+  assert.equal(calls.length, 1);
+});
+
 test('attestation retry can replay its receipt after concept content changes', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const conceptId = 'af7b4908-fd86-445f-b7d0-7191398e29f2';

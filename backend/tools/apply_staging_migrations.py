@@ -307,6 +307,10 @@ INCREMENTAL_PROBES = {
         "public.edge_worker_claim_legacy_enrichment(integer,integer,integer)",
         "public.edge_worker_finish_legacy_enrichment(uuid,uuid,boolean,text,jsonb)",
     ),
+    "0128_supabase_worker_owner_reporting.sql": (
+        "public.edge_api_editorial_owner_operations(uuid,uuid,text,text,boolean,boolean,boolean,boolean,boolean,boolean,integer)",
+        "public.edge_api_editorial_owner_events(uuid,uuid,text,date,date,text,text,text,uuid,timestamp with time zone,text,integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

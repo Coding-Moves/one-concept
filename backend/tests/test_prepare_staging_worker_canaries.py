@@ -42,6 +42,16 @@ def test_fixture_hides_private_inputs_on_database_error(monkeypatch, capsys):
     assert "ExpoPushToken" not in capsys.readouterr().err
 
 
+def test_fixture_names_invalid_input_without_printing_it(monkeypatch, capsys):
+    fill_environment(monkeypatch)
+    monkeypatch.setenv("STAGING_CANARY_PUSH_TOKEN", "private-invalid-token")
+    monkeypatch.setattr(setup.subprocess, "run", lambda *_a, **_k: pytest.fail("psql called"))
+    assert setup.main() == 2
+    output = capsys.readouterr().err
+    assert "Expo push token" in output
+    assert "private-invalid-token" not in output
+
+
 def test_fixture_quotes_private_values_and_rejects_newlines():
     assert setup.literal("o'brien@example.test") == "'o''brien@example.test'"
     with pytest.raises(ValueError):
@@ -53,6 +63,25 @@ def test_secret_cleanup_refuses_production(monkeypatch):
     monkeypatch.setenv("PRODUCTION_PROJECT_REF", setup.DEMO_PROJECT_REF)
     monkeypatch.setattr(secrets.subprocess, "run", lambda *_a, **_k: pytest.fail("CLI called"))
     assert secrets.cleanup() == 2
+
+
+def test_secret_cleanup_unsets_only_present_canary_names(monkeypatch):
+    fill_environment(monkeypatch)
+    calls = []
+
+    def fake_cli(args, **_kwargs):
+        calls.append(args)
+        if args[2] == "list":
+            return subprocess.CompletedProcess(args, 0,
+                '[{"name":"WORKER_CANARY_GENERATION_ENABLED"},'
+                '{"name":"UNRELATED_SECRET"}]', "")
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    monkeypatch.setattr(secrets.subprocess, "run", fake_cli)
+    assert secrets.cleanup() == 0
+    assert calls[-1][0:4] == ["supabase", "secrets", "unset",
+                               "WORKER_CANARY_GENERATION_ENABLED"]
+    assert "UNRELATED_SECRET" not in calls[-1]
 
 
 def test_gate_closure_commits_before_fixture_cleanup():

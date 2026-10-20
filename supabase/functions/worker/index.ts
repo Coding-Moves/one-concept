@@ -7,6 +7,7 @@ import { createCuratedRefillTask } from './curated_refill.ts';
 import { createEditorialGenerationTask } from './editorial_generation.ts';
 import { createLegacyEnrichmentTask } from './legacy_enrichment.ts';
 import { generationAllowed } from './provider_gate.ts';
+import { workerSetting } from './worker_settings.ts';
 
 declare const Deno: {
   env: { get(name: string): string | undefined };
@@ -19,13 +20,20 @@ function required(name: string): string {
   return value;
 }
 
+// Edge secrets are project-wide. Staging canaries override only this worker,
+// leaving the staged API's CORS, editorial flags and provider settings alone.
+function setting(name: string): string | undefined {
+  return workerSetting(Deno.env.get('ENVIRONMENT') ?? 'development',
+    name, key => Deno.env.get(key));
+}
+
 const supabaseUrl = required('SUPABASE_URL').replace(/\/$/, '');
 const serviceRoleKey = required('SUPABASE_SERVICE_ROLE_KEY');
 const workerDatabaseUrl = Deno.env.get('WORKER_DATABASE_URL') ?? '';
-const dashboardOrigin = Deno.env.get('EDITORIAL_EMAIL_DASHBOARD_URL') ?? '';
-const emailRecipients = new Set((Deno.env.get('EDITORIAL_EMAIL_TEST_RECIPIENTS') ?? '')
+const dashboardOrigin = setting('EDITORIAL_EMAIL_DASHBOARD_URL') ?? '';
+const emailRecipients = new Set((setting('EDITORIAL_EMAIL_TEST_RECIPIENTS') ?? '')
   .split(',').map(email => email.trim().toLowerCase()).filter(Boolean));
-const allowedOrigins = new Set((Deno.env.get('ALLOWED_ORIGINS') ?? '')
+const allowedOrigins = new Set((setting('ALLOWED_ORIGINS') ?? '')
   .split(',').map(origin => origin.trim().replace(/\/$/, '')).filter(Boolean));
 
 const emailTransaction: EmailTransaction = async work => {
@@ -54,21 +62,21 @@ const emailTransaction: EmailTransaction = async work => {
 };
 const pushOptions = {
   environment: Deno.env.get('ENVIRONMENT') ?? 'development',
-  testTokens: new Set((Deno.env.get('WORKER_PUSH_TEST_TOKENS') ?? '')
+  testTokens: new Set((setting('WORKER_PUSH_TEST_TOKENS') ?? '')
     .split(',').map(token => token.trim()).filter(Boolean)),
 };
 const canGenerate = generationAllowed(pushOptions.environment,
-  Deno.env.get('WORKER_GENERATION_TEST_ENABLED'));
+  setting('WORKER_GENERATION_TEST_ENABLED'));
 const integerSetting = (name: string, fallback: number): number => {
-  const raw = Deno.env.get(name);
+  const raw = setting(name);
   return raw === undefined ? fallback : Number(raw);
 };
 const refillOptions = {
-  enabled: Deno.env.get('GENERATION_ENABLED') === 'true' &&
-    Deno.env.get('FUTURE_REFILL_ENABLED') === 'true' && canGenerate,
-  urgentEnabled: Deno.env.get('FUTURE_REFILL_URGENT_ENABLED') === 'true',
-  apiKey: Deno.env.get('GEMINI_API_KEY') ?? '',
-  model: Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
+  enabled: setting('GENERATION_ENABLED') === 'true' &&
+    setting('FUTURE_REFILL_ENABLED') === 'true' && canGenerate,
+  urgentEnabled: setting('FUTURE_REFILL_URGENT_ENABLED') === 'true',
+  apiKey: setting('GEMINI_API_KEY') ?? '',
+  model: setting('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
   activeDays: integerSetting('CONTENT_ACTIVE_DAYS', 90),
   reserve: integerSetting('CONTENT_RESERVE_PER_TOPIC', 60),
   low: integerSetting('CONTENT_LOW_WATERMARK', 10),
@@ -102,36 +110,36 @@ Deno.serve(createHandler({
     daily_reminders: createDailyReminderTask(serviceRpc, fetch, pushOptions),
     weekly_quiz: createWeeklyQuizTask(serviceRpc, fetch, {
       ...pushOptions,
-      enabled: Deno.env.get('WEEKLY_QUIZ_NOTIFICATIONS_ENABLED') === 'true',
+      enabled: setting('WEEKLY_QUIZ_NOTIFICATIONS_ENABLED') === 'true',
     }),
     editorial_email: createEditorialEmailTask(serviceRpc, emailTransaction, fetch, {
-      enabled: Deno.env.get('EDITORIAL_ENABLED') === 'true' &&
-        Deno.env.get('EDITORIAL_EMAIL_ENABLED') === 'true',
+      enabled: setting('EDITORIAL_ENABLED') === 'true' &&
+        setting('EDITORIAL_EMAIL_ENABLED') === 'true',
       environment: pushOptions.environment,
       testRecipients: emailRecipients,
       dashboardOrigin,
       allowedOrigins,
-      from: Deno.env.get('EDITORIAL_EMAIL_FROM') ?? '',
-      clientId: Deno.env.get('EDITORIAL_GMAIL_CLIENT_ID') ?? '',
-      clientSecret: Deno.env.get('EDITORIAL_GMAIL_CLIENT_SECRET') ?? '',
-      refreshToken: Deno.env.get('EDITORIAL_GMAIL_REFRESH_TOKEN') ?? '',
-      dailyCap: Number(Deno.env.get('EDITORIAL_EMAIL_DAILY_CAP') ?? '40'),
+      from: setting('EDITORIAL_EMAIL_FROM') ?? '',
+      clientId: setting('EDITORIAL_GMAIL_CLIENT_ID') ?? '',
+      clientSecret: setting('EDITORIAL_GMAIL_CLIENT_SECRET') ?? '',
+      refreshToken: setting('EDITORIAL_GMAIL_REFRESH_TOKEN') ?? '',
+      dailyCap: Number(setting('EDITORIAL_EMAIL_DAILY_CAP') ?? '40'),
       databaseReady: workerDatabaseUrl.length > 0,
     }),
     content_pool: createCuratedRefillTask(serviceRpc, fetch, refillOptions, false),
     prefetch: createCuratedRefillTask(serviceRpc, fetch, refillOptions, true),
     editorial_generation: createEditorialGenerationTask(serviceRpc, fetch, {
-      enabled: Deno.env.get('EDITORIAL_ENABLED') === 'true' &&
-        Deno.env.get('GENERATION_ENABLED') === 'true' && canGenerate,
-      apiKey: Deno.env.get('GEMINI_API_KEY') ?? '',
-      model: Deno.env.get('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
+      enabled: setting('EDITORIAL_ENABLED') === 'true' &&
+        setting('GENERATION_ENABLED') === 'true' && canGenerate,
+      apiKey: setting('GEMINI_API_KEY') ?? '',
+      model: setting('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
       dailyCap: integerSetting('GENERATION_DAILY_CALL_CAP', 200),
       maxConcurrent: integerSetting('GENERATION_MAX_CONCURRENT', 3),
     }),
     legacy_enrichment: createLegacyEnrichmentTask(serviceRpc, fetch, {
-      enabled: Deno.env.get('GENERATION_ENABLED') === 'true' &&
-        Deno.env.get('LEGACY_ENRICHMENT_ENABLED') === 'true' && canGenerate,
-      apiKey: Deno.env.get('GEMINI_API_KEY') ?? '',
+      enabled: setting('GENERATION_ENABLED') === 'true' &&
+        setting('LEGACY_ENRICHMENT_ENABLED') === 'true' && canGenerate,
+      apiKey: setting('GEMINI_API_KEY') ?? '',
       dailyCap: integerSetting('GENERATION_DAILY_CALL_CAP', 200),
       maxConcurrent: integerSetting('GENERATION_MAX_CONCURRENT', 3),
       reviewLimit: integerSetting('CONTENT_REVIEW_BACKLOG_LIMIT', 25),

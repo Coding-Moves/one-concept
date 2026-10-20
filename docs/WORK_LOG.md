@@ -12,7 +12,7 @@ claims as completed work.
 - **Outcome:** identify One Concept as a Coding Moves Product and link its README to the Products section.
 - **Scope:** documentation only, based on current `origin/develop`; no application or release changes.
 - **Validation:** review the README link and run `git diff --check`. Application tests are outside this documentation change.
-- **Handoff:** PR and commit details will be recorded after publication.
+- **Handoff:** [PR #433](https://github.com/Coding-Moves/one-concept/pull/433) targets `develop`; commit `4f6d12f` adds the README link and this scoped log entry. The Products page is updated in a separate website PR. No application tests were run for this documentation-only change.
 
 ### Supabase API migration candidate — issue #416, 2026-10-15
 

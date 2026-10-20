@@ -187,6 +187,9 @@ each named job's enabled state, latest run, failure and staleness from the
 durable ledger. The event feed includes only job name, status, time and run ID;
 provider response and recipient data remain private. The operator SQL below
 also checks the independent Cron active gate and HTTP outcome.
+Migration 0129 makes each HTTP reconciliation prune at most 1,000 terminal run
+records older than 30 days. It never prunes queued or running work; this keeps
+the ledger and owner event history bounded on the Free database tier.
 
 The request queue contains a run ID, job, issue time and HMAC. It contains no
 Supabase service-role key or signing key. A readable queued signature can at

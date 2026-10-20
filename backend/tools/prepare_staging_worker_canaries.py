@@ -174,7 +174,7 @@ def main() -> int:
     learner = os.environ.get("STAGING_CANARY_LEARNER_EMAIL", "").strip()
     reviewer = os.environ.get("STAGING_CANARY_REVIEWER_EMAIL", "").strip()
     owner = os.environ.get("STAGING_CANARY_OWNER_EMAIL", "").strip()
-    token = os.environ.get("STAGING_CANARY_PUSH_TOKEN", "")
+    token = os.environ.get("STAGING_CANARY_PUSH_TOKEN", "").strip()
     if staging != DEMO_PROJECT_REF or staging == production:
         print("Canary staging target is invalid", file=sys.stderr)
         return 2
@@ -186,6 +186,10 @@ def main() -> int:
         invalid.append("Expo push token")
     if invalid:
         print("Invalid canary inputs: " + ", ".join(invalid), file=sys.stderr)
+        if "Expo push token" in invalid:
+            print("Token must contain only ExpoPushToken[...] or "
+                  "ExponentPushToken[...] with no header, quotes or spaces",
+                  file=sys.stderr)
         return 2
     try:
         env = connection_environment(staging, production, os.environ["STAGING_DIRECT_URL"])

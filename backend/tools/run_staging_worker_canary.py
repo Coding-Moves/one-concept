@@ -38,7 +38,7 @@ def query(env: dict[str, str], sql: str) -> str | None:
 
 def fixture_is_safe(env: dict[str, str], job: str) -> bool:
     if job in {"daily_reminders", "weekly_quiz"}:
-        token = os.environ.get("STAGING_CANARY_PUSH_TOKEN", "")
+        token = os.environ.get("STAGING_CANARY_PUSH_TOKEN", "").strip()
         if not re.fullmatch(r"(?:Expo|Exponent)PushToken\[[A-Za-z0-9_-]{8,160}\]", token):
             return False
         digest = hashlib.sha256(token.encode()).hexdigest()

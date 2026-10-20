@@ -27,6 +27,7 @@ end $$;
 
 
 def cleanup_sql(token: str, reviewer: str) -> str:
+    token = token.strip()
     cleanup = """update public.editorial_generation_jobs
   set status='cancelled',claim_token=null,claimed_at=null,updated_at=clock_timestamp()
   where source_body->>'title'='Staging worker canary: transactions'

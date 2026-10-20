@@ -52,6 +52,21 @@ def test_fixture_names_invalid_input_without_printing_it(monkeypatch, capsys):
     assert "private-invalid-token" not in output
 
 
+def test_fixture_trims_pasted_token_before_seeding(monkeypatch):
+    fill_environment(monkeypatch)
+    monkeypatch.setenv("STAGING_CANARY_PUSH_TOKEN", " ExpoPushToken[stagingonly1234]\n")
+    seen = []
+
+    def fake_psql(_args, **kwargs):
+        seen.append(kwargs["input"])
+        return subprocess.CompletedProcess([], 0, "", "")
+
+    monkeypatch.setattr(setup.subprocess, "run", fake_psql)
+    assert setup.main() == 0
+    assert "ExpoPushToken[stagingonly1234]" in seen[0]
+    assert " ExpoPushToken[stagingonly1234]" not in seen[0]
+
+
 def test_fixture_quotes_private_values_and_rejects_newlines():
     assert setup.literal("o'brien@example.test") == "'o''brien@example.test'"
     with pytest.raises(ValueError):

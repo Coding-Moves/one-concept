@@ -56,6 +56,9 @@ def configure() -> int:
         print("Canary secret setup refused: unreviewed target", file=sys.stderr)
         return 2
     inputs = {name: os.environ.get(source, "") for name, source in PRIVATE.items()}
+    for name in ("WORKER_PUSH_TEST_TOKENS", "EDITORIAL_EMAIL_TEST_RECIPIENTS",
+                 "EDITORIAL_EMAIL_FROM"):
+        inputs[name] = inputs[name].strip()
     if any(not value or any(char in value for char in "\x00\r\n")
            for value in inputs.values()) or \
        not re.fullmatch(r"(?:Expo|Exponent)PushToken\[[A-Za-z0-9_-]{8,160}\]",

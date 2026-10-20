@@ -75,11 +75,11 @@ function reviewLink(line: string, origin: string): boolean {
   } catch { return false; }
 }
 
-function renderHtml(body: string, origin: string): string {
+function renderHtml(body: string, origin: string, liveLinks = true): string {
   let number = 0;
   const content = body.split(/\r?\n/).filter(Boolean).map(line => {
     const safe = htmlEscape(line);
-    if (!reviewLink(line, origin)) return `<p style="margin:0 0 12px">${safe}</p>`;
+    if (!liveLinks || !reviewLink(line, origin)) return `<p style="margin:0 0 12px">${safe}</p>`;
     number++;
     return `<p><a href="${safe}" style="background:#5248bf;color:#fff;padding:12px 20px">Open assigned lesson ${number}</a></p>`;
   }).join('\n');
@@ -94,15 +94,19 @@ function renderHtml(body: string, origin: string): string {
 function rawMessage(batch: MailBatch, config: MailConfig): string {
   const boundary = `one-concept-${batch.id}`;
   const domain = config.from.split('@')[1];
+  const staging = config.environment !== 'production';
+  const body = staging
+    ? `STAGING DELIVERY TEST. No action needed; review links below are inactive.\n\n${batch.body}`
+    : batch.body;
   const mime = [
     `From: ${config.from}`, `To: ${batch.recipient_email}`, `Subject: ${batch.subject}`,
     `Message-ID: <${batch.id}@${domain}>`, 'MIME-Version: 1.0',
     `Content-Type: multipart/alternative; boundary="${boundary}"`, '',
     `--${boundary}`, 'Content-Type: text/plain; charset=UTF-8',
-    'Content-Transfer-Encoding: base64', '', encoded(batch.body),
+    'Content-Transfer-Encoding: base64', '', encoded(body),
     `--${boundary}`, 'Content-Type: text/html; charset=UTF-8',
     'Content-Transfer-Encoding: base64', '',
-    encoded(renderHtml(batch.body, config.dashboardOrigin.replace(/\/$/, ''))),
+    encoded(renderHtml(body, config.dashboardOrigin.replace(/\/$/, ''), !staging)),
     `--${boundary}--`, '',
   ].join('\r\n');
   return base64(new TextEncoder().encode(mime)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');

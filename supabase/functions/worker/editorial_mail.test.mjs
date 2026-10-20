@@ -48,3 +48,21 @@ test('staging rejects recipient outside explicit test list before provider I/O',
   assert.deepEqual(result, { state: 'failed', code: 'staging_blocked' });
   assert.equal(mailSetupStatus({ ...stage, testRecipients: new Set() }), 'test_recipients_required');
 });
+
+test('staging email identifies itself and has no live review button', async () => {
+  const stage = { ...config, environment: 'staging',
+    testRecipients: new Set([batch.recipient_email]) };
+  let mime = '';
+  const result = await sendEditorialMail(async (url, options) => {
+    if (url.includes('oauth2.googleapis.com')) return Response.json({ access_token: 'token' });
+    const raw = JSON.parse(options.body).raw;
+    mime = atob(raw.replace(/-/g, '+').replace(/_/g, '/'));
+    return Response.json({ id: 'gmail-message-id' });
+  }, batch, stage);
+  assert.equal(result.state, 'sent');
+  assert.equal(mime.includes('STAGING DELIVERY TEST'), false); // MIME parts are base64 encoded.
+  const htmlPart = mime.split('Content-Type: text/html; charset=UTF-8')[1];
+  const html = atob(htmlPart.split('\r\n\r\n')[1].split('\r\n')[0]);
+  assert.match(html, /STAGING DELIVERY TEST/);
+  assert.equal(html.includes('<a href='), false);
+});

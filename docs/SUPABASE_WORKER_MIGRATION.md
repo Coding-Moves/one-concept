@@ -120,9 +120,41 @@ Before an inactive staging installation, configure these *only in staging*:
    inactive Cron jobs. It sets the staging worker URL, existing session-pooler
    URL, `ENVIRONMENT=staging`, and `WORKER_GENERATION_TEST_ENABLED=false`.
    It then temporarily opens one disabled-provider job to prove signed dispatch
-   and closes that gate again. No production secret is reused.
+   and closes that gate again. This inactive installation does not copy any
+   production provider secret.
 3. Keep provider jobs off until controlled staging canaries pass. Production
    uses its own different signing key and stays off until issue #418's cutover.
+
+The protected `supabase-worker-staging-batch-canary-*` tag runs one grouped
+provider check after the inactive installation. It requires a test learner,
+reviewer and owner in staging, one owner-approved test phone token copied into
+the `SUPABASE_STAGING_TEST_PUSH_TOKEN` GitHub environment secret, and a reviewer
+inbox the owner can open. Save the five temporary provider inputs as GitHub
+`supabase-staging` environment secrets:
+
+| Secret | Value source |
+| --- | --- |
+| `SUPABASE_STAGING_CANARY_GEMINI_KEY` | A Gemini key authorized for one private test draft |
+| `SUPABASE_STAGING_CANARY_GMAIL_FROM` | The test sender's email |
+| `SUPABASE_STAGING_CANARY_GMAIL_CLIENT_ID` | That sender's OAuth client ID |
+| `SUPABASE_STAGING_CANARY_GMAIL_CLIENT_SECRET` | That sender's OAuth client secret |
+| `SUPABASE_STAGING_CANARY_GMAIL_REFRESH_TOKEN` | That sender's Gmail refresh token |
+
+The workflow refuses unexpected users, existing tokens, work queues, active
+application gates or active Cron jobs. It seeds one pending reminder, quiz
+notice, reviewer assignment and private editorial revision in a transaction,
+then dispatches each job once with a one-call AI cap and one-email cap. All
+provider values use worker-only `WORKER_CANARY_*` Edge settings; the shared
+staging API configuration is untouched. The staging push text explicitly says
+it is a test, and its weekly payload cannot open a staging quiz in the owner's
+production phone app. The email also says it is a test and offers no live
+review button; its `review.example.test` origin is deliberately inert. Only
+the allowlisted phone and reviewer inbox can receive these deliveries. On
+success or failure, the workflow closes every application gate, removes the
+test token from staging tables, disables provider switches and removes the
+temporary Edge credentials. The eight staging Cron schedules remain inactive.
+Check the phone, inbox, worker run ledger and private draft before treating
+the canaries as accepted. Delete the GitHub test push token secret afterward.
 
 The request queue contains a run ID, job, issue time and HMAC. It contains no
 Supabase service-role key or signing key. A readable queued signature can at

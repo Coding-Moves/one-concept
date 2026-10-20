@@ -105,7 +105,7 @@ jobs:
         run: python backend/tools/staging_worker_canary_secrets.py cleanup
 
   diagnose_worker:
-    if: ${{ contains(github.ref_name, '-diagnose-') }}
+    if: ${{ contains(github.ref_name, '-diagnose-') && !contains(github.ref_name, '-oauth-diagnose-') }}
     runs-on: ubuntu-latest
     environment: supabase-staging
     env:
@@ -120,6 +120,24 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Report bounded staging email failure status
         run: python backend/tools/inspect_staging_worker_canary.py
+
+  diagnose_oauth_worker:
+    if: ${{ contains(github.ref_name, '-oauth-diagnose-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: supabase-staging
+    env:
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_CANARY_GMAIL_CLIENT_ID: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_ID }}
+      STAGING_CANARY_GMAIL_CLIENT_SECRET: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_SECRET }}
+      STAGING_CANARY_GMAIL_REFRESH_TOKEN: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check staging sender token exchange without sending email
+        run: python backend/tools/diagnose_staging_gmail_oauth.py
 
   retry_email_worker:
     if: ${{ contains(github.ref_name, '-email-retry-') }}

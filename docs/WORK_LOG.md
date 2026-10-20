@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Coding Moves site catalog — 2026-10-20
+
+- **Outcome:** identify One Concept as a Coding Moves Product and link its README to the Products section.
+- **Scope:** documentation only, based on current `origin/develop`; no application or release changes.
+- **Validation:** review the README link and run `git diff --check`. Application tests are outside this documentation change.
+- **Handoff:** [PR #433](https://github.com/Coding-Moves/one-concept/pull/433) targets `develop`; commit `4f6d12f` adds the README link and this scoped log entry. The Products page is updated in a separate website PR. No application tests were run for this documentation-only change.
+
 ### Supabase API migration candidate — issue #416, 2026-10-15
 
 - Protected role/privacy run [39034796873](https://github.com/Coding-Moves/one-concept/actions/runs/39034796873) passed owner invitation, reviewer onboarding, MFA denial, role isolation, queue, and public-profile field/link privacy with three distinct staging test accounts. Final review found the Edge candidate lacked the existing 120-read/60-write authenticated request budget. Commits `c00794a`, `cf18a16`, and `c4b7022` add a service-only shared PostgreSQL token bucket, enforce its 429/`Retry-After` contract in Edge, and adapt the 500-request probe to count expected throttling. Disposable PostgreSQL/schema/runner tests: 48 passed; a later 500-call concurrent SQL regression passed; Edge handlers: 92 passed; TypeScript passed; load-script unit tests: 4 passed. Protected SQL run `39079447842` applied migration 0118. The first load runs exposed intermittent `edge_api_state` five-second timeouts; `0a1caea` extends only that read RPC to eight seconds and protected Edge run `39081462372` deployed it. The strict final load run `39081564483` passed 500 single-account requests with five workers: 450 HTTP 200, 50 valid HTTP 429, no 503, p50 1,329 ms, p95 4,195 ms, 1,404-byte responses, and database connections 19/21/20 before/peak/after. This is not a 500-distinct-user capacity claim. All three PR quality jobs passed on `8923918`; #419 was marked ready with `Closes #416`, while production remains on Railway.

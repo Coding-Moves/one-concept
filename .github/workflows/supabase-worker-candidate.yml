@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   stage_worker:
-    if: ${{ !contains(github.ref_name, '-canary-') }}
+    if: ${{ !contains(github.ref_name, '-canary-') && !contains(github.ref_name, '-diagnose-') }}
     runs-on: ubuntu-latest
     environment: supabase-staging
     env:
@@ -103,3 +103,20 @@ jobs:
       - name: Remove temporary provider credentials and switches
         if: ${{ always() }}
         run: python backend/tools/staging_worker_canary_secrets.py cleanup
+
+  diagnose_worker:
+    if: ${{ contains(github.ref_name, '-diagnose-') }}
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    env:
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Report bounded staging email failure status
+        run: python backend/tools/inspect_staging_worker_canary.py

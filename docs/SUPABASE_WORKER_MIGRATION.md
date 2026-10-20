@@ -27,11 +27,24 @@ delivered push or email. `pool-topup` has green executions on October 18–20
 around 03:02–03:04 (GMT+5), lasting 8–10 seconds. Its logs report generation
 disabled, revision work empty, and legacy enrichment empty. They show the
 current queue state, but do not establish every effective feature-flag value.
-The remaining live checks are `reminders` variable names, non-secret flags and
-caps, and any service-level command or root-directory overrides.
+The `reminders` Variables panel uses all 17 shared variables. Its listed
+service variables include the database/Supabase configuration, Gemini model
+and caps, editorial email settings, and the standard seven Railway-provided
+variables. The owner showed `EDITORIAL_EMAIL_ENABLED=true` as the effective
+service value; its recent runs still processed no mail because there was no
+eligible work. `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED` is absent from this service
+and shared-variable inventory, so the deployed Python setting uses its
+default `false`; the missing weekly log line agrees. The remaining live checks
+are the other non-secret flags and caps and any service-level command or
+root-directory overrides.
 The `pool-topup` service uses shared variable references for the Gemini,
-generation, editorial email, and legacy-enrichment settings. Their values were
-masked in the owner's capture and are not recorded here.
+generation, editorial email, and legacy-enrichment settings. The owner read
+`GENERATION_ENABLED=true` and `LEGACY_ENRICHMENT_ENABLED=true` from its live
+Variables panel. The zero-work logs show there was no revision or legacy entry
+to process; `nothing to do: generation disabled` describes the refill pass and
+does **not** mean the master generation flag is false. The effective
+`FUTURE_REFILL_ENABLED` value and generation caps remain unverified; do not
+infer them from the logs.
 
 ## Responsibilities to preserve
 
@@ -231,7 +244,7 @@ before closing issue #417.
 ## Evidence still needed
 
 - Railway deployment details with the full deployed Git SHA for both services.
-- `reminders` variable names, safe flag/cap values on both services, and
+- Safe flag/cap values on both services, and
   effective root directory/start-command overrides.
 - Whether any one-off maintainer command runs outside the two cron services.
 - Staging credentials and allowlisted recipients for controlled push, Gmail,

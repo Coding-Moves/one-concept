@@ -164,13 +164,29 @@ Google rejected the sender's OAuth token exchange before the send call
 removed the staged phone token, and removed temporary Edge provider secrets.
 The email acceptance item remains open. A protected
 `supabase-worker-staging-batch-diagnose-*` tag reports only bounded staging
-status/error codes. After the owner saves a fresh sender refresh token, the
-`supabase-worker-staging-batch-email-retry-*` tag reopens only that one unsent
-OAuth-rejected email batch, allows its second and final test attempt, and
-checks its result before the same cleanup. It cannot retry an ambiguous Gmail
+status/error codes. The first `supabase-worker-staging-batch-email-retry-*` run
+reopened only the one unsent OAuth-rejected email batch for a second test
+attempt and performed the same cleanup. It cannot retry an ambiguous Gmail
 delivery or repeat the push/AI canaries. Keep the OAuth client ID, secret and
 refresh token from the same Google client and sender account; [Google documents](https://developers.google.com/identity/protocols/oauth2)
 seven-day refresh-token expiry for an External/Testing app.
+
+The first email-only retry also failed before Gmail granted access. The
+protected OAuth diagnostic then returned Google's `invalid_client` code; it
+sent nothing. Replace both staging OAuth client values with the exact client
+used to issue the refreshed token. The final email-only retry first checks
+Google's token exchange, then applies any reviewed staging migrations and
+reopens only the same unsent batch with exactly two prior authorization
+failures. Its third attempt uses a three-message test cap and repeats neither
+push nor generation. A failed preflight cannot reopen the batch.
+
+Migration 0128 updates the owner operations view and event feed. While every
+Supabase worker application gate is off, the view continues to use Railway's
+existing worker observations. When any Supabase worker is enabled, it reports
+each named job's enabled state, latest run, failure and staleness from the
+durable ledger. The event feed includes only job name, status, time and run ID;
+provider response and recipient data remain private. The operator SQL below
+also checks the independent Cron active gate and HTTP outcome.
 
 The request queue contains a run ID, job, issue time and HMAC. It contains no
 Supabase service-role key or signing key. A readable queued signature can at

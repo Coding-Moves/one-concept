@@ -156,6 +156,22 @@ temporary Edge credentials. The eight staging Cron schedules remain inactive.
 Check the phone, inbox, worker run ledger and private draft before treating
 the canaries as accepted. Delete the GitHub test push token secret afterward.
 
+The first live provider batch on October 20 passed one daily push, one weekly
+push, and one private editorial draft. The owner received a staging-labeled
+phone notification. The Gmail batch made one attempt but sent no email:
+Google rejected the sender's OAuth token exchange before the send call
+(`sender_authorization`). The protected cleanup closed every application gate,
+removed the staged phone token, and removed temporary Edge provider secrets.
+The email acceptance item remains open. A protected
+`supabase-worker-staging-batch-diagnose-*` tag reports only bounded staging
+status/error codes. After the owner saves a fresh sender refresh token, the
+`supabase-worker-staging-batch-email-retry-*` tag reopens only that one unsent
+OAuth-rejected email batch, allows its second and final test attempt, and
+checks its result before the same cleanup. It cannot retry an ambiguous Gmail
+delivery or repeat the push/AI canaries. Keep the OAuth client ID, secret and
+refresh token from the same Google client and sender account; [Google documents](https://developers.google.com/identity/protocols/oauth2)
+seven-day refresh-token expiry for an External/Testing app.
+
 The request queue contains a run ID, job, issue time and HMAC. It contains no
 Supabase service-role key or signing key. A readable queued signature can at
 most race the legitimate request for that already-enqueued, one-use run; it
@@ -279,8 +295,8 @@ before closing issue #417.
 - Safe flag/cap values on both services, and
   effective root directory/start-command overrides.
 - Whether any one-off maintainer command runs outside the two cron services.
-- Staging credentials and allowlisted recipients for controlled push, Gmail,
-  and Gemini canaries; do not copy production secrets into test logs or Git.
+- A valid Gmail OAuth sender refresh token and successful controlled reviewer
+  inbox canary. The existing staging token was rejected before sending.
 
 ## References
 

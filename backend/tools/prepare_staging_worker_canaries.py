@@ -175,10 +175,17 @@ def main() -> int:
     reviewer = os.environ.get("STAGING_CANARY_REVIEWER_EMAIL", "").strip()
     owner = os.environ.get("STAGING_CANARY_OWNER_EMAIL", "").strip()
     token = os.environ.get("STAGING_CANARY_PUSH_TOKEN", "")
-    if staging != DEMO_PROJECT_REF or staging == production or not all(
-        EMAIL.fullmatch(email) for email in (learner, reviewer, owner)
-    ) or not TOKEN.fullmatch(token):
-        print("Canary staging target or fixture input is invalid", file=sys.stderr)
+    if staging != DEMO_PROJECT_REF or staging == production:
+        print("Canary staging target is invalid", file=sys.stderr)
+        return 2
+    invalid = [name for name, value in (
+        ("learner email", learner), ("reviewer email", reviewer),
+        ("owner email", owner)
+    ) if not EMAIL.fullmatch(value)]
+    if not TOKEN.fullmatch(token):
+        invalid.append("Expo push token")
+    if invalid:
+        print("Invalid canary inputs: " + ", ".join(invalid), file=sys.stderr)
         return 2
     try:
         env = connection_environment(staging, production, os.environ["STAGING_DIRECT_URL"])

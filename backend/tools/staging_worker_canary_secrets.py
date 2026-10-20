@@ -49,7 +49,7 @@ EMAIL_PRIVATE = {name: source for name, source in PRIVATE.items()
 EMAIL_FLAGS = {name: value for name, value in FLAGS.items()
                if name in {"EDITORIAL_ENABLED", "EDITORIAL_EMAIL_ENABLED",
                            "EDITORIAL_EMAIL_DASHBOARD_URL", "ALLOWED_ORIGINS"}}
-EMAIL_FLAGS["EDITORIAL_EMAIL_DAILY_CAP"] = "2"
+EMAIL_FLAGS["EDITORIAL_EMAIL_DAILY_CAP"] = "3"
 
 
 def target_is_safe() -> bool:

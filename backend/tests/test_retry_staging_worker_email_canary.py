@@ -48,6 +48,8 @@ def test_retry_dispatches_only_email_after_guard_passes(monkeypatch):
     assert retry.main() == 0
     assert called == ["editorial_email"]
     assert "failure_code='sender_authorization'" in statements[0]
+    assert "b.attempts=2" in statements[0]
+    assert "attempt in (1,2)" in statements[0]
     assert "sent_at is null" in statements[0]
     assert "edge_worker_email_batch_eligible" in statements[0]
 
@@ -83,7 +85,7 @@ def test_email_retry_installs_no_push_or_gemini_secret(monkeypatch):
 
     monkeypatch.setattr(secrets.subprocess, "run", fake_cli)
     assert secrets.configure_email() == 0
-    assert "WORKER_CANARY_EDITORIAL_EMAIL_DAILY_CAP=2" in saved[0]
+    assert "WORKER_CANARY_EDITORIAL_EMAIL_DAILY_CAP=3" in saved[0]
     assert "WORKER_CANARY_EDITORIAL_GMAIL_REFRESH_TOKEN=refresh-token" in saved[0]
     assert "WORKER_CANARY_GEMINI_API_KEY=" not in saved[0]
     assert "WORKER_CANARY_WORKER_PUSH_TEST_TOKENS=" not in saved[0]

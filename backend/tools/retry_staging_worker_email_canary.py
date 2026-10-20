@@ -1,7 +1,8 @@
 """Retry only the staging email batch rejected before Gmail granted access.
 
-The prior batch keeps its stable Message-ID. A retry is permitted only for a
-single OAuth authorization failure, which happened before Gmail could send.
+The prior batch keeps its stable Message-ID. This final canary retry is
+permitted only after both earlier OAuth authorization failures, which happened
+before Gmail could send.
 """
 
 import os
@@ -37,8 +38,8 @@ begin
   select array_agg(b.id) into v_ids
     from public.editorial_email_batches b
    where b.status='failed' and b.failure_code='sender_authorization'
-     and b.attempts=1 and b.sent_at is null
-     and b.created_at>=clock_timestamp()-interval '4 hours'
+     and b.attempts=2 and b.sent_at is null
+     and b.created_at>=clock_timestamp()-interval '24 hours'
      and lower(b.recipient_email)=lower({address})
      and exists(select 1 from public.editorial_notification_outbox o
        join public.concept_revisions r on r.id=o.revision_id
@@ -51,9 +52,9 @@ begin
   v_id := v_ids[1];
   if not public.edge_worker_email_batch_eligible(v_id)
      or (select count(*) from public.editorial_email_attempts
-           where started_at>clock_timestamp()-interval '24 hours')<>1
-     or not exists(select 1 from public.editorial_email_attempts
-           where batch_id=v_id and attempt=1) then
+           where started_at>clock_timestamp()-interval '24 hours')<>2
+     or (select count(*) from public.editorial_email_attempts
+           where batch_id=v_id and attempt in (1,2))<>2 then
     raise exception 'Email retry does not match one unsent staging canary';
   end if;
   update public.editorial_email_batches

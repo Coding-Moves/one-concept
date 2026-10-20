@@ -163,6 +163,10 @@ jobs:
       - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
         with:
           version: latest
+      - name: Verify staging sender before any database write or email
+        run: python backend/tools/diagnose_staging_gmail_oauth.py
+      - name: Apply and verify reviewed staging worker migrations
+        run: python backend/tools/apply_staging_migrations.py --apply-incremental
       - name: Install temporary email-only staging credentials
         run: python backend/tools/staging_worker_canary_secrets.py configure-email
       - name: Deploy staged worker with refreshed sender

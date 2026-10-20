@@ -5,7 +5,7 @@ It records verified live settings separately from source defaults. Keep provider
 credentials, token values, URLs containing secrets, and recipient addresses out
 of this document and Git history.
 
-## Live Railway baseline (owner inspection, 2026-10-18)
+## Live Railway baseline (owner inspection, 2026-10-18–20)
 
 | Service | Production command | Cron schedule (UTC) | Source | Restart |
 | --- | --- | --- | --- | --- |
@@ -13,11 +13,22 @@ of this document and Git history.
 | `pool-topup` | `python -m app.workers.pool_topup` | `0 22 * * *` | `Coding-Moves/one-concept`, `main` | Never |
 
 Both services are in Singapore with a 2 vCPU / 1 GB ceiling and no public
-domain. The owner saw successful **deployments** seven days before inspection;
-this is not evidence that scheduled runs succeeded. At inspection the Railway
-project showed eight days or $4.32 of remaining trial. The effective deployed
-source revision, feature-flag values, latest Cron Runs, and `reminders` variable
-names remain to be verified independently of this display.
+domain. On October 20 the Railway project showed six days or $4.25 of remaining
+trial. Both current deployment panels identify release PR #414; its GitHub
+merge commit is `c244088aa285127a3f065cc1d7e41afdae8bf36f`. Railway's
+deployment details have not exposed the full Git SHA, so the exact deployed
+revision is not independently confirmed.
+
+The owner's Cron Runs panels show green `reminders` executions on October 20 at
+15:16, 15:30, and 15:46 (GMT+5), lasting 7–9 seconds. Their deployment logs
+show `sent 0, dropped 0 stale tokens` and `editorial email:
+status=ready processed=0`; these are successful no-op runs, not proof of a
+delivered push or email. `pool-topup` has green executions on October 18–20
+around 03:02–03:04 (GMT+5), lasting 8–10 seconds. Its logs report generation
+disabled, revision work empty, and legacy enrichment empty. They show the
+current queue state, but do not establish every effective feature-flag value.
+The remaining live checks are `reminders` variable names, non-secret flags and
+caps, and any service-level command or root-directory overrides.
 The `pool-topup` service uses shared variable references for the Gemini,
 generation, editorial email, and legacy-enrichment settings. Their values were
 masked in the owner's capture and are not recorded here.
@@ -219,7 +230,7 @@ before closing issue #417.
 
 ## Evidence still needed
 
-- Railway Cron Runs and latest full deployed Git SHA for both services.
+- Railway deployment details with the full deployed Git SHA for both services.
 - `reminders` variable names, safe flag/cap values on both services, and
   effective root directory/start-command overrides.
 - Whether any one-off maintainer command runs outside the two cron services.

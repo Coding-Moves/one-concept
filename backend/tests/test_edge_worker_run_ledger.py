@@ -1,6 +1,7 @@
 """The scheduler handoff is fenced by one committed run per job."""
 
 import asyncio
+from uuid import uuid4
 
 import pytest
 from sqlalchemy import text
@@ -104,3 +105,29 @@ async def test_worker_ledger_is_service_only(session):
       has_function_privilege('anon','public.edge_worker_start_run(uuid,text)','EXECUTE'),
       has_function_privilege('service_role','public.edge_worker_start_run(uuid,text)','EXECUTE')"""))).one()
     assert result == (False, True, False, True)
+
+
+@pytest.mark.asyncio
+async def test_reconcile_prunes_only_old_terminal_run_history(session):
+    savepoint = await session.begin_nested()
+    try:
+        old_success, old_failure, recent_success, fresh_queue = (uuid4() for _ in range(4))
+        await session.execute(text("""insert into public.edge_worker_runs
+          (id,job,scheduled_for,status,queued_at,finished_at) values
+          (:old_success,'prefetch',now()-interval '32 days','succeeded',
+           now()-interval '32 days',now()-interval '32 days'),
+          (:old_failure,'prefetch',now()-interval '31 days','failed',
+           now()-interval '31 days',now()-interval '31 days'),
+          (:recent_success,'prefetch',now()-interval '1 day','succeeded',
+           now()-interval '1 day',now()-interval '1 day'),
+          (:fresh_queue,'prefetch',now(),'queued',now(),null)"""),
+          {"old_success": old_success, "old_failure": old_failure,
+           "recent_success": recent_success, "fresh_queue": fresh_queue})
+        assert await session.scalar(text("select public.edge_worker_expire_runs()")) == 0
+        retained = set((await session.execute(text("""select id from public.edge_worker_runs
+          where id in (:old_success,:old_failure,:recent_success,:fresh_queue)"""),
+          {"old_success": old_success, "old_failure": old_failure,
+           "recent_success": recent_success, "fresh_queue": fresh_queue})).scalars())
+        assert retained == {recent_success, fresh_queue}
+    finally:
+        await savepoint.rollback()

@@ -311,6 +311,9 @@ INCREMENTAL_PROBES = {
         "public.edge_api_editorial_owner_operations(uuid,uuid,text,text,boolean,boolean,boolean,boolean,boolean,boolean,integer)",
         "public.edge_api_editorial_owner_events(uuid,uuid,text,date,date,text,text,text,uuid,timestamp with time zone,text,integer)",
     ),
+    "0129_supabase_worker_run_retention.sql": (
+        "definer:public.edge_worker_expire_runs()",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

@@ -5,6 +5,7 @@ command line, repository, or logs. Cleanup removes the provider credentials.
 """
 
 import argparse
+import json
 import os
 import re
 import subprocess
@@ -103,7 +104,22 @@ def cleanup() -> int:
     if result.returncode:
         print("Could not disable staging provider switches", file=sys.stderr)
         return 1
-    names = [f"WORKER_CANARY_{name}" for name in (PRIVATE | FLAGS)]
+    listed = subprocess.run(["supabase", "secrets", "list", "--project-ref",
+                             os.environ["STAGING_PROJECT_REF"], "--output", "json"],
+                            capture_output=True, text=True, check=False, timeout=90)
+    if listed.returncode:
+        print("Could not inspect staging provider secret names", file=sys.stderr)
+        return 1
+    try:
+        present = {item["name"] for item in json.loads(listed.stdout)}
+    except (KeyError, TypeError, ValueError):
+        print("Could not parse staging provider secret names", file=sys.stderr)
+        return 1
+    names = [f"WORKER_CANARY_{name}" for name in (PRIVATE | FLAGS)
+             if f"WORKER_CANARY_{name}" in present]
+    if not names:
+        print("Staging provider switches disabled; no temporary credentials remain")
+        return 0
     result = subprocess.run(["supabase", "secrets", "unset", *names,
                              "--project-ref", os.environ["STAGING_PROJECT_REF"]],
                             capture_output=True, text=True, check=False, timeout=90)

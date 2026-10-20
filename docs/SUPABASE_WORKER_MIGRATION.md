@@ -179,6 +179,12 @@ Google's token exchange, then applies any reviewed staging migrations and
 reopens only the same unsent batch with exactly two prior authorization
 failures. Its third attempt uses a three-message test cap and repeats neither
 push nor generation. A failed preflight cannot reopen the batch.
+The first protected run after replacing the GitHub client values still returned
+`invalid_client` before applying SQL or sending mail. Check that the client ID
+belongs to the OAuth Web client used in Playground and that its enabled secret
+was copied exactly. Google [hides old client secrets after creation and permits
+adding a new secret to the same client](https://support.google.com/cloud/answer/15549257);
+keep the existing refresh token when rotating only that client's secret.
 
 Migration 0128 updates the owner operations view and event feed. While every
 Supabase worker application gate is off, the view continues to use Railway's

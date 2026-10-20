@@ -52,6 +52,18 @@ test('staging allows only explicit test tokens to reach Expo', async () => {
   assert.deepEqual(recorded, [{ id: 3, status: 'rejected', error: 'staging_blocked' }]);
 });
 
+test('allowlisted staging phone receives an explicitly labeled test reminder', async () => {
+  const token = 'ExponentPushToken[test]';
+  let sent;
+  const { task } = harness([{ id: 3, to: token }], async (_url, options) => {
+    sent = JSON.parse(options.body);
+    return Response.json({ data: [{ status: 'ok' }] });
+  }, { environment: 'staging', testTokens: new Set([token]) });
+  assert.equal((await task('run-id')).accepted, 1);
+  assert.equal(sent[0].title, 'One Concept staging test');
+  assert.match(sent[0].body, /No action needed/);
+});
+
 test('malformed claim cannot trigger provider I/O', async () => {
   const { task } = harness([{ id: 1, to: '' }],
     async () => { throw new Error('Expo must not be called'); });

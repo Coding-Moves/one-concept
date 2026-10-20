@@ -54,11 +54,15 @@ export function createDailyReminderTask(
     let received: Array<Record<string, unknown>> = [];
     let transportFailed = false;
     try {
+      const staging = options.environment !== 'production';
       const response = await fetcher(EXPO_URL, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify(batch.map(item => ({
-          to: item.to, title: TITLE, body: BODY, sound: 'default',
+          to: item.to,
+          title: staging ? 'One Concept staging test' : TITLE,
+          body: staging ? 'Daily reminder notification test. No action needed.' : BODY,
+          sound: 'default',
           priority: 'high', channelId: 'reminders',
         }))),
         signal: AbortSignal.timeout(20000),

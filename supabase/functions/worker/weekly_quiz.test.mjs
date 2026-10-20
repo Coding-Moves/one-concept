@@ -63,6 +63,18 @@ test('explicit Expo rate limit may retry, but staging blocks real handsets', asy
     [{ id: row.id, status: 'failed', error: 'staging_blocked' }]);
 });
 
+test('allowlisted staging phone gets an inert notice without a staging quiz link', async () => {
+  const requests = [];
+  const staging = harness({ provider: async (_url, options) => {
+    requests.push(JSON.parse(options.body));
+    return Response.json({ data: [{ status: 'ok', id: 'test-ticket' }] });
+  }, config: { environment: 'staging', testTokens: new Set([row.to]) } });
+  assert.equal((await staging.task('run-id')).accepted, 1);
+  assert.equal(requests[0][0].title, 'One Concept staging test');
+  assert.deepEqual(requests[0][0].data, { type: 'worker_canary' });
+  assert.equal(JSON.stringify(requests).includes(row.quiz_id), false);
+});
+
 test('disabled weekly notifications do not touch the database', async () => {
   const { task, calls } = harness({ provider: async () => { throw new Error('must not call Expo'); },
     config: { enabled: false } });

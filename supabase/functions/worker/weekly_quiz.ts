@@ -103,13 +103,16 @@ export function createWeeklyQuizTask(rpc: ServiceRpc, fetcher: typeof fetch, con
     let tickets: Record<string, unknown>[] = [];
     let retry = false;
     try {
+      const staging = config.environment !== 'production';
       const response = await fetcher(SEND_URL, {
         method: 'POST', headers: { 'content-type': 'application/json' },
         body: JSON.stringify(batch.map(row => ({
-          to: row.to, title: 'Your weekly quiz is ready',
-          body: 'Seven questions from concepts you learned. Take it when you like.',
+          to: row.to, title: staging ? 'One Concept staging test' : 'Your weekly quiz is ready',
+          body: staging ? 'Weekly quiz notification test. No action needed.'
+            : 'Seven questions from concepts you learned. Take it when you like.',
           sound: 'default', channelId: 'reminders', ttl: 3600,
-          data: { type: 'weekly_quiz', quiz_id: row.quiz_id },
+          data: staging ? { type: 'worker_canary' }
+            : { type: 'weekly_quiz', quiz_id: row.quiz_id },
         }))),
         signal: AbortSignal.timeout(20000), redirect: 'error',
       });

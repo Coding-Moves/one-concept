@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   stage_worker:
-    if: ${{ !contains(github.ref_name, '-canary-') && !contains(github.ref_name, '-diagnose-') }}
+    if: ${{ !contains(github.ref_name, '-canary-') && !contains(github.ref_name, '-diagnose-') && !contains(github.ref_name, '-email-retry-') }}
     runs-on: ubuntu-latest
     environment: supabase-staging
     env:
@@ -120,3 +120,43 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Report bounded staging email failure status
         run: python backend/tools/inspect_staging_worker_canary.py
+
+  retry_email_worker:
+    if: ${{ contains(github.ref_name, '-email-retry-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: supabase-staging
+    env:
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
+      STAGING_CANARY_REVIEWER_EMAIL: ${{ secrets.SUPABASE_STAGING_REVIEWER_EMAIL }}
+      STAGING_CANARY_GMAIL_FROM: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_FROM }}
+      STAGING_CANARY_GMAIL_CLIENT_ID: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_ID }}
+      STAGING_CANARY_GMAIL_CLIENT_SECRET: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_SECRET }}
+      STAGING_CANARY_GMAIL_REFRESH_TOKEN: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: latest
+      - name: Install temporary email-only staging credentials
+        run: python backend/tools/staging_worker_canary_secrets.py configure-email
+      - name: Deploy staged worker with refreshed sender
+        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF"
+      - name: Retry only the unsent staging email batch
+        run: python backend/tools/retry_staging_worker_email_canary.py
+      - name: Report bounded email outcome
+        if: ${{ always() }}
+        run: python backend/tools/inspect_staging_worker_canary.py
+      - name: Close every staging application job gate
+        if: ${{ always() }}
+        run: python backend/tools/close_staging_worker_gates.py
+      - name: Remove temporary provider credentials and switches
+        if: ${{ always() }}
+        run: python backend/tools/staging_worker_canary_secrets.py cleanup

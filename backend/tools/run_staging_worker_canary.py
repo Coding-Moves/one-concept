@@ -64,7 +64,18 @@ def fixture_is_safe(env: dict[str, str], job: str) -> bool:
                       f"'{digest}'")
         other_batches = query(env, "select count(*) from public.editorial_email_batches "
                               "where status in ('pending','sending')")
-        return ready == "1" and other_batches == "0"
+        pending_canary = query(env, "select count(distinct b.id) "
+            "from public.editorial_email_batches b "
+            "join public.editorial_notification_outbox o on o.batch_id=b.id "
+            "join public.concept_revisions r on r.id=o.revision_id "
+            "join public.concepts c on c.id=r.concept_id "
+            "where b.status='pending' and b.sent_at is null "
+            "and c.slug like 'staging-worker-email-%' "
+            "and public.edge_worker_email_batch_eligible(b.id) "
+            "and encode(pg_catalog.sha256(convert_to(lower(b.recipient_email),'UTF8')),'hex')="
+            f"'{digest}'")
+        return (ready == "1" and other_batches == "0") or \
+            (ready == "0" and other_batches == pending_canary == "1")
     if job == "editorial_generation":
         pending = query(env, "select count(*) from public.editorial_generation_jobs "
                         "where status='pending'")

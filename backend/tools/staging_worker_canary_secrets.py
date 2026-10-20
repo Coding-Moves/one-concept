@@ -42,6 +42,14 @@ FLAGS = {
     "EDITORIAL_EMAIL_DASHBOARD_URL": "https://review.example.test",
     "ALLOWED_ORIGINS": "https://review.example.test",
 }
+EMAIL_PRIVATE = {name: source for name, source in PRIVATE.items()
+                 if name in {"EDITORIAL_EMAIL_TEST_RECIPIENTS", "EDITORIAL_EMAIL_FROM",
+                             "EDITORIAL_GMAIL_CLIENT_ID", "EDITORIAL_GMAIL_CLIENT_SECRET",
+                             "EDITORIAL_GMAIL_REFRESH_TOKEN"}}
+EMAIL_FLAGS = {name: value for name, value in FLAGS.items()
+               if name in {"EDITORIAL_ENABLED", "EDITORIAL_EMAIL_ENABLED",
+                           "EDITORIAL_EMAIL_DASHBOARD_URL", "ALLOWED_ORIGINS"}}
+EMAIL_FLAGS["EDITORIAL_EMAIL_DAILY_CAP"] = "2"
 
 
 def target_is_safe() -> bool:
@@ -49,6 +57,27 @@ def target_is_safe() -> bool:
     production = os.environ.get("PRODUCTION_PROJECT_REF", "")
     return staging == DEMO_PROJECT_REF and bool(PROJECT_REF.fullmatch(production)) \
         and staging != production
+
+
+def set_values(values: dict[str, str]) -> int:
+    temporary: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile("w", prefix="worker-canary-", delete=False) as file:
+            temporary = Path(file.name)
+            os.chmod(temporary, 0o600)
+            for name, value in values.items():
+                file.write(f"{name}={value}\n")
+        result = subprocess.run(["supabase", "secrets", "set", "--env-file",
+                                 str(temporary), "--project-ref",
+                                 os.environ["STAGING_PROJECT_REF"]],
+                                capture_output=True, text=True, check=False, timeout=90)
+    finally:
+        if temporary is not None:
+            temporary.unlink(missing_ok=True)
+    if result.returncode:
+        print("Staging canary provider setup failed", file=sys.stderr)
+        return 1
+    return 0
 
 
 def configure() -> int:
@@ -71,24 +100,32 @@ def configure() -> int:
         return 2
     values = {f"WORKER_CANARY_{name}": value
               for name, value in (inputs | FLAGS).items()}
-    temporary: Path | None = None
-    try:
-        with tempfile.NamedTemporaryFile("w", prefix="worker-canary-", delete=False) as file:
-            temporary = Path(file.name)
-            os.chmod(temporary, 0o600)
-            for name, value in values.items():
-                file.write(f"{name}={value}\n")
-        result = subprocess.run(["supabase", "secrets", "set", "--env-file",
-                                 str(temporary), "--project-ref",
-                                 os.environ["STAGING_PROJECT_REF"]],
-                                capture_output=True, text=True, check=False, timeout=90)
-    finally:
-        if temporary is not None:
-            temporary.unlink(missing_ok=True)
-    if result.returncode:
-        print("Staging canary provider setup failed", file=sys.stderr)
+    if set_values(values):
         return 1
     print("Staging worker provider canaries configured")
+    return 0
+
+
+def configure_email() -> int:
+    if not target_is_safe():
+        print("Email retry secret setup refused: unreviewed target", file=sys.stderr)
+        return 2
+    inputs = {name: os.environ.get(source, "").strip()
+              if name in {"EDITORIAL_EMAIL_TEST_RECIPIENTS", "EDITORIAL_EMAIL_FROM"}
+              else os.environ.get(source, "")
+              for name, source in EMAIL_PRIVATE.items()}
+    if any(not value or any(char in value for char in "\x00\r\n")
+           for value in inputs.values()) or any(
+               not re.fullmatch(r"[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+", inputs[name])
+               for name in ("EDITORIAL_EMAIL_TEST_RECIPIENTS", "EDITORIAL_EMAIL_FROM")
+           ):
+        print("Email retry provider inputs are missing or invalid", file=sys.stderr)
+        return 2
+    values = {f"WORKER_CANARY_{name}": value
+              for name, value in (inputs | EMAIL_FLAGS).items()}
+    if set_values(values):
+        return 1
+    print("Staging email retry provider settings configured")
     return 0
 
 
@@ -135,9 +172,13 @@ def cleanup() -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("mode", choices=("configure", "cleanup"))
+    parser.add_argument("mode", choices=("configure", "configure-email", "cleanup"))
     args = parser.parse_args()
-    return configure() if args.mode == "configure" else cleanup()
+    if args.mode == "configure":
+        return configure()
+    if args.mode == "configure-email":
+        return configure_email()
+    return cleanup()
 
 
 if __name__ == "__main__":

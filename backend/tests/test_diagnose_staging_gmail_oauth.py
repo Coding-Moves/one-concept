@@ -8,7 +8,7 @@ from tools import diagnose_staging_gmail_oauth as diagnose
 def environment(monkeypatch):
     monkeypatch.setenv("STAGING_PROJECT_REF", diagnose.DEMO_PROJECT_REF)
     monkeypatch.setenv("PRODUCTION_PROJECT_REF", "egdszjoesxlccauahmsx")
-    monkeypatch.setenv("STAGING_CANARY_GMAIL_CLIENT_ID", "fixture-client")
+    monkeypatch.setenv("STAGING_CANARY_GMAIL_CLIENT_ID", "fixture-client.apps.googleusercontent.com")
     monkeypatch.setenv("STAGING_CANARY_GMAIL_CLIENT_SECRET", "fixture-secret")
     monkeypatch.setenv("STAGING_CANARY_GMAIL_REFRESH_TOKEN", "fixture-refresh")
 
@@ -60,6 +60,25 @@ def test_oauth_check_reports_safe_google_error(monkeypatch, capsys):
     assert "fixture" not in output.err
     assert connection.requested[0:2] == ("POST", "/token")
     assert connection.closed
+
+
+def test_format_only_reports_field_without_network_or_value(monkeypatch, capsys):
+    environment(monkeypatch)
+    monkeypatch.setenv("STAGING_CANARY_GMAIL_CLIENT_SECRET", " fixture-secret")
+    monkeypatch.setattr(diagnose.http.client, "HTTPSConnection",
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError()))
+    assert diagnose.main(format_only=True) == 2
+    output = capsys.readouterr()
+    assert "client_secret_format" in output.err
+    assert "fixture-secret" not in output.err
+
+
+def test_format_only_accepts_valid_shape_without_network(monkeypatch, capsys):
+    environment(monkeypatch)
+    monkeypatch.setattr(diagnose.http.client, "HTTPSConnection",
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError()))
+    assert diagnose.main(format_only=True) == 0
+    assert "credential_format_ok" in capsys.readouterr().out
 
 
 def test_oauth_check_reports_valid_scope_without_token(monkeypatch, capsys):

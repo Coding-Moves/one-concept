@@ -137,7 +137,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Check staging sender token exchange without sending email
-        run: python backend/tools/diagnose_staging_gmail_oauth.py
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-format-* ]]; then
+            python backend/tools/diagnose_staging_gmail_oauth.py --format-only
+          else
+            python backend/tools/diagnose_staging_gmail_oauth.py
+          fi
 
   retry_email_worker:
     if: ${{ contains(github.ref_name, '-email-retry-') }}

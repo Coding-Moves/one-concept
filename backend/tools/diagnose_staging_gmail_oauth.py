@@ -7,6 +7,7 @@ client credential, response body, exception, or recipient address.
 import http.client
 import json
 import os
+import re
 import sys
 from urllib.parse import urlencode
 
@@ -21,9 +22,23 @@ GOOGLE_ERRORS = frozenset({
     "access_denied", "unsupported_grant_type", "temporarily_unavailable",
 })
 SCOPE = "https://www.googleapis.com/auth/gmail.send"
+CLIENT_ID = re.compile(r"[A-Za-z0-9_-]+\.apps\.googleusercontent\.com\Z")
 
 
-def main() -> int:
+def credential_shape(credentials: dict[str, str]) -> str | None:
+    """Report only the field with a likely copy/paste error, never its value."""
+    client_id = credentials["client_id"]
+    if not CLIENT_ID.fullmatch(client_id):
+        return "client_id_format"
+    for field in ("client_secret", "refresh_token"):
+        value = credentials[field]
+        if any(char.isspace() for char in value) or value.startswith(('"', "'")) or \
+           value.endswith(('"', "'")):
+            return f"{field}_format"
+    return None
+
+
+def main(*, format_only: bool = False) -> int:
     staging = os.environ.get("STAGING_PROJECT_REF", "")
     production = os.environ.get("PRODUCTION_PROJECT_REF", "")
     credentials = {
@@ -36,6 +51,13 @@ def main() -> int:
                                     for value in credentials.values()):
         print("Staging Gmail OAuth check refused: target or credentials missing", file=sys.stderr)
         return 2
+    shape = credential_shape(credentials)
+    if shape:
+        print(f"Staging Gmail OAuth: {shape}", file=sys.stderr)
+        return 2
+    if format_only:
+        print("Staging Gmail OAuth: credential_format_ok")
+        return 0
 
     connection = http.client.HTTPSConnection("oauth2.googleapis.com", timeout=10)
     try:
@@ -69,4 +91,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    raise SystemExit(main(format_only="--format-only" in sys.argv[1:]))

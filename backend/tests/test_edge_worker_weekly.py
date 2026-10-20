@@ -4,7 +4,9 @@ import json
 from datetime import datetime, timedelta, timezone
 
 import pytest
+import pytest_asyncio
 from sqlalchemy import text
+
 
 def local_nine_today():
     return datetime.now(timezone.utc).replace(hour=9, minute=5, second=0, microsecond=0)
@@ -15,25 +17,37 @@ def decoded(value):
 
 
 async def make_eligible(session, user):
-    concepts = (await session.execute(text("""select id from public.concepts
-      where status='published' order by id limit 7"""))).scalars().all()
+    concepts = (await session.execute(text("""select id, mcqs::text as original_mcqs
+      from public.concepts where status='published' order by id limit 7"""))).all()
     assert len(concepts) == 7
     for index, concept in enumerate(concepts):
         questions = [{"question": f"Reviewed question {index}-{part}?",
                       "options": ["One", "Two", "Three", "Four"],
                       "correct_index": 0} for part in range(3)]
         await session.execute(text("update public.concepts set mcqs=cast(:q as jsonb) where id=:id"),
-                              {"q": json.dumps(questions), "id": concept})
+                              {"q": json.dumps(questions), "id": concept.id})
         await session.execute(text("""insert into public.daily_assignments(
           user_id,concept_id,assigned_for,completed_at)
           values (:uid,:concept,date '2025-01-01'+cast(:offset as integer),now())"""),
-          {"uid": user, "concept": concept, "offset": index})
+          {"uid": user, "concept": concept.id, "offset": index})
+    await session.commit()
+    return concepts
+
+
+@pytest_asyncio.fixture
+async def eligible_weekly_user(session, user):
+    originals = await make_eligible(session, user)
+    yield
+    await session.rollback()
+    for concept in originals:
+        await session.execute(text("""update public.concepts
+          set mcqs=cast(:mcqs as jsonb) where id=:id"""),
+          {"mcqs": concept.original_mcqs, "id": concept.id})
     await session.commit()
 
 
 @pytest.mark.asyncio
-async def test_weekly_enqueue_send_and_receipt_are_separate(session, user):
-    await make_eligible(session, user)
+async def test_weekly_enqueue_send_and_receipt_are_separate(session, user, eligible_weekly_user):
     token = "ExponentPushToken[edge-weekly-one]"
     await session.execute(text("""update public.notification_preferences
       set weekly_quiz_enabled=true where user_id=:uid"""), {"uid": user})

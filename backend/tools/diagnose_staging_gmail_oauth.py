@@ -28,8 +28,14 @@ CLIENT_ID = re.compile(r"[A-Za-z0-9_-]+\.apps\.googleusercontent\.com\Z")
 def credential_shape(credentials: dict[str, str]) -> str | None:
     """Report only the field with a likely copy/paste error, never its value."""
     client_id = credentials["client_id"]
+    if any(char.isspace() for char in client_id):
+        return "client_id_whitespace"
+    if client_id.startswith(('"', "'")) or client_id.endswith(('"', "'")):
+        return "client_id_quotes"
+    if not client_id.endswith(".apps.googleusercontent.com"):
+        return "client_id_suffix"
     if not CLIENT_ID.fullmatch(client_id):
-        return "client_id_format"
+        return "client_id_characters"
     for field in ("client_secret", "refresh_token"):
         value = credentials[field]
         if any(char.isspace() for char in value) or value.startswith(('"', "'")) or \

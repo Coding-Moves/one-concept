@@ -2,6 +2,8 @@
 
 import json
 
+import pytest
+
 from tools import diagnose_staging_gmail_oauth as diagnose
 
 
@@ -79,6 +81,24 @@ def test_format_only_accepts_valid_shape_without_network(monkeypatch, capsys):
                         lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError()))
     assert diagnose.main(format_only=True) == 0
     assert "credential_format_ok" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(("client_id", "code"), [
+    (" fixture.apps.googleusercontent.com", "client_id_whitespace"),
+    ("'fixture.apps.googleusercontent.com'", "client_id_quotes"),
+    ("fixture", "client_id_suffix"),
+])
+def test_format_only_identifies_client_id_copy_errors(
+    monkeypatch, capsys, client_id, code,
+):
+    environment(monkeypatch)
+    monkeypatch.setenv("STAGING_CANARY_GMAIL_CLIENT_ID", client_id)
+    monkeypatch.setattr(diagnose.http.client, "HTTPSConnection",
+                        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError()))
+    assert diagnose.main(format_only=True) == 2
+    output = capsys.readouterr()
+    assert code in output.err
+    assert client_id not in output.err
 
 
 def test_oauth_check_reports_valid_scope_without_token(monkeypatch, capsys):

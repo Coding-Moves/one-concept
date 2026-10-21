@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### Supabase production release/cutover — issue #418, 2026-10-21
+
+- Scope: prepare one reviewed Step 3 branch from merged `develop` at `caaf0be`, retaining production on Railway until SQL, browser, deploy, OTA, Cron and retirement gates are observed. The owner asked for one large PR; issue #418 and `RELEASING.md` specify a `develop` → `main` release PR, so the PR target and gate exception must be explicit before merge. No production SQL, Edge deployment, Cron switch, EAS update or Railway setting has been changed by this branch.
+- `51f7596` decouples mobile Auth and public profile browser links from the API URL using a validated web origin, while accepting an optional legacy web origin for old QR links. Mobile typecheck and 98 unit tests passed.
+- `8d7c277` hosts confirmation, recovery, privacy and public-profile HTML on the static reviewer site; it validates the Supabase function API URL and keeps only publishable config in the browser. Admin typecheck, 17 unit tests, build, and all 50 browser tests passed.
+- `b035cc6` adds a main-only, protected Supabase production deploy with project guards, read-only schema checks and API health; Release now requires its successful run ID for the same SHA. `de99858` publishes preview before a second protected production OTA approval and rejects a reused tag before any OTA. These workflows are not yet run in production.
+- `docs/SUPABASE_CUTOVER.md` records the ordered preflight, backup, migration, browser, EAS, job handover, observation and retirement gates. Production `applied.txt` still ends at 0045 while the candidate includes 0130; do not append filenames before actual production SQL and read-back. The production size/quota, restore drill, full Railway SHAs, EAS values, OAuth rotation, static-site publication and old-client tail remain operational evidence to collect.
+
 ### Supabase scheduled worker migration — issue #417, 2026-10-18
 
 - Branch `codex/supabase-cron-workers` starts from `develop` at `69b01c5`. Scope is one feature PR for all Railway scheduled/background work, with production Supabase schedules disabled until the step-3 cutover. The owner confirmed Railway production runs `reminders` every 15 minutes and `pool-topup` at 22:00 UTC; source is `main`. On October 20, the owner showed three green recent runs of each service: reminders sent zero tokens and processed zero editorial emails, while pool-topup reported generation disabled and empty revision/enrichment work. Both deployment panels identify release PR #414, whose merge commit is `c244088aa285127a3f065cc1d7e41afdae8bf36f`; Railway's full deployed SHA and some effective non-secret flags remain to be checked. The owner later showed `reminders` with `GEMINI_MODEL=gemini-3.1-flash-lite` and `GENERATION_DAILY_CALL_CAP=200`.

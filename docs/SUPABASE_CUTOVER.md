@@ -111,14 +111,20 @@ main SHA. Keep all production Cron jobs inactive during this phase.
    `GEMINI_MODEL=gemini-3.1-flash-lite`; check effective values on all relevant
    services rather than guessing. Keep email disabled until OAuth rotation,
    recipient tests, and a nonzero cap are deliberately approved.
-4. Install `backend/ops/supabase_workers/0001_install_inactive_cron.sql` only
-   after the worker SQL and Vault secrets are verified. It installs seven work
-   schedules plus HTTP receipt reconciliation, and fails unless all eight are
-   inactive. [Supabase Cron](https://supabase.com/docs/guides/cron/quickstart)
+   The owner reported copying the production Railway `GEMINI_API_KEY` directly
+   to production Edge Secrets and saving `EDITORIAL_ENABLED=true`,
+   `GENERATION_ENABLED=true`, and `LEGACY_ENRICHMENT_ENABLED=true` on October
+   21. These private or newly set values are not yet exercised by production
+   Edge code; do not equate saved settings with a successful provider call.
+4. After merging and deploying the worker, run the protected **Install inactive
+   Supabase production Cron jobs** workflow on the exact current `main` commit.
+   It verifies the fixed production project and worker schema, then applies
+   `backend/ops/supabase_workers/0001_install_inactive_cron.sql`. The installer
+   creates seven work schedules plus HTTP receipt reconciliation, and the
+   workflow reads back all eight names as inactive. [Supabase Cron](https://supabase.com/docs/guides/cron/quickstart)
    overwrites a job with the same name, so this one-time installer refuses
-   existing One Concept jobs, including those activated during handover. Read
-   back `cron.job` by name and active state. Do not turn on provider or job
-   switches in a bulk edit.
+   existing One Concept jobs, including those activated during handover. Do
+   not turn on provider or job switches in a bulk edit.
 
 Supabase [does not serve HTML from GET Edge Function responses](https://supabase.com/docs/guides/functions/development-tips).
 Before merging, verify that the `admin/` Netlify site's production build still
@@ -158,6 +164,8 @@ keep the public path in the address bar.
    from that exact main commit, checks the API `/health`, and requires the worker
    to reject an unsigned dispatch with its own 401 response. Record its Actions
    run ID and main SHA. This does not activate Cron or repoint clients.
+   Then run **Install inactive Supabase production Cron jobs** behind the same
+   protected approval gate, and record its run ID and eight-inactive read-back.
 4. Verify authenticated learner, reviewer and owner flows, avatar, public
    profile, recovery, health, and an isolated worker dispatch. Check function
    logs for 429/503, database connections, latency, quota and Edge usage. Keep

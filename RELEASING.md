@@ -34,7 +34,9 @@ APK and the procedure in [mobile/DEPLOYMENT.md](mobile/DEPLOYMENT.md).
    Railway auto deploy must be disabled beforehand. Run the protected
    `Deploy Supabase API and worker to production` workflow from **current main**.
    It verifies schema and project identity, deploys both Edge Functions, and
-   checks API health. It leaves all Supabase Cron jobs inactive.
+   checks API health. Then run the separately protected **Install inactive
+   Supabase production Cron jobs** workflow, which verifies all eight jobs are
+   inactive. Neither workflow repoints clients or starts scheduled work.
 5. Smoke-test production with isolated accounts and a compatible preview app.
    The `Release` workflow requires the successful production deployment run ID
    and exact main SHA. It rejects a reused version tag, publishes preview OTA,

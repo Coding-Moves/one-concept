@@ -578,10 +578,9 @@ function OperationsPanel({
                       : "No observation recorded"}
                   </p>
                   <small>
-                    A completed process is not a promise that content was
-                    generated or a message delivered. Completion is stale after{" "}
-                    {w.stale_after_minutes} minutes; a start without completion
-                    becomes stale after 30 minutes.
+                    A completed process does not confirm content was generated
+                    or a message was delivered. Its observation becomes stale
+                    after {w.stale_after_minutes} minutes.
                   </small>
                 </article>
               ))}

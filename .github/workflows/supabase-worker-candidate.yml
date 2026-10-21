@@ -1,0 +1,196 @@
+name: Validate Supabase worker candidate in staging
+
+on:
+  push:
+    tags:
+      - 'supabase-worker-staging-batch-*'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-worker-staging
+  cancel-in-progress: false
+
+jobs:
+  stage_worker:
+    if: ${{ !contains(github.ref_name, '-canary-') && !contains(github.ref_name, '-diagnose-') && !contains(github.ref_name, '-email-retry-') }}
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    env:
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
+      STAGING_WORKER_SIGNING_KEY: ${{ secrets.SUPABASE_STAGING_WORKER_SIGNING_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Require reviewed staging target and scoped token
+        run: |
+          if [ "$STAGING_PROJECT_REF" != 'zhrulokgngjceqgjkcmw' ] || \
+             [ -z "$PRODUCTION_PROJECT_REF" ] || \
+             [ "$STAGING_PROJECT_REF" = "$PRODUCTION_PROJECT_REF" ] || \
+             [ -z "$STAGING_DIRECT_URL" ] || [ -z "$SUPABASE_ACCESS_TOKEN" ] || \
+             [ -z "$STAGING_WORKER_SIGNING_KEY" ]; then
+            echo '::error::Worker staging target or credentials are not configured.'
+            exit 1
+          fi
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: latest
+      - name: Require staging token's Edge secret permissions before SQL
+        run: |
+          if ! supabase secrets set WORKER_GENERATION_TEST_ENABLED=false \
+              --project-ref "$STAGING_PROJECT_REF" > /dev/null 2>&1; then
+            echo '::error::The staging token needs Edge Function Secrets read and read-write permissions.'
+            exit 1
+          fi
+      - name: Apply and verify reviewed worker migrations
+        run: python backend/tools/apply_staging_migrations.py --apply-incremental
+      - name: Configure staging-only Vault and Edge secrets
+        run: python backend/tools/configure_staging_worker.py
+      - name: Deploy candidate worker only to staging
+        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF"
+      - name: Install all worker schedules inactive in staging
+        run: python backend/tools/install_staging_worker_cron.py
+      - name: Verify one signed disabled-provider dispatch
+        run: python backend/tools/smoke_staging_worker.py
+
+  canary_worker:
+    if: ${{ contains(github.ref_name, '-canary-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: supabase-staging
+    env:
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
+      STAGING_CANARY_LEARNER_EMAIL: ${{ secrets.SUPABASE_STAGING_TEST_EMAIL }}
+      STAGING_CANARY_REVIEWER_EMAIL: ${{ secrets.SUPABASE_STAGING_REVIEWER_EMAIL }}
+      STAGING_CANARY_OWNER_EMAIL: ${{ secrets.SUPABASE_STAGING_OWNER_EMAIL }}
+      STAGING_CANARY_PUSH_TOKEN: ${{ secrets.SUPABASE_STAGING_TEST_PUSH_TOKEN }}
+      STAGING_CANARY_GMAIL_FROM: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_FROM }}
+      STAGING_CANARY_GMAIL_CLIENT_ID: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_ID }}
+      STAGING_CANARY_GMAIL_CLIENT_SECRET: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_SECRET }}
+      STAGING_CANARY_GMAIL_REFRESH_TOKEN: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_REFRESH_TOKEN }}
+      STAGING_CANARY_GEMINI_KEY: ${{ secrets.SUPABASE_STAGING_CANARY_GEMINI_KEY }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: latest
+      - name: Seed one controlled recipient and one claim per provider
+        run: python backend/tools/prepare_staging_worker_canaries.py
+      - name: Install temporary staging-only provider settings
+        run: python backend/tools/staging_worker_canary_secrets.py configure
+      - name: Deploy staged worker with provider settings
+        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF"
+      - name: Check phone, inbox and private draft in one provider batch
+        run: python backend/tools/run_all_staging_worker_canaries.py
+      - name: Close every staging application job gate
+        if: ${{ always() }}
+        run: |
+          python backend/tools/close_staging_worker_gates.py
+      - name: Remove temporary provider credentials and switches
+        if: ${{ always() }}
+        run: python backend/tools/staging_worker_canary_secrets.py cleanup
+
+  diagnose_worker:
+    if: ${{ contains(github.ref_name, '-diagnose-') && !contains(github.ref_name, '-oauth-diagnose-') }}
+    runs-on: ubuntu-latest
+    environment: supabase-staging
+    env:
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - name: Inspect staging email status or reconcile its existing HTTP receipt
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-smoke-* ]]; then
+            python backend/tools/inspect_staging_worker_canary.py --worker-smoke
+          elif [[ "$GITHUB_REF_NAME" == *-reconcile-* ]]; then
+            python backend/tools/inspect_staging_worker_canary.py --reconcile-http
+          else
+            python backend/tools/inspect_staging_worker_canary.py
+          fi
+
+  diagnose_oauth_worker:
+    if: ${{ contains(github.ref_name, '-oauth-diagnose-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment: supabase-staging
+    env:
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_CANARY_GMAIL_CLIENT_ID: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_ID }}
+      STAGING_CANARY_GMAIL_CLIENT_SECRET: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_SECRET }}
+      STAGING_CANARY_GMAIL_REFRESH_TOKEN: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Check staging sender token exchange without sending email
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-format-* ]]; then
+            python backend/tools/diagnose_staging_gmail_oauth.py --format-only
+          else
+            python backend/tools/diagnose_staging_gmail_oauth.py
+          fi
+
+  retry_email_worker:
+    if: ${{ contains(github.ref_name, '-email-retry-') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: supabase-staging
+    env:
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_DIRECT_URL: ${{ secrets.SUPABASE_STAGING_DATABASE_URL }}
+      SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_STAGING_ACCESS_TOKEN }}
+      STAGING_CANARY_REVIEWER_EMAIL: ${{ secrets.SUPABASE_STAGING_REVIEWER_EMAIL }}
+      STAGING_CANARY_GMAIL_FROM: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_FROM }}
+      STAGING_CANARY_GMAIL_CLIENT_ID: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_ID }}
+      STAGING_CANARY_GMAIL_CLIENT_SECRET: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_CLIENT_SECRET }}
+      STAGING_CANARY_GMAIL_REFRESH_TOKEN: ${{ secrets.SUPABASE_STAGING_CANARY_GMAIL_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+        with:
+          version: latest
+      - name: Verify staging sender before any database write or email
+        run: python backend/tools/diagnose_staging_gmail_oauth.py
+      - name: Apply and verify reviewed staging worker migrations
+        run: python backend/tools/apply_staging_migrations.py --apply-incremental
+      - name: Install temporary email-only staging credentials
+        run: python backend/tools/staging_worker_canary_secrets.py configure-email
+      - name: Deploy staged worker with refreshed sender
+        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF"
+      - name: Retry only the unsent staging email batch
+        run: python backend/tools/retry_staging_worker_email_canary.py
+      - name: Report bounded email outcome
+        if: ${{ always() }}
+        run: python backend/tools/inspect_staging_worker_canary.py
+      - name: Close every staging application job gate
+        if: ${{ always() }}
+        run: python backend/tools/close_staging_worker_gates.py
+      - name: Remove temporary provider credentials and switches
+        if: ${{ always() }}
+        run: python backend/tools/staging_worker_canary_secrets.py cleanup

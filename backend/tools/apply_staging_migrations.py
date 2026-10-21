@@ -258,6 +258,65 @@ INCREMENTAL_PROBES = {
     "0118_supabase_api_request_rate_limit.sql": (
         "public.edge_api_request_retry_after(uuid,text,integer,integer)",
     ),
+    "0119_supabase_worker_run_ledger.sql": (
+        "public.edge_worker_enqueue_run(text,timestamp with time zone)",
+        "public.edge_worker_start_run(uuid,text)",
+        "public.edge_worker_finish_run(uuid,boolean,jsonb,text)",
+        "public.edge_worker_expire_runs()",
+    ),
+    "0120_supabase_worker_transport.sql": (
+        "public.edge_worker_dispatch(text)",
+        "public.edge_worker_poll_http()",
+    ),
+    "0121_supabase_daily_reminder_outbox.sql": (
+        "public.edge_worker_enqueue_reminders(timestamp with time zone,integer)",
+        "public.edge_worker_claim_reminders(integer,timestamp with time zone)",
+        "public.edge_worker_record_reminders(jsonb)",
+        "public.edge_worker_expire_reminders()",
+    ),
+    "0122_supabase_weekly_quiz_worker.sql": (
+        "public.edge_worker_enqueue_weekly(timestamp with time zone,integer,integer)",
+        "public.edge_worker_claim_weekly(timestamp with time zone,integer)",
+        "public.edge_worker_record_weekly(jsonb,timestamp with time zone)",
+        "public.edge_worker_claim_weekly_receipts(timestamp with time zone,integer)",
+        "public.edge_worker_record_weekly_receipts(jsonb,timestamp with time zone)",
+        "public.edge_worker_expire_weekly_sends()",
+    ),
+    "0123_supabase_editorial_email_worker.sql": (
+        "public.edge_worker_email_entry_eligible(uuid)",
+        "public.edge_worker_email_batch_eligible(uuid)",
+        "public.edge_worker_prepare_email(boolean,text[],text,integer)",
+        "public.edge_worker_claim_email(integer)",
+    ),
+    "0124_supabase_active_reader_supply.sql": (
+        "public.edge_worker_plan_active_readers(integer,integer,integer)",
+    ),
+    "0125_supabase_curated_refill_worker.sql": (
+        "public.edge_worker_claim_curated_refill(uuid,boolean,integer,integer,integer,integer,integer,integer,integer)",
+        "public.edge_worker_release_curated_refill(uuid,uuid,text)",
+        "public.edge_worker_complete_curated_refill(uuid,uuid,text,text,jsonb,text,text)",
+    ),
+    "0126_supabase_editorial_revision_worker.sql": (
+        "public.edge_worker_editorial_requester_active(uuid,uuid)",
+        "public.edge_worker_editorial_source_current(uuid)",
+        "public.edge_worker_claim_editorial_revision(integer,integer)",
+        "public.edge_worker_finish_editorial_revision(uuid,uuid,boolean,text,text,text,jsonb,text,text)",
+    ),
+    "0127_supabase_legacy_enrichment_worker.sql": (
+        "public.edge_worker_legacy_finish_empty(uuid)",
+        "public.edge_worker_claim_legacy_enrichment(integer,integer,integer)",
+        "public.edge_worker_finish_legacy_enrichment(uuid,uuid,boolean,text,jsonb)",
+    ),
+    "0128_supabase_worker_owner_reporting.sql": (
+        "public.edge_api_editorial_owner_operations(uuid,uuid,text,text,boolean,boolean,boolean,boolean,boolean,boolean,integer)",
+        "public.edge_api_editorial_owner_events(uuid,uuid,text,date,date,text,text,text,uuid,timestamp with time zone,text,integer)",
+    ),
+    "0129_supabase_worker_run_retention.sql": (
+        "definer:public.edge_worker_expire_runs()",
+    ),
+    "0130_supabase_email_ambiguous_delivery.sql": (
+        "definer:public.edge_worker_claim_email(integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

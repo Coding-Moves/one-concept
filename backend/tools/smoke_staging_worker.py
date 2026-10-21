@@ -14,6 +14,38 @@ except ImportError:
 
 JOB = "editorial_generation"
 REQUEST_ID = re.compile(r"[0-9]{1,20}\Z")
+SAFE_FAILURE = re.compile(
+    r"(queued|running|succeeded|failed|timed_out)\|([0-9]{1,3})\|"
+    r"(started|not_started)\|([a-z][a-z0-9_]{0,79})\|"
+    r"(ledger_unavailable|task_failed|run_fenced|job_unavailable|"
+    r"run_not_claimed|invalid_dispatch|unrecognized)\Z"
+)
+
+
+def failure_label(env: dict[str, str], request_id: str) -> str:
+    # Never print an Edge response body. Match only fixed handler error labels.
+    sql = f"""select r.status,coalesce(r.http_status,0),
+      case when r.started_at is null then 'not_started' else 'started' end,
+      coalesce(r.error_code,'none'),
+      case
+        when strpos(coalesce(h.content::text,''),'\"error\":\"ledger_unavailable\"')>0
+          then 'ledger_unavailable'
+        when strpos(coalesce(h.content::text,''),'\"error\":\"task_failed\"')>0
+          then 'task_failed'
+        when strpos(coalesce(h.content::text,''),'\"error\":\"run_fenced\"')>0
+          then 'run_fenced'
+        when strpos(coalesce(h.content::text,''),'\"error\":\"job_unavailable\"')>0
+          then 'job_unavailable'
+        when strpos(coalesce(h.content::text,''),'\"error\":\"run_not_claimed\"')>0
+          then 'run_not_claimed'
+        when strpos(coalesce(h.content::text,''),'\"error\":\"invalid_dispatch\"')>0
+          then 'invalid_dispatch'
+        else 'unrecognized' end
+      from public.edge_worker_runs r
+      left join net._http_response h on h.id=r.request_id
+      where r.request_id={request_id}"""
+    value = query(env, sql)
+    return value if value and SAFE_FAILURE.fullmatch(value) else "unavailable"
 
 
 def query(env: dict[str, str], sql: str) -> str | None:
@@ -74,7 +106,8 @@ def main() -> int:
                   file=sys.stderr)
             outcome = 1
     if outcome:
-        print("Signed staging worker dispatch did not complete", file=sys.stderr)
+        print("Signed staging worker dispatch did not complete: " +
+              failure_label(env, request_id), file=sys.stderr)
     else:
         print("Signed staging dispatch completed with generation disabled")
     return outcome

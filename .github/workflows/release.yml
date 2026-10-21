@@ -73,8 +73,13 @@ jobs:
       - name: Check actual target schema without writing to the database
         working-directory: backend
         env:
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_SCHEMA_DIRECT_URL: ${{ secrets.PRODUCTION_SCHEMA_DIRECT_URL }}
           DIRECT_URL: ${{ secrets.PRODUCTION_SCHEMA_DIRECT_URL }}
-        run: python -m app.workers.schema_check
+        run: |
+          python -c 'from tools.apply_production_cutover import target_environment; target_environment(); print("production_connection=validated")'
+          python -m app.workers.schema_check
 
   preview_ota:
     needs: schema

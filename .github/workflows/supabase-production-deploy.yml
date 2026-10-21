@@ -55,6 +55,30 @@ jobs:
         run: supabase functions deploy api --project-ref "$PRODUCTION_REF"
       - name: Deploy worker from this main commit without activating Cron
         run: supabase functions deploy worker --project-ref "$PRODUCTION_REF"
+      - name: Check worker boot and unsigned dispatch rejection
+        env:
+          WORKER_URL: https://${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}.supabase.co/functions/v1/worker
+        run: |
+          python - <<'PY'
+          import os
+          import urllib.error
+          import urllib.request
+
+          request = urllib.request.Request(
+              os.environ['WORKER_URL'], data=b'{}', method='POST',
+              headers={'Content-Type': 'application/json'},
+          )
+          try:
+              with urllib.request.urlopen(request, timeout=20) as response:
+                  status, body = response.status, response.read(128)
+          except urllib.error.HTTPError as error:
+              status, body = error.code, error.read(128)
+          except Exception:
+              status, body = 0, b''
+          ok = status == 401 and body == b'{"error":"invalid_dispatch"}'
+          print('production_worker_boot=' + ('ready' if ok else 'failed'))
+          raise SystemExit(0 if ok else 1)
+          PY
       - name: Check production API health
         env:
           HEALTH_URL: https://${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}.supabase.co/functions/v1/api/health

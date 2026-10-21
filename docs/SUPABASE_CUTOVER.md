@@ -121,7 +121,8 @@ keep the public path in the address bar.
 3. Run **Deploy Supabase API and worker to production** on `main`. Approve its
    existing `production-schema` protected environment. It rejects a noncurrent
    SHA or another project, reads actual SQL schema, deploys both functions
-   from that exact main commit, and checks the API `/health`. Record its Actions
+   from that exact main commit, checks the API `/health`, and requires the worker
+   to reject an unsigned dispatch with its own 401 response. Record its Actions
    run ID and main SHA. This does not activate Cron or repoint clients.
 4. Verify authenticated learner, reviewer and owner flows, avatar, public
    profile, recovery, health, and an isolated worker dispatch. Check function

@@ -14,10 +14,11 @@ of this document and Git history.
 
 Both services are in Singapore with a 2 vCPU / 1 GB ceiling and no public
 domain. On October 20 the Railway project showed six days or $4.25 of remaining
-trial. Both current deployment panels identify release PR #414; its GitHub
-merge commit is `c244088aa285127a3f065cc1d7e41afdae8bf36f`. Railway's
-deployment details have not exposed the full Git SHA, so the exact deployed
-revision is not independently confirmed.
+trial. Both current deployment panels identify release PR #414. The owner
+supplied its GitHub commit page, and PR #414's merge commit is
+`c244088aa285127a3f065cc1d7e41afdae8bf36f`. This identifies the release
+shown on the Railway cards; the cards do not display a full SHA themselves,
+so step 3 should confirm the direct deployed revision before cutover.
 
 The owner's Cron Runs panels show green `reminders` executions on October 20 at
 15:16, 15:30, and 15:46 (GMT+5), lasting 7–9 seconds. Their deployment logs
@@ -26,27 +27,32 @@ status=ready processed=0`; these are successful no-op runs, not proof of a
 delivered push or email. `pool-topup` has green executions on October 18–20
 around 03:02–03:04 (GMT+5), lasting 8–10 seconds. Its logs report generation
 disabled, revision work empty, and legacy enrichment empty. They show the
-current queue state, but do not establish every effective feature-flag value.
+work observed on those runs, but not every pending item or effective flag.
 The `reminders` Variables panel uses all 17 shared variables. Its listed
 service variables include the database/Supabase configuration, Gemini model
 and caps, editorial email settings, and the standard seven Railway-provided
 variables. The owner showed `EDITORIAL_EMAIL_ENABLED=true`,
 `GENERATION_DAILY_CALL_CAP=200`, and `GEMINI_MODEL=gemini-3.1-flash-lite`
-as effective `reminders` service values. Its recent runs still processed no mail
-because there was no eligible work. `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED` is absent from this service
-and shared-variable inventory, so the deployed Python setting uses its
-default `false`; the missing weekly log line agrees. The remaining live checks
-are the other non-secret flags and caps and any service-level command or
-root-directory overrides.
+as effective `reminders` service values. Its recent runs processed no mail.
+`WEEKLY_QUIZ_NOTIFICATIONS_ENABLED` is absent from this service and the
+shared-variable inventory, so the deployed Python setting uses its
+default `false`; the missing weekly log line agrees. The shared
+`EDITORIAL_EMAIL_DAILY_CAP` name is present, but its value was masked in the
+owner's capture.
 The `pool-topup` service uses shared variable references for the Gemini,
 generation, editorial email, and legacy-enrichment settings. The owner read
 `GENERATION_ENABLED=true` and `LEGACY_ENRICHMENT_ENABLED=true` from its live
 Variables panel, plus `FUTURE_REFILL_ENABLED=false` and
-`LEGACY_ENRICHMENT_BATCH_SIZE=25`. The zero-work logs show there was no revision or legacy entry
-to process; `nothing to do: generation disabled` describes the refill pass and
-does **not** mean the master generation flag is false. The effective
-generation cap and pace values for this service remain unverified; do not
-infer them from the logs.
+`LEGACY_ENRICHMENT_BATCH_SIZE=25`. Both services reference the shared
+`GEMINI_MODEL`, revealed as `gemini-3.1-flash-lite` in `reminders`. The logs show
+no revision or legacy entry was processed; `nothing to do: generation disabled`
+describes the refill pass and
+does **not** mean the master generation flag is false. The owner could not find
+pool-topup overrides for `GENERATION_DAILY_CALL_CAP` or
+`GENERATION_PACE_SECONDS`; release commit `c244088` defaults them to 200 and
+6.0 seconds when absent. The effective values remain unverified until their
+absence is confirmed in the full Railway variable list; do not infer them
+from no-op logs. `FUTURE_REFILL_ENABLED=false` keeps curated refill off.
 
 ## Responsibilities to preserve
 
@@ -337,18 +343,13 @@ before the migration PR is marked ready.
 
 ## Live inventory still needed for #417
 
-- Railway deployment details with the full deployed Git SHA for both services.
-- For each Railway service, record the effective non-secret values of
-  `GENERATION_ENABLED`, `FUTURE_REFILL_ENABLED`,
-  `LEGACY_ENRICHMENT_ENABLED`, `EDITORIAL_EMAIL_ENABLED`,
-  `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED`, `GEMINI_MODEL`,
-  `GENERATION_DAILY_CALL_CAP`, `GENERATION_PACE_SECONDS`, and
-  `LEGACY_ENRICHMENT_BATCH_SIZE`, where present. Confirm effective root
-  directory and start-command overrides. Keep provider keys and addresses out
-  of the record. If Railway cannot expose a value, leave its Supabase job gate
-  disabled at cutover until the owner explicitly chooses and verifies that
-  value against production policy.
-- Whether any one-off maintainer command runs outside the two cron services.
+- The values of masked shared `EDITORIAL_EMAIL_DAILY_CAP` and
+  `CONTENT_REVIEW_BACKLOG_LIMIT`, and any pool-topup overrides for generation
+  cap and pace. The owner already supplied the visible flags, model and legacy
+  batch size;
+  do not request those again. If Railway cannot expose a remaining value,
+  keep the matching Supabase provider gate disabled until it is chosen and
+  verified against production policy.
 - Current production queue counts for pending or in-progress editorial revision
   jobs, reviewer email batches/outbox, weekly quiz notifications, and curated
   backlog. Recent successful no-op runs cannot establish these counts. The
@@ -377,6 +378,12 @@ services before it enables a provider job.
 
 ## Step-3 activation checks
 
+- Confirm the Railway deployment cards' direct full Git SHA, root directory,
+  and command overrides before stopping either service. The release shown on
+  both cards matches PR #414's merge commit, but the SHA itself is not shown.
+- Confirm whether any out-of-band maintainer command is routinely run outside
+  the two inspected Railway cron services. The known maintainer CLIs remain
+  documented manual paths.
 - The protected October 21 Gmail OAuth check passed token exchange. The guarded
   staging email retry recorded one sent batch and `sent=1` in the worker; the
   owner found it in the controlled reviewer mailbox's Spam folder. A protected

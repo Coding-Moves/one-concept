@@ -189,6 +189,16 @@ was copied exactly. Google [hides old client secrets after creation and permits
 adding a new secret to the same client](https://support.google.com/cloud/answer/15549257);
 keep the existing refresh token when rotating only that client's secret.
 
+The corrected staging client passed a no-send OAuth exchange on October 21.
+The guarded retry sent one test email; the owner found it in the controlled
+reviewer mailbox's Spam folder. A separate protected reconciliation recorded
+its HTTP 200 receipt without sending again. Migration 0130 then fenced
+uncertain Gmail delivery from automatic retries. The final protected staging
+batch verified all migrations through 0130, deployed the candidate worker,
+confirmed eight Cron jobs inactive, and completed a signed dispatch with
+generation disabled. Production still uses Railway; these results authorize
+review of this migration PR, not activation of Supabase production jobs.
+
 Migration 0128 updates the owner operations view and event feed. While every
 Supabase worker application gate is off, the view continues to use Railway's
 existing worker observations. When any Supabase worker is enabled, it reports
@@ -323,9 +333,9 @@ selected Supabase database after confirming the project ref; no Railway service
 is needed. Publication and rejection must use the authenticated editorial
 actions, as the content CLI itself refuses free-text decisions. The working
 commands and data paths must be rechecked against the live Railway inventory
-before closing issue #417.
+before the step-3 cutover retires Railway.
 
-## Evidence still needed
+## Step-3 cutover checks still needed
 
 - Railway deployment details with the full deployed Git SHA for both services.
 - For each Railway service, record the effective non-secret values of
@@ -346,6 +356,10 @@ before closing issue #417.
   dispatching or sending again. Before production
   editorial email is enabled, check sender authentication and placement with a
   real controlled production-domain message.
+- The OAuth client secret and refresh token appeared in owner-shared diagnostic
+  screenshots. Rotate those credentials before production email activation if
+  the same values are used there; save replacements only in the destination
+  secret store and verify a no-send token exchange first.
 
 ## References
 

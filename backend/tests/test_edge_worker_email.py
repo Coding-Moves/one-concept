@@ -80,7 +80,7 @@ async def test_prepare_claim_and_revocation_guard(session, user):
 
 
 @pytest.mark.asyncio
-async def test_email_cap_and_expired_claim_are_durable(session, user):
+async def test_email_cap_and_expired_claim_requires_manual_review(session, user):
     email, _ = await assigned_revision(session, user)
     await session.scalar(text("""select public.edge_worker_prepare_email(
       false,:recipients,'https://review.example.test',10)"""),
@@ -92,8 +92,9 @@ async def test_email_cap_and_expired_claim_are_durable(session, user):
       set lease_until=now()-interval '1 minute' where id=:id"""),
       {"id": first["id"]})
     await session.commit()
-    second = decoded(await session.scalar(text("select public.edge_worker_claim_email(500)")))
-    assert second["id"] == first["id"]
-    assert second["claim_token"] != first["claim_token"]
-    assert second["attempts"] == 2
+    assert await session.scalar(text("select public.edge_worker_claim_email(500)")) is None
+    batch = (await session.execute(text("""select status, failure_code, attempts,
+      claim_token, lease_until from public.editorial_email_batches where id=:id"""),
+      {"id": first["id"]})).one()
+    assert batch == ("failed", "delivery_unknown", 1, None, None)
     await session.commit()

@@ -314,6 +314,9 @@ INCREMENTAL_PROBES = {
     "0129_supabase_worker_run_retention.sql": (
         "definer:public.edge_worker_expire_runs()",
     ),
+    "0130_supabase_email_ambiguous_delivery.sql": (
+        "definer:public.edge_worker_claim_email(integer)",
+    ),
 }
 FRESH_SQL = """set row_security = off;
 select

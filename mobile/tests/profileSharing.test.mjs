@@ -2,13 +2,16 @@ import './helpers/resolve-ts.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 process.env.EXPO_PUBLIC_API_BASE_URL ||= 'https://api.example.org';
+process.env.EXPO_PUBLIC_WEB_BASE_URL = 'https://web.example.org';
+process.env.EXPO_PUBLIC_LEGACY_WEB_BASE_URL = 'https://old-api.example.org';
 const { API_BASE_URL, setTokenProvider, invalidateAccountRequests } = await import('../src/api/client.ts');
 const { profileQr, publicProfileUrl, profileTokenFromLink, getPublicProfile, getSharing, putSharing } = await import('../src/services/profileSharing.ts');
 const token = 'a'.repeat(43);
 test('shared links and QR use only an opaque public URL', () => {
   const url = publicProfileUrl(`/p/${token}`);
-  assert.equal(url, `${API_BASE_URL}/p/${token}`);
+  assert.equal(url, `https://web.example.org/p/${token}`);
   assert.equal(profileTokenFromLink(url), token);
+  assert.equal(profileTokenFromLink(`https://old-api.example.org/p/${token}`), token);
   assert.equal(profileTokenFromLink(`com.codingmoves.oneconcept://p/${token}`), token);
   for (const invalid of [`https://evil.invalid/p/${token}`, `${url}?token=secret`, `${url}#email`, 'com.codingmoves.oneconcept://p/private-id']) assert.equal(profileTokenFromLink(invalid), null);
   assert.throws(() => publicProfileUrl('//evil.invalid/p/x'));

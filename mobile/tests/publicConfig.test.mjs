@@ -5,6 +5,7 @@ import { publicConfigErrors, validUrl } from '../public-config.cjs';
 
 const validConfiguration = {
   EXPO_PUBLIC_API_BASE_URL: 'https://api.example.org',
+  EXPO_PUBLIC_WEB_BASE_URL: 'https://web.example.org',
   EXPO_PUBLIC_SUPABASE_URL: 'https://project.supabase.co',
   EXPO_PUBLIC_SUPABASE_ANON_KEY: 'test-public-key',
 };

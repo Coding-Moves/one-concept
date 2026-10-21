@@ -29,7 +29,9 @@ operator, and result of each gate in the release PR. Stop at a failed gate.
    50,000 of the documented 500,000 Free Edge invocations for worker dispatch,
    retries, admin traffic, and bursts; a 31-day month would use 465,000 API
    calls. Measure actual calls per user and upgrade or reduce load before the
-   quota is approached. Connection utilization was not supplied.
+   quota is approached. A read-only production query on October 21 reported 16
+   of 60 database connections open, with 1 active. This one sample is not a
+   load or concurrency guarantee.
 3. Take a recoverable production database backup, record its timestamp and
    restore instructions, and complete a restore drill in a separate disposable
    target. Supabase Auth and Storage also need a recovery plan. Keep credentials,
@@ -133,8 +135,9 @@ its **publishable** key. Check the generated HTML and security headers locally.
 On October 21, the current public site bundle exposed only the expected hostnames:
 `one-concept-production.up.railway.app` for API traffic and
 `egdszjoesxlccauahmsx.supabase.co` for Auth. This confirms the published
-origins, not Netlify's private settings or the correctness of its publishable
-key.
+origins. The owner separately reported that Netlify's saved `VITE_API_URL`
+still points to Railway, `VITE_SUPABASE_URL` names the production project, and
+`VITE_SUPABASE_PUBLISHABLE_KEY` exists. The key value was not shared or checked.
 This site's deploy previews are canceled by policy, so the new routes cannot be
 verified on the live host before this PR reaches `main`. After merging, publish
 the exact `main` commit on Netlify with Railway still configured and confirm

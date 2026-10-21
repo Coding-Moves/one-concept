@@ -44,29 +44,19 @@ and [Expo update deployment](https://docs.expo.dev/eas-update/deployment/).
 
 The production `backend/migrations/applied.txt` ledger records through 0130 after
 the protected SQL run and independent read-only verification on October 21, 2026.
-For any future migration, after
-the backup and restore drill, record its non-secret reference as production
-environment variable `SUPABASE_PRODUCTION_BACKUP_REFERENCE`. The reviewed
-`Apply reviewed Supabase SQL to production` workflow can then run from one
-**exact commit tag** `supabase-production-schema-cutover-<full 40-character SHA>`
-at the PR commit. Permit only that exact tag in the production environment's
-deployment allowlist, retain required owner review, and verify the tag and
-project shown in the approval request. The job refuses the wrong project,
-missing backup reference, missing 0045 baseline, any already-partial Edge
-schema, or a tag whose SHA differs from its source commit. It applies 0046–0130
-in filename order and stops on the first error. Do not rerun after a partial
-application; inspect the last applied file and database first. These are
-additive application/schema migrations on the existing Supabase database;
-there is no user-data copy between staging and production.
+The owner-approved one-time job applied 0046–0130 in filename order to the
+existing production project. There was no user-data copy between staging and
+production. **Do not rerun that SQL job**: its 0045-baseline guard will reject
+the now-migrated database. For later migrations, take and test a fresh backup,
+apply only the new ordered files through a separately reviewed procedure,
+verify the live schema, and then update the ledger.
 
-Use the protected production schema verifier after application. Confirm the
-`edge_api_*` RPCs, `edge_worker_*` RPCs and `edge_worker_jobs` ledger exist;
-`backend/tools/verify_supabase_cutover_schema.py` also checks the final email
-ambiguity fix. Only after production application and independent read-back may
-the operator append the verified filenames to `applied.txt` on the release
-branch. The ledger is an attestation, never a way to make CI green. Re-run the
-protected verifier against the exact proposed release SHA. Keep all production
-Cron jobs inactive during this phase.
+The protected production schema verifier passed after application. It confirmed
+the `edge_api_*` and `edge_worker_*` RPCs, the `edge_worker_jobs` ledger, and
+the final email ambiguity fix before the verified filenames were appended to
+`applied.txt`. The ledger is an attestation, never a way to make CI green.
+Before release, recheck the actual production schema against the exact proposed
+main SHA. Keep all production Cron jobs inactive during this phase.
 
 ## 3. Configure production without opening job gates
 

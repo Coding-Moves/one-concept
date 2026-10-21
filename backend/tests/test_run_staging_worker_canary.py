@@ -57,6 +57,32 @@ def test_provider_success_closes_temporary_gate(monkeypatch):
     assert "set enabled=false" in calls[-1]
 
 
+def test_provider_waits_for_http_receipt_after_task_success(monkeypatch):
+    staging_environment(monkeypatch)
+    monkeypatch.setattr(canary, "fixture_is_safe", lambda *_: True)
+    monkeypatch.setattr(canary.time, "sleep", lambda *_: None)
+    rows = iter(("running|0|0", "succeeded|0|1", "succeeded|200|1"))
+    polled = []
+
+    def fake_query(_env, sql):
+        if "from cron.job" in sql or "where enabled" in sql:
+            return "0"
+        if "set enabled=true" in sql or "set enabled=false" in sql:
+            return "editorial_email"
+        if "edge_worker_dispatch" in sql:
+            return "123"
+        if "edge_worker_poll_http" in sql:
+            polled.append(True)
+            return "0"
+        if "where request_id=123" in sql:
+            return next(rows)
+        raise AssertionError("unexpected SQL")
+
+    monkeypatch.setattr(canary, "query", fake_query)
+    assert canary.run("editorial_email") == 0
+    assert len(polled) == 3
+
+
 def test_provider_failure_closes_temporary_gate(monkeypatch):
     staging_environment(monkeypatch)
     monkeypatch.setattr(canary, "fixture_is_safe", lambda *_: True)

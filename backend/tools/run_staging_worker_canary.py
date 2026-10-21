@@ -131,7 +131,9 @@ def run(job: str) -> int:
             if row == "succeeded|200|1":
                 outcome = 0
                 break
-            if row is not None and row.startswith(("succeeded|", "failed|", "timed_out|")):
+            # The Edge task can finish before pg_net records its HTTP receipt.
+            # Keep polling a succeeded run until the transport result arrives.
+            if row is not None and row.startswith(("failed|", "timed_out|")):
                 break
             time.sleep(1)
     finally:

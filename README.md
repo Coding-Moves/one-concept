@@ -2,6 +2,8 @@
 
 **Learn one new concept every day.**
 
+One Concept is a [Coding Moves Product](https://codingmoves.netlify.app/products/).
+
 > One day. One concept. One small step forward.
 
 One Concept sends you a single, carefully chosen technical concept each day —

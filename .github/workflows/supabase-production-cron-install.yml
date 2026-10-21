@@ -2,9 +2,15 @@ name: Install inactive Supabase production Cron jobs
 
 on:
   workflow_dispatch:
+    inputs:
+      production_deploy_run_id:
+        description: 'Successful production API/worker deploy run ID for this main commit'
+        required: true
+        type: string
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: supabase-production-cron-install
@@ -32,6 +38,17 @@ jobs:
           test "$PRODUCTION_PROJECT_REF" = 'egdszjoesxlccauahmsx'
           test "$STAGING_PROJECT_REF" = 'zhrulokgngjceqgjkcmw'
           test -n "$PRODUCTION_SCHEMA_DIRECT_URL"
+      - name: Require a successful API and worker deployment for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_RUN_ID: ${{ inputs.production_deploy_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}" \
+            --jq '[.path, .head_branch, .head_sha, .event, .conclusion] | @tsv' |
+            awk -v sha="$GITHUB_SHA" '$1 == ".github/workflows/supabase-production-deploy.yml" && $2 == "main" && $3 == sha && $4 == "workflow_dispatch" && $5 == "success" { found=1 } END { exit !found }'
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - uses: actions/setup-python@v7

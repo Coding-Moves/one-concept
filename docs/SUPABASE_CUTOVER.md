@@ -92,41 +92,54 @@ main SHA. Keep all production Cron jobs inactive during this phase.
    provider or job switches in a bulk edit.
 
 Supabase [does not serve HTML from GET Edge Function responses](https://supabase.com/docs/guides/functions/development-tips).
-Publish the `admin/` static site on Netlify with validated production
-`VITE_API_URL=https://egdszjoesxlccauahmsx.supabase.co/functions/v1/api`,
-production Supabase URL, and its **publishable** key. Confirm `/privacy`,
-`/confirmed`, `/reset-password`, and `/p/{token}` return HTML with the generated
-security headers. The profile page displays only public JSON. Add the new
-`/confirmed` and `/reset-password` URLs to production Supabase Auth's redirect
-allowlist; retain older Railway redirect URLs while old emails and app bundles
-can still use them. Test confirmation, recovery, shared profiles and revocation
-in an isolated production test account. Netlify [200 rewrites](https://docs.netlify.com/manage/routing/redirects/rewrites-proxies/)
+Before merging, verify that the `admin/` Netlify site's production build still
+uses its current Railway `VITE_API_URL`, the production Supabase Auth URL, and
+its **publishable** key. Check the generated HTML and security headers locally.
+This site's deploy previews are canceled by policy, so the new routes cannot be
+verified on the live host before this PR reaches `main`. After merging, publish
+the exact `main` commit on Netlify with Railway still configured and confirm
+`/privacy`, `/confirmed`, `/reset-password`, and `/p/{token}` return HTML with the
+generated security headers. The profile page displays only public JSON.
+Only then add the new `/confirmed` and `/reset-password` URLs to production
+Supabase Auth's redirect allowlist; retain older Railway redirect URLs while old
+emails and app bundles can still use them. Test confirmation, recovery, shared
+profiles and revocation in an isolated production test account before repointing
+mobile clients. Netlify [200 rewrites](https://docs.netlify.com/manage/routing/redirects/rewrites-proxies/)
 keep the public path in the address bar.
 
 ## 4. Deploy exact code, test preview, then switch clients
 
-1. After the production ledger, browser pages, backup, and capacity gates pass,
-   merge the reviewed release PR only with the owner's specific merge approval.
-   Keep Railway auto deploy disabled. The release PR must contain a version
-   bump and matching What's New card; the prepared version is 1.10.15 with
+1. After the production ledger, backup, capacity, Edge/Vault configuration,
+   current Netlify build settings, and local browser-page checks pass, merge the reviewed
+   release PR only with the owner's specific merge approval. Keep Railway auto
+   deploy disabled. The release PR must contain a version bump and matching
+   What's New card; the prepared version is 1.10.15 with
    native runtime 1.10.8 unchanged.
-2. Run **Deploy Supabase API and worker to production** on `main`. Approve its
+2. Publish and verify the four live Netlify pages as described above. Keep the
+   existing Railway API and app routing in place if any page fails; correct the
+   site before changing Auth redirects or mobile URLs.
+3. Run **Deploy Supabase API and worker to production** on `main`. Approve its
    existing `production-schema` protected environment. It rejects a noncurrent
    SHA or another project, reads actual SQL schema, deploys both functions
    from that exact main commit, and checks the API `/health`. Record its Actions
    run ID and main SHA. This does not activate Cron or repoint clients.
-3. Verify authenticated learner, reviewer and owner flows, avatar, public
+4. Verify authenticated learner, reviewer and owner flows, avatar, public
    profile, recovery, health, and an isolated worker dispatch. Check function
    logs for 429/503, database connections, latency, quota and Edge usage. Keep
    `EDITORIAL_EMAIL_DAILY_CAP=0` until production sender delivery is observed.
-4. In EAS `preview`, set the exact API function URL and a separately hosted
+5. Change only Netlify's production `VITE_API_URL` to
+   `https://egdszjoesxlccauahmsx.supabase.co/functions/v1/api`, redeploy that
+   site, and repeat its reviewer and public-profile checks. Its Supabase Auth URL
+   and publishable key must still belong to that same production project. Keep
+   mobile clients on Railway until the preview canary passes.
+6. In EAS `preview`, set the exact API function URL and a separately hosted
    `EXPO_PUBLIC_WEB_BASE_URL` (the static site's HTTPS origin). Keep Auth keys
    pointing to the **same** production Supabase project for a production canary
    or all to staging for a staging canary. Never mix project URLs/keys. Test a
    compatible preview app on a real phone, including sign-in, lesson writes,
    reset, profile share, offline replay, and reminders. The source code cannot
    prove what EAS environment is configured; check it before publication.
-5. The `Release` workflow requires the successful production deployment run
+7. The `Release` workflow requires the successful production deployment run
    ID and matching main SHA, checks actual schema and the unused release tag,
    publishes preview OTA first, then waits for a **second protected approval**.
    Approve that second gate only after testing the preview update and verifying

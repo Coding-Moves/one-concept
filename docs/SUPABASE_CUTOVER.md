@@ -21,6 +21,15 @@ operator, and result of each gate in the release PR. Stop at a failed gate.
    monthly. Compare that with the **current** plan and limits before promising
    that this remains free. One staging test account and 500 read calls do not
    establish a 500-user production capacity guarantee.
+   On October 21, the owner reported production project `egdszjoesxlccauahmsx`
+   on the Free plan with a 25 Sep–25 Oct billing cycle: database 0.033 GB
+   (31.94 MB), Storage 0 GB, egress 0.099 GB, 5 MAU, and 1 Edge invocation.
+   These are a pre-cutover baseline while Railway still handles API traffic.
+   At the stated 500-user scenario, 450,000 API calls in 30 days leave only
+   50,000 of the documented 500,000 Free Edge invocations for worker dispatch,
+   retries, admin traffic, and bursts; a 31-day month would use 465,000 API
+   calls. Measure actual calls per user and upgrade or reduce load before the
+   quota is approached. Connection utilization was not supplied.
 3. Take a recoverable production database backup, record its timestamp and
    restore instructions, and complete a restore drill in a separate disposable
    target. Supabase Auth and Storage also need a recovery plan. Keep credentials,
@@ -77,6 +86,14 @@ main SHA. Keep all production Cron jobs inactive during this phase.
    Vault as `one_concept_worker_url`. Use a private channel to set them and
    verify the production project reference before every write. Do not copy
    staging credentials into production.
+   The owner supplied a names-only screenshot on October 21 showing these
+   custom production Edge secrets saved: `ENVIRONMENT`, `ALLOWED_ORIGINS`,
+   `EDITORIAL_EMAIL_ENABLED`, `EDITORIAL_EMAIL_DAILY_CAP`,
+   `FUTURE_REFILL_ENABLED`, `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED`,
+   `CONTENT_REVIEW_BACKLOG_LIMIT`, `GENERATION_DAILY_CALL_CAP`, and
+   `GEMINI_MODEL`. The screenshot does not prove their effective values.
+   `WORKER_DATABASE_URL` and `WORKER_DISPATCH_SIGNING_KEY` are still missing
+   from that list; add and verify them before deploying the worker.
 3. Match the observed production flags before enabling any worker. Known
    baseline: `FUTURE_REFILL_ENABLED=false`,
    `LEGACY_ENRICHMENT_BATCH_SIZE=25`, `CONTENT_REVIEW_BACKLOG_LIMIT=30`,

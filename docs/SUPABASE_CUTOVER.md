@@ -119,6 +119,11 @@ Supabase [does not serve HTML from GET Edge Function responses](https://supabase
 Before merging, verify that the `admin/` Netlify site's production build still
 uses its current Railway `VITE_API_URL`, the production Supabase Auth URL, and
 its **publishable** key. Check the generated HTML and security headers locally.
+On October 21, the current public site bundle exposed only the expected hostnames:
+`one-concept-production.up.railway.app` for API traffic and
+`egdszjoesxlccauahmsx.supabase.co` for Auth. This confirms the published
+origins, not Netlify's private settings or the correctness of its publishable
+key.
 This site's deploy previews are canceled by policy, so the new routes cannot be
 verified on the live host before this PR reaches `main`. After merging, publish
 the exact `main` commit on Netlify with Railway still configured and confirm

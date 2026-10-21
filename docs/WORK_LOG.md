@@ -24,6 +24,7 @@ claims as completed work.
 - A release-gate review found the Netlify site cancels PR deploy previews, while the new browser routes exist only on this branch. The cutover checklist now keeps Netlify's Railway API setting through the `main` static-page deploy, verifies those pages, and changes Netlify to the Supabase API only after the function is deployed and checked. Railway stays on its current deployment while mobile clients are tested.
 - The production deployment now checks the worker's own unsigned-dispatch 401 response after deployment, catching a missing or malformed signing key before the workflow can report success. The exact read-only probe passed against the deployed staging worker; it starts no job and calls no provider.
 - Hosted backend, mobile, reviewer/browser, release-guard, and migration checks all passed on Step 3 PR head `73585fd`. The screenshot-confirmed production Edge secret inventory is recorded in the cutover runbook; no secret values were shared. Production functions, inactive Cron installation, and phone/OTA rollout remain pending.
+- Final Cron review found that `cron.schedule` overwrites a job with the same name. The one-time inactive installer now refuses to run when any `one-concept-` job already exists, avoiding accidental deactivation after handover. No production Cron installation has run.
 
 ### Supabase scheduled worker migration — issue #417, 2026-10-18
 

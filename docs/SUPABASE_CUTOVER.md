@@ -109,8 +109,10 @@ main SHA. Keep all production Cron jobs inactive during this phase.
 4. Install `backend/ops/supabase_workers/0001_install_inactive_cron.sql` only
    after the worker SQL and Vault secrets are verified. It installs seven work
    schedules plus HTTP receipt reconciliation, and fails unless all eight are
-   inactive. Read back `cron.job` by name and active state. Do not turn on
-   provider or job switches in a bulk edit.
+   inactive. This is a one-time installer: it refuses to overwrite existing
+   One Concept jobs, including jobs already activated during handover. Read
+   back `cron.job` by name and active state. Do not turn on provider or job
+   switches in a bulk edit.
 
 Supabase [does not serve HTML from GET Edge Function responses](https://supabase.com/docs/guides/functions/development-tips).
 Before merging, verify that the `admin/` Netlify site's production build still

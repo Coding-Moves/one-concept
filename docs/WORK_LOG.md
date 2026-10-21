@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Reviewer invitations and account controls — 2026-10-21
+
+- **Outcome:** route new reviewer invitations to the public One Concept Review callback, make authenticator use optional by default for newly invited reviewers, cap active reviewer memberships at ten including the owner, and let an owner permanently remove reviewer access while preserving the person's learning account and historical review evidence.
+- **Scope:** one focused feature branch from current `develop`. The existing reviewer site remains the password setup and sign-in surface; existing confirmed One Concept users keep their Auth identity. Live Supabase URL configuration and email-template installation are separate activation steps, not source-controlled secrets.
+- **Planned commits:** invitation copy/redirect guidance; new-account security default; membership cap; permanent removal and browser controls; validation/handoff. Do not delete Auth users, learning records, or historical editorial evidence.
+- **Status:** tracing production and candidate API paths before implementation. The owner supplied `https://coding-moves-one-concept-review.netlify.app` as the review-site origin and confirmed ten active memberships total, including the owner.
+
 ### Register protected production workflows on the default branch — 2026-10-21
 
 - After release PR #434 merged into `main` at `abc2dcf`, the new public Netlify pages returned HTML with the expected security headers while their API setting still pointed to Railway. GitHub did not list the new production deploy or inactive-Cron workflow because the repository default branch is `develop` and those workflow files existed only on `main`. GitHub requires a `workflow_dispatch` file on the default branch even when the run targets another ref.

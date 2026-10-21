@@ -330,10 +330,12 @@ before closing issue #417.
 - Whether any one-off maintainer command runs outside the two cron services.
 - The protected October 21 Gmail OAuth check passed token exchange. The guarded
   staging email retry recorded one sent batch and `sent=1` in the worker, but
-  the owner has not found it in the controlled reviewer inbox. Verify the
-  separate `pg_net` HTTP receipt and confirm the exact reviewer mailbox,
-  including All Mail and Spam. The sent batch must not be retried to diagnose
-  inbox delivery.
+  the owner found it in the controlled reviewer mailbox's Spam folder. The
+  read-only diagnostic found its separate `pg_net` HTTP receipt still absent
+  from the run ledger. Reconcile that existing receipt in staging without
+  dispatching again; the sent batch must not be retried. Before production
+  editorial email is enabled, check sender authentication and placement with a
+  real controlled production-domain message.
 
 ## References
 

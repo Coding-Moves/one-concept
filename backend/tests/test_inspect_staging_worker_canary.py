@@ -63,3 +63,36 @@ def test_reconciliation_never_polls_an_unsent_batch(monkeypatch):
     monkeypatch.setattr(inspect, "read_row", fake_read)
     assert inspect.main(reconcile_http=True) == 2
     assert "select public.edge_worker_poll_http()" not in calls
+
+
+def test_worker_smoke_reads_only_safe_status_with_closed_gates(monkeypatch, capsys):
+    staging_environment(monkeypatch)
+    calls = []
+
+    def fake_read(_env, sql, fields):
+        calls.append(sql)
+        if "from cron.job" in sql:
+            assert fields == 1
+            return ["0"]
+        assert sql == inspect.SMOKE_SQL and fields == 4
+        return ["failed", "503", "task_failed", "0"]
+
+    monkeypatch.setattr(inspect, "read_row", fake_read)
+    assert inspect.main(worker_smoke=True) == 0
+    assert capsys.readouterr().out.strip() == (
+        "Staging worker smoke: status=failed http=503 error=task_failed disabled=0")
+    assert len(calls) == 2
+
+
+def test_worker_smoke_refuses_active_gates(monkeypatch):
+    staging_environment(monkeypatch)
+    calls = []
+
+    def fake_read(_env, sql, _fields):
+        calls.append(sql)
+        assert "from cron.job" in sql
+        return ["1"]
+
+    monkeypatch.setattr(inspect, "read_row", fake_read)
+    assert inspect.main(worker_smoke=True) == 2
+    assert len(calls) == 1

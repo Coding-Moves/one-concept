@@ -120,7 +120,9 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Inspect staging email status or reconcile its existing HTTP receipt
         run: |
-          if [[ "$GITHUB_REF_NAME" == *-reconcile-* ]]; then
+          if [[ "$GITHUB_REF_NAME" == *-smoke-* ]]; then
+            python backend/tools/inspect_staging_worker_canary.py --worker-smoke
+          elif [[ "$GITHUB_REF_NAME" == *-reconcile-* ]]; then
             python backend/tools/inspect_staging_worker_canary.py --reconcile-http
           else
             python backend/tools/inspect_staging_worker_canary.py

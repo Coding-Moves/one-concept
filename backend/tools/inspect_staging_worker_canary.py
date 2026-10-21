@@ -54,9 +54,33 @@ BATCH_SQL = """select status,attempts,coalesce(failure_code,'none')
   from public.editorial_email_batches
   where subject='One Concept: assigned lessons to review'
   order by created_at desc,id desc limit 1"""
+SMOKE_SQL = """select status,coalesce(http_status,0),
+  coalesce(error_code,'none'),coalesce(result->>'disabled','0')
+  from public.edge_worker_runs where job='editorial_generation'
+  order by queued_at desc,id desc limit 1"""
 
 
-def main(reconcile_http: bool = False) -> int:
+def inspect_worker_smoke(env: dict[str, str]) -> int:
+    gates = read_row(env, "select (select count(*) from cron.job where "
+                     "jobname like 'one-concept-%' and active)+"
+                     "(select count(*) from public.edge_worker_jobs where enabled)", 1)
+    if gates != ["0"]:
+        print("Staging smoke diagnostic refused: worker gates are active", file=sys.stderr)
+        return 2
+    row = read_row(env, SMOKE_SQL, 4)
+    if row is None:
+        print("Staging worker smoke: no run")
+        return 0
+    if row[0] not in SAFE_STATUS or not row[1].isdecimal() or \
+       row[3] not in {"0", "1"}:
+        print("Staging smoke diagnostic returned invalid metadata", file=sys.stderr)
+        return 1
+    print("Staging worker smoke: status=" + row[0] + " http=" + row[1] +
+          " error=" + safe_code(row[2]) + " disabled=" + row[3])
+    return 0
+
+
+def main(reconcile_http: bool = False, worker_smoke: bool = False) -> int:
     staging = os.environ.get("STAGING_PROJECT_REF", "")
     production = os.environ.get("PRODUCTION_PROJECT_REF", "")
     if staging != DEMO_PROJECT_REF:
@@ -64,6 +88,8 @@ def main(reconcile_http: bool = False) -> int:
         return 2
     try:
         env = connection_environment(staging, production, os.environ["STAGING_DIRECT_URL"])
+        if worker_smoke:
+            return inspect_worker_smoke(env)
         run = read_row(env, RUN_SQL, 9)
         batch = read_row(env, BATCH_SQL, 3)
         if reconcile_http:
@@ -116,4 +142,8 @@ def main(reconcile_http: bool = False) -> int:
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--reconcile-http", action="store_true")
-    raise SystemExit(main(parser.parse_args().reconcile_http))
+    parser.add_argument("--worker-smoke", action="store_true")
+    args = parser.parse_args()
+    if args.reconcile_http and args.worker_smoke:
+        parser.error("choose one diagnostic mode")
+    raise SystemExit(main(args.reconcile_http, args.worker_smoke))

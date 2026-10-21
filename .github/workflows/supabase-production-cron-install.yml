@@ -1,0 +1,51 @@
+name: Install inactive Supabase production Cron jobs
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-production-cron-install
+  cancel-in-progress: false
+
+jobs:
+  install:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: production-schema
+    env:
+      PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+      STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+      PRODUCTION_SCHEMA_DIRECT_URL: ${{ secrets.PRODUCTION_SCHEMA_DIRECT_URL }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Require the current main commit and reviewed project references
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+          test "$PRODUCTION_PROJECT_REF" = 'egdszjoesxlccauahmsx'
+          test "$STAGING_PROJECT_REF" = 'zhrulokgngjceqgjkcmw'
+          test -n "$PRODUCTION_SCHEMA_DIRECT_URL"
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - name: Check production connection and worker schema without writes
+        working-directory: backend
+        run: python -m tools.install_production_cron
+      - name: Require main to remain at the reviewed commit before SQL
+        shell: bash
+        run: test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Install and verify eight inactive jobs
+        working-directory: backend
+        run: python -m tools.install_production_cron --install
+      - name: Require main to remain at the installed commit
+        shell: bash
+        run: test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"

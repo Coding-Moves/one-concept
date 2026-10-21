@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### Register protected production workflows on the default branch — 2026-10-21
+
+- After release PR #434 merged into `main` at `abc2dcf`, the new public Netlify pages returned HTML with the expected security headers while their API setting still pointed to Railway. GitHub did not list the new production deploy or inactive-Cron workflow because the repository default branch is `develop` and those workflow files existed only on `main`. GitHub requires a `workflow_dispatch` file on the default branch even when the run targets another ref.
+- Branch `codex/418-register-production-workflows` copies only the two exact reviewed workflow files from merged `main` into `develop` in focused commits `11acfa6` and `c0f6a15`. Both workflows still reject any dispatch except current `main` and use the protected `production-schema` environment. This default-branch registration does not deploy a function, install Cron, publish an OTA, or change Railway. A separate PR and its normal review/merge gate are required before dispatching the production deploy on `main`.
+
 ### Supabase scheduled worker migration — issue #417, 2026-10-18
 
 - Branch `codex/supabase-cron-workers` starts from `develop` at `69b01c5`. Scope is one feature PR for all Railway scheduled/background work, with production Supabase schedules disabled until the step-3 cutover. The owner confirmed Railway production runs `reminders` every 15 minutes and `pool-topup` at 22:00 UTC; source is `main`. On October 20, the owner showed three green recent runs of each service: reminders sent zero tokens and processed zero editorial emails, while pool-topup reported generation disabled and empty revision/enrichment work. Both deployment panels identify release PR #414, whose merge commit is `c244088aa285127a3f065cc1d7e41afdae8bf36f`; Railway's full deployed SHA and some effective non-secret flags remain to be checked. The owner later showed `reminders` with `GEMINI_MODEL=gemini-3.1-flash-lite` and `GENERATION_DAILY_CALL_CAP=200`.

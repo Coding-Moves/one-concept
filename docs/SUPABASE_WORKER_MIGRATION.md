@@ -30,9 +30,10 @@ current queue state, but do not establish every effective feature-flag value.
 The `reminders` Variables panel uses all 17 shared variables. Its listed
 service variables include the database/Supabase configuration, Gemini model
 and caps, editorial email settings, and the standard seven Railway-provided
-variables. The owner showed `EDITORIAL_EMAIL_ENABLED=true` as the effective
-service value; its recent runs still processed no mail because there was no
-eligible work. `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED` is absent from this service
+variables. The owner showed `EDITORIAL_EMAIL_ENABLED=true`,
+`GENERATION_DAILY_CALL_CAP=200`, and `GEMINI_MODEL=gemini-3.1-flash-lite`
+as effective `reminders` service values. Its recent runs still processed no mail
+because there was no eligible work. `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED` is absent from this service
 and shared-variable inventory, so the deployed Python setting uses its
 default `false`; the missing weekly log line agrees. The remaining live checks
 are the other non-secret flags and caps and any service-level command or
@@ -40,10 +41,11 @@ root-directory overrides.
 The `pool-topup` service uses shared variable references for the Gemini,
 generation, editorial email, and legacy-enrichment settings. The owner read
 `GENERATION_ENABLED=true` and `LEGACY_ENRICHMENT_ENABLED=true` from its live
-Variables panel. The zero-work logs show there was no revision or legacy entry
+Variables panel, plus `FUTURE_REFILL_ENABLED=false` and
+`LEGACY_ENRICHMENT_BATCH_SIZE=25`. The zero-work logs show there was no revision or legacy entry
 to process; `nothing to do: generation disabled` describes the refill pass and
 does **not** mean the master generation flag is false. The effective
-`FUTURE_REFILL_ENABLED` value and generation caps remain unverified; do not
+generation cap and pace values for this service remain unverified; do not
 infer them from the logs.
 
 ## Responsibilities to preserve
@@ -71,7 +73,8 @@ infer them from the logs.
   completions, and bound each invocation to a small amount of work. A stopped
   Edge worker must leave recoverable durable state.
 - Preserve daily reminder claim-before-send semantics; weekly push receipt
-  handling; editorial email's bounded, at-least-once outbox; Expo batches of at
+  handling; editorial email's bounded outbox and explicit review of uncertain
+  delivery; Expo batches of at
   most 100; Pacific-day Gemini reservations; per-topic allowance; review
   capacity; and all existing kill switches. A provider's ambiguous acceptance
   cannot be reported as proven exactly-once delivery.
@@ -264,8 +267,16 @@ secrets, never in Git or logs. `EDITORIAL_ENABLED` and
 `EDITORIAL_EMAIL_ENABLED` must both be true before this task runs; in staging,
 `EDITORIAL_EMAIL_TEST_RECIPIENTS` must name only controlled addresses and the
 dashboard origin must be listed in `ALLOWED_ORIGINS`. Gmail has no send
-idempotency key, so an unknown acceptance remains a bounded at-least-once
-retry with a stable Message-ID.
+idempotency key. Migration 0130 marks an expired `sending` lease as
+`failed/delivery_unknown` and excludes it from automatic claims. The worker
+also marks a send timeout, 5xx response, or unreadable success response as
+`failed/delivery_unknown`; these outcomes require checking Gmail Sent and the
+recipient mailbox before a human decides whether another send is appropriate.
+OAuth token-exchange failures occur before the send and remain retryable.
+This avoids an automatic duplicate after a worker restart, but it cannot prove
+exactly-once delivery when the provider outcome is unknown. An owner can use
+the existing version-checked notification retry action after investigating the
+sender's Sent folder and the recipient mailbox; never requeue the row blindly.
 
 Read-only operator checks after installation:
 
@@ -329,11 +340,10 @@ before closing issue #417.
   value against production policy.
 - Whether any one-off maintainer command runs outside the two cron services.
 - The protected October 21 Gmail OAuth check passed token exchange. The guarded
-  staging email retry recorded one sent batch and `sent=1` in the worker, but
-  the owner found it in the controlled reviewer mailbox's Spam folder. The
-  read-only diagnostic found its separate `pg_net` HTTP receipt still absent
-  from the run ledger. Reconcile that existing receipt in staging without
-  dispatching again; the sent batch must not be retried. Before production
+  staging email retry recorded one sent batch and `sent=1` in the worker; the
+  owner found it in the controlled reviewer mailbox's Spam folder. A protected
+  reconciliation of the existing `pg_net` receipt recorded HTTP 200, without
+  dispatching or sending again. Before production
   editorial email is enabled, check sender authentication and placement with a
   real controlled production-domain message.
 

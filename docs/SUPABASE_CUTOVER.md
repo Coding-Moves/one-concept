@@ -27,6 +27,11 @@ operator, and result of each gate in the release PR. Stop at a failed gate.
    backups, and user records out of GitHub logs and the PR. Capture current
    queue counts and production settings; the owner observed all five queues at
    zero on October 21, but that snapshot must be refreshed at handover.
+   Supabase's Free plan does not include automatic daily backups; use the
+   [documented CLI dump/restore procedure](https://supabase.com/docs/guides/platform/migrating-within-supabase/backup-restore)
+   if there is no managed backup. A database dump contains Storage metadata,
+   not the stored file objects. Do not claim a restore drill passed from the
+   presence of a dump file alone.
 4. Rotate the Gmail OAuth client secret and refresh token previously exposed
    in screenshots before enabling production email. A staging email arrived in
    Spam; successful Gmail HTTP acceptance alone does not prove inbox delivery.

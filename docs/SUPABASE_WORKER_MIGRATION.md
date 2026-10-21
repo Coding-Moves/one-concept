@@ -33,12 +33,17 @@ service variables include the database/Supabase configuration, Gemini model
 and caps, editorial email settings, and the standard seven Railway-provided
 variables. The owner showed `EDITORIAL_EMAIL_ENABLED=true`,
 `GENERATION_DAILY_CALL_CAP=200`, and `GEMINI_MODEL=gemini-3.1-flash-lite`
-as effective `reminders` service values. Its recent runs processed no mail.
+as effective `reminders` service values. On October 21 the owner also read
+`EDITORIAL_EMAIL_DAILY_CAP=0` and `CONTENT_REVIEW_BACKLOG_LIMIT=30` from
+Railway's production shared variables. A zero email cap prevents the existing
+worker from claiming any batch even though `EDITORIAL_EMAIL_ENABLED=true`.
+The new worker now defaults to a zero cap as well; step 3 must still explicitly
+set the production cap to zero and keep its email gate closed unless the owner
+deliberately changes the policy. Its recent runs processed no mail.
 `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED` is absent from this service and the
 shared-variable inventory, so the deployed Python setting uses its
-default `false`; the missing weekly log line agrees. The shared
-`EDITORIAL_EMAIL_DAILY_CAP` name is present, but its value was masked in the
-owner's capture.
+default `false`; the missing weekly log line agrees. The email cap was masked
+in the earlier capture and subsequently supplied by the owner.
 The `pool-topup` service uses shared variable references for the Gemini,
 generation, editorial email, and legacy-enrichment settings. The owner read
 `GENERATION_ENABLED=true` and `LEGACY_ENRICHMENT_ENABLED=true` from its live
@@ -50,9 +55,10 @@ describes the refill pass and
 does **not** mean the master generation flag is false. The owner could not find
 pool-topup overrides for `GENERATION_DAILY_CALL_CAP` or
 `GENERATION_PACE_SECONDS`; release commit `c244088` defaults them to 200 and
-6.0 seconds when absent. The effective values remain unverified until their
-absence is confirmed in the full Railway variable list; do not infer them
-from no-op logs. `FUTURE_REFILL_ENABLED=false` keeps curated refill off.
+6.0 seconds when absent. Those two overrides were not visible to the owner in
+the supplied Railway panel, so the defaults are the best available baseline;
+step 3 must confirm their absence before enabling generation. Do not infer
+them from no-op logs. `FUTURE_REFILL_ENABLED=false` keeps curated refill off.
 
 ## Responsibilities to preserve
 
@@ -338,25 +344,21 @@ can run their existing protected commands from a local checkout against the
 selected Supabase database after confirming the project ref; no Railway service
 is needed. Publication and rejection must use the authenticated editorial
 actions, as the content CLI itself refuses free-text decisions. The working
-commands and data paths must be rechecked against the live Railway inventory
-before the migration PR is marked ready.
+commands and data paths were checked against their source entry points and the
+two Railway cron commands. Whether an operator also runs any of them outside
+Railway remains a step-3 cutover confirmation.
 
-## Live inventory still needed for #417
+## Production queue snapshot (owner inspection, 2026-10-21)
 
-- The values of masked shared `EDITORIAL_EMAIL_DAILY_CAP` and
-  `CONTENT_REVIEW_BACKLOG_LIMIT`, and any pool-topup overrides for generation
-  cap and pace. The owner already supplied the visible flags, model and legacy
-  batch size;
-  do not request those again. If Railway cannot expose a remaining value,
-  keep the matching Supabase provider gate disabled until it is chosen and
-  verified against production policy.
-- Current production queue counts for pending or in-progress editorial revision
-  jobs, reviewer email batches/outbox, weekly quiz notifications, and curated
-  backlog. Recent successful no-op runs cannot establish these counts. The
-  current Railway daily reminder path calculates due users on each invocation,
-  so it has no separate pending outbox to count. In the **production** Supabase
-  SQL Editor, this read-only aggregate returns counts without recipient or
-  content data:
+The owner ran this read-only aggregate in the production Supabase SQL Editor.
+Every returned count was zero: pending/generating editorial jobs, pending/sending
+email batches, unbatched unsuppressed email outbox entries, pending/retry/sending
+weekly pushes, and pending/generating curated backlog. This is a point-in-time
+snapshot, not proof that the queues will remain empty at cutover. The Railway
+daily reminder path calculates due users on each invocation and has no separate
+pending outbox to count.
+
+The aggregate used was:
 
   ```sql
   select
@@ -372,12 +374,20 @@ before the migration PR is marked ready.
       where status in ('pending','generating')) as curated_backlog;
   ```
 
-Keep the migration PR draft until this Railway and production-queue inventory
-is recorded. The separate step-3 cutover must recheck values against the live
-services before it enables a provider job.
+The separate step-3 cutover must recheck queue counts and the two unconfirmed
+pool-topup overrides against the live services before it enables a provider
+job. Keep generation and email gates closed until their effective caps are set.
 
 ## Step-3 activation checks
 
+- Explicitly preserve `EDITORIAL_EMAIL_DAILY_CAP=0` and
+  `CONTENT_REVIEW_BACKLOG_LIMIT=30` in the destination configuration. The
+  current zero cap blocks production editorial email; do not turn on its email
+  gate without a separate policy decision. The worker's fallback is also zero.
+- Verify that pool-topup has no `GENERATION_DAILY_CALL_CAP` or
+  `GENERATION_PACE_SECONDS` override. Source defaults are 200 calls and 6.0
+  seconds only if those variables are truly absent. Recount all five production
+  queues immediately before changing job ownership.
 - Confirm the Railway deployment cards' direct full Git SHA, root directory,
   and command overrides before stopping either service. The release shown on
   both cards matches PR #414's merge commit, but the SHA itself is not shown.

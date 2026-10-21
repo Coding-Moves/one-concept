@@ -42,7 +42,9 @@ and [Expo update deployment](https://docs.expo.dev/eas-update/deployment/).
 
 ## 2. Apply SQL to the existing production database
 
-Production `backend/migrations/applied.txt` currently ends at 0045. After
+The production `backend/migrations/applied.txt` ledger records through 0130 after
+the protected SQL run and independent read-only verification on October 21, 2026.
+For any future migration, after
 the backup and restore drill, record its non-secret reference as production
 environment variable `SUPABASE_PRODUCTION_BACKUP_REFERENCE`. The reviewed
 `Apply reviewed Supabase SQL to production` workflow can then run from one

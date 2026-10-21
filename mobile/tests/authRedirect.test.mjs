@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { authLandingUrl } from '../src/services/authRedirect.ts';
 
-test('builds confirmation and recovery landings on the configured API origin', () => {
-  assert.equal(authLandingUrl('confirmed', 'https://api.example.org'), 'https://api.example.org/confirmed');
-  assert.equal(authLandingUrl('reset-password', 'https://api.example.org/'), 'https://api.example.org/reset-password');
-  assert.equal(authLandingUrl('confirmed', 'https://api.example.org/api'), 'https://api.example.org/api/confirmed');
+test('builds confirmation and recovery landings on the browser website', () => {
+  assert.equal(authLandingUrl('confirmed', 'https://web.example.org'), 'https://web.example.org/confirmed');
+  assert.equal(authLandingUrl('reset-password', 'https://web.example.org/'), 'https://web.example.org/reset-password');
+  assert.equal(authLandingUrl('confirmed', 'https://api.example.org/functions/v1/api'), undefined);
 });
 
 test('never passes a malformed or credential-bearing redirect to Supabase', () => {

@@ -35,7 +35,9 @@ MIGRATIONS = Path(__file__).resolve().parents[1] / "migrations"
 # Supabase provides these; the migrations depend on them, so a bare Postgres
 # needs stand-ins before the schema will apply.
 AUTH_STUB = """
+create role anon;
 create role authenticated;
+create role service_role bypassrls;
 create schema auth;
 create table auth.users (
   id uuid primary key default gen_random_uuid(),

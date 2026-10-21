@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.15',
+    highlights: [
+      'Get your daily learning reminder at your chosen time through improved background delivery.',
+    ],
+  },
+  {
     version: '1.10.14',
     highlights: [
       'Keep the same unfinished daily lesson until you mark it Learned, and see Today refresh when you return to the app.',

@@ -8,7 +8,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { API_BASE_URL, ApiError, setConnectivity, setTokenProvider } from '../api/client';
+import { ApiError, setConnectivity, setTokenProvider } from '../api/client';
 import { readCachedSession, supabase } from '../lib/supabase';
 import { clearAccountCaches } from '../services/accountCaches';
 import { authLandingUrl } from '../services/authRedirect';
@@ -79,10 +79,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    // Do not rely on Supabase's global Site URL: it can retain an old
-    // Railway hostname. The verified email link returns to the same API origin
-    // that this build uses, provided that URL is allowed in Supabase.
-    const emailRedirectTo = authLandingUrl('confirmed', API_BASE_URL);
+    const emailRedirectTo = authLandingUrl('confirmed', process.env.EXPO_PUBLIC_WEB_BASE_URL ?? '');
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
       password,
@@ -94,14 +91,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
-    // Sends a recovery link to /reset-password (a backend web page), where the
+    // Sends a recovery link to /reset-password (a static browser page), where the
     // user sets a new password. Supabase returns success whether or not the
     // email is registered, so the UI must stay deliberately neutral — never
     // confirm an account exists.
     //
     // Only pass redirectTo when the configured base is a safe absolute URL.
     // An incomplete local configuration falls back to the project's Site URL.
-    const redirectTo = authLandingUrl('reset-password', API_BASE_URL);
+    const redirectTo = authLandingUrl('reset-password', process.env.EXPO_PUBLIC_WEB_BASE_URL ?? '');
     const options = redirectTo ? { redirectTo } : undefined;
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), options);
     if (error) throw error;

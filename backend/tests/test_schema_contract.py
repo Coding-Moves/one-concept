@@ -52,6 +52,7 @@ async def test_migrations_produce_reviewed_schema_contract(database):
     ("alter table public.concept_revisions disable row level security", "tables: concept_revisions"),
     ("create policy leaked_drafts on public.concept_revisions for select using (true)", "Unexpected policy:"),
     ("alter table auth.users disable trigger on_auth_user_created", "triggers: auth.users.on_auth_user_created"),
+    ("alter function public.edge_api_health() rename to edge_api_health_tampered", "functions: edge_api_health"),
 ])
 async def test_false_ledger_cannot_hide_missing_or_unsafe_schema(database, damage, expected):
     # applied.txt remains unchanged and fully populated in every case.

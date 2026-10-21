@@ -12,13 +12,14 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Area | Entry points and purpose |
 | --- | --- |
 | Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. `mobile/src/screens/AboutScreen.tsx` links learners to the public review explanation. |
-| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private FastAPI calls. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Direct deployment steps are in `docs/EDITORIAL_ROLLOUT.md`. |
+| Review website and public pages | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; static editorial workspace using Supabase Auth and the configured API. `admin/public/confirmed/`, `reset-password/`, `privacy/`, and `p/` host browser-only pages outside Supabase Edge Functions. `admin/vite.config.ts` emits publishable-only page config and `admin/src/hosting.ts` emits security headers. `admin/public/_redirects` maps public paths and SPA links on Netlify. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
 | Content engine | `backend/app/services/generation.py`, `pool.py`, `prefetch.py`; Gemini lessons from a curated backlog. |
 | Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
-| Hosting migration | `docs/RAILWAY_MIGRATION.md`; source/destination evidence, worker handover, EAS endpoint publication, recovery redirects and retirement. New Railway services use dashboard settings because legacy Config as Code is deprecated. |
+| Hosting migration | `docs/SUPABASE_CUTOVER.md` is the current production operator sequence; `docs/RAILWAY_MIGRATION.md` is earlier preparation. `.github/workflows/supabase-production-schema-cutover.yml` runs the guarded one-time SQL batch from an exact tag; `.github/workflows/supabase-production-deploy.yml` deploys the exact main SHA behind a protected gate; `.github/workflows/supabase-production-cron-install.yml` installs and verifies eight inactive jobs behind the same gate; `.github/workflows/release.yml` checks the deploy run before preview and production OTA. |
+| Supabase scheduled workers | `supabase/functions/worker/` validates signed Cron calls; migrations 0119–0120 own the disabled run ledger and HTTP reconciliation; migrations 0128–0129 feed owner reporting and bound run history; migration 0130 fences uncertain Gmail delivery; `backend/ops/supabase_workers/` installs inactive platform Cron jobs. See `docs/SUPABASE_WORKER_MIGRATION.md` for staged handover. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
@@ -359,6 +360,28 @@ private diagnostics and restore procedures.
 
 ## Backend request and service flow
 
+The Supabase API candidate for #416 lives in `supabase/functions/api/` and
+`backend/migrations/0046_supabase_api_basics.sql`–`0116_supabase_profile_avatar_api.sql`.
+All 73 JSON paths have candidate handlers, including private avatar upload,
+short-lived Storage signing, and editorial read/command routes. The avatar
+image module bundles a pinned ImageMagick WASM file for 512px JPEG conversion.
+These candidate routes remain isolated from production clients. The complete route checklist and
+remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
+`backend/tools/apply_staging_migrations.py` applies ordered migrations only to
+a fresh staging project after checking its project reference against the connection.
+Its `--inspect` mode reports staging schema metadata and profile row presence
+when the fresh-project gate rejects an existing application schema.
+Its one-project `--reset-demo` mode removes only the reviewed disposable demo
+schema, its event trigger, and Auth users after exact object and empty-Storage
+checks; protected reset and migration tags are separate jobs.
+For the initialized staging project, `--apply-incremental` requires the verified
+0049 RPC baseline and explicit before/after probes for every later migration.
+The protected incremental tag runs this path separately from the fresh-schema
+and Edge deploy jobs. It reloads PostgREST's RPC schema cache after verified
+SQL; `--reload-cache` is the guarded staging-only repair path for stale cache.
+Migration #417 will move scheduled workers; #418 owns browser pages and client
+cutover. Until then, the FastAPI implementation below remains authoritative.
+
 `main.py` configures CORS, routes, production documentation visibility, safe SQLAlchemy and unexpected-exception responses, and a shared
 JWKS cache, and engine cleanup. Its lifespan owns `db/keepalive.py`'s configurable
 database probes; checkout/query and connection return are bounded, failures retry,
@@ -471,6 +494,8 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 ## Schema and migrations
 
 `db/schema.py` compares actual catalog metadata against `backend/schema/contract.json`.
+The contract records migration hashes and the candidate Edge API RPC definitions
+alongside the reviewed application schema.
 `workers/schema_check.py` performs the bounded read-only target check using
 `DIRECT_URL`; `docs/SCHEMA_VERIFICATION.md` covers contract maintenance and
 Railway/GitHub setup. No SQL is applied by verification.

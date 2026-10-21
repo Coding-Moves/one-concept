@@ -32,6 +32,12 @@ jobs:
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
+      - name: Typecheck and test Supabase functions
+        working-directory: .
+        run: |
+          mobile/node_modules/.bin/tsc -p supabase/functions/tsconfig.json
+          node --experimental-strip-types supabase/functions/api/handler.test.mjs
+          node --experimental-strip-types --test supabase/functions/worker/*.test.mjs
 
   backend:
     name: Backend lint and tests

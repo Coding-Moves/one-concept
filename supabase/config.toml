@@ -1,0 +1,10 @@
+# Health and anonymous profile reads require a public entry point. The handler
+# authenticates each private route with Supabase Auth before using service RPCs.
+[functions.api]
+verify_jwt = false
+static_files = ["./functions/api/magick.wasm"]
+
+# Cron uses a one-use HMAC dispatch rather than a user JWT. The handler checks
+# the signature before calling any service-role RPC or provider.
+[functions.worker]
+verify_jwt = false

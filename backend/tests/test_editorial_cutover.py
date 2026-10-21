@@ -18,7 +18,11 @@ async def test_cutover_preserves_catalog_and_progress_without_inventing_reviews(
         await admin.execute(f'create database "{name}"')
         db = await asyncpg.connect(dsn.rsplit("/", 1)[0] + "/" + name)
         # Roles are cluster-wide and supplied by the main disposable fixture.
-        await db.execute(AUTH_STUB.replace("create role authenticated;", ""))
+        await db.execute(
+            AUTH_STUB.replace("create role anon;", "")
+            .replace("create role authenticated;", "")
+            .replace("create role service_role bypassrls;", "")
+        )
         for migration in sorted(MIGRATIONS.glob("0*.sql")):
             if migration.name < "0033_editorial_provenance.sql":
                 await db.execute(migration.read_text())

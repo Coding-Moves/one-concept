@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - '.github/scripts/check-release-revision*'
+      - '.github/scripts/check-production-public-config*'
       - '.github/workflows/release*.yml'
       - '.github/workflows/eas-update.yml'
 jobs:
@@ -15,3 +16,4 @@ jobs:
           node-version: 24
       - run: bash -n .github/scripts/check-release-revision.sh
       - run: node --test --test-isolation=none .github/scripts/check-release-revision.test.cjs
+      - run: node --test --test-isolation=none .github/scripts/check-production-public-config.test.cjs

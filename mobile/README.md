@@ -21,8 +21,10 @@ EAS builds, and over-the-air updates are covered separately in
    cp .env.example .env
    ```
 
-   Set `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_SUPABASE_URL`, and
-   `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `.env`. For a physical phone, the API URL
+   Set `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_WEB_BASE_URL`,
+   `EXPO_PUBLIC_SUPABASE_URL`, and `EXPO_PUBLIC_SUPABASE_ANON_KEY` in `.env`.
+   The web URL serves confirmation, recovery, privacy, and shared-profile pages;
+   it is separate from the API function URL. For a physical phone, the API URL
    must use the computer's LAN address rather than `localhost`; the phone and
    computer must be able to reach each other.
 3. Install the locked dependencies and start Expo:

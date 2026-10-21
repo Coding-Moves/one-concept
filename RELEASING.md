@@ -26,23 +26,30 @@ APK and the procedure in [mobile/DEPLOYMENT.md](mobile/DEPLOYMENT.md).
    `backend/migrations/applied.txt`. The migration check's filename ledger is
    an operator record, not proof that SQL ran. Production schema verification
    remains protected and read-only.
-3. Publish and test the separate static browser pages for confirmation,
-   recovery, privacy and public profiles. Check production Auth redirect URLs,
-   reviewer web configuration and both EAS public environments. Keep older
-   Railway links alive until old emails and app bundles are accounted for.
+3. Prepare the separate static browser pages for confirmation, recovery,
+   privacy and public profiles. Check the Netlify build settings and generated
+   page assets. This site's PR deploy previews are canceled by policy, so
+   publish and test the live routes from `main` after the merge while Netlify
+   still points to Railway. Keep older Railway links alive until old emails
+   and app bundles are accounted for.
 4. Merge the reviewed release PR only with its specific owner confirmation.
    Railway auto deploy must be disabled beforehand. Run the protected
    `Deploy Supabase API and worker to production` workflow from **current main**.
-   It verifies schema and project identity, deploys both Edge Functions, and
-   checks API health. Then run the separately protected **Install inactive
-   Supabase production Cron jobs** workflow, which verifies all eight jobs are
+   It verifies the production database connection, schema and project identity,
+   deploys both Edge Functions, and checks API health. Publish and test the
+   live static pages before changing Auth redirects or client URLs. Then run
+   the separately protected **Install
+   inactive Supabase production Cron jobs** workflow with that successful
+   deployment run ID; it verifies the same `main` SHA and all eight jobs are
    inactive. Neither workflow repoints clients or starts scheduled work.
 5. Smoke-test production with isolated accounts and a compatible preview app.
    The `Release` workflow requires the successful production deployment run ID
    and exact main SHA. It rejects a reused version tag, publishes preview OTA,
    then waits at a second protected approval before production OTA, release tag,
    and native-gated APK dispatch. Approve production OTA only after checking
-   preview on a real device and the effective EAS environment values.
+   preview on a real device and the effective EAS environment values. The
+   production OTA job refuses to publish while its API URL still points to
+   Railway or Auth points to another Supabase project.
 6. Hand over Railway Cron services to Supabase job by job as described in the
    cutover runbook. Disable each old executor first; read the Edge run ledger,
    not just pg_net's HTTP 200. Watch a complete cadence and the morning load

@@ -125,7 +125,8 @@ main SHA. Keep all production Cron jobs inactive during this phase.
    21. These private or newly set values are not yet exercised by production
    Edge code; do not equate saved settings with a successful provider call.
 4. After merging and deploying the worker, run the protected **Install inactive
-   Supabase production Cron jobs** workflow on the exact current `main` commit.
+   Supabase production Cron jobs** workflow on the exact current `main` commit
+   with that successful deployment's run ID.
    It verifies the fixed production project and worker schema, then applies
    `backend/ops/supabase_workers/0001_install_inactive_cron.sql`. The installer
    creates seven work schedules plus HTTP receipt reconciliation, and the
@@ -169,12 +170,15 @@ keep the public path in the address bar.
    site before changing Auth redirects or mobile URLs.
 3. Run **Deploy Supabase API and worker to production** on `main`. Approve its
    existing `production-schema` protected environment. It rejects a noncurrent
-   SHA or another project, reads actual SQL schema, deploys both functions
+   SHA or another project, validates the production database connection and
+   actual SQL schema, then deploys both functions
    from that exact main commit, checks the API `/health`, and requires the worker
    to reject an unsigned dispatch with its own 401 response. Record its Actions
    run ID and main SHA. This does not activate Cron or repoint clients.
    Then run **Install inactive Supabase production Cron jobs** behind the same
-   protected approval gate, and record its run ID and eight-inactive read-back.
+   protected approval gate. Enter the successful deploy run ID; the workflow
+   requires that run to be for this exact `main` SHA before it writes Cron.
+   Record its run ID and eight-inactive read-back.
 4. Verify authenticated learner, reviewer and owner flows, avatar, public
    profile, recovery, health, and an isolated worker dispatch. Check function
    logs for 429/503, database connections, latency, quota and Edge usage. Keep
@@ -196,9 +200,11 @@ keep the public path in the address bar.
    publishes preview OTA first, then waits for a **second protected approval**.
    Approve that second gate only after testing the preview update and verifying
    `EXPO_PUBLIC_API_BASE_URL`, `EXPO_PUBLIC_WEB_BASE_URL`, Supabase Auth URL/key,
-   app version and runtime in both EAS environments. Production OTA then
-   publishes and the workflow creates the release. Installed app adoption must
-   be observed; older runtimes may still call Railway.
+   app version and runtime in both EAS environments. The production OTA job
+   also rejects a Railway API URL or a Supabase Auth URL from another project.
+   Production OTA then publishes and the workflow creates the release.
+   Installed app adoption must be observed; older runtimes may still call
+   Railway.
 
 ## 5. Hand over scheduled jobs without duplicate runs
 

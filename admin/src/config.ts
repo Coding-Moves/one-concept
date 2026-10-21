@@ -12,10 +12,13 @@ export function readConfig(env: Record<string, string | undefined>) {
       parsed.password ||
       parsed.search ||
       parsed.hash ||
-      parsed.pathname !== "/"
+      (name === "VITE_API_URL"
+        ? !["/", "/functions/v1/api"].includes(parsed.pathname)
+        : parsed.pathname !== "/")
     )
-      throw new Error("Use an HTTPS origin for " + name);
-    return parsed.origin;
+      throw new Error("Use an HTTPS origin or the exact Supabase API function URL for " + name);
+    return name === "VITE_API_URL" && parsed.pathname !== "/"
+      ? parsed.origin + parsed.pathname : parsed.origin;
   }
   const key = env.VITE_SUPABASE_PUBLISHABLE_KEY || "";
   if (!key.startsWith("sb_publishable_")) {

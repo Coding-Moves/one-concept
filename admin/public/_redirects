@@ -1,1 +1,5 @@
-/*  /index.html  200
+/confirmed       /confirmed/index.html        200
+/reset-password  /reset-password/index.html   200
+/privacy         /privacy/index.html          200
+/p/:token        /p/index.html                200
+/*               /index.html                  200

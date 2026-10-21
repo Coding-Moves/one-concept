@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>One Concept — reset password</title>
+  <link rel="stylesheet" href="/public-info.css">
+  <script defer src="/public-config.js"></script>
+  <script defer src="/reset-password.js"></script>
+</head>
+<body>
+  <main>
+    <h1>Reset your password</h1>
+    <p>Choose a new password for your One Concept account.</p>
+    <form id="reset-form" hidden>
+      <p><label for="password">New password</label><br><input id="password" type="password" autocomplete="new-password" minlength="6" required></p>
+      <p><label for="confirm-password">Confirm new password</label><br><input id="confirm-password" type="password" autocomplete="new-password" minlength="6" required></p>
+      <button type="submit">Update password</button>
+    </form>
+    <p id="status" role="status">Checking your recovery link…</p>
+  </main>
+</body>
+</html>

@@ -25,7 +25,7 @@ npm run dev
 
 | Public build variable | Meaning |
 | --- | --- |
-| `VITE_API_URL` | Exact HTTPS origin of the compatible FastAPI API; local development accepts `http://localhost:8000` or `http://127.0.0.1:8000`. |
+| `VITE_API_URL` | Exact HTTPS API origin or Supabase `https://<project>.supabase.co/functions/v1/api` URL; local development accepts `http://localhost:8000` or `http://127.0.0.1:8000`. |
 | `VITE_SUPABASE_URL` | Matching Supabase Auth HTTPS origin. |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Public `sb_publishable_…` key, or legacy JWT with role `anon`. Never a service-role/secret key. |
 | `VITE_ENVIRONMENT` | Visible label, such as `Staging` or `Production`. |
@@ -41,7 +41,8 @@ npx playwright install chromium
 npm run test:browser
 ```
 
-`build` requires the public configuration and writes `dist/`. Browser tests start
+`build` requires the public configuration and writes `dist/`, including a
+publishable-only `public-config.js` for the static learner pages. Browser tests start
 an isolated local server, intercept API/Auth calls with fixtures, and exercise
 actual browser navigation. They do not send invitations, run Gemini or publish
 real lessons. Backend authorization/concurrency tests use disposable PostgreSQL.
@@ -111,9 +112,12 @@ The reviewer workspace and Owner dashboard deploy as one static site. The
 [direct production rollout guide](../docs/EDITORIAL_ROLLOUT.md) gives the free
 Netlify build settings, exact API/Auth origins, account and email setup,
 verification and rollback. `npm run build` writes `dist/_headers` with CSP
-`connect-src` restricted to the two configured origins; the old broad static
+`connect-src` restricted to the API and Auth origins; the old broad static
 header file is no longer used. Netlify uses `public/_redirects` for the
-`/auth/callback` SPA fallback. Preview deployments remain off until a separate
+`/auth/callback` SPA fallback and the public `/confirmed`, `/reset-password`,
+`/privacy`, and `/p/{token}` browser pages. These pages must be tested on the
+published Netlify origin before changing Auth redirects or phone share links.
+Preview deployments remain off until a separate
 non-production environment exists under #255.
 
 The public `/about.html` and `/privacy.html` pages describe the workspace and
@@ -121,8 +125,8 @@ its send-only Gmail integration for Google's OAuth Branding form. They are
 static files in `public/`, so they load without initializing Supabase Auth or
 exposing private review data. Check both live URLs after the production Netlify
 deploy before entering them in Google Cloud. The root remains the invited-user
-sign-in page; it is not the public OAuth homepage. Do not substitute the mobile
-app's separate API privacy page for this site's privacy URL.
+sign-in page; it is not the public OAuth homepage. `/privacy.html` remains the
+reviewer workspace policy used by OAuth; `/privacy` is the learner app policy.
 
 Merging a code PR into `develop` does not publish the website or change Railway
 flags. After the compatible backend and website are live, an approved and

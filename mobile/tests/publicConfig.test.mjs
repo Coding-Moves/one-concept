@@ -24,6 +24,12 @@ test('release validation rejects non-public URLs and missing authentication conf
     assert.ok(publicConfigErrors({ ...validConfiguration, EXPO_PUBLIC_API_BASE_URL: endpoint }, true).length);
   }
   assert.ok(publicConfigErrors({ ...validConfiguration, EXPO_PUBLIC_SUPABASE_ANON_KEY: '' }, true).length);
+  assert.deepEqual(publicConfigErrors({ ...validConfiguration,
+    EXPO_PUBLIC_API_BASE_URL: 'https://project.supabase.co/functions/v1/api' }, true), []);
+  assert.ok(publicConfigErrors({ ...validConfiguration,
+    EXPO_PUBLIC_API_BASE_URL: 'https://another-project.supabase.co/functions/v1/api' }, true).length);
+  assert.ok(publicConfigErrors({ ...validConfiguration,
+    EXPO_PUBLIC_API_BASE_URL: 'https://project.supabase.co/functions/v1/other' }, true).length);
 });
 
 test('validator fails safely without exposing a supplied public key', () => {

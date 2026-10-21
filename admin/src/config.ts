@@ -29,9 +29,16 @@ export function readConfig(env: Record<string, string | undefined>) {
       throw new Error("Use a Supabase public publishable or anon key.");
     }
   }
+  const apiUrl = url("VITE_API_URL");
+  const supabaseUrl = url("VITE_SUPABASE_URL");
+  if (new URL(apiUrl).hostname.endsWith(".supabase.co") &&
+      (new URL(apiUrl).pathname !== "/functions/v1/api" ||
+        new URL(apiUrl).origin !== supabaseUrl)) {
+    throw new Error("Supabase API and Auth must use the same project");
+  }
   return {
-    apiUrl: url("VITE_API_URL"),
-    supabaseUrl: url("VITE_SUPABASE_URL"),
+    apiUrl,
+    supabaseUrl,
     key,
     environment: env.VITE_ENVIRONMENT || "Unspecified environment",
   };

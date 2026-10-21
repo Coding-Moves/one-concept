@@ -32,6 +32,12 @@ operator, and result of each gate in the release PR. Stop at a failed gate.
    quota is approached. A read-only production query on October 21 reported 16
    of 60 database connections open, with 1 active. This one sample is not a
    load or concurrency guarantee.
+   At the reviewed schedules, enabled daily reminders add up to 43,200 Edge
+   invocations in 30 days; enabled editorial generation and legacy enrichment
+   add up to 21,600 each. The 500-user/30-call scenario would
+   therefore exceed the Free allowance with both generation jobs active, even
+   before retries. Keep unused schedules inactive and plan a higher allowance
+   before that traffic is reached.
 3. Take a recoverable production database backup, record its timestamp and
    restore instructions, and complete a restore drill in a separate disposable
    target. Supabase Auth and Storage also need a recovery plan. Keep credentials,

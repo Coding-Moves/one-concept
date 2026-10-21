@@ -53,4 +53,4 @@ jobs:
           DIRECT_URL: ${{ secrets.PRODUCTION_SCHEMA_DIRECT_URL }}
         run: |
           python -m app.workers.schema_check
-          python tools/verify_supabase_cutover_schema.py
+          python -m tools.verify_supabase_cutover_schema

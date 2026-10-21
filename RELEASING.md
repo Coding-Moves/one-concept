@@ -20,7 +20,8 @@ APK and the procedure in [mobile/DEPLOYMENT.md](mobile/DEPLOYMENT.md).
 1. Freeze source and record the current Railway API/worker SHAs, schedules,
    effective non-secret settings and expiry. Review Supabase capacity and
    billing, take a recoverable backup, and test restore separately.
-2. Apply pending ordered SQL to the **production** Supabase project, verify
+2. Apply pending ordered SQL to the **production** Supabase project through
+   the exact-tag, owner-reviewed cutover job after a verified backup. Verify
    actual objects and behavior, and only then append applied filenames to
    `backend/migrations/applied.txt`. The migration check's filename ledger is
    an operator record, not proof that SQL ran. Production schema verification

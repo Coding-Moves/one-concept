@@ -37,13 +37,20 @@ and [Expo update deployment](https://docs.expo.dev/eas-update/deployment/).
 
 ## 2. Apply SQL to the existing production database
 
-Production `backend/migrations/applied.txt` currently ends at 0045. Apply the
-reviewed 0046–0130 SQL files **in filename order** against the production
-session-pooler connection (5432) after the backup, stopping on any failure.
-Check each file's transaction boundary and inspect the database after an
-interruption; do not blindly replay a partly applied file. These are additive
-application/schema migrations on the existing Supabase database; there is no
-user-data copy between staging and production.
+Production `backend/migrations/applied.txt` currently ends at 0045. After
+the backup and restore drill, record its non-secret reference as production
+environment variable `SUPABASE_PRODUCTION_BACKUP_REFERENCE`. The reviewed
+`Apply reviewed Supabase SQL to production` workflow can then run from one
+**exact commit tag** `supabase-production-schema-cutover-<full 40-character SHA>`
+at the PR commit. Permit only that exact tag in the production environment's
+deployment allowlist, retain required owner review, and verify the tag and
+project shown in the approval request. The job refuses the wrong project,
+missing backup reference, missing 0045 baseline, any already-partial Edge
+schema, or a tag whose SHA differs from its source commit. It applies 0046–0130
+in filename order and stops on the first error. Do not rerun after a partial
+application; inspect the last applied file and database first. These are
+additive application/schema migrations on the existing Supabase database;
+there is no user-data copy between staging and production.
 
 Use the protected production schema verifier after application. Confirm the
 `edge_api_*` RPCs, `edge_worker_*` RPCs and `edge_worker_jobs` ledger exist;
@@ -58,9 +65,10 @@ Cron jobs inactive during this phase.
 
 1. In the existing protected GitHub `production-schema` environment, set
    `PRODUCTION_SCHEMA_DIRECT_URL` and a **production-project-scoped**
-   `SUPABASE_PRODUCTION_ACCESS_TOKEN`. Set repo variables
+   `SUPABASE_PRODUCTION_ACCESS_TOKEN`. Set production environment variables
    `SUPABASE_PRODUCTION_PROJECT_REF=egdszjoesxlccauahmsx` and
-   `SUPABASE_STAGING_PROJECT_REF=zhrulokgngjceqgjkcmw`. Keep values out of
+   `SUPABASE_STAGING_PROJECT_REF=zhrulokgngjceqgjkcmw` (both are now set).
+   Keep values out of
    chat, logs, and source. The production deploy workflow rejects another
    target and a token missing from the protected environment.
 2. Configure production Edge secrets for the API and worker from the current

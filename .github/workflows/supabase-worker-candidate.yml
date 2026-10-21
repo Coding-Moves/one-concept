@@ -118,8 +118,13 @@ jobs:
           persist-credentials: false
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Report bounded staging email failure status
-        run: python backend/tools/inspect_staging_worker_canary.py
+      - name: Inspect staging email status or reconcile its existing HTTP receipt
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-reconcile-* ]]; then
+            python backend/tools/inspect_staging_worker_canary.py --reconcile-http
+          else
+            python backend/tools/inspect_staging_worker_canary.py
+          fi
 
   diagnose_oauth_worker:
     if: ${{ contains(github.ref_name, '-oauth-diagnose-') }}

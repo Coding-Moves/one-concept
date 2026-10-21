@@ -22,7 +22,7 @@ test('one invocation sends at most 100 and records invalid handsets', async () =
     sent = JSON.parse(options.body);
     return new Response(JSON.stringify({ data: sent.map((_, index) => index === 1
       ? { status: 'error', details: { error: 'DeviceNotRegistered' } }
-      : { status: 'ok' }) }), { status: 200 });
+      : { status: 'ok', id: `ticket-${index}` }) }), { status: 200 });
   };
   const { task, calls } = harness(batch, provider);
   const result = await task('run-id');
@@ -57,11 +57,19 @@ test('allowlisted staging phone receives an explicitly labeled test reminder', a
   let sent;
   const { task } = harness([{ id: 3, to: token }], async (_url, options) => {
     sent = JSON.parse(options.body);
-    return Response.json({ data: [{ status: 'ok' }] });
+    return Response.json({ data: [{ status: 'ok', id: 'test-ticket' }] });
   }, { environment: 'staging', testTokens: new Set([token]) });
   assert.equal((await task('run-id')).accepted, 1);
   assert.equal(sent[0].title, 'One Concept staging test');
   assert.match(sent[0].body, /No action needed/);
+});
+
+test('an ok ticket without an id is fenced as unknown and fails the run', async () => {
+  const { task, calls } = harness([{ id: 12, to: 'ExponentPushToken[test]' }],
+    async () => Response.json({ data: [{ status: 'ok' }] }));
+  await assert.rejects(task('run-id'), /expo_transport_unknown/);
+  assert.deepEqual(calls.find(call => call.name === 'edge_worker_record_reminders').args.p_results,
+    [{ id: 12, status: 'unknown' }]);
 });
 
 test('malformed claim cannot trigger provider I/O', async () => {

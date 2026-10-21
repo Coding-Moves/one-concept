@@ -79,7 +79,8 @@ export function createDailyReminderTask(
     let unknown = 0;
     const results = batch.map((item, index) => {
       const ticket = received[index];
-      if (ticket?.status === 'ok') {
+      if (ticket?.status === 'ok' && typeof ticket.id === 'string' &&
+          /^[!-~]{1,256}$/.test(ticket.id)) {
         accepted++;
         return { id: item.id, status: 'accepted' };
       }
@@ -98,7 +99,7 @@ export function createDailyReminderTask(
       return { id: item.id, status: 'unknown' };
     });
     await rpc('edge_worker_record_reminders', { p_results: results });
-    if (transportFailed) throw new Error('expo_transport_unknown');
+    if (transportFailed || unknown) throw new Error('expo_transport_unknown');
     return { enqueued: Number(enqueued), claimed: batch.length, accepted, rejected, dropped, unknown,
       blocked: 0 };
   };

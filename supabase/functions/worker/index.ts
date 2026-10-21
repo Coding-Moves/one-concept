@@ -123,7 +123,7 @@ Deno.serve(createHandler({
       clientId: setting('EDITORIAL_GMAIL_CLIENT_ID') ?? '',
       clientSecret: setting('EDITORIAL_GMAIL_CLIENT_SECRET') ?? '',
       refreshToken: setting('EDITORIAL_GMAIL_REFRESH_TOKEN') ?? '',
-      dailyCap: Number(setting('EDITORIAL_EMAIL_DAILY_CAP') ?? '40'),
+      dailyCap: Number(setting('EDITORIAL_EMAIL_DAILY_CAP') ?? '0'),
       databaseReady: workerDatabaseUrl.length > 0,
     }),
     content_pool: createCuratedRefillTask(serviceRpc, fetch, refillOptions, false),

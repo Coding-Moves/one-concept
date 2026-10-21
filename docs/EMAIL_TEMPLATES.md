@@ -1,6 +1,6 @@
 # One Concept email templates
 
-These three templates customize emails sent by Supabase Auth. They work with
+These four templates customize emails sent by Supabase Auth. They work with
 the project's configured sender; installing the HTML does not require Resend,
 a purchased domain, or an app update. Provider setup remains separate in
 [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187).
@@ -20,10 +20,11 @@ stores their reviewed source; it does not synchronize production settings.
 | Supabase template | Subject | HTML source |
 | --- | --- | --- |
 | Confirm sign up | `Confirm your email — One Concept` | [confirm-signup.html](../backend/email-templates/confirm-signup.html) |
+| Invite user | `You're invited to One Concept Review` | [invite-reviewer.html](../backend/email-templates/invite-reviewer.html) |
 | Reset password | `Reset your password — One Concept` | [reset-password.html](../backend/email-templates/reset-password.html) |
 | Password changed (Security) | `Your password was changed — One Concept` | [password-changed.html](../backend/email-templates/password-changed.html) |
 
-Keep every `{{ .ConfirmationURL }}` placeholder in signup and recovery. Supabase
+Keep every `{{ .ConfirmationURL }}` placeholder in signup, invitation, and recovery. Supabase
 fills in the appropriate verification URL; the button and copyable fallback
 must both pass through that verification. Password changed reports a completed
 change and intentionally has no token or reset-link placeholder. It directs
@@ -32,6 +33,16 @@ unrecognized changes to Forgot password in the app and the existing support emai
 Signup and recovery both request a landing page on the mobile build's configured
 API origin. The Site URL remains the fallback for earlier app versions, and the
 corresponding HTTPS destinations must be allowed in Supabase's URL Configuration.
+Reviewer invitations instead request the exact
+`https://coding-moves-one-concept-review.netlify.app/auth/callback` URL from the
+server. Add it to the allowed Redirect URLs and set the API's
+`EDITORIAL_INVITE_REDIRECT_URL` to that value. The invitation template does not
+use Supabase's `{{ .SiteURL }}`, which is why its visible copy no longer says
+`localhost:3000`. Keep the Supabase Site URL on the working public learner
+fallback described in [AUTH_REDIRECTS.md](AUTH_REDIRECTS.md); a template cannot
+repair a missing allowed redirect. Use **Reviewers → Invite reviewer** in the
+review website; manually sending a Supabase Dashboard invitation does not grant
+editorial membership.
 Do not replace verification links with those landing-page URLs. Follow the
 [authentication redirect runbook](AUTH_REDIRECTS.md) before testing the emails.
 See [Supabase email templates](https://supabase.com/docs/guides/auth/auth-email-templates).
@@ -50,6 +61,10 @@ Before announcing the new emails to users, test with accounts and inboxes you
 control under the configured sender's limits:
 
 - Confirm signup, follow the email's button, and successfully sign in to the app.
+- Invite a new reviewer through the review website, follow the email button to
+  the public callback, set a password, and sign in. Invite an existing confirmed
+  learner separately and verify that their existing password opens the workspace
+  after their reviewer name is approved.
 - Request Forgot password, set a new password through the recovery email, and
   sign in with it. Verify the separate Password changed notification arrives.
 - Check the design in a real inbox on phone and desktop, the full fallback links,

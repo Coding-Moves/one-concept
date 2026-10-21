@@ -109,8 +109,9 @@ main SHA. Keep all production Cron jobs inactive during this phase.
 4. Install `backend/ops/supabase_workers/0001_install_inactive_cron.sql` only
    after the worker SQL and Vault secrets are verified. It installs seven work
    schedules plus HTTP receipt reconciliation, and fails unless all eight are
-   inactive. This is a one-time installer: it refuses to overwrite existing
-   One Concept jobs, including jobs already activated during handover. Read
+   inactive. [Supabase Cron](https://supabase.com/docs/guides/cron/quickstart)
+   overwrites a job with the same name, so this one-time installer refuses
+   existing One Concept jobs, including those activated during handover. Read
    back `cron.job` by name and active state. Do not turn on provider or job
    switches in a bulk edit.
 

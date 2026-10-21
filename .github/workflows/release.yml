@@ -145,7 +145,9 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
       - run: npm ci
       - name: Validate production public configuration
-        run: eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
+        run: |
+          eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
+          eas env:exec production 'node ../.github/scripts/check-production-public-config.cjs' --non-interactive
       - name: Publish production OTA after preview approval
         env:
           MSG: ${{ github.event.head_commit.message || 'release' }}

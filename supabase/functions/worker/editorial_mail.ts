@@ -139,7 +139,7 @@ export async function sendEditorialMail(
       typeof (payload as Record<string, unknown>).access_token === 'string'
       ? (payload as Record<string, string>).access_token : '';
     if (!access) return { state: 'failed', code: 'sender_authorization' };
-  } catch { return { state: 'pending', code: 'delivery_unknown' }; }
+  } catch { return { state: 'pending', code: 'provider_temporary' }; }
 
   try {
     const response = await fetcher(SEND_URL, {
@@ -152,9 +152,9 @@ export async function sendEditorialMail(
       return typeof payload === 'object' && payload !== null &&
         typeof (payload as Record<string, unknown>).id === 'string' &&
         (payload as Record<string, string>).id.length > 0
-        ? { state: 'sent', code: null } : { state: 'pending', code: 'delivery_unknown' };
+        ? { state: 'sent', code: null } : { state: 'failed', code: 'delivery_unknown' };
     }
-    let temporary = response.status === 429 || response.status >= 500;
+    let temporary = response.status === 429;
     if (response.status === 403) {
       try {
         const payload = await response.json() as { error?: { errors?: Array<{ reason?: string }> } };
@@ -162,7 +162,8 @@ export async function sendEditorialMail(
           ['rateLimitExceeded', 'userRateLimitExceeded', 'dailyLimitExceeded'].includes(item.reason ?? ''));
       } catch { /* An unreadable 403 is a rejection. */ }
     }
-    return temporary ? { state: 'pending', code: 'provider_temporary' }
+    return response.status >= 500 ? { state: 'failed', code: 'delivery_unknown' }
+      : temporary ? { state: 'pending', code: 'provider_temporary' }
       : { state: 'failed', code: 'provider_rejected' };
-  } catch { return { state: 'pending', code: 'delivery_unknown' }; }
+  } catch { return { state: 'failed', code: 'delivery_unknown' }; }
 }

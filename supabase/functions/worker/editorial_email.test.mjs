@@ -64,6 +64,17 @@ test('revoked assignment suppresses outbox without calling Gmail', async () => {
   assert.ok(events.some(item => item.includes('set batch_id=null')));
 });
 
+test('ambiguous Gmail result blocks automatic retry of the claimed batch', async () => {
+  const { task, events } = harness({ mail: async url => {
+    if (url.includes('oauth2.googleapis.com')) return Response.json({ access_token: 'token' });
+    throw new Error('response lost after send');
+  } });
+  const result = await task('run-id');
+  assert.equal(result.failed, 1);
+  assert.equal(result.pending, 0);
+  assert.equal(events.filter(item => item === 'edge_worker_claim_email').length, 2);
+});
+
 test('disabled or unconfigured mail cannot contact the database or provider', async () => {
   const names = [];
   const rpc = async name => { names.push(name); throw new Error('must not call'); };

@@ -34,12 +34,27 @@ test('expired OAuth token is terminal; temporary OAuth failure retries', async (
   assert.deepEqual(temporary, { state: 'pending', code: 'provider_temporary' });
 });
 
-test('unknown Gmail acceptance stays retryable under the existing at-least-once policy', async () => {
+test('unknown Gmail acceptance is terminal until an operator checks the outcome', async () => {
   const result = await sendEditorialMail(async url => {
     if (url.includes('oauth2.googleapis.com')) return Response.json({ access_token: 'token' });
     throw new Error('timeout');
   }, batch, config);
-  assert.deepEqual(result, { state: 'pending', code: 'delivery_unknown' });
+  assert.deepEqual(result, { state: 'failed', code: 'delivery_unknown' });
+  const serverError = await sendEditorialMail(async url => url.includes('oauth2.googleapis.com')
+    ? Response.json({ access_token: 'token' }) : new Response('', { status: 503 }), batch, config);
+  assert.deepEqual(serverError, { state: 'failed', code: 'delivery_unknown' });
+  const missingReceipt = await sendEditorialMail(async url => url.includes('oauth2.googleapis.com')
+    ? Response.json({ access_token: 'token' }) : Response.json({}), batch, config);
+  assert.deepEqual(missingReceipt, { state: 'failed', code: 'delivery_unknown' });
+});
+
+test('a known Gmail rate limit and a pre-send token timeout remain retryable', async () => {
+  const rateLimit = await sendEditorialMail(async url => url.includes('oauth2.googleapis.com')
+    ? Response.json({ access_token: 'token' }) : new Response('', { status: 429 }), batch, config);
+  assert.deepEqual(rateLimit, { state: 'pending', code: 'provider_temporary' });
+  const tokenTimeout = await sendEditorialMail(async () => { throw new Error('token timeout'); },
+    batch, config);
+  assert.deepEqual(tokenTimeout, { state: 'pending', code: 'provider_temporary' });
 });
 
 test('staging rejects recipient outside explicit test list before provider I/O', async () => {

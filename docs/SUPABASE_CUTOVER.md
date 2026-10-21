@@ -91,7 +91,11 @@ main SHA. Keep all production Cron jobs inactive during this phase.
    `EDITORIAL_EMAIL_ENABLED`, `EDITORIAL_EMAIL_DAILY_CAP`,
    `FUTURE_REFILL_ENABLED`, `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED`,
    `CONTENT_REVIEW_BACKLOG_LIMIT`, `GENERATION_DAILY_CALL_CAP`, and
-   `GEMINI_MODEL`. The screenshot does not prove their effective values.
+   `GEMINI_MODEL`. The displayed SHA-256 digest prefixes match the intended
+   values: `production`, the Netlify reviewer origin, `false`, `0`, `false`,
+   `false`, `30`, `200`, and `gemini-3.1-flash-lite`, respectively. This checks
+   saved values without revealing them; live function behavior is still to be
+   tested after deployment.
    `WORKER_DATABASE_URL` and `WORKER_DISPATCH_SIGNING_KEY` are still missing
    from that list; add and verify them before deploying the worker.
 3. Match the observed production flags before enabling any worker. Known

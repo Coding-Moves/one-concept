@@ -333,9 +333,9 @@ selected Supabase database after confirming the project ref; no Railway service
 is needed. Publication and rejection must use the authenticated editorial
 actions, as the content CLI itself refuses free-text decisions. The working
 commands and data paths must be rechecked against the live Railway inventory
-before the step-3 cutover retires Railway.
+before the migration PR is marked ready.
 
-## Step-3 cutover checks still needed
+## Live inventory still needed for #417
 
 - Railway deployment details with the full deployed Git SHA for both services.
 - For each Railway service, record the effective non-secret values of
@@ -349,6 +349,34 @@ before the step-3 cutover retires Railway.
   disabled at cutover until the owner explicitly chooses and verifies that
   value against production policy.
 - Whether any one-off maintainer command runs outside the two cron services.
+- Current production queue counts for pending or in-progress editorial revision
+  jobs, reviewer email batches/outbox, weekly quiz notifications, and curated
+  backlog. Recent successful no-op runs cannot establish these counts. The
+  current Railway daily reminder path calculates due users on each invocation,
+  so it has no separate pending outbox to count. In the **production** Supabase
+  SQL Editor, this read-only aggregate returns counts without recipient or
+  content data:
+
+  ```sql
+  select
+    (select count(*) from public.editorial_generation_jobs
+      where status in ('pending','generating')) as editorial_jobs,
+    (select count(*) from public.editorial_email_batches
+      where status in ('pending','sending')) as email_batches,
+    (select count(*) from public.editorial_notification_outbox
+      where batch_id is null and not suppressed) as unbatched_email,
+    (select count(*) from public.weekly_quiz_notifications
+      where status in ('pending','retry','sending')) as weekly_pushes,
+    (select count(*) from public.concept_backlog
+      where status in ('pending','generating')) as curated_backlog;
+  ```
+
+Keep the migration PR draft until this Railway and production-queue inventory
+is recorded. The separate step-3 cutover must recheck values against the live
+services before it enables a provider job.
+
+## Step-3 activation checks
+
 - The protected October 21 Gmail OAuth check passed token exchange. The guarded
   staging email retry recorded one sent batch and `sent=1` in the worker; the
   owner found it in the controlled reviewer mailbox's Spam folder. A protected

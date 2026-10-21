@@ -96,8 +96,13 @@ main SHA. Keep all production Cron jobs inactive during this phase.
    `false`, `30`, `200`, and `gemini-3.1-flash-lite`, respectively. This checks
    saved values without revealing them; live function behavior is still to be
    tested after deployment.
-   `WORKER_DATABASE_URL` and `WORKER_DISPATCH_SIGNING_KEY` are still missing
-   from that list; add and verify them before deploying the worker.
+   After that screenshot, the owner reported saving `WORKER_DATABASE_URL` from
+   the existing production session-pooler connection string and saving the
+   same fresh `WORKER_DISPATCH_SIGNING_KEY` in Edge Secrets and production Vault.
+   The owner also reported saving `one_concept_worker_url` in Vault. These
+   private values have not been independently read back or exercised; the
+   protected worker boot check and a signed production canary must verify them
+   before enabling any scheduled job.
 3. Match the observed production flags before enabling any worker. Known
    baseline: `FUTURE_REFILL_ENABLED=false`,
    `LEGACY_ENRICHMENT_BATCH_SIZE=25`, `CONTENT_REVIEW_BACKLOG_LIMIT=30`,

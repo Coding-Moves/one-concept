@@ -1,5 +1,5 @@
-# Railway deploys main independently. Publish only after the operator verifies
-# the same commit on the API and workers and checks production health.
+# Publish only after the protected Supabase production deploy succeeded for the
+# current main commit and the operator verified the production API and workers.
 name: Release
 
 on:
@@ -7,6 +7,10 @@ on:
     inputs:
       backend_revision:
         description: 'Full main commit SHA verified on healthy production API and workers'
+        required: true
+        type: string
+      production_deploy_run_id:
+        description: 'Successful Deploy Supabase API and worker to production Actions run ID for this main SHA'
         required: true
         type: string
 
@@ -28,6 +32,7 @@ jobs:
     environment: production-schema
     permissions:
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,6 +40,18 @@ jobs:
       - name: Require current main revision
         run: |
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Require successful matching production deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_RUN_ID: ${{ inputs.production_deploy_run_id }}
+          VERIFIED_BACKEND_SHA: ${{ inputs.backend_revision }}
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$VERIFIED_BACKEND_SHA" = "$GITHUB_SHA"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}" \
+            --jq '[.path, .head_branch, .head_sha, .event, .conclusion] | @tsv' |
+            awk -v sha="$GITHUB_SHA" '$1 == ".github/workflows/supabase-production-deploy.yml" && $2 == "main" && $3 == sha && $4 == "workflow_dispatch" && $5 == "success" { found=1 } END { exit !found }'
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'

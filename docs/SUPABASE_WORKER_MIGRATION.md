@@ -317,11 +317,23 @@ before closing issue #417.
 ## Evidence still needed
 
 - Railway deployment details with the full deployed Git SHA for both services.
-- Safe flag/cap values on both services, and
-  effective root directory/start-command overrides.
+- For each Railway service, record the effective non-secret values of
+  `GENERATION_ENABLED`, `FUTURE_REFILL_ENABLED`,
+  `LEGACY_ENRICHMENT_ENABLED`, `EDITORIAL_EMAIL_ENABLED`,
+  `WEEKLY_QUIZ_NOTIFICATIONS_ENABLED`, `GEMINI_MODEL`,
+  `GENERATION_DAILY_CALL_CAP`, `GENERATION_PACE_SECONDS`, and
+  `LEGACY_ENRICHMENT_BATCH_SIZE`, where present. Confirm effective root
+  directory and start-command overrides. Keep provider keys and addresses out
+  of the record. If Railway cannot expose a value, leave its Supabase job gate
+  disabled at cutover until the owner explicitly chooses and verifies that
+  value against production policy.
 - Whether any one-off maintainer command runs outside the two cron services.
-- A valid Gmail OAuth sender refresh token and successful controlled reviewer
-  inbox canary. The existing staging token was rejected before sending.
+- The protected October 21 Gmail OAuth check passed token exchange. The guarded
+  staging email retry recorded one sent batch and `sent=1` in the worker, but
+  the owner has not found it in the controlled reviewer inbox. Verify the
+  separate `pg_net` HTTP receipt and confirm the exact reviewer mailbox,
+  including All Mail and Spam. The sent batch must not be retried to diagnose
+  inbox delivery.
 
 ## References
 

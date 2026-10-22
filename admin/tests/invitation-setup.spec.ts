@@ -20,6 +20,7 @@ test("an incomplete email return removes its credential fragment and stays on si
 test("a verified invitation opens dedicated setup for the shared learning and review account", async ({ page, context }) => {
   await fixture(context, { onboarding: true, requireMfa: false });
   await login(page);
+  await expect(page.getByRole("heading", { name: "Let’s set up your reviewer profile" })).toBeVisible();
   const tokens = await page.evaluate(() => {
     const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
     return { access: session.access_token as string, refresh: session.refresh_token as string };
@@ -41,6 +42,7 @@ test("a verified invitation opens dedicated setup for the shared learning and re
 test("a recovery email returns to the same password setup without creating a second account", async ({ page, context }) => {
   await fixture(context);
   await login(page);
+  await expect(page.getByRole("heading", { name: "A little care. Better learning." })).toBeVisible();
   const tokens = await page.evaluate(() => {
     const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
     return { access: session.access_token as string, refresh: session.refresh_token as string };

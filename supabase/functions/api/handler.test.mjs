@@ -1173,6 +1173,11 @@ test('reviewer access requires a versioned capability update and current owner',
     body: JSON.stringify({ expected_version: 1, status: 'revoked',
       capabilities: [] }),
   }))).status, 409);
+  payload = { error: 'team_full' };
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 2, status: 'active',
+      capabilities: ['review'] }),
+  }))).status, 409);
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
 });
 
@@ -1270,6 +1275,25 @@ test('reviewer invitation blocks an unapproved callback before contacting Auth',
     body: JSON.stringify({ email: 'friend@example.com' }),
   }));
   assert.equal(result.status, 503);
+  assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite')).length, 0);
+});
+
+test('reviewer invitation rejects a full team before sending email', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json({ error: 'team_full' });
+  });
+  const result = await handler(request('/v1/editorial/reviewers', {
+    method: 'POST', headers: { authorization: `Bearer ${token}`,
+      'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'friend@example.com' }),
+  }));
+  assert.equal(result.status, 409);
+  assert.equal((await result.json()).detail, 'The team already has 10 active reviewers');
   assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite')).length, 0);
 });
 

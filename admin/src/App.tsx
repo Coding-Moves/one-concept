@@ -86,6 +86,7 @@ export function App({
         dirty.current = false;
         setEpoch((n) => n + 1);
       }
+      if (event === "SIGNED_OUT") setSetup(null);
       if (event === "PASSWORD_RECOVERY") setSetup("recovery");
     });
     api.onDenied = (status) => {

@@ -45,6 +45,8 @@ async function start() {
         passwordSetup = fragment.get("type") === "invite"
           ? "invite"
           : fragment.get("type") === "recovery" ? "recovery" : "setup";
+      else
+        initialError = "This email link did not open an account session. Request a new one.";
     } else if (code) {
       const { data, error } = await auth.auth.exchangeCodeForSession(code);
       if (error)
@@ -52,6 +54,8 @@ async function start() {
           "This email link could not be verified. Open it in the browser that requested it, or request a new one.";
       else if (data.session)
         passwordSetup = "setup";
+      else
+        initialError = "This email link did not open an account session. Request a new one.";
     } else if (hasAuthFragment)
       initialError = "This sign-in link has expired or could not be verified.";
     else if (callback)

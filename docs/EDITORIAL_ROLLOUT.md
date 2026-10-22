@@ -138,7 +138,7 @@ checks. New reviewer accounts start with the authenticator requirement off and
 can enable it in **Settings**. Reviewers use individual accounts; no GitHub or database
 console access is required. Set their timezone in **Settings**.
 
-Before sending a real invitation, deploy migrations 0131–0133 with the matching
+Before sending a real invitation, deploy migrations 0131–0134 with the matching
 API and Edge code, then install the **Invite user** HTML template from
 `backend/email-templates/invite-reviewer.html`. A new reviewer should receive
 the website callback, set a password, and sign in. An existing confirmed

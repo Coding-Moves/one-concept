@@ -35,8 +35,9 @@ again afterward, using current-query time for session deadlines;
 versioned account mutations and records their audit events. `editorial_invites.py`
 is the server-only Auth invitation adapter. New memberships start with optional
 MFA and the account lock caps active reviewer memberships at 10 including the
-owner. Migration 0131 applies the same rules to the Edge API; migration 0132
-removes reviewer membership without deleting Auth or historical evidence, and
+owner. Migration 0131 applies the same rules to the Edge API; migration 0134
+resends invites to existing unconfirmed Auth users. Migration 0132 removes
+reviewer membership without deleting Auth or historical evidence, and
 clears open assignments. Migration `0032_editorial_accounts.sql`
 keeps memberships and account events inaccessible to browser roles. The one-time
 owner CLI is `python -m app.workers.editorial_accounts`; see

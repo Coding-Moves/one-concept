@@ -174,7 +174,7 @@ export async function fixture(
       headers: {
         "access-control-allow-origin": "*",
         "access-control-allow-headers": "*",
-        "access-control-allow-methods": "GET,POST,PATCH,PUT,OPTIONS",
+        "access-control-allow-methods": "GET,POST,PATCH,PUT,DELETE,OPTIONS",
       },
     });
   await context.route("https://review-auth.test/**", async (route) => {

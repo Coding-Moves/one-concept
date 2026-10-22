@@ -20,6 +20,7 @@ from app.schemas.editorial import (
     Member,
     MemberPage,
     ProfileInput,
+    ReviewerRemoval,
     VersionInput,
 )
 from app.services.editorial_accounts import authorize
@@ -148,6 +149,18 @@ async def access(
     member = await management.change_access(db, user, settings, user_id, body)
     await db.commit()
     return member
+
+
+@router.delete("/reviewers/{user_id}", response_model=ReviewerRemoval)
+async def remove_reviewer(
+    user_id: UUID, user: User, db: DB, settings: Config,
+    expected_version: int = Query(ge=1),
+):
+    result = await management.remove_reviewer(
+        db, user, settings, user_id, expected_version
+    )
+    await db.commit()
+    return result
 
 
 @router.post("/reviewers/{user_id}/approve-profile", response_model=Member)

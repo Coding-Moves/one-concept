@@ -170,7 +170,7 @@ function editorialClaims(token: string, verifiedUserId: string): {
   } catch { return null; }
 }
 
-async function rpc(name: 'edge_api_request_retry_after' | 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_set_avatar' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_stage_revision' | 'edge_api_editorial_revision_generation' | 'edge_api_editorial_concept_action' | 'edge_api_editorial_revision_action' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
+async function rpc(name: 'edge_api_request_retry_after' | 'edge_api_health' | 'edge_api_topics' | 'edge_api_concept' | 'edge_api_set_interaction' | 'edge_api_notifications' | 'edge_api_set_notifications' | 'edge_api_push_token' | 'edge_api_stats' | 'edge_api_history' | 'edge_api_saved' | 'edge_api_subtopic_progress' | 'edge_api_analytics' | 'edge_api_mark_subtopics_seen' | 'edge_api_daily' | 'edge_api_complete_daily' | 'edge_api_achievements' | 'edge_api_achievements_seen' | 'edge_api_complete_review' | 'edge_api_state' | 'edge_api_set_topics' | 'edge_api_patch_profile' | 'edge_api_set_avatar' | 'edge_api_sharing_get' | 'edge_api_sharing_put' | 'edge_api_public_profile' | 'edge_api_connection_settings_get' | 'edge_api_connection_settings_put' | 'edge_api_connections' | 'edge_api_connection_status' | 'edge_api_connection_request' | 'edge_api_connection_block_token' | 'edge_api_connection_action' | 'edge_api_connection_unblock' | 'edge_api_relationship_status' | 'edge_api_relationship_connect' | 'edge_api_relationship_remove' | 'edge_api_relationship_block' | 'edge_api_relationships' | 'edge_api_weekly_quiz' | 'edge_api_submit_weekly_quiz' | 'edge_api_subtopic_quiz' | 'edge_api_submit_subtopic_quiz' | 'edge_api_subtopic_quiz_attempts' | 'edge_api_editorial_me' | 'edge_api_editorial_reviewers' | 'edge_api_editorial_taxonomy' | 'edge_api_editorial_activity' | 'edge_api_editorial_legacy_entries' | 'edge_api_editorial_queue' | 'edge_api_editorial_revision_history' | 'edge_api_editorial_generation_jobs' | 'edge_api_editorial_generation_job' | 'edge_api_editorial_cancel_generation_job' | 'edge_api_editorial_generation_supply' | 'edge_api_editorial_legacy_eligibility' | 'edge_api_editorial_concept_timeline' | 'edge_api_editorial_legacy_batches' | 'edge_api_editorial_legacy_batch_action' | 'edge_api_editorial_create_legacy_batch' | 'edge_api_editorial_request_generation' | 'edge_api_editorial_concept_detail_source' | 'edge_api_editorial_revision_detail_source' | 'edge_api_editorial_stage_revision' | 'edge_api_editorial_revision_generation' | 'edge_api_editorial_concept_action' | 'edge_api_editorial_revision_action' | 'edge_api_editorial_notification_policy' | 'edge_api_editorial_notifications_overview' | 'edge_api_editorial_notification_retry' | 'edge_api_editorial_owner_operations' | 'edge_api_editorial_owner_overview' | 'edge_api_editorial_owner_reviewers' | 'edge_api_editorial_owner_events' | 'edge_api_editorial_reviewer_access' | 'edge_api_editorial_reviewer_remove' | 'edge_api_editorial_invite_prepare' | 'edge_api_editorial_invite_finish' | 'edge_api_editorial_request_profile' | 'edge_api_editorial_notification_timezone' | 'edge_api_editorial_authenticator' | 'edge_api_editorial_approve_profile', args: Record<string, unknown>, config: ApiConfig, fetcher: Fetcher): Promise<unknown> {
   let result: Response;
   try {
     result = await fetcher(`${config.supabaseUrl}/rest/v1/rpc/${name}`, {
@@ -1114,6 +1114,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
     const editorialAuthenticator = path === '/v1/editorial/me/authenticator';
     const editorialApproveProfile = /^\/v1\/editorial\/reviewers\/([^/]+)\/approve-profile$/.exec(path);
     const editorialReviewerAccess = /^\/v1\/editorial\/reviewers\/([^/]+)\/access$/.exec(path);
+    const editorialReviewerRemove = /^\/v1\/editorial\/reviewers\/([^/]+)$/.exec(path);
     const editorial = editorialMe || editorialReviewers || editorialTaxonomy || editorialActivity || editorialQueue
       || editorialHistory !== null || editorialConcept !== null || editorialConceptAction !== null
       || editorialRevision !== null || editorialRevisionAction !== null
@@ -1126,7 +1127,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
       || editorialOwnerEvents
       || editorialLegacyEntries !== null || editorialProfile
       || editorialTimezone || editorialAuthenticator || editorialApproveProfile !== null
-      || editorialReviewerAccess !== null;
+      || editorialReviewerAccess !== null || editorialReviewerRemove !== null;
     const state = path === '/v1/me/state';
     const profile = path === '/v1/me';
     const avatar = path === '/v1/me/avatar';
@@ -1160,6 +1161,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
           ? request.method === 'GET' || request.method === 'POST'
         : editorialLegacyBatches
           ? request.method === 'GET' || request.method === 'POST'
+        : editorialReviewerRemove
+          ? request.method === 'DELETE'
         : editorialProfile || editorialTimezone || editorialAuthenticator
           || editorialNotificationPolicy || editorialReviewerAccess
           ? request.method === 'PATCH'
@@ -1232,6 +1235,37 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
         if (!config.editorialEnabled) return editorialResponse({ detail: 'Editorial access is disabled' }, 503, cors);
         const claims = editorialClaims(token, userId);
         if (!claims) return editorialResponse({ detail: 'A current Supabase session is required' }, 401, cors, true);
+        if (editorialReviewerRemove) {
+          const rawVersion = requestUrl.searchParams.get('expected_version');
+          const version = Number(rawVersion);
+          if (!UUID.test(editorialReviewerRemove[1]) || !rawVersion
+              || !/^[1-9][0-9]*$/.test(rawVersion) || !Number.isSafeInteger(version)) {
+            return editorialResponse({ detail: 'Invalid reviewer removal' }, 422, cors);
+          }
+          const data = await rpc('edge_api_editorial_reviewer_remove', {
+            p_user_id: userId, p_session_id: claims.sessionId, p_aal: claims.aal,
+            p_subject_id: editorialReviewerRemove[1], p_expected_version: version,
+          }, config, fetcher) as JsonObject | null;
+          if (data === null) return unavailable(cors);
+          if (typeof data.error === 'string') {
+            const failures: Record<string, [number, string]> = {
+              invalid: [422, 'Invalid reviewer removal'],
+              session_required: [401, 'A confirmed account and current session are required'],
+              unavailable: [403, 'Editorial access is unavailable'],
+              permission: [403, 'Editorial permission required'],
+              profile_required: [403, 'Complete profile setup and obtain name approval'],
+              mfa_required: [403, 'Complete MFA verification for editorial actions'],
+              self_removal: [403, 'You cannot remove your own reviewer access'],
+              reviewer_not_found: [404, 'Reviewer not found'],
+              version_conflict: [409, 'Account changed; reload before removing'],
+              last_admin: [409, 'Keep another confirmed, approved administrator before removing this access'],
+            };
+            const failure = failures[data.error];
+            return failure ? editorialResponse({ detail: failure[1] }, failure[0], cors)
+              : unavailable(cors);
+          }
+          return editorialResponse(data, 200, cors);
+        }
         if (editorialRevisionAction) {
           if (!UUID.test(editorialRevisionAction[1])) {
             return editorialResponse({ detail: 'Invalid revision ID' }, 422, cors);

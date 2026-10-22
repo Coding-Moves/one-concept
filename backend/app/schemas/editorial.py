@@ -86,6 +86,11 @@ class Member(BaseModel):
     updated_at: datetime
 
 
+class ReviewerRemoval(BaseModel):
+    removed_user_id: UUID
+    unassigned_count: int = Field(ge=0)
+
+
 class Me(BaseModel):
     member: Member
     onboarding_required: bool

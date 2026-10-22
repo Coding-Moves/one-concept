@@ -1,5 +1,6 @@
 """Versioned account mutations. All authority is rechecked under the account lock."""
 
+import json
 import time
 from uuid import UUID
 
@@ -9,7 +10,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.deps import CurrentUser
-from app.schemas.editorial import AccessInput, AuthenticatorInput, InviteInput, Member, ProfileInput
+from app.schemas.editorial import (
+    AccessInput, AuthenticatorInput, InviteInput, Member, ProfileInput,
+    ReviewerRemoval,
+)
 from app.services.editorial_accounts import audit, authorize, check_version, membership
 from app.services.editorial_invites import invite_auth_user
 
@@ -220,3 +224,40 @@ async def change_access(
         },
     )
     return await membership(db, uid)
+
+
+async def remove_reviewer(
+    db: AsyncSession,
+    actor: CurrentUser,
+    settings: Settings,
+    uid: UUID,
+    expected_version: int,
+) -> ReviewerRemoval:
+    await authorize(db, actor, settings, "manage_reviewers")
+    payload = await db.scalar(
+        text("""select public.edge_api_editorial_reviewer_remove(
+          cast(:actor as uuid),cast(:session as uuid),:aal,
+          cast(:subject as uuid),:version)"""),
+        {"actor": actor.id, "session": actor.session_id, "aal": actor.aal,
+         "subject": uid, "version": expected_version},
+    )
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    errors = {
+        "invalid": (422, "Invalid reviewer removal"),
+        "session_required": (401, "A confirmed account and current session are required"),
+        "unavailable": (403, "Editorial access is unavailable"),
+        "permission": (403, "Editorial permission required"),
+        "profile_required": (403, "Complete profile setup and obtain name approval"),
+        "mfa_required": (403, "Complete MFA verification for editorial actions"),
+        "self_removal": (403, "You cannot remove your own reviewer access"),
+        "reviewer_not_found": (404, "Reviewer not found"),
+        "version_conflict": (409, "Account changed; reload before removing"),
+        "last_admin": (409, "Keep another confirmed, approved administrator before removing this access"),
+    }
+    if isinstance(payload, dict) and payload.get("error") in errors:
+        status, detail = errors[payload["error"]]
+        raise HTTPException(status, detail)
+    if not isinstance(payload, dict) or "removed_user_id" not in payload:
+        raise HTTPException(503, "Reviewer removal is unavailable")
+    return ReviewerRemoval.model_validate(payload)

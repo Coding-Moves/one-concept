@@ -175,6 +175,23 @@ function MemberRow({
       setBusy(false);
     }
   }
+  async function remove() {
+    if (!confirm(`Permanently remove reviewer access for ${member.invited_email}? Their One Concept learning account and past review history will remain.`))
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.request(
+        `/reviewers/${member.user_id}?expected_version=${member.version}`,
+        "DELETE",
+      );
+      changed();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <details className="member">
       <summary>
@@ -208,6 +225,11 @@ function MemberRow({
       <button disabled={busy} onClick={() => void save()}>
         Save account access
       </button>
+      {!self && (
+        <button type="button" disabled={busy} onClick={() => void remove()}>
+          Permanently remove reviewer
+        </button>
+      )}
     </details>
   );
 }

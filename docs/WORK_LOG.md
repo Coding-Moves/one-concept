@@ -7,12 +7,13 @@ claims as completed work.
 
 ## Current status
 
-### Reviewer invitations and account controls — 2026-10-21
+### Reviewer invitations and account controls — 2026-10-22
 
 - **Outcome:** route new reviewer invitations to the public One Concept Review callback, make authenticator use optional by default for newly invited reviewers, cap active reviewer memberships at ten including the owner, and let an owner permanently remove reviewer access while preserving the person's learning account and historical review evidence.
 - **Scope:** one focused feature branch from current `develop`. The existing reviewer site remains the password setup and sign-in surface; existing confirmed One Concept users keep their Auth identity. Live Supabase URL configuration and email-template installation are separate activation steps, not source-controlled secrets.
-- **Planned commits:** invitation copy/redirect guidance; new-account security default; membership cap; permanent removal and browser controls; validation/handoff. Do not delete Auth users, learning records, or historical editorial evidence.
-- **Status:** tracing production and candidate API paths before implementation. The owner supplied `https://coding-moves-one-concept-review.netlify.app` as the review-site origin and confirmed ten active memberships total, including the owner.
+- **Implementation:** `e4f0cab` adds the reviewer invitation template and exact callback guide; `23fd3ce` makes new owner/reviewer memberships MFA-optional and enforces the ten-active-member limit in FastAPI and Edge; `0670ffb` adds versioned permanent membership removal, clears open assignments, and retains learning accounts and review evidence; `66a8bd0` adjusts assignment email copy for optional MFA. The owner supplied `https://coding-moves-one-concept-review.netlify.app` as the review-site origin and confirmed ten active memberships total, including the owner.
+- **Validation:** 45 focused PostgreSQL tests passed before the Edge execution-mode fix; 41 further PostgreSQL/notification/schema tests passed afterward. The final schema-contract inventory, including the service-only removal RPC, passed 23 tests. Edge handler tests: 95 passed. Review site: 17 component tests, 50 browser tests, typecheck and fixture production build passed. Supabase function TypeScript and Ruff `F,E9` passed.
+- **Activation:** the source fixes are on this feature branch. Production Supabase invitation template, callback allowlist and Railway API redirect setting still require the exact changes in [EMAIL_TEMPLATES.md](EMAIL_TEMPLATES.md); no live invitation or user account was changed during this work.
 
 ### Register protected production workflows on the default branch — 2026-10-21
 

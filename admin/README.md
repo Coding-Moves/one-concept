@@ -50,9 +50,14 @@ actual HTTPS origin; local fixtures do not prove them.
 
 ## Reviewer journey
 
-1. The owner invites an individual email; each person sets their own password.
+1. The owner adds a reviewer by email. A new One Concept account receives an
+   invitation to this website and sets a password here. An existing confirmed
+   learner uses their current email and password. The team allows 10 active
+   reviewers in total, including the owner.
 2. The person submits their registered name. An authorized owner approves it.
-3. They verify an authenticator before opening private editorial content.
+3. Authenticator use starts off for new reviewer memberships. A reviewer may
+   turn on the requirement in **Settings**; when on, they verify a code before
+   opening private editorial content.
 4. They filter **Review queue** by topic, subtopic, status, assigned reviewer,
    deadline or title. Counts cover all matching records, independently of pages.
 5. They open the complete explanation, example, curriculum, references,
@@ -94,8 +99,11 @@ the publication checklist.
 - Owners assign a reviewer and an optional deadline with an audited note.
   Dates are entered/displayed in the browser's local timezone and stored in UTC.
   Deadlines never auto-approve content. Deadline notification emails are #279.
-- **Reviewers** manages invitations, name approval, explicit permissions and
-  revocation. Server safeguards protect the last owner and stale account edits.
+- **Reviewers** manages invitations, name approval, explicit permissions,
+  revocation, and permanent reviewer-access removal. Removal preserves the
+  person's learner account and historical review evidence, clears open review
+  assignments, and blocks further workspace access. Server safeguards protect
+  the last administrator and stale account edits.
 - **Settings** shows the approved identity, pending name, environment and access.
   Name changes affect future signatures; historical evidence remains immutable.
 

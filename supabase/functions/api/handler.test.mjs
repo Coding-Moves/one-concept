@@ -1320,6 +1320,34 @@ test('existing Auth accounts can be enrolled without sending another invitation'
   assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_invite_finish$/);
 });
 
+test('unconfirmed Auth accounts receive a new invitation before enrollment', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const reviewerId = 'fb7214e4-2505-41d3-a47b-98c0d05dcf07';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true,
+    editorialInviteRedirectUrl: 'https://review.example.com/invited' }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.endsWith('/rpc/edge_api_editorial_invite_prepare')) {
+      return Response.json({ user_id: reviewerId, needs_invite: true });
+    }
+    if (url.includes('/auth/v1/invite?')) {
+      return Response.json({ id: reviewerId, email: 'friend@example.com' });
+    }
+    return Response.json({ user_id: reviewerId, status: 'active', version: 1 });
+  });
+  const result = await handler(request('/v1/editorial/reviewers', {
+    method: 'POST', headers: { authorization: `Bearer ${token}`,
+      'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'friend@example.com' }),
+  }));
+  assert.equal(result.status, 201);
+  assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite?')).length, 1);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_invite_finish$/);
+  assert.equal(JSON.parse(calls.at(-1).init.body).p_invited_id, reviewerId);
+});
+
 test('editorial profile requests normalize the name and require the current version', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });

@@ -18,6 +18,25 @@ def _json(value):
 
 
 @pytest.mark.asyncio
+async def test_unconfirmed_existing_identity_needs_an_invitation(api, session):
+    reviewer, _, email = await auth_account(session, confirmed=False)
+    prepare = text("""select public.edge_api_editorial_invite_prepare(
+      :uid,:sid,:aal,:email)""")
+    args = {"uid": api.owner.id, "sid": api.owner.session_id,
+            "aal": "aal2", "email": email}
+    assert _json(await session.scalar(prepare, args)) == {
+        "user_id": str(reviewer), "needs_invite": True,
+    }
+    await session.execute(
+        text("update auth.users set email_confirmed_at=now() where id=:reviewer"),
+        {"reviewer": reviewer},
+    )
+    assert _json(await session.scalar(prepare, args)) == {
+        "user_id": str(reviewer), "needs_invite": False,
+    }
+
+
+@pytest.mark.asyncio
 async def test_invite_existing_identity_rechecks_authority_and_audits(api, session):
     reviewer, _, email = await auth_account(session)
     prepare = text("""select public.edge_api_editorial_invite_prepare(

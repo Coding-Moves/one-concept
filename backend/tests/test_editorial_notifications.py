@@ -170,6 +170,7 @@ async def test_claim_crash_recovery_and_revocation_suppresses(api, session, draf
     await session.commit()
     batch = await notices.claim(session, settings)
     assert batch and batch["attempts"] == 1
+    assert "If you enabled an authenticator requirement" in batch["body"]
     await session.execute(
         text(
             "update editorial_email_batches set lease_until=now()-interval '1 minute' where id=:id"

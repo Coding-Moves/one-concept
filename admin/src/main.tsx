@@ -11,8 +11,11 @@ const fragment = new URLSearchParams(location.hash.slice(1));
 const code = new URLSearchParams(location.search).get("code");
 const ownerDemo = new URLSearchParams(location.search).get("demo") === "owner";
 const callback = location.pathname === "/auth/callback";
-if (location.hash || code)
-  history.replaceState(null, "", callback ? "/auth/callback" : "/");
+const hasTokens = fragment.has("access_token") && fragment.has("refresh_token");
+const hasAuthFragment = fragment.has("access_token") || fragment.has("refresh_token") || fragment.has("error");
+const authReturn = hasAuthFragment || !!code;
+if (authReturn)
+  history.replaceState(null, "", "/auth/callback");
 async function start() {
   // The demo is selected before constructing Auth or any production API client.
   if (ownerDemo) {
@@ -29,21 +32,30 @@ async function start() {
       },
     });
     let initialError = "";
-    if (fragment.has("access_token") && fragment.has("refresh_token")) {
-      const { error } = await auth.auth.setSession({
+    let passwordSetup: "invite" | "recovery" | "setup" | null = null;
+    if (hasTokens) {
+      const { data, error } = await auth.auth.setSession({
         access_token: fragment.get("access_token")!,
         refresh_token: fragment.get("refresh_token")!,
       });
       if (error)
         initialError =
           "This invitation or recovery link is no longer valid. Request a new one.";
-    } else if (code && callback) {
-      const { error } = await auth.auth.exchangeCodeForSession(code);
+      else if (data.session)
+        passwordSetup = fragment.get("type") === "invite"
+          ? "invite"
+          : fragment.get("type") === "recovery" ? "recovery" : "setup";
+    } else if (code) {
+      const { data, error } = await auth.auth.exchangeCodeForSession(code);
       if (error)
         initialError =
-          "This recovery link could not be verified. Open it in the browser that requested it, or request a new one.";
-    } else if (fragment.has("error"))
+          "This email link could not be verified. Open it in the browser that requested it, or request a new one.";
+      else if (data.session)
+        passwordSetup = "setup";
+    } else if (hasAuthFragment)
       initialError = "This sign-in link has expired or could not be verified.";
+    else if (callback)
+      initialError = "Open your invitation or recovery link from the email, or sign in with your existing account.";
     root.render(
       <App
         auth={auth}
@@ -55,7 +67,7 @@ async function start() {
             : null;
         })}
         environment={config.environment}
-        passwordSetup={callback && !initialError}
+        passwordSetup={passwordSetup}
         initialError={initialError}
       />,
     );

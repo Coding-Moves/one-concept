@@ -568,13 +568,14 @@ test("invitation callback clears URL credentials and allows private password set
       "&type=invite",
   );
   await expect(
-    page.getByRole("heading", { name: "Set your password" }),
+    page.getByRole("heading", { name: "Finish creating your account" }),
   ).toBeVisible();
   expect(new URL(page.url()).hash).toBe("");
   await page
     .getByLabel("Password", { exact: true })
     .fill("new-private-fixture-password");
-  await page.getByRole("button", { name: "Save password" }).click();
+  await page.getByLabel("Confirm password").fill("new-private-fixture-password");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
   await expect(
     page.getByRole("heading", { name: "A little care. Better learning." }),
   ).toBeVisible();

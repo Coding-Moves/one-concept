@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { Api, ApiError } from "./api";
-import { Login, Mfa } from "./Auth";
+import { AccountSetup, Login, Mfa } from "./Auth";
 import { Notice, message } from "./ui";
 import type { Me } from "./types";
 import { Settings } from "./Settings";
@@ -28,13 +28,13 @@ export function App({
   auth,
   api,
   environment,
-  passwordSetup: initialSetup = false,
+  passwordSetup: initialSetup = null,
   initialError = "",
 }: {
   auth: SupabaseClient;
   api: Api;
   environment: string;
-  passwordSetup?: boolean;
+  passwordSetup?: "invite" | "recovery" | "setup" | null;
   initialError?: string;
 }) {
   const [session, setSession] = useState<Session | null>(null),
@@ -86,7 +86,7 @@ export function App({
         dirty.current = false;
         setEpoch((n) => n + 1);
       }
-      if (event === "PASSWORD_RECOVERY") setSetup(true);
+      if (event === "PASSWORD_RECOVERY") setSetup("recovery");
     });
     api.onDenied = (status) => {
       api.setToken(
@@ -196,19 +196,23 @@ export function App({
         Opening One Concept Review…
       </div>
     );
-  if (!session || setup)
+  if (session && setup)
+    return (
+      <AccountSetup
+        auth={auth}
+        email={session.user.email || ""}
+        flow={setup}
+        onPasswordSet={() => {
+          setSetup(null);
+          navigate({ view: "queue" });
+        }}
+      />
+    );
+  if (!session)
     return (
       <>
         {error && <Notice error>{error}</Notice>}
-        <Login
-          key={epoch}
-          auth={auth}
-          passwordSetup={setup && !!session}
-          onPasswordSet={() => {
-            setSetup(false);
-            navigate({ view: "queue" });
-          }}
-        />
+        <Login key={epoch} auth={auth} />
       </>
     );
   const can = (cap: string) => !!me?.member.capabilities.includes(cap as never);

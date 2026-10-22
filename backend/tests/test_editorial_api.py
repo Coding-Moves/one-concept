@@ -493,6 +493,8 @@ async def test_invitation_failure_has_no_membership_and_retry_is_safe(
     async def provider(address, settings):
         nonlocal calls
         calls += 1
+        if calls == 2:
+            return uid
         await session.execute(
             text("insert into auth.users(id,email) values (:id,:email)"),
             {"id": uid, "email": email},
@@ -518,7 +520,10 @@ async def test_invitation_failure_has_no_membership_and_retry_is_safe(
     retried = await api.client.post(
         "/v1/editorial/reviewers", headers=api.headers(), json={"email": email}
     )
-    assert retried.status_code == 201 and calls == 1
+    assert retried.status_code == 201 and calls == 2
+    # The existing unconfirmed Auth identity is invited again, not silently
+    # enrolled without a usable confirmation and password setup link.
+    assert retried.json()["user_id"] == str(uid)
     # Invitation is not equivalent to confirmation or approved onboarding.
     assert (
         await api.client.get("/v1/editorial/me", headers=api.headers(uid, sid))

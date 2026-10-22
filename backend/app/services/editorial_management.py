@@ -35,24 +35,28 @@ async def invite(
 ) -> Member:
     await authorize(db, actor, settings, "manage_reviewers", mutation=True)
     await require_team_slot(db)
-    # An existing Auth account is explicitly enrolled by this owner request.
-    # Retry after an ambiguous provider response binds the same account instead
-    # of sending more mail; confirmation/onboarding are still required.
+    # Confirmed learners keep their account and password. An unconfirmed Auth
+    # identity may be an earlier invite whose membership transaction failed;
+    # resend its invitation so it still has a usable confirmation/setup link.
     rows = (
         (
             await db.execute(
-                text("select id from auth.users where lower(email)=:email"),
+                text("select id,email_confirmed_at from auth.users where lower(email)=:email"),
                 {"email": body.email},
             )
         )
-        .scalars()
+        .mappings()
         .all()
     )
     if len(rows) > 1:
         raise HTTPException(
             409, "Resolve duplicate Auth email identities before inviting"
         )
-    uid = rows[0] if rows else await invite_auth_user(body.email, settings)
+    uid = (
+        rows[0]["id"]
+        if rows and rows[0]["email_confirmed_at"] is not None
+        else await invite_auth_user(body.email, settings)
+    )
     # Validate provider identity against the authoritative project DB as well.
     matches = await db.scalar(
         text(

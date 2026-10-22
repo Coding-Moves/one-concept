@@ -35,6 +35,7 @@ async def test_invite_existing_identity_rechecks_authority_and_audits(api, sessi
     assert member["user_id"] == str(reviewer)
     assert member["invited_email"] == email
     assert member["capabilities"] == ["approve", "review"]
+    assert member["require_mfa"] is False
     assert member["version"] == 1
     await session.commit()
     saved = await api.client.get(f"{content.ROOT}/reviewers", headers=api.headers())

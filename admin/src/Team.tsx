@@ -28,7 +28,7 @@ export function Team({ api, me }: { api: Api; me: Me }) {
       await api.request("/reviewers", "POST", { email, capabilities: caps });
       setEmail("");
       setNotice(
-        "Membership created. New accounts receive an invitation; existing accounts use their own sign-in or recovery.",
+        "Reviewer access created. New users receive a link to set their password; existing One Concept users sign in with their current email and password.",
       );
       setRefresh((n) => n + 1);
     } catch (e) {
@@ -49,8 +49,8 @@ export function Team({ api, me }: { api: Api; me: Me }) {
       <section className="card">
         <h2>Invite a reviewer</h2>
         <p>
-          Reviewers set their own passwords. Start with your three-person team
-          and add others whenever needed.
+          Up to 10 active reviewers, including the owner, can use this workspace.
+          New users set their own password; existing One Concept users keep theirs.
         </p>
         {error && <Notice error>{error}</Notice>}
         {notice && <Notice>{notice}</Notice>}

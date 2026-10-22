@@ -103,7 +103,9 @@ async def test_multi_reviewer_onboarding_and_editable_profile(api, session):
         uid, sid, member = await enroll(api, session)
         own = api.headers(uid, sid, "aal1")
         me = await api.client.get("/v1/editorial/me", headers=own)
-        assert me.json()["onboarding_required"] and me.json()["mfa_required"]
+        assert me.json()["onboarding_required"]
+        assert me.json()["mfa_required"] is False
+        assert member["require_mfa"] is False
         assert me.headers["cache-control"] == "no-store"
         member = await profile_and_approve(api, uid, sid)
         assert member["approved_name"] == "Reviewer Name"

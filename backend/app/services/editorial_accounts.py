@@ -149,8 +149,8 @@ async def bootstrap_owner(db: AsyncSession, email: str, name: str) -> Member:
     row = rows[0]
     await db.execute(
         text("""insert into public.editorial_memberships
-        (user_id,invited_email,capabilities,requested_name,approved_name)
-        values (:uid,:email,:caps,:name,:name)"""),
+        (user_id,invited_email,capabilities,requested_name,approved_name,require_mfa)
+        values (:uid,:email,:caps,:name,:name,false)"""),
         {"uid": row["id"], "email": row["email"], "caps": CAPABILITIES, "name": name},
     )
     await audit(

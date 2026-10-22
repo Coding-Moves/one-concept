@@ -54,10 +54,13 @@ async def test_reviewer_can_change_only_their_own_authenticator_choice(api, sess
     uid, sid, _ = await enroll(api, session)
     reviewer = await profile_and_approve(api, uid, sid)
     initial = (await api.client.get("/v1/editorial/me", headers=api.headers(uid, sid, "aal1"))).json()
-    assert initial["member"]["require_mfa"] is True
+    assert initial["member"]["require_mfa"] is False
+    enabled = await api.client.patch("/v1/editorial/me/authenticator", headers=api.headers(uid, sid, "aal1"),
+        json={"expected_version": reviewer["version"], "require_mfa": True})
+    assert enabled.status_code == 200, enabled.text
     reviewer_fresh = api.headers(uid, sid, "aal2", amr=[{"method": "totp", "timestamp": int(time.time())}])
     changed = await api.client.patch("/v1/editorial/me/authenticator", headers=reviewer_fresh,
-        json={"expected_version": reviewer["version"], "require_mfa": False})
+        json={"expected_version": enabled.json()["version"], "require_mfa": False})
     assert changed.status_code == 200, changed.text
     assert changed.json()["user_id"] == str(uid)
     assert (await api.client.get("/v1/editorial/queue", headers=api.headers(uid, sid, "aal1"))).status_code == 200

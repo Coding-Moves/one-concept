@@ -1651,6 +1651,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
               invalid: [422, 'Invalid reviewer invitation'],
               duplicate_identity: [409, 'Resolve duplicate Auth email identities before inviting'],
               reviewer_exists: [409, 'Reviewer already exists; use their versioned access settings'],
+              team_full: [409, 'The team already has 10 active reviewers'],
               identity_not_ready: [502, 'Invited identity is not yet available; retry after checking Auth'],
             };
             if (typeof data.error !== 'string') return null;
@@ -1958,6 +1959,9 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
         }
         if (data.error === 'last_admin') {
           return editorialResponse({ detail: 'Keep another confirmed, approved administrator before removing this access' }, 409, cors);
+        }
+        if (data.error === 'team_full') {
+          return editorialResponse({ detail: 'The team already has 10 active reviewers' }, 409, cors);
         }
         if (data.error === 'policy_conflict') {
           return editorialResponse({ detail: 'Policy changed; refresh before saving' }, 409, cors);

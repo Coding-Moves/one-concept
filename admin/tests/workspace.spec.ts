@@ -449,7 +449,7 @@ test("owner assigns a deadline, invites a reviewer and requests bounded drafts",
     .getByRole("button", { name: "Invite reviewer", exact: true })
     .click();
   await expect(
-    page.getByText("Membership created.", { exact: false }),
+    page.getByText("Reviewer access created.", { exact: false }),
   ).toBeVisible();
   await page.getByRole("button", { name: "AI requests", exact: true }).click();
   await page

@@ -13,11 +13,24 @@ from app.schemas.editorial import AccessInput, AuthenticatorInput, InviteInput, 
 from app.services.editorial_accounts import audit, authorize, check_version, membership
 from app.services.editorial_invites import invite_auth_user
 
+MAX_ACTIVE_REVIEWERS = 10
+
+
+async def require_team_slot(db: AsyncSession) -> None:
+    # Account mutations hold the same advisory lock, so concurrent invitations
+    # and reactivations cannot both claim the last slot.
+    active = await db.scalar(
+        text("select count(*) from public.editorial_memberships where status='active'")
+    )
+    if active >= MAX_ACTIVE_REVIEWERS:
+        raise HTTPException(409, "The team already has 10 active reviewers")
+
 
 async def invite(
     db: AsyncSession, actor: CurrentUser, settings: Settings, body: InviteInput
 ) -> Member:
     await authorize(db, actor, settings, "manage_reviewers", mutation=True)
+    await require_team_slot(db)
     # An existing Auth account is explicitly enrolled by this owner request.
     # Retry after an ambiguous provider response binds the same account instead
     # of sending more mail; confirmation/onboarding are still required.
@@ -56,8 +69,8 @@ async def invite(
         )
     caps = sorted(set(body.capabilities))
     await db.execute(
-        text("""insert into editorial_memberships(user_id,invited_email,capabilities)
-        values (:id,:email,:caps)"""),
+        text("""insert into editorial_memberships(user_id,invited_email,capabilities,require_mfa)
+        values (:id,:email,:caps,false)"""),
         {"id": uid, "email": body.email, "caps": caps},
     )
     await audit(db, actor.id, uid, "invite", {"capabilities": caps})
@@ -186,6 +199,8 @@ async def change_access(
             )
     if current.status == body.status and set(current.capabilities) == set(caps):
         return current
+    if current.status != "active" and body.status == "active":
+        await require_team_slot(db)
     await db.execute(
         text("""update editorial_memberships set status=:status,capabilities=:caps,
         version=version+1,updated_at=now() where user_id=:id"""),

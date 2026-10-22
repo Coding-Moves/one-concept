@@ -100,7 +100,9 @@ for compatibility, historical offline semantics and rollout.
 `main.tsx` supplies the current Supabase session to `api.ts` before private
 requests; the API client refreshes an idle token and fences account changes and
 late denials without discarding recoverable review work.
-`Auth.tsx` handles invitation/recovery, password and MFA; `Settings.tsx` handles
+`Auth.tsx` renders a dedicated verified invitation/recovery password setup form,
+direct sign-in and MFA; `main.tsx` removes callback credentials before rendering
+and opens setup only after a valid Supabase session exchange. `Settings.tsx` handles
 registered identity, and `AuthenticatorSetting.tsx` lets owners and reviewers
 choose whether MFA is required for their own account. `editorial_accounts.py`
 enforces that persisted choice for every editorial capability. Disabling it

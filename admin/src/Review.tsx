@@ -600,6 +600,13 @@ export function Review({
                 onChange={(e) => setNote(e.target.value)}
               />
             </Field>
+            {revision && detail.status === "pending_review" && (
+              <p className="muted">
+                Add comment saves feedback only. Request changes queues an AI
+                correction for the next worker run when generation is enabled.
+                The new draft still needs human review.
+              </p>
+            )}
             {revision &&
               ["changes_requested", "validation_failed", "rejected"].includes(
                 detail.status,

@@ -63,7 +63,9 @@ const server = http.createServer((req, res) => {
       });
       assert.equal(scrollableCode, true, 'long code stays in a horizontal scroll container');
       assert.equal(await page.locator('a[href^="javascript:"]').count(), 0);
+      assert.equal((await page.locator('body').innerText()).includes('[unsafe](javascript:'), false);
       assert.deepEqual(errors, []);
+      await page.screenshot({ path: `/tmp/markdown-lesson-${theme}.png`, fullPage: true, animations: 'disabled' });
       console.log(`${theme}: lesson Markdown renders safely`);
       await context.close();
     }

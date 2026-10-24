@@ -11,6 +11,9 @@ import { codeTokens } from './markdownCode';
 type MdNode = { type: string; tag: string; content: string; info: string; attrs: [string, string | number][] | null; children: MdNode[] };
 type MdToken = { type: string; tag: string; nesting: number; content: string; info?: string; attrs: [string, string | number][] | null; children: MdToken[] | null };
 const parser = new MarkdownIt({ html: false, linkify: false, typographer: false });
+// Parse link labels even when their destination is unsafe; the renderer below
+// then presents only the label instead of leaking Markdown punctuation.
+parser.validateLink = () => true;
 
 function tree(tokens: readonly MdToken[]): MdNode[] {
   const root: MdNode = { type: 'root', tag: '', content: '', info: '', attrs: null, children: [] };
@@ -74,7 +77,7 @@ export function MarkdownText({ value, style, inline = false, interactiveLinks = 
         case 's_open': return <Text key={key} style={{ textDecorationLine: 'line-through' }}>{renderInline(node.children)}</Text>;
         case 'link_open': {
           const url = safeLink(String(node.attrs?.find(([name]) => name === 'href')?.[1] ?? ''));
-          return <Text key={key} style={{ color: colors.primary, textDecorationLine: 'underline' }} onPress={url && interactiveLinks ? () => { void Linking.openURL(url); } : undefined}>{renderInline(node.children)}</Text>;
+          return <Text key={key} style={url ? { color: colors.primary, textDecorationLine: 'underline' } : undefined} onPress={url && interactiveLinks ? () => { void Linking.openURL(url); } : undefined}>{renderInline(node.children)}</Text>;
         }
         case 'image': return node.content || node.children.map(child => child.content).join('');
         case 'html_inline': return node.content;

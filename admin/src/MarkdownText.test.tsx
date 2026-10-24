@@ -20,6 +20,7 @@ describe("lesson Markdown", () => {
     const html = renderToStaticMarkup(<MarkdownText value={"```unknown\n<script>alert(1)</script>\n```\n\n[click](javascript:alert(1))\n\n<img src=x onerror=alert(1)>"} />);
     expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("href=\"javascript:");
+    expect(html).not.toContain("[click](javascript:");
     expect(html).not.toContain("<img");
   });
 

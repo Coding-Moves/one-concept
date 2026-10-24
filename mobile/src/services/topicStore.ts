@@ -37,6 +37,11 @@ export class TopicStore {
 
   async load(): Promise<ServerTopic[]> {
     const revision = ++this.revision;
+    // A refresh started just after a toggle must see its queued intent before
+    // overlaying an older server response. Otherwise the stale response can
+    // restore a follow that the learner has already removed.
+    await this.writes;
+    if (revision !== this.revision) return this.topics;
     const cached = await this.deps.read();
     const overlay = (rows: ServerTopic[], slugs?: string[]) => slugs
       ? rows.map(topic => ({ ...topic, following: slugs.includes(topic.slug) }))

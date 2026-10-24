@@ -89,6 +89,27 @@ test('last unfollow stays empty across a stale catalog reload and a new store', 
   assert.equal(reopened.getSnapshot().some(topic => topic.following), false);
 });
 
+test('a refresh cannot restore a stale follow while the last-unfollow enqueue is pending', async () => {
+  const { store, deps } = setup();
+  await store.load();
+  const enqueued = deferred();
+  const releaseEnqueue = deferred();
+  deps.enqueue = async slugs => {
+    enqueued.resolve();
+    await releaseEnqueue.promise;
+    deps.queued = slugs;
+  };
+  deps.pending = async () => deps.queued;
+
+  const unfollow = store.toggle('computer-science');
+  await enqueued.promise;
+  const refresh = store.load();
+  await tick();
+  releaseEnqueue.resolve();
+  await Promise.all([unfollow, refresh]);
+  assert.equal(store.getSnapshot()[0].following, false);
+});
+
 test('catalog cache failure cannot roll back a durable follow intent', async () => {
   const { store, deps, calls } = setup();
   await store.load();

@@ -157,9 +157,8 @@ async def test_state_aggregates_everything_the_app_needs(session, user):
 async def test_bootstrap_creates_everything_when_the_trigger_did_not(session):
     """The safety net must work for a user with no profile at all.
 
-    ensure_bootstrapped runs profile, preferences, and follows in one statement
-    for latency, and follows carry a foreign key to profiles — so this asserts
-    the FK is satisfied within that single statement rather than assuming it.
+    Missing-trigger accounts still start without topic follows; an old default
+    here would silently bypass the opt-in signup migration.
     """
     import uuid as _uuid
 
@@ -187,7 +186,9 @@ async def test_bootstrap_creates_everything_when_the_trigger_did_not(session):
         text("select count(*) from public.notification_preferences where user_id = :u"), {"u": user_id})
     follows = await session.scalar(
         text("select count(*) from public.user_topics where user_id = :u"), {"u": user_id})
-    assert (profiles, prefs, follows) == (1, 1, 5)
+    assert (profiles, prefs, follows) == (1, 1, 0)
+    daily = await get_or_create_daily(session, user_id, today=DAY)
+    assert daily.status == "personalization_required"
 
 
 async def test_bootstrap_does_not_resurrect_unfollowed_topics(session, user):

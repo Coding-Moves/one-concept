@@ -36,6 +36,17 @@ export class TopicStore {
   }
 
   async load(): Promise<ServerTopic[]> {
+    const epoch = this.epoch;
+    // Settle local writes before claiming a refresh revision. Claiming it
+    // earlier would suppress a failed toggle's rollback while offline.
+    // A toggle can arrive during the wait, so repeat until the write tail is
+    // stable before reading the queued intent and older server response.
+    for (;;) {
+      const writes = this.writes;
+      await writes;
+      if (epoch !== this.epoch) return this.topics;
+      if (writes === this.writes) break;
+    }
     const revision = ++this.revision;
     const cached = await this.deps.read();
     const overlay = (rows: ServerTopic[], slugs?: string[]) => slugs
@@ -70,7 +81,9 @@ export class TopicStore {
       // All follows use the durable queue, even online. A single replay path
       // preserves order when connectivity changes during rapid taps.
       await this.deps.enqueue(next.filter(topic => topic.following).map(topic => topic.slug));
-      if (epoch === this.epoch) await this.deps.write(next);
+      // The queued intent is authoritative. A catalog-cache write failure
+      // must not undo a choice that the sync loop will still send later.
+      if (epoch === this.epoch) await this.deps.write(next).catch(() => {});
     });
     this.writes = write.catch(() => {});
     return write.catch(error => {

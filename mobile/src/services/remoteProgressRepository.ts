@@ -195,10 +195,9 @@ export class RemoteProgressRepository implements ProgressRepository {
     return this.fromState(payload, epoch);
   }
 
-  async uploadAvatar(uri: string, mimeType: string, userId: string): Promise<ProgressState> {
+  async uploadAvatar(jpeg: Blob, userId: string): Promise<ProgressState> {
     const epoch = this.epoch;
-    const response = await fetch(uri); const body = await response.blob();
-    const payload = await this.request<StatePayload>(epoch, '/v1/me/avatar?compact=true', { method: 'PUT', rawBody: body, contentType: mimeType, expectedUserId: userId });
+    const payload = await this.request<StatePayload>(epoch, '/v1/me/avatar?compact=true', { method: 'PUT', rawBody: jpeg, contentType: 'image/jpeg', expectedUserId: userId });
     return this.fromState(payload, epoch);
   }
 

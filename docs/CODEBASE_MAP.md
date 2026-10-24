@@ -110,8 +110,9 @@ packages, diffs, history, comments, checklist decisions and safe corrections.
 subject batch at a time. `services/legacy_generation.py` builds a grounded
 complete-card candidate and `legacy_enrichment_worker.py` stages it privately
 through the scheduled `pool_topup.py` run; only a later human approval publishes.
-`MarkdownText.tsx` safely renders lesson writing and `LessonEditor` shows a live
-preview; identifiers and configuration fields remain plain text.
+`MarkdownText.tsx` safely renders lesson writing, with `markdownCode.tsx` adding
+bounded Prism token highlighting to fenced code; `LessonEditor` shows a live
+preview. Identifiers and configuration fields remain plain text.
 `api.ts` and `useCommand.ts` preserve exact operation retries and stale-token
 failures. Migration 0037 adds audited review deadlines. Queue totals are computed
 with page results in one statement; published rows require matching exact-version
@@ -248,7 +249,7 @@ inside a root stack, with a concept-detail modal above them.
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, icon-marked accessible answer selection, result feedback and reattempts. |
 | `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, icon-marked accessible answer selection, retries, and prior-score history. |
 | `ProfileScreen.tsx` | Task-grouped account hub: profile/privacy, learning, topics, preferences, library and support. It keeps clear reminder prerequisites and immediate per-control queued reminder writes. |
-| `EditProfileScreen.tsx` / `services/profilePhotoPicker.ts` | Name and bio editing, camera/library photo preview and explicit save, account-bound Android picker recovery, and confirmed avatar writes. |
+| `EditProfileScreen.tsx` / `services/profilePhotoPicker.ts` / `services/profilePhotoPreparation.ts` | Keyboard-aware name and bio editing, camera/library photo preview and explicit save, account-bound Android picker recovery, bounded JPEG preparation, and confirmed avatar writes. |
 | `ProfileSharingScreen.tsx` / `ProfilePublishReviewSheet.tsx` / `PublicProfileLink.tsx` | Opt-in, independently selected sharing fields, a private review-before-publish step, explicit unpublish confirmation, native share/local QR, and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
@@ -258,7 +259,8 @@ inside a root stack, with a concept-detail modal above them.
 
 All screens live in `mobile/src/screens/`. Reusable presentation in
 `mobile/src/components/` covers lesson cards/actions, category/follow controls,
-reviewed lesson and quiz Markdown through the pure-JavaScript `MarkdownText`,
+reviewed lesson and quiz Markdown through `MarkdownText` and its bounded Prism
+code tokenizer,
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.
@@ -338,6 +340,8 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
 - `hooks/useTopics.ts`, `services/topicsApi.ts`, and `topicStore.ts` share the
   cached dynamic topic catalog. Follow changes enter the same durable outbox as
   other actions; queued choices override stale server responses until replay.
+  A catalog-cache write failure cannot roll back an already queued choice;
+  the Following screen shows pending sync and local save/refresh errors.
   Both the catalog and full-concept cache participate in account cleanup.
 - `services/notifications.ts` handles permissions, Android channel setup, Expo
   tokens, timezone sync, preference caching, and deregistration before sign-out.
@@ -523,6 +527,8 @@ enforce one daily assignment and no concept repeats per user. RLS adds isolation
 | `0014_content_operations.sql` | Worker heartbeat and deduplicated condition state. |
 | `0015_revision_generation_claims.sql` | Durable claims for correction drafting. |
 | `0017_topic_subtopics.sql`–`0019_subtopic_topic_cleanup.sql` | Parent-scoped subtopics, explicit classification of published/planned content, category integrity, and safe empty-topic cleanup. |
+| `0131_opt_in_followed_topics.sql` | New Auth users start with no follows; existing `user_topics` rows remain untouched. Apply through the normal migration gate before releasing the matching mobile UI. |
+| `0132_opt_in_edge_bootstrap.sql` | Daily/state, achievements, weekly quiz, and subtopic quiz Edge first-request paths create only profile/preferences when the Auth trigger was skipped. They never seed topic follows; existing follows remain untouched. |
 
 Migrations 0001–0015 are recorded in `migrations/applied.txt`. The owner applied
 0011–0015 during 1.9.0 release preparation, and a separate read-only production

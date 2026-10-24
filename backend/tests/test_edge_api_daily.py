@@ -18,6 +18,26 @@ def _json(value):
 
 
 @pytest.mark.asyncio
+async def test_new_account_starts_without_follows_and_can_opt_in(session):
+    fresh = uuid.uuid4()
+    await session.execute(text("insert into auth.users(id,email) values (:id,:email)"),
+                          {"id": fresh, "email": f"{fresh}@example.invalid"})
+    await session.commit()
+    assert await session.scalar(text("select count(*) from public.profiles where id=:id"), {"id": fresh}) == 1
+    assert await session.scalar(text("select count(*) from public.notification_preferences where user_id=:id"), {"id": fresh}) == 1
+    assert await session.scalar(text("select count(*) from public.user_topics where user_id=:id"), {"id": fresh}) == 0
+    before = _json(await session.scalar(DAILY, {"uid": fresh, "day": DAY}))
+    assert before["reason"] == "personalization_required"
+    assert await session.scalar(text("select count(*) from public.daily_assignments where user_id=:id"), {"id": fresh}) == 0
+
+    saved = _json(await session.scalar(text("select public.edge_api_set_topics(:id,:slugs,true,:day)"),
+                                       {"id": fresh, "slugs": ["software-engineering"], "day": DAY}))
+    assert saved["followed_topics"] == ["software-engineering"]
+    selected = _json(await session.scalar(DAILY, {"uid": fresh, "day": DAY}))
+    assert selected["concept"]["topic_slug"] == "software-engineering"
+
+
+@pytest.mark.asyncio
 async def test_daily_requires_active_follow_and_never_chooses_other_subjects(session, user):
     await session.execute(text("delete from public.user_topics where user_id = :uid"), {"uid": user})
     await session.commit()

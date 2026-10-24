@@ -1,6 +1,6 @@
 import { Category, ProgressState } from '../types';
 import { ProgressRepository } from './progressRepository';
-import { EMPTY_PROGRESS, loadProgress, saveProgress } from './storage';
+import { GUEST_PROGRESS, loadProgress, saveProgress } from './storage';
 
 function toggleInList(list: string[], id: string): string[] {
   return list.includes(id) ? list.filter((x) => x !== id) : [...list, id];
@@ -14,7 +14,7 @@ function toggleInList(list: string[], id: string): string[] {
  * same class becomes the offline cache behind the HTTP repository.
  */
 export class LocalProgressRepository implements ProgressRepository {
-  private cache: ProgressState = EMPTY_PROGRESS;
+  private cache: ProgressState = GUEST_PROGRESS;
 
   async load(): Promise<ProgressState> {
     this.cache = await loadProgress();

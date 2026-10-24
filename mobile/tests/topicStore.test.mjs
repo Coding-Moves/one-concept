@@ -15,8 +15,8 @@ function setup() {
   return { deps, calls, store: new TopicStore(deps) };
 }
 function deferred() {
-  let resolve;
-  return { promise: new Promise(r => { resolve=r; }), resolve: (...args) => resolve(...args) };
+  let resolve, reject;
+  return { promise: new Promise((r, j) => { resolve=r; reject=j; }), resolve: (...args) => resolve(...args), reject: (...args) => reject(...args) };
 }
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -108,6 +108,26 @@ test('a refresh cannot restore a stale follow while the last-unfollow enqueue is
   releaseEnqueue.resolve();
   await Promise.all([unfollow, refresh]);
   assert.equal(store.getSnapshot()[0].following, false);
+});
+
+test('a failed pending enqueue still rolls back when a refresh also fails offline', async () => {
+  const { store, deps } = setup();
+  await store.load();
+  const enqueued = deferred();
+  const releaseEnqueue = deferred();
+  deps.enqueue = async () => {
+    enqueued.resolve();
+    await releaseEnqueue.promise;
+  };
+  deps.fetch = async () => { throw new Error('offline'); };
+
+  const unfollow = store.toggle('computer-science');
+  await enqueued.promise;
+  const refresh = store.load();
+  releaseEnqueue.reject(new Error('queue storage unavailable'));
+  await assert.rejects(unfollow, /queue storage unavailable/);
+  await refresh;
+  assert.equal(store.getSnapshot()[0].following, true);
 });
 
 test('catalog cache failure cannot roll back a durable follow intent', async () => {

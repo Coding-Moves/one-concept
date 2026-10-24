@@ -36,12 +36,18 @@ export class TopicStore {
   }
 
   async load(): Promise<ServerTopic[]> {
+    const epoch = this.epoch;
+    // Settle local writes before claiming a refresh revision. Claiming it
+    // earlier would suppress a failed toggle's rollback while offline.
+    // A toggle can arrive during the wait, so repeat until the write tail is
+    // stable before reading the queued intent and older server response.
+    for (;;) {
+      const writes = this.writes;
+      await writes;
+      if (epoch !== this.epoch) return this.topics;
+      if (writes === this.writes) break;
+    }
     const revision = ++this.revision;
-    // A refresh started just after a toggle must see its queued intent before
-    // overlaying an older server response. Otherwise the stale response can
-    // restore a follow that the learner has already removed.
-    await this.writes;
-    if (revision !== this.revision) return this.topics;
     const cached = await this.deps.read();
     const overlay = (rows: ServerTopic[], slugs?: string[]) => slugs
       ? rows.map(topic => ({ ...topic, following: slugs.includes(topic.slug) }))

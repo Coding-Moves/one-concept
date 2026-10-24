@@ -22,7 +22,7 @@
     "expo-splash-screen": "~57.0.10",
     "expo-status-bar": "~57.0.1",
     "expo-updates": "~57.0.26",
-    "markdown-it": "15.0.2",
+    "markdown-it": "15.0.3",
     "qrcode-generator": "2.0.4",
     "react": "19.2.8",
     "react-dom": "19.2.8",

@@ -28,7 +28,7 @@ export function Team({ api, me }: { api: Api; me: Me }) {
       await api.request("/reviewers", "POST", { email, capabilities: caps });
       setEmail("");
       setNotice(
-        "Membership created. New accounts receive an invitation; existing accounts use their own sign-in or recovery.",
+        "Reviewer access created. New users receive a link to set their password; existing One Concept users sign in with their current email and password.",
       );
       setRefresh((n) => n + 1);
     } catch (e) {
@@ -49,8 +49,8 @@ export function Team({ api, me }: { api: Api; me: Me }) {
       <section className="card">
         <h2>Invite a reviewer</h2>
         <p>
-          Reviewers set their own passwords. Start with your three-person team
-          and add others whenever needed.
+          Up to 10 active reviewers, including the owner, can use this workspace.
+          New users set their own password; existing One Concept users keep theirs.
         </p>
         {error && <Notice error>{error}</Notice>}
         {notice && <Notice>{notice}</Notice>}
@@ -175,6 +175,23 @@ function MemberRow({
       setBusy(false);
     }
   }
+  async function remove() {
+    if (!confirm(`Permanently remove reviewer access for ${member.invited_email}? Their One Concept learning account and past review history will remain.`))
+      return;
+    setBusy(true);
+    setError("");
+    try {
+      await api.request(
+        `/reviewers/${member.user_id}?expected_version=${member.version}`,
+        "DELETE",
+      );
+      changed();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
     <details className="member">
       <summary>
@@ -208,6 +225,11 @@ function MemberRow({
       <button disabled={busy} onClick={() => void save()}>
         Save account access
       </button>
+      {!self && (
+        <button type="button" disabled={busy} onClick={() => void remove()}>
+          Permanently remove reviewer
+        </button>
+      )}
     </details>
   );
 }

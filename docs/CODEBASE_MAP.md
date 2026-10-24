@@ -22,7 +22,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Supabase scheduled workers | `supabase/functions/worker/` validates signed Cron calls; migrations 0119–0120 own the disabled run ledger and HTTP reconciliation; migrations 0128–0129 feed owner reporting and bound run history; migration 0130 fences uncertain Gmail delivery; `backend/ops/supabase_workers/` installs inactive platform Cron jobs. See `docs/SUPABASE_WORKER_MIGRATION.md` for staged handover. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
-| Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
+| Authentication email | `backend/email-templates/` contains branded signup, reviewer invitation, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
 | Engineering handbook | `docs/handbook/ONE_CONCEPT_HANDBOOK.md` explains the full stack and learning lifecycle; `docs/handbook/build_pdf.py` renders the printable guide with vector diagrams. Build and verification instructions are in `docs/handbook/README.md`. |
 
 ## Editorial identities (#274)
@@ -33,7 +33,12 @@ email, membership, capabilities and MFA before account-lock acquisition and
 again afterward, using current-query time for session deadlines;
 `editorial_management.py` serializes
 versioned account mutations and records their audit events. `editorial_invites.py`
-is the server-only Auth invitation adapter. Migration `0032_editorial_accounts.sql`
+is the server-only Auth invitation adapter. New memberships start with optional
+MFA and the account lock caps active reviewer memberships at 10 including the
+owner. Migration 0131 applies the same rules to the Edge API; migration 0134
+resends invites to existing unconfirmed Auth users. Migration 0132 removes
+reviewer membership without deleting Auth or historical evidence, and
+clears open assignments. Migration `0032_editorial_accounts.sql`
 keeps memberships and account events inaccessible to browser roles. The one-time
 owner CLI is `python -m app.workers.editorial_accounts`; see
 [editorial-accounts.md](editorial-accounts.md) for activation and frontend handoff.
@@ -96,7 +101,9 @@ for compatibility, historical offline semantics and rollout.
 `main.tsx` supplies the current Supabase session to `api.ts` before private
 requests; the API client refreshes an idle token and fences account changes and
 late denials without discarding recoverable review work.
-`Auth.tsx` handles invitation/recovery, password and MFA; `Settings.tsx` handles
+`Auth.tsx` renders a dedicated verified invitation/recovery password setup form,
+direct sign-in and MFA; `main.tsx` removes callback credentials before rendering
+and opens setup only after a valid Supabase session exchange. `Settings.tsx` handles
 registered identity, and `AuthenticatorSetting.tsx` lets owners and reviewers
 choose whether MFA is required for their own account. `editorial_accounts.py`
 enforces that persisted choice for every editorial capability. Disabling it

@@ -16,7 +16,7 @@ def test_email_has_plain_fallback_and_safe_accessible_html():
         "You have 1 assigned lesson(s) ready for review.\n\n"
         'Topic: <img src=x onerror="bad()"> & Engineering | Due: 2026-10-04 18:00 PKT\n'
         + url
-        + "\n\nSign in with your invited account and authenticator.\n"
+        + "\n\nSign in with your account. If you enabled an authenticator requirement, verify it there.\n"
     )
     msg = editorial_mail.message(
         SimpleNamespace(

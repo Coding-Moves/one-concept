@@ -127,7 +127,7 @@ async def prepare(db, settings):
             url = f"{settings.editorial_email_dashboard_url.rstrip('/')}/?view=review&kind=revisions&id={item['revision_id']}"
             body.extend([f"Topic: {item['topic_name']} | Due: {due}", url, ""])
         body.append(
-            "Sign in with your invited account and authenticator. Review and approval happen only in the workspace."
+            "Sign in with your account. If you enabled an authenticator requirement, verify it there. Review and approval happen only in the workspace."
         )
         bid = uuid4()
         await db.execute(

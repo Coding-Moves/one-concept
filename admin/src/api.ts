@@ -81,6 +81,8 @@ export class Api {
           response.status === 409
             ? code === "review_conflict" && typeof detail.message === "string"
               ? detail.message
+              : typeof detail === "string"
+                ? detail
               : "This item changed or the action is no longer allowed. Reload and review the latest version before deciding."
             : response.status === 422
               ? "Check the required fields and complete lesson package."

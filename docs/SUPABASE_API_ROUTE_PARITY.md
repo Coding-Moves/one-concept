@@ -20,6 +20,7 @@ The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/ed
 | PATCH | `/v1/editorial/me/authenticator` | Owner/reviewer site / current session + active membership + recent TOTP to disable | Candidate; local handler/SQL tests, staging role checks pending |
 | GET, POST | `/v1/editorial/reviewers` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests and staging POST invitation passed |
 | PATCH | `/v1/editorial/reviewers/{user_id}/access` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |
+| DELETE | `/v1/editorial/reviewers/{user_id}` | Owner/reviewer site / manage_reviewers and current version | Candidate; local handler/SQL tests, staging role checks pending |
 | POST | `/v1/editorial/reviewers/{user_id}/approve-profile` | Owner/reviewer site / manage_reviewers capability + MFA | Candidate; local handler/SQL and staging approval checks passed |
 | GET | `/v1/editorial/queue` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL and staging reviewer/MFA checks passed |
 | GET | `/v1/editorial/taxonomy` | Owner/reviewer site / role + capability + MFA | Candidate; local handler/SQL tests, staging role checks pending |

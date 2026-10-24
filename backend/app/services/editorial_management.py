@@ -1,5 +1,6 @@
 """Versioned account mutations. All authority is rechecked under the account lock."""
 
+import json
 import time
 from uuid import UUID
 
@@ -9,33 +10,53 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import Settings
 from app.deps import CurrentUser
-from app.schemas.editorial import AccessInput, AuthenticatorInput, InviteInput, Member, ProfileInput
+from app.schemas.editorial import (
+    AccessInput, AuthenticatorInput, InviteInput, Member, ProfileInput,
+    ReviewerRemoval,
+)
 from app.services.editorial_accounts import audit, authorize, check_version, membership
 from app.services.editorial_invites import invite_auth_user
+
+MAX_ACTIVE_REVIEWERS = 10
+
+
+async def require_team_slot(db: AsyncSession) -> None:
+    # Account mutations hold the same advisory lock, so concurrent invitations
+    # and reactivations cannot both claim the last slot.
+    active = await db.scalar(
+        text("select count(*) from public.editorial_memberships where status='active'")
+    )
+    if active >= MAX_ACTIVE_REVIEWERS:
+        raise HTTPException(409, "The team already has 10 active reviewers")
 
 
 async def invite(
     db: AsyncSession, actor: CurrentUser, settings: Settings, body: InviteInput
 ) -> Member:
     await authorize(db, actor, settings, "manage_reviewers", mutation=True)
-    # An existing Auth account is explicitly enrolled by this owner request.
-    # Retry after an ambiguous provider response binds the same account instead
-    # of sending more mail; confirmation/onboarding are still required.
+    await require_team_slot(db)
+    # Confirmed learners keep their account and password. An unconfirmed Auth
+    # identity may be an earlier invite whose membership transaction failed;
+    # resend its invitation so it still has a usable confirmation/setup link.
     rows = (
         (
             await db.execute(
-                text("select id from auth.users where lower(email)=:email"),
+                text("select id,email_confirmed_at from auth.users where lower(email)=:email"),
                 {"email": body.email},
             )
         )
-        .scalars()
+        .mappings()
         .all()
     )
     if len(rows) > 1:
         raise HTTPException(
             409, "Resolve duplicate Auth email identities before inviting"
         )
-    uid = rows[0] if rows else await invite_auth_user(body.email, settings)
+    uid = (
+        rows[0]["id"]
+        if rows and rows[0]["email_confirmed_at"] is not None
+        else await invite_auth_user(body.email, settings)
+    )
     # Validate provider identity against the authoritative project DB as well.
     matches = await db.scalar(
         text(
@@ -56,8 +77,8 @@ async def invite(
         )
     caps = sorted(set(body.capabilities))
     await db.execute(
-        text("""insert into editorial_memberships(user_id,invited_email,capabilities)
-        values (:id,:email,:caps)"""),
+        text("""insert into editorial_memberships(user_id,invited_email,capabilities,require_mfa)
+        values (:id,:email,:caps,false)"""),
         {"id": uid, "email": body.email, "caps": caps},
     )
     await audit(db, actor.id, uid, "invite", {"capabilities": caps})
@@ -186,6 +207,8 @@ async def change_access(
             )
     if current.status == body.status and set(current.capabilities) == set(caps):
         return current
+    if current.status != "active" and body.status == "active":
+        await require_team_slot(db)
     await db.execute(
         text("""update editorial_memberships set status=:status,capabilities=:caps,
         version=version+1,updated_at=now() where user_id=:id"""),
@@ -205,3 +228,40 @@ async def change_access(
         },
     )
     return await membership(db, uid)
+
+
+async def remove_reviewer(
+    db: AsyncSession,
+    actor: CurrentUser,
+    settings: Settings,
+    uid: UUID,
+    expected_version: int,
+) -> ReviewerRemoval:
+    await authorize(db, actor, settings, "manage_reviewers")
+    payload = await db.scalar(
+        text("""select public.edge_api_editorial_reviewer_remove(
+          cast(:actor as uuid),cast(:session as uuid),:aal,
+          cast(:subject as uuid),:version)"""),
+        {"actor": actor.id, "session": actor.session_id, "aal": actor.aal,
+         "subject": uid, "version": expected_version},
+    )
+    if isinstance(payload, str):
+        payload = json.loads(payload)
+    errors = {
+        "invalid": (422, "Invalid reviewer removal"),
+        "session_required": (401, "A confirmed account and current session are required"),
+        "unavailable": (403, "Editorial access is unavailable"),
+        "permission": (403, "Editorial permission required"),
+        "profile_required": (403, "Complete profile setup and obtain name approval"),
+        "mfa_required": (403, "Complete MFA verification for editorial actions"),
+        "self_removal": (403, "You cannot remove your own reviewer access"),
+        "reviewer_not_found": (404, "Reviewer not found"),
+        "version_conflict": (409, "Account changed; reload before removing"),
+        "last_admin": (409, "Keep another confirmed, approved administrator before removing this access"),
+    }
+    if isinstance(payload, dict) and payload.get("error") in errors:
+        status, detail = errors[payload["error"]]
+        raise HTTPException(status, detail)
+    if not isinstance(payload, dict) or "removed_user_id" not in payload:
+        raise HTTPException(503, "Reviewer removal is unavailable")
+    return ReviewerRemoval.model_validate(payload)

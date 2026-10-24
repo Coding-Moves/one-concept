@@ -1,9 +1,9 @@
-fastapi==0.143.1
+fastapi==0.156.8
 uvicorn[standard]==0.54.0
-sqlalchemy[asyncio]==2.1.4
+sqlalchemy[asyncio]==2.1.5
 asyncpg==0.32.0
-pydantic-settings==2.15.0
+pydantic-settings==2.16.0
 pyjwt[crypto]==2.15.1
 httpx==0.28.1
 
-Pillow==12.3.0
+Pillow==13.0.0

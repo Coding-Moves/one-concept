@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.16',
+    highlights: [
+      'Choose the topics you want to follow before receiving personalized lessons.',
+      'Read lesson examples and code more clearly, including on narrow screens.',
+      'Edit your profile with the keyboard in view and prepare gallery or camera photos for upload.',
+    ],
+  },
+  {
     version: '1.10.15',
     highlights: [
       'Get your daily learning reminder at your chosen time through improved background delivery.',

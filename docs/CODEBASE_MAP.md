@@ -340,6 +340,8 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
 - `hooks/useTopics.ts`, `services/topicsApi.ts`, and `topicStore.ts` share the
   cached dynamic topic catalog. Follow changes enter the same durable outbox as
   other actions; queued choices override stale server responses until replay.
+  A catalog-cache write failure cannot roll back an already queued choice;
+  the Following screen shows pending sync and local save/refresh errors.
   Both the catalog and full-concept cache participate in account cleanup.
 - `services/notifications.ts` handles permissions, Android channel setup, Expo
   tokens, timezone sync, preference caching, and deregistration before sign-out.

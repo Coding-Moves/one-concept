@@ -526,6 +526,7 @@ enforce one daily assignment and no concept repeats per user. RLS adds isolation
 | `0015_revision_generation_claims.sql` | Durable claims for correction drafting. |
 | `0017_topic_subtopics.sql`–`0019_subtopic_topic_cleanup.sql` | Parent-scoped subtopics, explicit classification of published/planned content, category integrity, and safe empty-topic cleanup. |
 | `0131_opt_in_followed_topics.sql` | New Auth users start with no follows; existing `user_topics` rows remain untouched. Apply through the normal migration gate before releasing the matching mobile UI. |
+| `0132_opt_in_edge_bootstrap.sql` | Daily/state, achievements, weekly quiz, and subtopic quiz Edge first-request paths create only profile/preferences when the Auth trigger was skipped. They never seed topic follows; existing follows remain untouched. |
 
 Migrations 0001–0015 are recorded in `migrations/applied.txt`. The owner applied
 0011–0015 during 1.9.0 release preparation, and a separate read-only production

@@ -52,7 +52,7 @@ function serverCategoryProgress(
 
 export function StatsScreen() {
   const { loading, progress, streaks, refresh } = useProgress();
-  const { loading: topicsLoading, topics, error, retry } = useTopics();
+  const { loading: topicsLoading, topics, loadError: error, retry } = useTopics();
   const { session } = useAuth();
   const online = useOnline();
   const { colors } = useTheme();

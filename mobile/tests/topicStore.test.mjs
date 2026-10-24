@@ -75,3 +75,36 @@ test('account reset suppresses late topic fetches and queued follow writes', asy
   assert.deepEqual(store.getSnapshot(), []);
   assert.deepEqual(calls, []);
 });
+
+test('last unfollow stays empty across a stale catalog reload and a new store', async () => {
+  const { store, deps, calls } = setup();
+  await store.load();
+  await store.toggle('computer-science');
+  assert.deepEqual(calls, [[]]);
+  assert.equal(store.getSnapshot().some(topic => topic.following), false);
+  await store.load();
+  assert.equal(store.getSnapshot().some(topic => topic.following), false);
+  const reopened = new TopicStore(deps);
+  await reopened.load();
+  assert.equal(reopened.getSnapshot().some(topic => topic.following), false);
+});
+
+test('catalog cache failure cannot roll back a durable follow intent', async () => {
+  const { store, deps, calls } = setup();
+  await store.load();
+  deps.write = async () => { throw new Error('catalog cache unavailable'); };
+  await store.toggle('new-server-topic');
+  assert.deepEqual(calls, [['computer-science', 'new-server-topic']]);
+  assert.equal(store.getSnapshot()[1].following, true);
+  const reopened = new TopicStore(deps);
+  await reopened.load();
+  assert.equal(reopened.getSnapshot()[1].following, true);
+});
+
+test('failed durable enqueue rolls back the visible topic choice', async () => {
+  const { store, deps } = setup();
+  await store.load();
+  deps.enqueue = async () => { throw new Error('queue storage unavailable'); };
+  await assert.rejects(store.toggle('new-server-topic'), /queue storage unavailable/);
+  assert.equal(store.getSnapshot()[1].following, false);
+});

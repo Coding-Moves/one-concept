@@ -70,7 +70,9 @@ export class TopicStore {
       // All follows use the durable queue, even online. A single replay path
       // preserves order when connectivity changes during rapid taps.
       await this.deps.enqueue(next.filter(topic => topic.following).map(topic => topic.slug));
-      if (epoch === this.epoch) await this.deps.write(next);
+      // The queued intent is authoritative. A catalog-cache write failure
+      // must not undo a choice that the sync loop will still send later.
+      if (epoch === this.epoch) await this.deps.write(next).catch(() => {});
     });
     this.writes = write.catch(() => {});
     return write.catch(error => {

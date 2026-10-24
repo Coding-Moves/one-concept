@@ -129,7 +129,8 @@
     "0127_supabase_legacy_enrichment_worker.sql": "6cbd73098ab8cc42c85a9c2d6584c27f2d76cc0484217f25da9db02209f18e55",
     "0128_supabase_worker_owner_reporting.sql": "2df8d9f6ae0f9f99a6210f1d015651f00d9dc8373ba1edeaef84f1e2d5fc0afd",
     "0129_supabase_worker_run_retention.sql": "21deceb956f640102aba8728b65f64da8c84c4675f18ed8bbe3f7917172b9524",
-    "0130_supabase_email_ambiguous_delivery.sql": "c9916265e8cc34832b2f666a0d6584185c7fccac2e5cc7ee12392de40b0f5bd5"
+    "0130_supabase_email_ambiguous_delivery.sql": "c9916265e8cc34832b2f666a0d6584185c7fccac2e5cc7ee12392de40b0f5bd5",
+    "0131_opt_in_followed_topics.sql": "25238ed6e4ad41ea905213cbdbff7697f033f85b730eee3acc4a9ea5f958b08b"
   },
   "schema": {
     "columns": {
@@ -3423,7 +3424,7 @@
         "definition": "CREATE OR REPLACE FUNCTION public.enqueue_editorial_notification()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  if new.assigned_to is not null and new.review_assigned_at is not null\n     and new.status in ('draft','pending_review') then\n    insert into public.editorial_notification_outbox(revision_id,recipient_id,epoch,ordinal)\n      values(new.id,new.assigned_to,new.notification_epoch,0) on conflict do nothing;\n  end if;\n  return new;\nend $function$\n"
       },
       "handle_new_user": {
-        "definition": "CREATE OR REPLACE FUNCTION public.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO 'public'\nAS $function$\nbegin\n  insert into public.profiles (id, display_name)\n  values (\n    new.id,\n    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1))\n  )\n  on conflict (id) do nothing;\n\n  insert into public.notification_preferences (user_id)\n  values (new.id)\n  on conflict (user_id) do nothing;\n\n  -- Follow every active topic by default, matching the app's current behaviour.\n  insert into public.user_topics (user_id, topic_id)\n  select new.id, t.id from public.topics t where t.is_active\n  on conflict do nothing;\n\n  return new;\nend;\n$function$\n"
+        "definition": "CREATE OR REPLACE FUNCTION public.handle_new_user()\n RETURNS trigger\n LANGUAGE plpgsql\n SECURITY DEFINER\n SET search_path TO ''\nAS $function$\nbegin\n  insert into public.profiles (id, display_name)\n  values (\n    new.id,\n    coalesce(new.raw_user_meta_data ->> 'display_name', split_part(new.email, '@', 1))\n  )\n  on conflict (id) do nothing;\n\n  insert into public.notification_preferences (user_id)\n  values (new.id)\n  on conflict (user_id) do nothing;\n\n  return new;\nend;\n$function$\n"
       },
       "prevent_editorial_evidence_mutation": {
         "definition": "CREATE OR REPLACE FUNCTION public.prevent_editorial_evidence_mutation()\n RETURNS trigger\n LANGUAGE plpgsql\n SET search_path TO 'pg_catalog'\nAS $function$\nbegin\n  raise exception 'Editorial evidence is append-only';\nend $function$\n"

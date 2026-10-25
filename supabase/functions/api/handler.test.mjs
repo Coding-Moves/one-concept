@@ -14,6 +14,32 @@ const config = {
 const request = (path, init = {}) => new Request(`https://one-concept.supabase.co/functions/v1/api${path}`, init);
 const editorialToken = (claims) => `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
 
+test('public cutover pages serve browser HTML without leaking service credentials', async () => {
+  const calls = [];
+  const handler = createHandler(config, async (...args) => {
+    calls.push(args);
+    throw new Error('Public pages must not use a service request');
+  });
+  for (const path of ['/confirmed', '/reset-password', '/privacy']) {
+    const result = await handler(request(path));
+    const body = await result.text();
+    assert.equal(result.status, 200);
+    assert.match(result.headers.get('content-type'), /^text\/html/);
+    assert.equal(result.headers.get('cache-control'), 'no-store');
+    assert.equal(result.headers.get('referrer-policy'), 'no-referrer');
+    assert.match(result.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+    assert.doesNotMatch(body, /private-service-key|__NONCE__|__CONFIG__/);
+  }
+  assert.equal(calls.length, 0);
+  const reset = await (await handler(request('/reset-password'))).text();
+  assert.match(reset, /\/auth\/v1\/user/);
+  assert.match(reset, /public-anon-key/);
+  assert.match(reset, /history\.replaceState\(null, '', location\.pathname\)/);
+  const rejected = await handler(request('/reset-password', { method: 'POST' }));
+  assert.equal(rejected.status, 405);
+  assert.equal(rejected.headers.get('allow'), 'GET');
+});
+
 test('editorial correction request reaches the atomic job RPC with the receipt fingerprint', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const revisionId = 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272';

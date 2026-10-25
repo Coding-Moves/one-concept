@@ -6,6 +6,7 @@ test('builds confirmation and recovery landings on the configured API origin', (
   assert.equal(authLandingUrl('confirmed', 'https://api.example.org'), 'https://api.example.org/confirmed');
   assert.equal(authLandingUrl('reset-password', 'https://api.example.org/'), 'https://api.example.org/reset-password');
   assert.equal(authLandingUrl('confirmed', 'https://api.example.org/api'), 'https://api.example.org/api/confirmed');
+  assert.equal(authLandingUrl('privacy', 'https://example.supabase.co/functions/v1/api'), 'https://example.supabase.co/functions/v1/api/privacy');
 });
 
 test('never passes a malformed or credential-bearing redirect to Supabase', () => {

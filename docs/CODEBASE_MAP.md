@@ -12,7 +12,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Area | Entry points and purpose |
 | --- | --- |
 | Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. `mobile/src/screens/AboutScreen.tsx` links learners to the public review explanation. |
-| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private FastAPI calls. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Direct deployment steps are in `docs/EDITORIAL_ROLLOUT.md`. |
+| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private Supabase Edge API calls. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Direct deployment steps are in `docs/EDITORIAL_ROLLOUT.md`. |
 | Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
@@ -364,13 +364,14 @@ private diagnostics and restore procedures.
 
 ## Backend request and service flow
 
-The Supabase API candidate for #416 lives in `supabase/functions/api/` and
+The production Supabase API lives in `supabase/functions/api/` and
 `backend/migrations/0046_supabase_api_basics.sql`–`0116_supabase_profile_avatar_api.sql`.
 All 73 JSON paths have candidate handlers, including private avatar upload,
 short-lived Storage signing, and editorial read/command routes. The avatar
 image module bundles a pinned ImageMagick WASM file for 512px JPEG conversion.
-These candidate routes remain isolated from production clients. The complete route checklist and
-remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
+Its `public_pages.ts` serves the browser confirmation, recovery and learner
+privacy pages at the same API path. The historical route checklist and parity
+gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
 `backend/tools/apply_staging_migrations.py` applies ordered migrations only to
 a fresh staging project after checking its project reference against the connection.
 Its `--inspect` mode reports staging schema metadata and profile row presence
@@ -408,7 +409,7 @@ Authenticated routes pass through `core/rate_limit.py` after JWT verification. I
 | `me.py`: `PUT /v1/me/topics`, `PATCH /v1/me` | Whole-set follows, profile name, PostgreSQL-validated timezone. |
 | `me.py`: `GET/PUT /v1/me/notifications`, `POST/DELETE /v1/me/push-token` | Reminder preferences and scoped device registration/removal. |
 | `concepts.py`: `GET /v1/concepts/{slug}`, `PUT/DELETE .../like`, `.../save` | Published lesson detail and independent interaction writes. |
-| `pages.py`: `GET /privacy`, `/confirmed`, `/reset-password` | Public privacy and branded Auth landing pages; email redirects use the mobile API origin and reset uses Supabase Auth in the browser. See [auth redirects](AUTH_REDIRECTS.md). |
+| `pages.py`: `GET /privacy`, `/confirmed`, `/reset-password` | Historical FastAPI equivalents of the production Edge `public_pages.ts` routes. Email redirects use the mobile API origin and recovery calls Supabase Auth in the browser. See [auth redirects](AUTH_REDIRECTS.md). |
 
 `router.py` mounts authenticated feature routers under `/v1`. Response/input
 models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.

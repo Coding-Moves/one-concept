@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### Production Supabase cutover landing pages and content supply — 2026-10-25
+
+- The owner deleted the Railway services after confirming the production app, review site and real 08:00 reminder worked on Supabase. Production SQL showed `daily_reminders`, `editorial_generation`, `legacy_enrichment`, and `http-reconcile` active; `content_pool` and `prefetch` remain off. For Software Engineering, the owner's aggregate query showed 26 published lessons, 2 draft concepts, 20 pending-review revisions, zero pending curated titles and 6 failed titles. Some pending revisions may correct published lessons, so they are not 20 new lessons. Keep refill paused while the owner reviews exact content and failed-title causes.
+- Live production `GET /functions/v1/api/confirmed`, `/reset-password`, and `/privacy` each returned 404 after Railway deletion. Commit `446b7a1` adds public Edge browser pages while preserving the existing app's explicit API-based Auth redirects. Commit `024472c` fixes the mobile About privacy URL to retain the `/functions/v1/api` path and updates the reviewer policy link. The owner is adding the two exact Edge redirect allowlist entries. Do not claim the live pages work until the tested API revision is deployed and real signup/recovery flows pass.
+- Validation: Edge TypeScript and handler tests passed; mobile typecheck and all 103 Node tests passed (the in-sandbox child-process check needed an unsandboxed run); a local headless browser accepted a mocked recovery token, submitted a password to a mocked Supabase Auth endpoint, removed the token fragment, rejected a bare reset URL and forwarded a fallback recovery link from `/confirmed`. No real password or account was used. The branch still needs PR review, merge authorization, production release/deploy, and real email/phone verification.
+
 ### Combined learner fixes #454–#457 — 2026-10-24
 
 - Branch `codex/fix-454-457-product-polish` starts from current `develop` at `dae3d95`. The owner requested one PR covering Markdown readability and code samples (#454), opt-in followed topics (#455), keyboard-safe profile editing (#456), and gallery/camera avatar uploads (#457). Target is `develop`; this task does not authorize a release or PR merge.

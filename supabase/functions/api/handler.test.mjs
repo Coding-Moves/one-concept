@@ -76,6 +76,107 @@ test('confirmation page claims success only after an Auth redirect', async () =>
     ['https://one-concept.supabase.co/functions/v1/api/reset-password#access_token=test-token&type=recovery']);
 });
 
+test('password reset page rejects invalid links and validates passwords before calling Auth', async () => {
+  const handler = createHandler(config);
+  const body = await (await handler(request('/reset-password'))).text();
+  const script = body.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(script);
+
+  function open(fragment, search = '') {
+    const elements = Object.fromEntries(['form', 'intro', 'message', 'submit', 'pw', 'pw2'].map(id => {
+      const classes = new Set(id === 'form' ? ['hidden'] : []);
+      return [id, {
+        textContent: '', className: '', value: '', disabled: false,
+        classList: { add: name => classes.add(name), remove: name => classes.delete(name),
+          contains: name => classes.has(name) },
+        addEventListener: (_type, listener) => { if (id === 'form') elements.form.submit = listener; },
+      }];
+    }));
+    const replaced = [];
+    const calls = [];
+    const location = { hash: fragment, search, pathname: '/functions/v1/api/reset-password' };
+    const history = { replaceState: (_state, _title, url) => replaced.push(url) };
+    const document = { getElementById: id => elements[id] };
+    const fetch = async (...args) => { calls.push(args); return { ok: true }; };
+    runInNewContext(script, { URLSearchParams, location, history, document, fetch });
+    return { elements, replaced, calls };
+  }
+
+  const direct = open('');
+  assert.equal(direct.elements.form.classList.contains('hidden'), true);
+  assert.match(direct.elements.message.textContent, /invalid or has expired/);
+  assert.deepEqual(direct.replaced, ['/functions/v1/api/reset-password']);
+
+  const expired = open('#error=access_denied&error_description=Email%20link%20expired');
+  assert.equal(expired.elements.form.classList.contains('hidden'), true);
+  assert.equal(expired.elements.message.textContent, 'Email link expired');
+
+  const wrongType = open('#access_token=token&type=signup');
+  assert.equal(wrongType.elements.form.classList.contains('hidden'), true);
+
+  const valid = open('#access_token=reset-token&type=recovery');
+  assert.equal(valid.elements.form.classList.contains('hidden'), false);
+  let prevented = 0;
+  const submit = () => valid.elements.form.submit({ preventDefault: () => { prevented++; } });
+  valid.elements.pw.value = 'short';
+  valid.elements.pw2.value = 'short';
+  await submit();
+  assert.match(valid.elements.message.textContent, /at least 6 characters/);
+  valid.elements.pw.value = 'long-enough';
+  valid.elements.pw2.value = 'different';
+  await submit();
+  assert.match(valid.elements.message.textContent, /do not match/);
+  assert.equal(valid.calls.length, 0);
+  assert.equal(prevented, 2);
+});
+
+test('password reset page sends the recovery token to Auth and reports success or failure', async () => {
+  const handler = createHandler(config);
+  const body = await (await handler(request('/reset-password'))).text();
+  const script = body.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(script);
+
+  async function submitPassword(reply) {
+    const classes = new Set(['hidden']);
+    const elements = {
+      form: { classList: { add: name => classes.add(name), remove: name => classes.delete(name),
+        contains: name => classes.has(name) }, addEventListener: (_type, listener) => { elements.submitForm = listener; } },
+      intro: { classList: { add: () => {} } },
+      message: { textContent: '', className: '' },
+      submit: { disabled: false },
+      pw: { value: 'safe-new-password' },
+      pw2: { value: 'safe-new-password' },
+    };
+    const calls = [];
+    const history = { replaceState: (_state, _title, url) => calls.push(['replaceState', url]) };
+    const location = { hash: '#access_token=reset-token&type=recovery', search: '',
+      pathname: '/functions/v1/api/reset-password' };
+    const document = { getElementById: id => elements[id] };
+    const fetch = async (...args) => { calls.push(['fetch', ...args]); return reply; };
+    runInNewContext(script, { URLSearchParams, location, history, document, fetch });
+    assert.equal(classes.has('hidden'), false);
+    await elements.submitForm({ preventDefault: () => {} });
+    return { elements, classes, calls };
+  }
+
+  const success = await submitPassword({ ok: true });
+  assert.equal(success.calls[0][1], '/functions/v1/api/reset-password');
+  assert.equal(success.calls[1][1], 'https://one-concept.supabase.co/auth/v1/user');
+  assert.equal(success.calls[1][2].method, 'PUT');
+  assert.equal(success.calls[1][2].headers.apikey, 'public-anon-key');
+  assert.equal(success.calls[1][2].headers.Authorization, 'Bearer reset-token');
+  assert.equal(JSON.parse(success.calls[1][2].body).password, 'safe-new-password');
+  assert.equal(success.classes.has('hidden'), true);
+  assert.match(success.elements.message.textContent, /Password updated/);
+  assert.equal(success.elements.message.className, 'success');
+
+  const rejected = await submitPassword({ ok: false, json: async () => ({ msg: 'Token has expired' }) });
+  assert.equal(rejected.elements.submit.disabled, false);
+  assert.equal(rejected.classes.has('hidden'), false);
+  assert.equal(rejected.elements.message.textContent, 'Token has expired');
+  assert.equal(rejected.elements.message.className, 'error');
+});
+
 test('editorial correction request reaches the atomic job RPC with the receipt fingerprint', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const revisionId = 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272';

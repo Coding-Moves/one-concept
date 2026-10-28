@@ -1,5 +1,29 @@
 # Reviewer accounts and permissions (#274)
 
+## Reviewer access after deployment
+
+After the matching reviewer release and manual Auth setup are deployed, the
+owner uses **Reviewers → Invite reviewer** on the One Concept Review website.
+A new Auth email receives a link to the website's `/auth/callback` and sets
+its own password there. An existing confirmed One Concept learner is
+granted reviewer membership on the same Auth identity and signs in with the
+existing password. The owner can keep at most **10 active reviewer memberships
+including their own**. New memberships start with the authenticator requirement
+off; each reviewer can turn it on in **Settings**. Existing members keep their
+chosen setting.
+
+**Permanently remove reviewer** deletes only that person's editorial membership.
+Their Supabase Auth identity, learner data, account audit events, legacy work and
+historical review evidence remain. Open review assignments are cleared and
+pending review notification entries are suppressed. The current version must
+match; self-removal and deletion of the last qualified administrator are denied.
+This is distinct from versioned revocation, which retains the membership for
+later reactivation.
+
+The live callback allowlist, invitation template and API redirect setting must
+be configured as in [EMAIL_TEMPLATES.md](EMAIL_TEMPLATES.md). Merging source code
+alone does not change those Supabase or deployment settings.
+
 This is the identity foundation for [#263](https://github.com/Coding-Moves/one-concept/issues/263).
 It adds private account APIs and an operator bootstrap command. The login,
 invitation callback, MFA and profile **screens are delivered in #278**. Do not
@@ -55,9 +79,12 @@ Supabase-managed Auth tables are read, never altered by the application migratio
 `status=active` means membership has not been revoked; it does **not** imply
 confirmed email, completed onboarding or MFA. `/me` exposes the onboarding and
 MFA state for the future frontend. Users without an approved name cannot exercise
-editorial capabilities. All capability checks require a signed `aal2` token.
+editorial capabilities. Capability checks require a signed `aal2` token only
+when the member has enabled the authenticator requirement.
 Reading one's own account and requesting a name change work at `aal1` so a new
-reviewer can complete onboarding before privileged actions.
+reviewer can complete onboarding before privileged actions. A current `aal1`
+session is sufficient for privileged actions when the authenticator requirement
+is off.
 
 ## Permission contract
 

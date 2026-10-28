@@ -1235,7 +1235,48 @@ test('reviewer access requires a versioned capability update and current owner',
     body: JSON.stringify({ expected_version: 1, status: 'revoked',
       capabilities: [] }),
   }))).status, 409);
+  payload = { error: 'team_full' };
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 2, status: 'active',
+      capabilities: ['review'] }),
+  }))).status, 409);
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
+test('permanent reviewer removal validates identity and version before the service RPC', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const reviewerId = 'fb7214e4-2505-41d3-a47b-98c0d05dcf07';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });
+  const calls = [];
+  let payload = { removed_user_id: reviewerId, unassigned_count: 2 };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = `/v1/editorial/reviewers/${reviewerId}`;
+  assert.equal((await handler(request(`${path}?expected_version=1`, {
+    method: 'DELETE',
+  }))).status, 401);
+  for (const suffix of ['?expected_version=0', '?expected_version=1.2', '']) {
+    assert.equal((await handler(request(path + suffix, {
+      method: 'DELETE', headers,
+    }))).status, 422);
+  }
+  assert.equal((await handler(request(`${path}?expected_version=1`, {
+    method: 'DELETE', headers,
+  }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_reviewer_remove$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal1',
+    p_subject_id: reviewerId, p_expected_version: 1,
+  });
+  payload = { error: 'last_admin' };
+  assert.equal((await handler(request(`${path}?expected_version=1`, {
+    method: 'DELETE', headers,
+  }))).status, 409);
+  assert.equal((await handler(request(path, { method: 'PATCH', headers }))).status, 405);
 });
 
 test('reviewer invitation verifies Auth identity before adding membership', async () => {
@@ -1299,6 +1340,25 @@ test('reviewer invitation blocks an unapproved callback before contacting Auth',
   assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite')).length, 0);
 });
 
+test('reviewer invitation rejects a full team before sending email', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json({ error: 'team_full' });
+  });
+  const result = await handler(request('/v1/editorial/reviewers', {
+    method: 'POST', headers: { authorization: `Bearer ${token}`,
+      'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'friend@example.com' }),
+  }));
+  assert.equal(result.status, 409);
+  assert.equal((await result.json()).detail, 'The team already has 10 active reviewers');
+  assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite')).length, 0);
+});
+
 test('existing Auth accounts can be enrolled without sending another invitation', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const reviewerId = 'fb7214e4-2505-41d3-a47b-98c0d05dcf07';
@@ -1320,6 +1380,34 @@ test('existing Auth accounts can be enrolled without sending another invitation'
   assert.equal(result.status, 201);
   assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite')).length, 0);
   assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_invite_finish$/);
+});
+
+test('unconfirmed Auth accounts receive a new invitation before enrollment', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const reviewerId = 'fb7214e4-2505-41d3-a47b-98c0d05dcf07';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true,
+    editorialInviteRedirectUrl: 'https://review.example.com/invited' }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.endsWith('/rpc/edge_api_editorial_invite_prepare')) {
+      return Response.json({ user_id: reviewerId, needs_invite: true });
+    }
+    if (url.includes('/auth/v1/invite?')) {
+      return Response.json({ id: reviewerId, email: 'friend@example.com' });
+    }
+    return Response.json({ user_id: reviewerId, status: 'active', version: 1 });
+  });
+  const result = await handler(request('/v1/editorial/reviewers', {
+    method: 'POST', headers: { authorization: `Bearer ${token}`,
+      'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'friend@example.com' }),
+  }));
+  assert.equal(result.status, 201);
+  assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite?')).length, 1);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_invite_finish$/);
+  assert.equal(JSON.parse(calls.at(-1).init.body).p_invited_id, reviewerId);
 });
 
 test('editorial profile requests normalize the name and require the current version', async () => {

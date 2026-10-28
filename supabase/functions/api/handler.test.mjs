@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { runInNewContext } from 'node:vm';
 import { createHandler } from './handler.ts';
 import './avatar.test.mjs';
 
@@ -38,6 +39,41 @@ test('public cutover pages serve browser HTML without leaking service credential
   const rejected = await handler(request('/reset-password', { method: 'POST' }));
   assert.equal(rejected.status, 405);
   assert.equal(rejected.headers.get('allow'), 'GET');
+});
+
+test('confirmation page claims success only after an Auth redirect', async () => {
+  const handler = createHandler(config);
+  const body = await (await handler(request('/confirmed'))).text();
+  const script = body.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(script);
+
+  function open(fragment) {
+    const heading = { textContent: 'Check your email link' };
+    const message = { textContent: 'Open the confirmation link from your email.', className: '' };
+    const replaced = [];
+    const location = {
+      href: `https://one-concept.supabase.co/functions/v1/api/confirmed${fragment}`,
+      hash: fragment,
+      search: '',
+      pathname: '/functions/v1/api/confirmed',
+      replace: url => replaced.push(url),
+    };
+    const history = { replaceState: (_state, _title, url) => replaced.push(url) };
+    const document = { getElementById: id => id === 'heading' ? heading : message };
+    runInNewContext(script, { URL, URLSearchParams, location, history, document });
+    return { heading, message, replaced };
+  }
+
+  const direct = open('');
+  assert.equal(direct.heading.textContent, 'Check your email link');
+  assert.deepEqual(direct.replaced, ['/functions/v1/api/confirmed']);
+  const verified = open('#access_token=test-token&type=signup');
+  assert.equal(verified.heading.textContent, 'Email confirmed ✓');
+  assert.deepEqual(verified.replaced, ['/functions/v1/api/confirmed']);
+  const recovery = open('#access_token=test-token&type=recovery');
+  assert.equal(recovery.heading.textContent, 'Check your email link');
+  assert.deepEqual(recovery.replaced,
+    ['https://one-concept.supabase.co/functions/v1/api/reset-password#access_token=test-token&type=recovery']);
 });
 
 test('editorial correction request reaches the atomic job RPC with the receipt fingerprint', async () => {

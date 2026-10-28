@@ -23,8 +23,8 @@ const STYLE = `
 const CONFIRMED = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>One Concept — email confirmed</title><style nonce="__NONCE__">${STYLE}</style></head>
-<body><main><h1 id="heading">Email confirmed ✓</h1>
-<p id="message">You're all set. Open the One Concept app and sign in to get today's concept.</p>
+<body><main><h1 id="heading">Check your email link</h1>
+<p id="message">Open the confirmation link from your email to finish setting up your account.</p>
 </main><script nonce="__NONCE__">
 const hash = new URLSearchParams(location.hash.slice(1));
 const query = new URLSearchParams(location.search);
@@ -40,6 +40,10 @@ if (hash.get('type') === 'recovery' && hash.get('access_token')) {
     document.getElementById('heading').textContent = 'Confirmation did not finish';
     document.getElementById('message').textContent = error;
     document.getElementById('message').className = 'error';
+  } else if (hash.get('access_token')) {
+    document.getElementById('heading').textContent = 'Email confirmed ✓';
+    document.getElementById('message').textContent =
+      "You're all set. Open the One Concept app and sign in to get today's concept.";
   }
 }
 </script></body></html>`;

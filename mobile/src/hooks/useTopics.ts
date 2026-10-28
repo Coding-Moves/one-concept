@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { fetchTopics, ServerTopic, topicStore } from '../services/topicsApi';
+import { pending as queuedMutations, subscribeQueue } from '../services/mutationQueue';
 
 export interface Topics {
   loading: boolean;
-  error: unknown;
+  loadError: unknown;
+  saveError: boolean;
+  syncPending: boolean;
   retry: () => void;
   topics: ServerTopic[];
   /** Follow/unfollow one topic. The PUT sends every currently-followed slug
@@ -19,9 +22,31 @@ export function useTopics(): Topics {
   const userId = session?.user?.id ?? null;
   const topics = useSyncExternalStore(topicStore.subscribe, topicStore.getSnapshot);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<unknown>(null);
+  const [loadError, setLoadError] = useState<unknown>(null);
+  const [saveError, setSaveError] = useState(false);
+  const [syncPending, setSyncPending] = useState(false);
+  const saveRevision = useRef(0);
   const [attempt, setAttempt] = useState(0);
   const retry = useCallback(() => setAttempt((value) => value + 1), []);
+
+  useEffect(() => {
+    saveRevision.current += 1;
+    setSaveError(false);
+    return () => { saveRevision.current += 1; };
+  }, [userId]);
+
+  useEffect(() => {
+    if (!userId) { setSyncPending(false); return; }
+    let active = true;
+    const update = () => {
+      void queuedMutations().then(entries => {
+        if (active) setSyncPending(entries.some(entry => entry.kind === 'topics'));
+      }).catch(() => {});
+    };
+    update();
+    const unsubscribe = subscribeQueue(update);
+    return () => { active = false; unsubscribe(); };
+  }, [userId]);
 
   useEffect(() => {
     if (!userId) {
@@ -30,10 +55,10 @@ export function useTopics(): Topics {
     }
     let cancelled = false;
     setLoading(true);
-    setError(null);
+    setLoadError(null);
     fetchTopics()
       .catch((cause: unknown) => {
-        if (!cancelled) setError(cause);
+        if (!cancelled) setLoadError(cause);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -45,10 +70,14 @@ export function useTopics(): Topics {
 
   const toggle = useCallback(
     (slug: string) => {
-      topicStore.toggle(slug).catch((cause: unknown) => setError(cause));
+      const revision = ++saveRevision.current;
+      setSaveError(false);
+      topicStore.toggle(slug).catch(() => {
+        if (revision === saveRevision.current) setSaveError(true);
+      });
     },
     []
   );
 
-  return { loading: loading && topics.length === 0, error, retry, topics, toggle };
+  return { loading: loading && topics.length === 0, loadError, saveError, syncPending, retry, topics, toggle };
 }

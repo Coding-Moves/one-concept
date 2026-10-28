@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-# This validates an operator's deployment attestation, not Railway health itself.
+# This validates an operator's deployment attestation, not live API health itself.
 if [[ "${GITHUB_REF:-}" != refs/heads/main ]]; then
   echo '::error::Publish releases from main only.'
   exit 1

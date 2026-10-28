@@ -2,7 +2,7 @@
 
 A private, branded editorial website, built independently from the Expo app.
 React + TypeScript + Vite produce static files; Supabase Auth signs reviewers in,
-and the existing FastAPI backend authorizes every editorial read and write.
+and the Supabase Edge API authorizes every editorial read and write.
 The browser has no database, Gemini or service-role credentials.
 
 Public source code and private workspace access are separate concerns. The
@@ -25,13 +25,14 @@ npm run dev
 
 | Public build variable | Meaning |
 | --- | --- |
-| `VITE_API_URL` | Exact HTTPS origin of the compatible FastAPI API; local development accepts `http://localhost:8000` or `http://127.0.0.1:8000`. |
+| `VITE_API_URL` | Exact URL of the matching Supabase Edge API, ending in `/functions/v1/api`; local Python development accepts `http://localhost:8000`. |
 | `VITE_SUPABASE_URL` | Matching Supabase Auth HTTPS origin. |
 | `VITE_SUPABASE_PUBLISHABLE_KEY` | Public `sb_publishable_…` key, or legacy JWT with role `anon`. Never a service-role/secret key. |
 | `VITE_ENVIRONMENT` | Visible label, such as `Staging` or `Production`. |
 
-The build rejects missing/invalid origins and privileged keys in the public key
-field. All `VITE_` values are public: never add private values under that prefix.
+The build rejects missing/invalid URLs, mismatched Supabase projects, and
+privileged keys in the public key field. All `VITE_` values are public: never
+add private values under that prefix.
 No real credentials are needed for the automated tests.
 
 ```sh
@@ -115,10 +116,19 @@ only HTTP(S), open separately with no opener, and lesson text is rendered as tex
 
 ## Hosting and manual activation
 
-The reviewer workspace and Owner dashboard deploy as one static site. The
-[direct production rollout guide](../docs/EDITORIAL_ROLLOUT.md) gives the free
-Netlify build settings, exact API/Auth origins, account and email setup,
-verification and rollback. `npm run build` writes `dist/_headers` with CSP
+The reviewer workspace and Owner dashboard deploy as one Netlify static site.
+Before enabling new reviewer invitations, apply migrations 0133–0136 in order
+with the matching API and Edge code. Migrations 0131–0132 belong to learner
+topic opt-in and must remain ahead of them. Merging this PR into `develop`
+does not apply production SQL or deploy the new invitation flow.
+Set the production branch to `main`, base directory to `admin`, build command
+to `npm run build`, and publish directory to `dist`. Set only the four public
+build variables above, matching the production Supabase project; do not place
+service-role, Gmail or Gemini credentials in the browser build. The production
+Edge API must allow the exact Netlify origin in `ALLOWED_ORIGINS`, use that
+origin plus `/auth/callback` for `EDITORIAL_INVITE_REDIRECT_URL`, and use the
+origin for `EDITORIAL_EMAIL_DASHBOARD_URL`. Supabase Auth must allow the exact
+callback URL. `npm run build` writes `dist/_headers` with CSP
 `connect-src` restricted to the two configured origins; the old broad static
 header file is no longer used. Netlify uses `public/_redirects` for the
 `/auth/callback` SPA fallback. Preview deployments remain off until a separate
@@ -132,20 +142,20 @@ deploy before entering them in Google Cloud. The root remains the invited-user
 sign-in page; it is not the public OAuth homepage. Do not substitute the mobile
 app's separate API privacy page for this site's privacy URL.
 
-Merging a code PR into `develop` does not publish the website or change Railway
-flags. After the compatible backend and website are live, an approved and
-published card enters normal server selection automatically; each content
-approval needs no app release. Software/schema changes still use the normal
+Merging a code PR into `develop` does not publish the website or change
+production Edge Function flags. After the compatible API and website are live,
+an approved and published card enters normal server selection automatically;
+each content approval needs no app release. Software/schema changes still use the normal
 release procedure.
 
 ## Reviewer notifications
 
 Owners can open **Notifications** to see overdue assignments, delivery failures,
 review policy and bounded retries. Reviewers choose their email deadline timezone
-in **Settings**. Delivery uses the existing backend worker and the sender's Gmail
-HTTPS API; no SMTP upgrade or new paid mail service is required. Follow the
-[notification setup and direct production rollout](../docs/editorial-notifications.md)
-before enabling email. Supabase Auth email templates remain separate.
+in **Settings**. Delivery uses the scheduled Supabase Edge worker and the
+sender's Gmail HTTPS API. Keep the production editorial email gate and daily
+cap at their intended values; check `edge_worker_runs` and the owner dashboard
+before enabling sends. Supabase Auth email templates remain separate.
 
 ## Owner dashboard and safe demo
 

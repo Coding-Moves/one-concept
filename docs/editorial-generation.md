@@ -1,5 +1,8 @@
 # Bounded editorial generation (#277)
 
+> Original feature design and rollout record. For current Supabase Edge refill
+> gates and plan capacity, use [FUTURE_REFILL_ROLLOUT.md](FUTURE_REFILL_ROLLOUT.md).
+
 Step 4 of [#263](https://github.com/Coding-Moves/one-concept/issues/263) extends
 existing Gemini workers. New lessons and AI corrections stay private until the
 exact new revision passes authenticated human approval and publication. A low

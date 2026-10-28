@@ -1,7 +1,8 @@
 """Run with: python -m app.workers.pool_topup
 
-Scheduled on Railway as a cron job. Keeps every topic stocked so the request
-path never waits on a model.
+Legacy Python entry point for controlled maintenance. Production content jobs run
+through the Supabase Edge worker. This command prepares private content without
+blocking the learner request path.
 """
 
 import asyncio

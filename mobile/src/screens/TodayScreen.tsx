@@ -2,7 +2,7 @@ import { useRefreshControl } from '../hooks/useRefreshControl';
 import { useNavigation, NavigationProp, NavigatorScreenParams } from '@react-navigation/native';
 import type { ProfileStackParamList } from './ProfileScreen';
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
@@ -19,6 +19,7 @@ import { useProgress } from '../context/ProgressContext';
 import { useTheme } from '../context/ThemeContext';
 import { toConcept } from '../services/dailyApi';
 import { greetingFor } from '../services/greeting';
+import { topicStore } from '../services/topicsApi';
 import { scaleIcon, scaleFont, radius, shadows, spacing, ThemeColors } from '../theme';
 
 export function TodayScreen() {
@@ -39,6 +40,7 @@ export function TodayScreen() {
   const { colors, mode, toggle } = useTheme();
   const styles = useMemo(() => createStyles(colors), [colors]);
   const refreshUI = useRefreshControl('today', refresh);
+  const topics = useSyncExternalStore(topicStore.subscribe, topicStore.getSnapshot);
 
   const navigation = useNavigation<NavigationProp<{Profile: NavigatorScreenParams<ProfileStackParamList>}>>();
   const explore = () => navigation.navigate('Profile', {screen: 'Personalization'});
@@ -59,7 +61,13 @@ export function TodayScreen() {
   const done = review ? outcome.payload.learned : learnedToday || (!!serverConcept && hasLearned(serverConcept.id));
   const loading = localLoading;
   const exhausted = outcome?.status === 'exhausted';
-  const personalizationRequired = outcome?.status === 'personalization_required';
+  // The learner can unfollow the last topic while today's older assignment is
+  // still pinned. Hide that assignment immediately; future selection already
+  // refuses to create another one without a followed topic.
+  const noFollowedTopics = !!session && (topics.length > 0
+    ? !topics.some(topic => topic.following)
+    : progress.followedTopics.length === 0);
+  const personalizationRequired = noFollowedTopics || outcome?.status === 'personalization_required';
   const greeting = greetingFor(new Date(), progress.timezone, progress.displayName);
   const offline = (outcome?.status === 'ok'
     || outcome?.status === 'review'
@@ -115,7 +123,7 @@ export function TodayScreen() {
             </View>
           ) : null}
 
-          {outsideTopics ? (
+          {outsideTopics && !personalizationRequired ? (
             <View style={styles.noteBox}>
               <Ionicons name="sparkles-outline" size={scaleIcon(16)} color={colors.textMuted} />
               <Text style={styles.noteText}>
@@ -124,7 +132,7 @@ export function TodayScreen() {
             </View>
           ) : null}
 
-          {exhausted ? (
+          {exhausted && !personalizationRequired ? (
             <View style={styles.noteBox}>
               <Ionicons name="checkmark-done-outline" size={scaleIcon(16)} color={colors.success} />
               <Text style={styles.noteText}>
@@ -133,7 +141,7 @@ export function TodayScreen() {
             </View>
           ) : null}
 
-          {review ? (
+          {review && !personalizationRequired ? (
             <View style={styles.noteBox}>
               <Ionicons name="refresh-outline" size={scaleIcon(18)} color={colors.textSecondary} />
               <Text style={styles.noteText}>
@@ -150,9 +158,9 @@ export function TodayScreen() {
               <View style={styles.personalizationIcon}>
                 <Ionicons name="compass-outline" size={scaleIcon(24)} color={colors.primary} />
               </View>
-              <Text style={styles.personalizationTitle}>Choose what you want to learn</Text>
+              <Text style={styles.personalizationTitle}>Follow your interests to start learning</Text>
               <Text style={styles.personalizationText}>
-                Follow one or more topics to shape your next daily concept. Your previous lessons and streak stay safe.
+                Choose one or more topics for your daily concepts. Your previous lessons and streak stay safe.
               </Text>
               <PrimaryButton label="Choose topics" onPress={explore} />
             </View>
@@ -170,7 +178,7 @@ export function TodayScreen() {
             />
           ) : null}
 
-          {concept && (done ? (
+          {concept && !personalizationRequired && (done ? (
             <>
               <View style={styles.doneBox}>
                 <Ionicons name="checkmark-circle" size={scaleIcon(20)} color={colors.success} />

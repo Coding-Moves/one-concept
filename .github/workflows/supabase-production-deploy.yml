@@ -52,7 +52,7 @@ jobs:
           python -c 'from tools.apply_production_cutover import target_environment; target_environment(); print("production_connection=validated")'
           python -m app.workers.schema_check
           python -m tools.verify_supabase_cutover_schema
-      - uses: supabase/setup-cli@3c2f5e2ae34c34e428e8e206e2c4d21fa2d20fbf # v2.1.1
+      - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
           version: latest
       - name: Deploy API from this main commit

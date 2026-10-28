@@ -1,4 +1,4 @@
-/** Candidate Railway-compatible JSON routes. No production client uses these yet. */
+/** Supabase Edge API routes for learner and editorial clients. */
 
 import { conceptPreview, editorialDigest, revisionPreview, stageLessonBody } from './editorial_preview.ts';
 import { AvatarInputError, normalizeAvatar } from './avatar_image.ts';

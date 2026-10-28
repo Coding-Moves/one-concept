@@ -315,7 +315,7 @@ async def test_worker_observations_do_not_depend_on_api_telemetry_switch(api, se
         {"id": uuid4()},
     )
     await session.commit()
-    # Workers and the API have independent environment variables on Railway.
+    # Worker and API processes can have independent environment variables.
     api.settings.owner_telemetry_enabled = False
     response = await api.client.get("/v1/editorial/owner/operations", headers=api.headers())
     assert response.status_code == 200, response.text

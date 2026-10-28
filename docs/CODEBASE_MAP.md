@@ -369,6 +369,8 @@ The production Supabase API from #416 lives in `supabase/functions/api/` and
 All 73 JSON paths have candidate handlers, including private avatar upload,
 short-lived Storage signing, and editorial read/command routes. The avatar
 image module bundles a pinned ImageMagick WASM file for 512px JPEG conversion.
+Its `public_pages.ts` serves the browser confirmation, recovery, and learner
+privacy pages at the same API path.
 Production clients use the Edge route. The historical parity checklist is in
 [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
 `backend/tools/apply_staging_migrations.py` applies ordered migrations only to

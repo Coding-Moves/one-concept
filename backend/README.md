@@ -16,12 +16,13 @@ production reminders and generation run through the Supabase Edge worker.
 ## Sustainable content lifecycle
 
 See [the architecture](../docs/CONTENT_ARCHITECTURE.md) and
-[the operator runbook](../docs/CONTENT_OPERATIONS.md). Content now uses durable
+[the current refill guide](../docs/FUTURE_REFILL_ROLLOUT.md). Content now uses durable
 reader-aware supply targets, structured curriculum imports, explicit reviewed
 publication, and separate daily reviews when new lessons are exhausted.
 Run `python -m app.workers.content --help` for maintainer operations.
-Migrations 0011–0015 must precede this backend; keep old generators disabled
-during rollout. Daily review clients opt into `reviews=true` on `/v1/me/state`
+The original #195 rollout applied migrations 0011–0015 before enabling these
+rules. Current production schema changes follow [RELEASING.md](../RELEASING.md).
+Daily review clients opt into `reviews=true` on `/v1/me/state`
 and complete an identified activity through `/v1/reviews/{id}/complete`.
 
 ## Layout

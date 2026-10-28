@@ -385,8 +385,9 @@ For the initialized staging project, `--apply-incremental` requires the verified
 The protected incremental tag runs this path separately from the fresh-schema
 and Edge deploy jobs. It reloads PostgREST's RPC schema cache after verified
 SQL; `--reload-cache` is the guarded staging-only repair path for stale cache.
-Migration #417 will move scheduled workers; #418 owns browser pages and client
-cutover. Until then, the FastAPI implementation below remains authoritative.
+The Edge API and worker own production traffic. The Python implementation below
+remains a local reference and maintenance path; its routes and workers should
+not be mistaken for the deployed production entry points.
 
 `main.py` configures CORS, routes, production documentation visibility, safe SQLAlchemy and unexpected-exception responses, and a shared
 JWKS cache, and engine cleanup. Its lifespan owns `db/keepalive.py`'s configurable
@@ -458,7 +459,8 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 - `services/reminders.py` claims due user/day/time slots before sending Expo push
   batches, handles timezone and midnight windows, suppresses completed days, and
   drops unregistered device tokens. A claimed but failed send can miss a reminder.
-- `workers/pool_topup.py` and `workers/reminders.py` are cron entry points.
+- `workers/pool_topup.py` and `workers/reminders.py` are retained Python
+  maintenance entry points. Production schedules call the Supabase Edge worker.
   `workers/rewrite_catalog.py` is a maintenance command that rewrites existing
   lessons through Gemini with the shared budget and generation kill switch;
   do not run it merely to inspect the project.

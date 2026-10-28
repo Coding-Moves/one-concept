@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### Remove retired hosting configuration — 2026-10-28
+
+- The owner requested a repository-wide cleanup after deleting the former hosted services. This work removes live deployment configuration and stale runtime, release, website and email guidance. It is added to open [PR #459](https://github.com/Coding-Moves/one-concept/pull/459), which also holds the three Supabase Auth landing pages. The narrow production hotfix remains open in PR #460; neither PR is merged or deployed here.
+- The Supabase Auth email templates already contain no former host URL. Applied SQL migrations, generated schema contracts and factual cutover history remain intact. Obsolete runbooks now display historical notices; current guides point to the Supabase Edge API and scheduled workers. The review site's public privacy link now targets the Supabase Edge privacy page, and its build validates the exact Edge API URL and matching Auth project.
+- Validation: all 22 review-site unit tests passed; its TypeScript check and production build passed with public test values. A repository search found no former host string in active runtime code, email templates, current setup guides or workflows; `git diff --check` passed. This is source and build verification, not proof that the pending public pages have been deployed.
+
 ### Production Supabase cutover landing pages and content supply — 2026-10-25
 
 - The owner deleted the Railway services after confirming the production app, review site and real 08:00 reminder worked on Supabase. Production SQL showed `daily_reminders`, `editorial_generation`, `legacy_enrichment`, and `http-reconcile` active; `content_pool` and `prefetch` remain off. For Software Engineering, the owner's aggregate query showed 26 published lessons, 2 draft concepts, 20 pending-review revisions, zero pending curated titles and 6 failed titles. Some pending revisions may correct published lessons, so they are not 20 new lessons. Keep refill paused while the owner reviews exact content and failed-title causes.

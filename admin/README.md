@@ -110,7 +110,8 @@ the publication checklist.
 
 Private lesson data and drafts are held in memory, not a persistent content cache.
 Sign-out/account changes discard them and fence late responses. The Auth client
-stores its own session; the only additional local preference is the theme.
+stores its own session; the browser also keeps the theme and the account-bound,
+non-secret pending password-setup marker described below.
 Unsent review feedback prompts before navigation or sign-out. References allow
 only HTTP(S), open separately with no opener, and lesson text is rendered as text.
 
@@ -121,6 +122,12 @@ Before enabling new reviewer invitations, apply migrations 0133–0136 in order
 with the matching API and Edge code. Migrations 0131–0132 belong to learner
 topic opt-in and must remain ahead of them. Merging this PR into `develop`
 does not apply production SQL or deploy the new invitation flow.
+
+After a verified invitation or recovery link opens password setup, that screen
+survives a browser refresh for the same signed-in account until the password
+is saved. The browser stores only the pending account ID and setup type for
+this purpose, never the email-link tokens or password.
+
 Set the production branch to `main`, base directory to `admin`, build command
 to `npm run build`, and publish directory to `dist`. Set only the four public
 build variables above, matching the production Supabase project; do not place

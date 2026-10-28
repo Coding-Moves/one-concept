@@ -1,10 +1,11 @@
 # Reviewer accounts and permissions (#274)
 
-## Current reviewer access
+## Reviewer access after deployment
 
-On the active One Concept Review website, the owner uses **Reviewers → Invite
-reviewer**. A new Auth email receives a link to the website's `/auth/callback`
-and sets its own password there. An existing confirmed One Concept learner is
+After the matching reviewer release and manual Auth setup are deployed, the
+owner uses **Reviewers → Invite reviewer** on the One Concept Review website.
+A new Auth email receives a link to the website's `/auth/callback` and sets
+its own password there. An existing confirmed One Concept learner is
 granted reviewer membership on the same Auth identity and signs in with the
 existing password. The owner can keep at most **10 active reviewer memberships
 including their own**. New memberships start with the authenticator requirement

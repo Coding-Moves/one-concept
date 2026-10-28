@@ -1,94 +1,58 @@
-# Authentication email redirects
+# Authentication email redirects after the Supabase cutover
 
-Supabase verifies email addresses itself. After verification, it redirects the
-browser to a permitted HTTPS URL. One Concept uses its FastAPI public pages for
-that final browser step:
+Supabase Auth verifies email links before redirecting the browser to an allowed
+HTTPS landing URL. The production mobile release on `main` sends new sign-up and
+recovery links to the Netlify browser pages built from
+`EXPO_PUBLIC_WEB_BASE_URL`. Those pages remain the current explicit redirect
+destinations; their `/confirmed` and `/reset-password` flows are tested in
+`admin/tests/public-pages.spec.ts`.
 
-- `GET /confirmed` displays the One Concept confirmation page and asks the
-  person to return to the app.
-- `GET /reset-password` displays the One Concept password-reset form.
+The Supabase `api` Edge function also serves browser pages at:
 
-These pages are product pages served by the API. Railway is only the current
-hosting provider; its name, error page, or dashboard must never be part of the
-learner experience.
+- `/functions/v1/api/confirmed`: shows a neutral message on direct visits and a
+  confirmation message after an Auth redirect. A recovery session sent to this
+  page is forwarded to the reset page with its URL fragment.
+- `/functions/v1/api/reset-password`: accepts a recovery session in the URL
+  fragment, removes it from the address bar, and updates the password through
+  Supabase Auth. A missing or expired link displays an error.
+- `/functions/v1/api/privacy`: shows the learner privacy policy.
 
-The mobile app supplies `emailRedirectTo` for new sign-ups and `redirectTo` for
-password recovery from `EXPO_PUBLIC_API_BASE_URL`. This keeps both flows on the
-same deployed API origin instead of relying only on a stale Supabase Site URL.
-Supabase must allow those destinations before it will honor them.
+Once configured as the Site URL, the Edge pages provide a fallback for new
+links that omit an explicit redirect. They also support the API-based redirect
+configuration planned on `develop`. They contain only the
+Supabase project URL and publishable key; no service credential is sent to the
+browser. Their route and browser behavior are covered in
+`supabase/functions/api/handler.test.mjs` and
+`admin/tests/auth-landing.spec.ts`.
 
-## Owner checklist
+## Production deployment and verification
 
-Do these **before merging the PR**. They are safe while the PR is open and do
-not require a mobile build, database migration, secret, or payment.
-
-1. In Railway, open the production **api** service, then **Settings →
-   Networking**. Copy the active public HTTPS domain exactly. Do not copy a
-   deployment ID, internal service URL, or an old removed domain.
-2. In a private browser window, open `https://YOUR-API-DOMAIN/confirmed`.
-   Continue only when it displays the One Concept **“Email confirmed”** page.
-   If Railway shows “The train has not arrived at the station”, wait for the
-   deployment/domain to become active or create and attach a new Railway domain
-   to the current api service. Do not place that broken address in Supabase.
-3. Open Supabase **Authentication → URL Configuration** for the production
-   project. Set **Site URL** to `https://YOUR-API-DOMAIN`. This remains the
-   fallback for old app versions and any request that lacks a redirect value.
-4. Under **Redirect URLs**, add these exact entries:
-
-   ```text
-   https://YOUR-API-DOMAIN/confirmed
-   https://YOUR-API-DOMAIN/reset-password
-   ```
-
-   Keep any still-working previous recovery URL until links already sent to
-   users have expired. Do not add wildcards, credentials, a Railway dashboard
-   URL, `localhost`, or a URL with a query string.
-5. In Expo/EAS, inspect the **production** value of
-   `EXPO_PUBLIC_API_BASE_URL`. It must equal `https://YOUR-API-DOMAIN` with no
-   trailing path, query, fragment, username, or password. The value is public
-   configuration; never put Supabase service keys or database passwords there.
-6. Save the dashboard settings and capture the exact domain in the release
-   record. No source-code configuration file should contain the live domain if
-   EAS already owns that public setting.
-
-## After this PR merges to `develop`
-
-1. Wait for the normal preview EAS update workflow to complete, then install or
-   open the staging/preview app. A merge to `develop` does **not** update the
-   production app.
-2. Create a fresh test account with an inbox you control. Open the confirmation
-   email and check this sequence:
+1. Deploy the reviewed `api` Edge function revision through the protected
+   production deployment workflow. Confirm `/health` and each public page over
+   HTTPS. A direct visit to `/confirmed` must ask the visitor to open an email
+   link; a direct visit to `/reset-password` must report an invalid link.
+2. In the matching Supabase project, allow the exact `/confirmed` and
+   `/reset-password` Edge URLs under **Authentication → URL Configuration**.
+   Keep the working Netlify redirect URLs while the released mobile app still
+   uses them. Do not add a wildcard or a retired host.
 
    ```text
-   Supabase verifies the address → One Concept confirmation page → sign in succeeds
+   https://egdszjoesxlccauahmsx.supabase.co/functions/v1/api/confirmed
+   https://egdszjoesxlccauahmsx.supabase.co/functions/v1/api/reset-password
    ```
 
-   The browser must not show a Railway 404 page. Test password recovery too;
-   it must open the One Concept reset-password page and permit sign-in with the
-   new password.
-3. If the test fails, keep the PR merged but stop the production release. Check
-   the exact generated email URL, the Railway domain and the Supabase allowlist
-   rather than changing templates or exposing a credential.
+3. Keep the **Site URL** fallback on a working page. Change it to the Edge
+   `/confirmed` page only after that page is deployed and its recovery
+   forwarding is verified. The Site URL is used when a client supplies no
+   explicit redirect.
+4. Check Expo's production `EXPO_PUBLIC_API_BASE_URL`,
+   `EXPO_PUBLIC_SUPABASE_URL`, and `EXPO_PUBLIC_WEB_BASE_URL` against the
+   production Supabase project and current Netlify site. The publishable key
+   must belong to the same project.
+5. With an inbox and account you control, request a fresh signup confirmation
+   and password recovery email. Check that confirmation permits sign-in, and
+   that recovery accepts a new password and permits sign-in with it. Do not
+   share email links, URL fragments, tokens, or passwords in logs or chat.
 
-## Before production users receive the fix
-
-This is a JavaScript mobile change. After the preview test passes, include it in
-a normal `develop` → `main` release PR. After that release PR is merged, verify
-the deployed API health and manually run the repository’s **Release** workflow
-on the verified `main` commit. That publishes the production EAS OTA update to
-compatible installed builds. A production user receives it on a later app
-launch; an update is not instantaneous.
-
-Changing the Supabase Site URL in the checklist is still worthwhile before the
-OTA: it repairs the fallback redirect used by older app versions. Do not claim
-production confirmation is fixed until a new controlled account has completed
-the real email flow.
-
-## Future own-domain upgrade
-
-When One Concept has a domain, point a subdomain such as
-`app.oneconcept.example` at the API service, wait for HTTPS provisioning, then
-repeat the checklist using that domain. A true browser-to-app open button later
-requires Android App Links (and iOS Universal Links) hosted on that domain. It
-is separate from email verification and should be introduced with its own
-native release, association-file validation, and device testing.
+A `200` response from a landing page proves only that the page is served; it
+does not prove that Supabase verified the email or changed the password.

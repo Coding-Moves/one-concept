@@ -1,4 +1,4 @@
-/** Browser landing pages retained when the learner API moved off Railway. */
+/** Browser landing pages served alongside the Supabase learner API. */
 
 type PageConfig = { supabaseUrl: string; anonKey: string };
 

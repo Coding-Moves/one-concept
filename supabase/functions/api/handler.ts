@@ -2,6 +2,7 @@
 
 import { conceptPreview, editorialDigest, revisionPreview, stageLessonBody } from './editorial_preview.ts';
 import { AvatarInputError, normalizeAvatar } from './avatar_image.ts';
+import { publicPage } from './public_pages.ts';
 
 export type ApiConfig = {
   supabaseUrl: string;
@@ -1058,6 +1059,8 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
     const requestUrl = new URL(request.url);
     const path = routePath(requestUrl.pathname);
     if (path === null) return httpError(404, 'Not Found', cors);
+    const page = publicPage(path, request.method, config, cors);
+    if (page) return page;
     const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
     const publicProfile = /^\/v1\/public-profiles\/([^/]+)$/.exec(path);
     const connectionStatus = /^\/v1\/me\/connections\/with\/([^/]+)$/.exec(path);

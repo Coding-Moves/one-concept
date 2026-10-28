@@ -29,9 +29,11 @@ must both pass through that verification. Password changed reports a completed
 change and intentionally has no token or reset-link placeholder. It directs
 unrecognized changes to Forgot password in the app and the existing support email.
 
-Signup and recovery both request a landing page on the mobile build's configured
-API origin. The Site URL remains the fallback for earlier app versions, and the
-corresponding HTTPS destinations must be allowed in Supabase's URL Configuration.
+The current production mobile app requests signup and recovery landing pages on
+the Netlify site configured by `EXPO_PUBLIC_WEB_BASE_URL`. The `develop` branch
+prepares API-based landing pages for a later mobile release. Supabase's Site URL
+remains the fallback when a client does not supply an explicit redirect. Keep
+the HTTPS destinations used by released clients in Supabase's URL Configuration.
 Do not replace verification links with those landing-page URLs. Follow the
 [authentication redirect runbook](AUTH_REDIRECTS.md) before testing the emails.
 See [Supabase email templates](https://supabase.com/docs/guides/auth/auth-email-templates).

@@ -1,5 +1,9 @@
 # Supabase API route parity for #416
 
+> Historical migration checklist. Production clients now use the Supabase
+> Edge API. Current operations are in [RELEASING.md](../RELEASING.md) and
+> [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md).
+
 Source: current `develop` FastAPI OpenAPI plus four routes excluded from its schema. The target is `/functions/v1/api` with the current `/v1/...` path appended. This is an inventory, not evidence that a candidate route works.
 
 The mobile client calls learner endpoints; the owner/reviewer site calls `/v1/editorial/...`; public visitors use profile JSON and `/p/{token}`. Every `/v1/...` route requires a verified token except public profiles. Editorial routes apply their existing per-route capability and MFA policy; `/v1/editorial/me` can report that MFA is required. The HTML routes belong to #418 because the default Edge URL does not serve HTML as HTML.

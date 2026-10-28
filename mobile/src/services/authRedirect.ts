@@ -1,4 +1,4 @@
-export type AuthLandingPath = 'confirmed' | 'reset-password';
+export type AuthLandingPath = 'confirmed' | 'reset-password' | 'privacy';
 
 /**
  * Builds a browser landing URL on the configured API origin.

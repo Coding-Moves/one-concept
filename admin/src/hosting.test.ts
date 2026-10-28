@@ -13,5 +13,8 @@ describe("static-host response headers", () => {
     expect(headers).toContain("Cache-Control: no-store");
     expect(headers).toContain("X-Robots-Tag: noindex, nofollow, noarchive");
     expect(headers).toContain("style-src-attr 'unsafe-inline'");
+    expect(headers).toContain("img-src 'self' data: https://auth.example.test;");
+    expect(pagesHeaders({ apiUrl: "https://api.example.test/functions/v1/api", supabaseUrl: "https://auth.example.test" }))
+      .toContain("connect-src 'self' https://api.example.test https://auth.example.test;");
   });
 });

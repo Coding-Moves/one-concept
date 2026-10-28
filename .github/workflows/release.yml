@@ -1,5 +1,5 @@
-# Railway deploys main independently. Publish only after the operator verifies
-# the same commit on the API and workers and checks production health.
+# Deploy the Supabase API and worker through the protected production workflow
+# first. Publish only after the operator verifies that exact main commit and health.
 name: Release
 
 on:

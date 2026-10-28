@@ -1,27 +1,28 @@
 # One Concept — backend
 
-FastAPI service that owns the Gemini API key, the daily concept selection, and
-every write to the database. The mobile app never talks to Gemini or Postgres
-directly.
+Python API and maintenance implementation of the learning rules. The mobile app
+never talks to Gemini or Postgres directly. Production serves those rules through
+the Supabase Edge API and scheduled worker.
 
 ```
-Mobile app  ──►  FastAPI  ──┬──►  Supabase (Postgres + Auth)
-                            └──►  Gemini API
+Mobile app  ──►  Supabase Edge API  ──►  Supabase (Postgres + Auth)
+Supabase Cron  ──►  Edge worker  ─────►  Expo Push / Gmail / Gemini
 ```
 
-Status: **Phase 7 — reminders.** Reads, writes, Gemini generation from a
-curated backlog, and timezone-aware push reminders that stop once the day is
-learned.
+Production serves the learner and reviewer API through Supabase Edge Functions;
+the Python service remains a local and maintenance implementation. Scheduled
+production reminders and generation run through the Supabase Edge worker.
 
 ## Sustainable content lifecycle
 
 See [the architecture](../docs/CONTENT_ARCHITECTURE.md) and
-[the operator runbook](../docs/CONTENT_OPERATIONS.md). Content now uses durable
+[the current refill guide](../docs/FUTURE_REFILL_ROLLOUT.md). Content now uses durable
 reader-aware supply targets, structured curriculum imports, explicit reviewed
 publication, and separate daily reviews when new lessons are exhausted.
 Run `python -m app.workers.content --help` for maintainer operations.
-Migrations 0011–0015 must precede this backend; keep old generators disabled
-during rollout. Daily review clients opt into `reviews=true` on `/v1/me/state`
+The original #195 rollout applied migrations 0011–0015 before enabling these
+rules. Current production schema changes follow [RELEASING.md](../RELEASING.md).
+Daily review clients opt into `reviews=true` on `/v1/me/state`
 and complete an identified activity through `/v1/reviews/{id}/complete`.
 
 ## Layout
@@ -42,7 +43,7 @@ backend/
 ├── migrations/          # plain SQL, applied in filename order
 ├── email-templates/     # account email HTML installed manually in Supabase Auth
 ├── tests/               # regression suite for API, security, persistence, workers and content lifecycle
-├── Dockerfile           # what Railway builds
+├── Dockerfile           # optional local container
 └── .env.example         # copy to .env — never commit the filled copy
 ```
 
@@ -167,8 +168,8 @@ Run the worker:
 python -m app.workers.pool_topup
 ```
 
-On Railway, add this as a **cron job** on the same service (daily is plenty).
-It is safe to run concurrently: backlog items are claimed with
+This is a controlled legacy maintenance command; production scheduling uses
+the Supabase Edge worker. Backlog items are claimed with
 `FOR UPDATE SKIP LOCKED`, so two workers never write the same title.
 
 ### Safety rails
@@ -354,11 +355,11 @@ today pending, day missed), and RLS isolation between two users.
 
 ## Deployment
 
-**Railway**, from `backend/Dockerfile` (see `railway.json`). Set every variable
-from `.env.example` in Railway's variable store — never in the image, never in
-git. Point the health check at `/health`, and set `ENVIRONMENT=production` to
-disable both `/docs` and `/openapi.json` (the raw schema). A cron worker for
-pool top-up and reminders joins later, in Phases 6 and 7.
+Production API and worker code lives in `supabase/functions/api/` and
+`supabase/functions/worker/`. Deploy the exact current `main` revision through
+the protected GitHub workflow in [RELEASING.md](../RELEASING.md). The Python
+service in this directory can be run locally with private configuration; never
+commit a filled `.env` or bake credentials into the optional Docker image.
 
 ## Deployment schema verification
 
@@ -366,4 +367,4 @@ The migration ledger is an operator record. Before deployment, run
 `python -m app.workers.schema_check` with `DIRECT_URL` supplied privately. This
 read-only check fails on missing or changed required schema even if every SQL
 filename is listed. See [setup and contract maintenance](../docs/SCHEMA_VERIFICATION.md)
-for the Railway pre-deploy command and protected GitHub release check.
+for the protected production Edge deployment and release checks.

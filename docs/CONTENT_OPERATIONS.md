@@ -1,5 +1,11 @@
 # Content operations runbook
 
+> Historical #195 rollout instructions for the Python backend. For current
+> Supabase Edge deployment and worker gates, use [RELEASING.md](../RELEASING.md),
+> [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md), and
+> [FUTURE_REFILL_ROLLOUT.md](FUTURE_REFILL_ROLLOUT.md). Do not run the old
+> deployment or schedule steps below against production.
+
 This runbook implements [the sustainable learning architecture](CONTENT_ARCHITECTURE.md)
 for #195. The repository owner is the initial content operator and reviewer.
 Broader crash reporting and application observability remain in #161.

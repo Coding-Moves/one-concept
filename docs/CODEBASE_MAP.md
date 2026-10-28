@@ -1,6 +1,6 @@
 # Codebase map
 
-Source inspection: 2026-09-13. This is a navigation guide to the implementation,
+Source inspection: 2026-10-28. This is a navigation guide to the implementation,
 not a claim that deployed services or every runtime behavior have been verified.
 Refresh the relevant sections when the code changes.
 
@@ -12,14 +12,14 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Area | Entry points and purpose |
 | --- | --- |
 | Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. `mobile/src/screens/AboutScreen.tsx` links learners to the public review explanation. |
-| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private FastAPI calls. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Direct deployment steps are in `docs/EDITORIAL_ROLLOUT.md`. |
-| Backend | `backend/app/main.py`; FastAPI, async SQLAlchemy/asyncpg, Pydantic settings, ES256 JWT verification. Docker uses Python 3.12. |
+| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private Supabase Edge API calls. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Current hosting instructions are in `admin/README.md`. |
+| Production API | `supabase/functions/api/handler.ts` routes mobile and review-site requests through the protected Supabase Edge API and SQL RPCs. `backend/app/main.py` remains the Python reference and maintenance implementation. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
-| Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/CONTENT_OPERATIONS.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. |
-| Content engine | `backend/app/services/generation.py`, `pool.py`, `prefetch.py`; Gemini lessons from a curated backlog. |
-| Operations | `.github/workflows/`, `backend/railway.json`, `backend/Dockerfile`, `mobile/eas.json`, `mobile/app.config.js`. |
-| Hosting migration | `docs/RAILWAY_MIGRATION.md`; source/destination evidence, worker handover, EAS endpoint publication, recovery redirects and retirement. New Railway services use dashboard settings because legacy Config as Code is deprecated. `.github/workflows/supabase-production-deploy.yml` and `supabase-production-cron-install.yml` are registered here on the default branch for manual, protected runs against current `main`; they are not triggered by merging `develop`. |
-| Supabase scheduled workers | `supabase/functions/worker/` validates signed Cron calls; migrations 0119–0120 own the disabled run ledger and HTTP reconciliation; migrations 0128–0129 feed owner reporting and bound run history; migration 0130 fences uncertain Gmail delivery; `backend/ops/supabase_workers/` installs inactive platform Cron jobs. See `docs/SUPABASE_WORKER_MIGRATION.md` for staged handover. |
+| Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/FUTURE_REFILL_ROLLOUT.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. `docs/CONTENT_OPERATIONS.md` preserves the earlier Python rollout. |
+| Content engine | `supabase/functions/worker/` runs scheduled Gemini drafting, reminders and reconciliation; `backend/app/services/generation.py`, `pool.py`, `prefetch.py` retain Python maintenance and reference paths. |
+| Operations | `.github/workflows/supabase-production-deploy.yml`, `.github/workflows/supabase-production-cron-install.yml`, `backend/ops/supabase_workers/`, `mobile/eas.json`, `mobile/app.config.js`. |
+| Hosting history | `docs/RAILWAY_MIGRATION.md` and `docs/SUPABASE_WORKER_MIGRATION.md` retain factual cutover evidence. Current deployment and release instructions are in `RELEASING.md`, `docs/SCHEMA_VERIFICATION.md`, and `docs/INCIDENT_RESPONSE.md`. |
+| Supabase scheduled workers | `supabase/functions/worker/` validates signed Cron calls; migrations 0119–0120 own the run ledger and HTTP reconciliation; migrations 0128–0129 feed owner reporting and bound run history; migration 0130 fences uncertain Gmail delivery; `backend/ops/supabase_workers/` installs platform Cron jobs. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
 | Agent guidance | Root `AGENTS.md`; `mobile/AGENTS.md` adds Expo documentation requirements and `mobile/CLAUDE.md` references it. |
 | Authentication email | `backend/email-templates/` contains branded signup, recovery, and password-changed HTML; `docs/EMAIL_TEMPLATES.md` covers manual Supabase installation and activation checks. Templates use the configured sender and are not installed by app deployment. |
@@ -54,8 +54,8 @@ gates. See [editorial-api.md](editorial-api.md) for permissions, retry semantics
 and rollout. The `admin/` website (#278) consumes these APIs; mobile attribution (#280) projects exact-version evidence through learner reads;
 owner reporting (#297) remains a separate child of #263.
 `services/editorial_notifications.py` drains the private #279 outbox through the
-existing reminders worker; `editorial_mail.py` uses Gmail HTTPS/OAuth (no Railway
-SMTP upgrade). `editorial_email_template.py` renders the escaped HTML template
+scheduled reminders worker; `editorial_mail.py` uses Gmail HTTPS/OAuth.
+`editorial_email_template.py` renders the escaped HTML template
 in `app/templates/editorial_review.html` alongside a plain-text fallback.
 `api/v1/editorial_notifications.py` exposes owner delivery/policy
 controls and the reviewer timezone. `admin/src/Notifications.tsx` shows overdue
@@ -67,7 +67,7 @@ claim fencing, provider orchestration and private draft completion. Migration
 0035 stores immutable source/feedback/result links and backlog claim tokens.
 `editorial_generation_status.py` exposes bounded private supply/planning status;
 `review_capacity.py` shares human-work limits across pool/prefetch/rewrite paths.
-The existing `workers/pool_topup.py` runs a bounded revision batch before refill;
+The Edge `worker` function runs a bounded revision batch before refill;
 `content_health.py` adds aggregate job conditions. See
 [editorial-generation.md](editorial-generation.md) for API and staging contracts.
 
@@ -109,7 +109,7 @@ packages, diffs, history, comments, checklist decisions and safe corrections.
 `LegacyEnrichment.tsx` previews eligible existing lessons and controls one
 subject batch at a time. `services/legacy_generation.py` builds a grounded
 complete-card candidate and `legacy_enrichment_worker.py` stages it privately
-through the scheduled `pool_topup.py` run; only a later human approval publishes.
+through the scheduled Edge `legacy_enrichment` job; only a later human approval publishes.
 `MarkdownText.tsx` safely renders lesson writing, with `markdownCode.tsx` adding
 bounded Prism token highlighting to fenced code; `LessonEditor` shows a live
 preview. Identifiers and configuration fields remain plain text.
@@ -158,8 +158,8 @@ recorded low-supply topic one normal slot before any optional urgent second pass
 response commits. Editorial corrections and legacy enrichment retain their own
 generation paths and cannot consume this allowance. `content_health.py` reports
 per-topic low-supply eligibility and the separate budget. See
-[FUTURE_REFILL_ROLLOUT.md](FUTURE_REFILL_ROLLOUT.md) for release-only migration,
-Railway variables, verification and rollback.
+[FUTURE_REFILL_ROLLOUT.md](FUTURE_REFILL_ROLLOUT.md) for worker gates,
+verification and rollback.
 
 ## Future multilingual content (#265)
 
@@ -358,19 +358,21 @@ share `hooks/useRefreshControl.tsx` for native pull gestures and refresh buttons
 ## Incident response
 
 [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) defines the production triage and
-communication sequence for Railway API/workers, Supabase, GitHub release gates,
+communication sequence for the Supabase API/workers, GitHub release gates,
 and mobile delivery. It deliberately separates learner-safe UI recovery from
 private diagnostics and restore procedures.
 
 ## Backend request and service flow
 
-The Supabase API candidate for #416 lives in `supabase/functions/api/` and
+The production Supabase API from #416 lives in `supabase/functions/api/` and
 `backend/migrations/0046_supabase_api_basics.sql`–`0116_supabase_profile_avatar_api.sql`.
 All 73 JSON paths have candidate handlers, including private avatar upload,
 short-lived Storage signing, and editorial read/command routes. The avatar
 image module bundles a pinned ImageMagick WASM file for 512px JPEG conversion.
-These candidate routes remain isolated from production clients. The complete route checklist and
-remaining parity gates are in [SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
+Its `public_pages.ts` serves the browser confirmation, recovery, and learner
+privacy pages at the same API path.
+Production clients use the Edge route. The historical parity checklist is in
+[SUPABASE_API_ROUTE_PARITY.md](SUPABASE_API_ROUTE_PARITY.md).
 `backend/tools/apply_staging_migrations.py` applies ordered migrations only to
 a fresh staging project after checking its project reference against the connection.
 Its `--inspect` mode reports staging schema metadata and profile row presence
@@ -383,8 +385,9 @@ For the initialized staging project, `--apply-incremental` requires the verified
 The protected incremental tag runs this path separately from the fresh-schema
 and Edge deploy jobs. It reloads PostgREST's RPC schema cache after verified
 SQL; `--reload-cache` is the guarded staging-only repair path for stale cache.
-Migration #417 will move scheduled workers; #418 owns browser pages and client
-cutover. Until then, the FastAPI implementation below remains authoritative.
+The Edge API and worker own production traffic. The Python implementation below
+remains a local reference and maintenance path; its routes and workers should
+not be mistaken for the deployed production entry points.
 
 `main.py` configures CORS, routes, production documentation visibility, safe SQLAlchemy and unexpected-exception responses, and a shared
 JWKS cache, and engine cleanup. Its lifespan owns `db/keepalive.py`'s configurable
@@ -456,7 +459,8 @@ models live in `schemas/daily.py`, `me.py`, `notifications.py`, and `topics.py`.
 - `services/reminders.py` claims due user/day/time slots before sending Expo push
   batches, handles timezone and midnight windows, suppresses completed days, and
   drops unregistered device tokens. A claimed but failed send can miss a reminder.
-- `workers/pool_topup.py` and `workers/reminders.py` are cron entry points.
+- `workers/pool_topup.py` and `workers/reminders.py` are retained Python
+  maintenance entry points. Production schedules call the Supabase Edge worker.
   `workers/rewrite_catalog.py` is a maintenance command that rewrites existing
   lessons through Gemini with the shared budget and generation kill switch;
   do not run it merely to inspect the project.
@@ -502,7 +506,7 @@ The contract records migration hashes and the candidate Edge API RPC definitions
 alongside the reviewed application schema.
 `workers/schema_check.py` performs the bounded read-only target check using
 `DIRECT_URL`; `docs/SCHEMA_VERIFICATION.md` covers contract maintenance and
-Railway/GitHub setup. No SQL is applied by verification.
+protected GitHub deployment. No SQL is applied by verification.
 
 `db/models.py` mirrors the SQL schema; migrations are the schema authority.
 The seventeen tables cover profiles, topics, concepts, user topics, daily assignments,
@@ -562,8 +566,8 @@ and the session pooler. Applied migrations must not be rewritten.
   the deployed backend/worker SHA; its guard rejects missing/mismatched revisions
   and non-main dispatches. It publishes production then preview OTA, creates a
   version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
-  is gated on native `runtimeVersion` changes. Railway deploys the backend
-  independently; follow `RELEASING.md` for migration and release ordering.
+  is gated on native `runtimeVersion` changes. The Supabase Edge API and worker
+  deploy through a separate protected workflow; follow `RELEASING.md` for ordering.
 - `pr-quality.yml` is the general pull-request gate for `develop` and `main`.
   It runs mobile Node 24 typechecking/tests and backend Ruff F/E9 plus pytest.
   The backend job installs Podman and fails if its disposable PostgreSQL 16

@@ -79,8 +79,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signUp = useCallback(async (email: string, password: string) => {
-    // Do not rely on Supabase's global Site URL: it can retain an old
-    // Railway hostname. The verified email link returns to the same API origin
+    // Do not rely on Supabase's global Site URL: it can retain a retired
+    // hostname. The verified email link returns to the same API origin
     // that this build uses, provided that URL is allowed in Supabase.
     const emailRedirectTo = authLandingUrl('confirmed', API_BASE_URL);
     const { data, error } = await supabase.auth.signUp({

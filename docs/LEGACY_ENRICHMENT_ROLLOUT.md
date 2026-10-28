@@ -1,5 +1,9 @@
 # Complete existing lessons, one subject at a time
 
+> Historical rollout record. The current scheduled implementation is the
+> Supabase Edge `legacy_enrichment` worker; use [RELEASING.md](../RELEASING.md)
+> and [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) for deployment and diagnosis.
+
 Migration `0042_legacy_enrichment_batches.sql` is already recorded as applied
 in production. Do not reapply or edit it. The new worker and owner controls use
 those existing tables. This change needs a normal `develop` → `main` release

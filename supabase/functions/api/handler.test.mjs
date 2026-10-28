@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
+import { runInNewContext } from 'node:vm';
 import { createHandler } from './handler.ts';
 import './avatar.test.mjs';
 
@@ -13,6 +14,67 @@ const config = {
 };
 const request = (path, init = {}) => new Request(`https://one-concept.supabase.co/functions/v1/api${path}`, init);
 const editorialToken = (claims) => `header.${Buffer.from(JSON.stringify(claims)).toString('base64url')}.signature`;
+
+test('public cutover pages serve browser HTML without leaking service credentials', async () => {
+  const calls = [];
+  const handler = createHandler(config, async (...args) => {
+    calls.push(args);
+    throw new Error('Public pages must not use a service request');
+  });
+  for (const path of ['/confirmed', '/reset-password', '/privacy']) {
+    const result = await handler(request(path));
+    const body = await result.text();
+    assert.equal(result.status, 200);
+    assert.match(result.headers.get('content-type'), /^text\/html/);
+    assert.equal(result.headers.get('cache-control'), 'no-store');
+    assert.equal(result.headers.get('referrer-policy'), 'no-referrer');
+    assert.match(result.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+    assert.doesNotMatch(body, /private-service-key|__NONCE__|__CONFIG__/);
+  }
+  assert.equal(calls.length, 0);
+  const reset = await (await handler(request('/reset-password'))).text();
+  assert.match(reset, /\/auth\/v1\/user/);
+  assert.match(reset, /public-anon-key/);
+  assert.match(reset, /history\.replaceState\(null, '', location\.pathname\)/);
+  const rejected = await handler(request('/reset-password', { method: 'POST' }));
+  assert.equal(rejected.status, 405);
+  assert.equal(rejected.headers.get('allow'), 'GET');
+});
+
+test('confirmation page claims success only after an Auth redirect', async () => {
+  const handler = createHandler(config);
+  const body = await (await handler(request('/confirmed'))).text();
+  const script = body.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
+  assert.ok(script);
+
+  function open(fragment) {
+    const heading = { textContent: 'Check your email link' };
+    const message = { textContent: 'Open the confirmation link from your email.', className: '' };
+    const replaced = [];
+    const location = {
+      href: `https://one-concept.supabase.co/functions/v1/api/confirmed${fragment}`,
+      hash: fragment,
+      search: '',
+      pathname: '/functions/v1/api/confirmed',
+      replace: url => replaced.push(url),
+    };
+    const history = { replaceState: (_state, _title, url) => replaced.push(url) };
+    const document = { getElementById: id => id === 'heading' ? heading : message };
+    runInNewContext(script, { URL, URLSearchParams, location, history, document });
+    return { heading, message, replaced };
+  }
+
+  const direct = open('');
+  assert.equal(direct.heading.textContent, 'Check your email link');
+  assert.deepEqual(direct.replaced, ['/functions/v1/api/confirmed']);
+  const verified = open('#access_token=test-token&type=signup');
+  assert.equal(verified.heading.textContent, 'Email confirmed ✓');
+  assert.deepEqual(verified.replaced, ['/functions/v1/api/confirmed']);
+  const recovery = open('#access_token=test-token&type=recovery');
+  assert.equal(recovery.heading.textContent, 'Check your email link');
+  assert.deepEqual(recovery.replaced,
+    ['https://one-concept.supabase.co/functions/v1/api/reset-password#access_token=test-token&type=recovery']);
+});
 
 test('editorial correction request reaches the atomic job RPC with the receipt fingerprint', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';

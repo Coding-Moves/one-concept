@@ -72,7 +72,7 @@ def message(settings, batch):
 
 
 async def send(settings, batch):
-    """Gmail's HTTPS API works without Railway's paid SMTP networking."""
+    """Send through Gmail's HTTPS API without requiring an SMTP connection."""
     raw = base64.urlsafe_b64encode(message(settings, batch).as_bytes()).decode("ascii")
     try:
         async with (

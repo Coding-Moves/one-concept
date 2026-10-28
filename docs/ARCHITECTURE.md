@@ -4,13 +4,16 @@
 Mobile app (Expo / React Native)
         |
         v
-FastAPI backend (Railway) ──┬──► Supabase (Postgres + Auth)
-                            └──► Gemini API
+Supabase Edge API ───────────┬──► Supabase (Postgres + Auth)
+                             └──► private editorial operations
+Supabase Cron → Edge worker ─────► Expo Push / Gmail HTTPS / Gemini
 ```
 
-The mobile app never talks to Gemini or Postgres directly. The backend owns
-the API key, every write, and the daily selection. See
-[backend/README.md](../backend/README.md) for endpoints and auth details.
+The mobile app uses Supabase Auth for sessions and calls the Edge API for app
+data. It never talks to Gemini or Postgres directly. The API owns data writes
+and daily selection; scheduled generation and notifications run through the
+Edge worker. See [backend/README.md](../backend/README.md) for the shared API
+contract and local Python maintenance implementation.
 
 ## Concept selection — no repeats
 
@@ -24,21 +27,22 @@ Published concepts in followed topics
   → assign, save to history
 ```
 
-When a user has read everything in their topics, the backend generates one
-new lesson on demand; a nightly worker keeps every topic stocked to 25 ahead
-of time so nobody normally waits on a model.
+When a user has read all published lessons in their followed topics, the app
+offers scheduled reviews. New lesson generation is a bounded background process
+from a human-planned backlog. It can stop for an empty plan, a full review queue,
+provider limits, or a disabled gate; learner requests do not wait for Gemini.
 
 ## Lessons
 
-Gemini writes lessons; it never chooses subjects — titles come from a curated
-backlog. Every lesson is 2–3 plain sentences plus one concrete example, and
-output is validated (length bounds, banned filler words) before publishing.
-Rejected output is retried later, never shown to a user.
+Gemini drafts lessons from curated titles; it does not choose subjects. Output
+is validated and remains private until a human reviews and publishes the full
+lesson package. Failed plans have bounded retries and require diagnosis before
+an operator grants another attempt.
 
 ## Reminders
 
 Up to three reminder times per user, interpreted in the user's own timezone.
-A worker runs every 15 minutes on Railway, claims each due (user, day, slot)
+A Supabase scheduled worker checks due slots, claims each (user, day, slot)
 occurrence in a log table before pushing — so a crash or overlapping run can
 miss a nudge but never send a duplicate — and stops the moment the user marks
 the concept learned. If the learner follows no active topic, the worker preserves
@@ -69,9 +73,9 @@ the completion history — a gaps-and-islands query, no counters to drift.
 | Layer | Technology |
 |---|---|
 | Mobile | Expo SDK 57, React Native, TypeScript |
-| Backend | Python, FastAPI, SQLAlchemy (async) |
+| API | Supabase Edge Function with PostgreSQL RPCs |
 | Database & auth | Supabase (Postgres) |
 | AI | Gemini (flash-lite) |
 | Push | Expo Notifications + Firebase Cloud Messaging |
-| Hosting | Railway (API + cron workers) |
+| Scheduled work | Supabase Cron + Edge worker |
 | CI/CD | GitHub Actions, EAS Build + Update |

@@ -25,6 +25,35 @@ test("review privacy policy opens the published learner privacy page", async ({ 
   await expect(page.getByRole("heading", { name: "Privacy Policy" })).toBeVisible();
 });
 
+test("Netlify confirmation stays neutral until an Auth redirect and clears its session", async ({ page }) => {
+  const html = await readFile(resolve("public/confirmed/index.html"), "utf8");
+  await page.route("**/confirmed", route => route.fulfill({ contentType: "text/html", body: html }));
+  await page.goto("/confirmed");
+  await expect(page.getByRole("heading", { name: "Check your email link" })).toBeVisible();
+  await expect(page).toHaveTitle("One Concept — email confirmation");
+
+  await page.goto("/");
+  await page.goto("/confirmed#access_token=confirmed-token&type=signup");
+  await expect(page.getByRole("heading", { name: "Email confirmed ✓" })).toBeVisible();
+  await expect(page).toHaveURL(/\/confirmed$/);
+
+  await page.goto("/");
+  await page.goto("/confirmed#error=access_denied&error_description=Email%20link%20expired");
+  await expect(page.getByRole("heading", { name: "Confirmation did not finish" })).toBeVisible();
+  await expect(page.locator("#message")).toHaveText("Email link expired");
+  await expect(page).toHaveURL(/\/confirmed$/);
+});
+
+test("Netlify confirmation forwards a recovery session to its reset form", async ({ page }) => {
+  const html = await readFile(resolve("public/confirmed/index.html"), "utf8");
+  const reset = await readFile(resolve("public/reset-password/index.html"), "utf8");
+  await page.route("**/confirmed", route => route.fulfill({ contentType: "text/html", body: html }));
+  await page.route("**/reset-password", route => route.fulfill({ contentType: "text/html", body: reset }));
+  await page.goto("/confirmed#access_token=recovery-token&type=recovery");
+  await expect(page).toHaveURL(/\/reset-password$/);
+  await expect(page.locator("#reset-form")).toBeVisible();
+});
+
 test("shared profile reads only public JSON and hides a revoked profile", async ({ page }) => {
   const html = await readFile(resolve("public/p/index.html"), "utf8");
   await page.route(`**/p/${token}`, (route) => route.fulfill({ contentType: "text/html", body: html }));

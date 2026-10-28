@@ -156,6 +156,15 @@ describe("private request boundaries", () => {
       VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_test",
     };
     expect(readConfig(base).apiUrl).toBe("https://api.test");
+    expect(readConfig({ ...base, VITE_API_URL: "https://api.test/functions/v1/api" }).apiUrl)
+      .toBe("https://api.test/functions/v1/api");
+    expect(() => readConfig({ ...base, VITE_API_URL: "https://api.test/other" })).toThrow();
+    expect(readConfig({ ...base, VITE_API_URL: "https://project.supabase.co/functions/v1/api",
+      VITE_SUPABASE_URL: "https://project.supabase.co" }).apiUrl)
+      .toBe("https://project.supabase.co/functions/v1/api");
+    expect(() => readConfig({ ...base,
+      VITE_API_URL: "https://staging.supabase.co/functions/v1/api",
+      VITE_SUPABASE_URL: "https://production.supabase.co" })).toThrow();
     expect(() =>
       readConfig({
         ...base,

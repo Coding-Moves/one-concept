@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### Production auth landing hotfix review — PR #460, 2026-10-28
+
+- Scope: review the `main` hotfix for Supabase Edge confirmation, recovery, and privacy pages; keep the existing production Netlify redirects working. PR [#460](https://github.com/Coding-Moves/one-concept/pull/460) remains open for independent review and the protected production deployment.
+- `9dfd2eb` makes a direct `/confirmed` visit neutral instead of falsely reporting verified email, matching the correction on `develop`. `32fd36f` adds script-level recovery edge cases and Chromium tests for direct confirmation, a successful recovery update, and an expired link.
+- `922e77e` replaces the retired-host redirect runbook with the current `main` mobile redirect and Edge fallback sequence, and maps the Edge page source. Local validation: 97 Edge handler tests, Supabase function TypeScript check, 17 admin unit tests, admin build with CI fixture variables, and all 53 Chromium tests passed. Hosted PR checks and a real inbox recovery test remain to be verified after push; no migration is involved.
+
 ### Supabase production release/cutover — issue #418, 2026-10-21
 
 - Scope: prepare one reviewed Step 3 branch from merged `develop` at `caaf0be`, retaining production on Railway until browser, deploy, OTA, Cron and retirement gates are observed. The owner asked for one large PR; issue #418 and `RELEASING.md` specify a `develop` → `main` release PR, so the PR target and gate exception must be explicit before merge. Production SQL was applied under the protected gate described below; Edge deployment, Cron and EAS remain unchanged. On October 21, the owner disabled Railway Auto Deploy on `api`, `reminders`, and `pool-topup` while leaving the current services and schedules running; the pasted `api` settings explicitly show it disabled.

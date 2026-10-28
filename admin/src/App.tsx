@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { Api, ApiError } from "./api";
 import { AccountSetup, Login, Mfa } from "./Auth";
+import { clearPendingSetup } from "./accountSetup";
 import { Notice, message } from "./ui";
 import type { Me } from "./types";
 import { Settings } from "./Settings";
@@ -86,7 +87,10 @@ export function App({
         dirty.current = false;
         setEpoch((n) => n + 1);
       }
-      if (event === "SIGNED_OUT") setSetup(null);
+      if (event === "SIGNED_OUT") {
+        clearPendingSetup();
+        setSetup(null);
+      }
       if (event === "PASSWORD_RECOVERY") setSetup("recovery");
     });
     api.onDenied = (status) => {
@@ -178,6 +182,7 @@ export function App({
     )
       return;
     setError("");
+    clearPendingSetup();
     api.setToken(null, true, null);
     sessionRef.current = null;
     setMe(null);
@@ -204,6 +209,7 @@ export function App({
         email={session.user.email || ""}
         flow={setup}
         onPasswordSet={() => {
+          clearPendingSetup();
           setSetup(null);
           navigate({ view: "queue" });
         }}

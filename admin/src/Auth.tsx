@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Field, Notice, message } from "./ui";
+import { clearPendingSetup } from "./accountSetup";
 export function Login({
   auth,
 }: {
@@ -30,6 +31,7 @@ export function Login({
             : "Unable to sign in. Check your credentials or contact your administrator.",
         );
       setPassword("");
+      if (!recovery) clearPendingSetup();
       if (recovery)
         setNotice(
           "If this address can recover an account, a password reset email will arrive shortly.",

@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { OwnerDemo } from "./OwnerDemo";
 import { App } from "./App";
 import { Api } from "./api";
+import { hasPendingSetup, pendingSetupFor, rememberPendingSetup } from "./accountSetup";
 import { readConfig } from "./config";
 import "./style.css";
 const root = createRoot(document.getElementById("root")!);
@@ -41,10 +42,12 @@ async function start() {
       if (error)
         initialError =
           "This invitation or recovery link is no longer valid. Request a new one.";
-      else if (data.session)
+      else if (data.session) {
         passwordSetup = fragment.get("type") === "invite"
           ? "invite"
           : fragment.get("type") === "recovery" ? "recovery" : "setup";
+        rememberPendingSetup(data.session.user.id, passwordSetup);
+      }
       else
         initialError = "This email link did not open an account session. Request a new one.";
     } else if (code) {
@@ -52,14 +55,20 @@ async function start() {
       if (error)
         initialError =
           "This email link could not be verified. Open it in the browser that requested it, or request a new one.";
-      else if (data.session)
+      else if (data.session) {
         passwordSetup = "setup";
+        rememberPendingSetup(data.session.user.id, passwordSetup);
+      }
       else
         initialError = "This email link did not open an account session. Request a new one.";
     } else if (hasAuthFragment)
       initialError = "This sign-in link has expired or could not be verified.";
     else if (callback)
       initialError = "Open your invitation or recovery link from the email, or sign in with your existing account.";
+    if (!passwordSetup && hasPendingSetup()) {
+      const { data } = await auth.auth.getSession();
+      if (data.session) passwordSetup = pendingSetupFor(data.session.user.id);
+    }
     root.render(
       <App
         auth={auth}

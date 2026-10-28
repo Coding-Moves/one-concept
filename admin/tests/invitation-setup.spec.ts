@@ -29,6 +29,9 @@ test("a verified invitation opens dedicated setup for the shared learning and re
   await expect(page.getByRole("heading", { name: "Finish creating your account" })).toBeVisible();
   await expect(page.getByLabel("Verified email")).toHaveValue("reviewer@example.test");
   await expect(page).toHaveURL(/\/auth\/callback$/);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Finish creating your account" })).toBeVisible();
+  await expect(page.getByLabel("Verified email")).toHaveValue("reviewer@example.test");
   await page.getByLabel("Password", { exact: true }).fill("new-private-password");
   await page.getByLabel("Confirm password").fill("different-password");
   await page.getByRole("button", { name: "Save password and continue" }).click();
@@ -37,6 +40,8 @@ test("a verified invitation opens dedicated setup for the shared learning and re
   await page.getByRole("button", { name: "Save password and continue" }).click();
   await expect(page.getByRole("heading", { name: "Let’s set up your reviewer profile" })).toBeVisible();
   await expect(page).toHaveURL(/\?view=queue$/);
+  await page.reload();
+  await expect(page.getByRole("heading", { name: "Finish creating your account" })).toHaveCount(0);
 });
 
 test("a recovery email returns to the same password setup without creating a second account", async ({ page, context }) => {

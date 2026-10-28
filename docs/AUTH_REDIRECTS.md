@@ -1,7 +1,8 @@
 # Authentication email redirects after the Supabase cutover
 
 Supabase Auth verifies email links, then sends the browser to a permitted HTTPS
-landing URL. The public Supabase `api` Edge function now serves three pages:
+landing URL. Once the pending public-page release is deployed, the Supabase
+`api` Edge function serves three pages:
 
 - `/functions/v1/api/confirmed` explains successful email confirmation. If an
   older client sends a recovery session to the Site URL, this page forwards the
@@ -33,7 +34,7 @@ public browser pages; private application routes still authenticate the user.
 3. After the pages are live, set the **Site URL** fallback to the exact
    `/functions/v1/api/confirmed` page. Its recovery forwarding handles older
    clients that omitted an explicit reset redirect. Keep previous working
-   redirect URLs until outstanding email links expire; a removed Railway host
+   redirect URLs until outstanding email links expire; a retired host
    cannot be repaired by an allowlist entry.
 4. Check Expo's **production** `EXPO_PUBLIC_API_BASE_URL` points to the same
    Supabase `api` function, and keep the Supabase Auth URL and publishable key
@@ -50,5 +51,5 @@ or chat. A 200 response from the page alone does not prove the full Auth flow.
 
 The production app must receive the compatible JavaScript update for its About
 screen to link to the Edge privacy page under the API path. Older builds can
-still contain removed Railway URLs; ask those users to update the app rather
-than re-enabling Railway.
+still contain retired host URLs; ask those users to update the app rather
+than restoring the retired service.

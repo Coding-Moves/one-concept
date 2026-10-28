@@ -67,29 +67,25 @@ not a team-wide unique count when several people reviewed the same concept.
 API/database “reachable” means this authorized reporting request succeeded; it
 is not historical uptime. If the API or database is unavailable the UI shows a
 report error. Generation/email/telemetry switches and the configured call cap
-describe the serving API process, not the separately configured workers. Check
-worker settings in their service consoles. Reserved daily generation calls, AI
-job states and email-batch states come from shared database records. Generation budgets
+describe the serving API process, not the separately configured Edge worker.
+Check production Edge secrets and worker gates separately. Reserved daily
+generation calls, AI job states and email-batch states come from shared database
+records. Generation budgets
 retain the existing `America/Los_Angeles` day. A reservation can include a failed
 attempt and is not a billing total. Email “Accepted” means the provider accepted
 it; it does not prove inbox delivery.
 
-Optional `OWNER_TELEMETRY_ENABLED` defaults to **false**. When enabled on API,
-reminders and pool-topup, the existing processes record only allowlisted status
-codes, UTC timestamp, service, severity and a random correlation UUID in
-`owner_operation_events`. API failure correlation matches its public incident ID
-(compact and hyphenated UUIDs are accepted by the event filter). Worker start
-and terminal events share an ID.
-Telemetry never includes credentials, stack traces, raw errors or user input.
-It uses a separate short transaction, 750 ms statement timeout and a one-second
-write deadline; a logging failure does not replace the worker's result.
+Optional legacy Python `OWNER_TELEMETRY_ENABLED` defaults to **false**. When
+used in a controlled local process, it records allowlisted status codes, UTC
+timestamps, service, severity and a random correlation UUID in
+`owner_operation_events`. Production scheduled-job observations come from the
+separate `edge_worker_runs` ledger. Neither feed includes credentials, stack
+traces, raw errors or user input.
 
-- Worker observations are unavailable when absent. The API’s own telemetry switch
-  does not suppress observations written by workers. Disabling a worker’s telemetry
-  stops new observations; existing ones age into stale status. Starts without a
-  terminal observation become stale after 30 minutes. Terminal observations are
-  stale after 45 minutes for the 15-minute reminders cron and 36 hours for the
-  daily pool-topup cron. If schedules change, adjust these thresholds in code.
+- Production worker status comes from `edge_worker_jobs` and
+  `edge_worker_runs`. A missing run is unavailable, a disabled job is disabled,
+  and a completed dispatch can become stale after its job-specific interval.
+  Check the current Cron schedule before interpreting a stale result.
 - “Completed” describes process completion, not generation, publication or email
   success. Individual skipped/failed work remains in the existing job/outbox
   counters and provider consoles.
@@ -152,10 +148,9 @@ When #281 performs the rollout after the production release:
    unnecessary.
 4. Confirm the intended owner account has an approved name, MFA and
    `manage_reviewers`. An ordinary reviewer must be denied all four report URLs.
-5. Optionally enable `OWNER_TELEMETRY_ENABLED=true` on the API, reminders and
-   pool-topup services once the migration is verified. Wait for ordinary scheduled
-   runs; do not run content generation just to paint a green status. Until then,
-   worker observations correctly remain unavailable.
+5. Check the enabled Supabase worker gates and ordinary scheduled runs. Do not
+   run content generation just to paint a green status. When a job is disabled,
+   its observation should accurately reflect that state.
 6. Reconcile a controlled learner completion and a known review/publication with
    the reports. Verify sign-out, revocation, unavailable states, narrow layout,
    keyboard use and both themes on the deployed origin. Verify actual host headers

@@ -1,5 +1,10 @@
 # Reviewer website: direct production rollout (#281 / #313)
 
+> Historical rollout record. Current Netlify and Supabase Edge setup is in
+> [admin/README.md](../admin/README.md); use
+> [RELEASING.md](../RELEASING.md) for protected production deployment.
+> The former service URLs and instructions below are not current.
+
 The reviewer and owner dashboards are two sections of the same `admin/` site.
 They use the existing production FastAPI service and Supabase Auth; no new
 backend service or paid frontend plan is required. Static hosting needs no

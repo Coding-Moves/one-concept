@@ -1,5 +1,8 @@
 # Supabase API candidate staging (#416)
 
+> Historical staging validation record. Production now uses the Supabase Edge
+> API. Current release steps are in [RELEASING.md](../RELEASING.md).
+
 The current candidate implements all 73 inventoried JSON paths under
 `/functions/v1/api`. [The route matrix](SUPABASE_API_ROUTE_PARITY.md) records
 each consumer and validation state. Local route coverage is complete; hosted

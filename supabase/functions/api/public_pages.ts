@@ -22,7 +22,7 @@ const STYLE = `
 
 const CONFIRMED = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>One Concept — email confirmed</title><style nonce="__NONCE__">${STYLE}</style></head>
+<title>One Concept — email confirmation</title><style nonce="__NONCE__">${STYLE}</style></head>
 <body><main><h1 id="heading">Check your email link</h1>
 <p id="message">Open the confirmation link from your email to finish setting up your account.</p>
 </main><script nonce="__NONCE__">
@@ -155,6 +155,7 @@ export function publicPage(path: string, method: string, config: PageConfig, cor
   headers.set('x-content-type-options', 'nosniff');
   headers.set('referrer-policy', 'no-referrer');
   headers.set('x-frame-options', 'DENY');
+  headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
   headers.set('content-security-policy', `default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src ${config.supabaseUrl}`);
   return new Response(body, { status: 200, headers });
 }

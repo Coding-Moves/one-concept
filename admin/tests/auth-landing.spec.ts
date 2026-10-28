@@ -23,6 +23,22 @@ test("direct confirmation visit does not claim that an email was verified", asyn
   await page.goto(`${base}/confirmed`);
   await expect(page.getByRole("heading", { name: "Check your email link" })).toBeVisible();
   await expect(page.getByText("Email confirmed ✓")).toHaveCount(0);
+  await expect(page).toHaveTitle("One Concept — email confirmation");
+});
+
+test("verified confirmation link reports success and removes its session fragment", async ({ page }) => {
+  await serveAuthPages(page);
+  await page.goto(`${base}/confirmed#access_token=confirmed-token&type=signup`);
+  await expect(page.getByRole("heading", { name: "Email confirmed ✓" })).toBeVisible();
+  await expect(page).toHaveURL(`${base}/confirmed`);
+});
+
+test("expired confirmation link reports the error without claiming success", async ({ page }) => {
+  await serveAuthPages(page);
+  await page.goto(`${base}/confirmed#error=access_denied&error_description=Email%20link%20expired`);
+  await expect(page.getByRole("heading", { name: "Confirmation did not finish" })).toBeVisible();
+  await expect(page.getByText("Email link expired")).toBeVisible();
+  await expect(page).toHaveURL(`${base}/confirmed`);
 });
 
 test("recovery link reaches the reset form and updates the password with its token", async ({ page }) => {

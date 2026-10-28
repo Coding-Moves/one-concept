@@ -28,6 +28,7 @@ test('public cutover pages serve browser HTML without leaking service credential
     assert.match(result.headers.get('content-type'), /^text\/html/);
     assert.equal(result.headers.get('cache-control'), 'no-store');
     assert.equal(result.headers.get('referrer-policy'), 'no-referrer');
+    assert.equal(result.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
     assert.match(result.headers.get('content-security-policy'), /frame-ancestors 'none'/);
     assert.doesNotMatch(body, /private-service-key|__NONCE__|__CONFIG__/);
   }

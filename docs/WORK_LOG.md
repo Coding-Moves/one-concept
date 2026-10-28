@@ -12,6 +12,7 @@ claims as completed work.
 - Scope: review the `main` hotfix for Supabase Edge confirmation, recovery, and privacy pages; keep the existing production Netlify redirects working. PR [#460](https://github.com/Coding-Moves/one-concept/pull/460) remains open for independent review and the protected production deployment.
 - `9dfd2eb` makes a direct `/confirmed` visit neutral instead of falsely reporting verified email, matching the correction on `develop`. `32fd36f` adds script-level recovery edge cases and Chromium tests for direct confirmation, a successful recovery update, and an expired link.
 - `922e77e` replaces the retired-host redirect runbook with the current `main` mobile redirect and Edge fallback sequence, and maps the Edge page source. Local validation: 97 Edge handler tests, Supabase function TypeScript check, 17 admin unit tests, admin build with CI fixture variables, and all 53 Chromium tests passed. Hosted PR checks and a real inbox recovery test remain to be verified after push; no migration is involved.
+- Live HTTP checks found the existing Netlify `/privacy` page returns 200 while the new production Edge `/privacy` page still returns 404 before deployment. `1e3eb2d` keeps the reviewer policy link on the working Netlify page and adds a focused Chromium navigation test, which passed. This removes a link outage between a future merge and the protected Edge deployment; #459 is already merged to `develop` for a later release.
 
 ### Supabase production release/cutover — issue #418, 2026-10-21
 

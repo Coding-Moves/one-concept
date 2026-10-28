@@ -10,7 +10,7 @@ claims as completed work.
 ### Reviewer invitation PR #436 integration — 2026-10-28
 
 - The owner requested a final review and merge-ready update of [PR #436](https://github.com/Coding-Moves/one-concept/pull/436). The branch is integrating current `develop` after #458 and #459 without rewriting existing commits. Its four unapplied reviewer migrations are renumbered to 0133–0136, after the learner opt-in migrations 0131–0132; their SQL bodies are unchanged. The combined schema contract was regenerated and verified against disposable PostgreSQL 16. No production migration or deployment is part of this PR update.
-- The reviewer/account integration tests passed (72), the Edge function TypeScript check and all 98 API handler tests passed, and the review-site unit tests (22), typecheck, fixture build, and 54 browser tests passed. Hosted checks are still pending. Live invitation and removal acceptance remain release steps after the matching schema, API, Auth redirect, and email template are configured.
+- The reviewer/account integration tests passed (72), the Edge function TypeScript check and all 98 API handler tests passed, and the review-site unit tests (22), typecheck, fixture build, and 54 browser tests passed. All three hosted checks passed on merge-resolution commit `baad176` ([run 40692075416](https://github.com/Coding-Moves/one-concept/actions/runs/40692075416)), including the complete backend suite and Ruff. Live invitation and removal acceptance remain release steps after the matching schema, API, Auth redirect, and email template are configured.
 
 ### Reviewer invitations and account controls — 2026-10-22
 

@@ -91,6 +91,7 @@ form.addEventListener('submit', async event => {
       method: 'PUT', headers: { apikey: config.anonKey,
         Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
+      cache: 'no-store', credentials: 'omit', redirect: 'error',
     });
     if (!result.ok) {
       const body = await result.json().catch(() => ({}));
@@ -102,7 +103,8 @@ form.addEventListener('submit', async event => {
     message.className = 'success';
   } catch (error) {
     submit.disabled = false;
-    fail(error instanceof Error ? error.message : 'Could not reset your password.');
+    fail(error instanceof Error && !(error instanceof TypeError)
+      ? error.message : 'Could not reset your password. Request a new link from the app.');
   }
 });
 </script></body></html>`;

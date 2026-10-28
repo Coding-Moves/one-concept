@@ -81,3 +81,23 @@ test("expired recovery link shows an error and never calls Auth", async ({ page 
   await expect(page).toHaveURL(`${base}/reset-password`);
   expect(called).toBe(false);
 });
+
+test("password update rejects Auth redirects without forwarding the recovery token", async ({ page }) => {
+  await serveAuthPages(page);
+  let redirected = false;
+  await page.route(`${origin}/auth/v1/user`, route => route.fulfill({
+    status: 302,
+    headers: { location: `${origin}/auth/v1/redirect-target` },
+  }));
+  await page.route(`${origin}/auth/v1/redirect-target`, async route => {
+    redirected = true;
+    await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });
+  });
+
+  await page.goto(`${base}/reset-password#access_token=recovery-token&type=recovery`);
+  await page.getByLabel("New password", { exact: true }).fill("safe-new-password");
+  await page.getByLabel("Confirm new password").fill("safe-new-password");
+  await page.getByRole("button", { name: "Update password" }).click();
+  await expect(page.getByRole("alert")).toContainText("Could not reset your password");
+  expect(redirected).toBe(false);
+});

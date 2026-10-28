@@ -16,6 +16,15 @@ test.beforeEach(async ({ page }) => {
   }));
 });
 
+test("review privacy policy opens the published learner privacy page", async ({ page }) => {
+  const html = await readFile(resolve("public/privacy/index.html"), "utf8");
+  await page.route("**/privacy", route => route.fulfill({ contentType: "text/html", body: html }));
+  await page.goto("/privacy.html");
+  await page.getByRole("link", { name: "One Concept learning app privacy policy" }).click();
+  await expect(page).toHaveURL(/\/privacy\/?$/);
+  await expect(page.getByRole("heading", { name: "Privacy Policy" })).toBeVisible();
+});
+
 test("shared profile reads only public JSON and hides a revoked profile", async ({ page }) => {
   const html = await readFile(resolve("public/p/index.html"), "utf8");
   await page.route(`**/p/${token}`, (route) => route.fulfill({ contentType: "text/html", body: html }));

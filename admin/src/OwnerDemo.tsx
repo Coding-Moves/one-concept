@@ -13,7 +13,7 @@ export function OwnerDemo() {
       </a>
       <header className="owner-demo-header">
         <div className="brand">
-          <span className="brand-mark">1</span>
+          <img className="brand-mark" src="/one-concept-icon.png" width="43" height="43" alt="" />
           <div>
             One Concept<small>Owner dashboard · demo</small>
           </div>

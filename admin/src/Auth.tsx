@@ -46,7 +46,7 @@ export function Login({
     <div className="auth-layout">
       <section className="auth-story">
         <div className="brand">
-          <span className="brand-mark">1</span> One Concept
+          <img className="brand-mark" src="/one-concept-icon.png" width="43" height="43" alt="" /> One Concept
         </div>
         <p className="eyebrow">THE REVIEW WORKSPACE</p>
         <h1>
@@ -120,6 +120,7 @@ export function Login({
           Private workspace · Your learning app account does not automatically
           grant review access.
         </p>
+        <p><a href="/account">Create or manage a learner account</a></p>
       </section>
     </div>
   );
@@ -164,7 +165,7 @@ export function AccountSetup({
   return (
     <main className="auth-layout">
       <section className="auth-story">
-        <div className="brand"><span className="brand-mark">1</span> One Concept</div>
+        <div className="brand"><img className="brand-mark" src="/one-concept-icon.png" width="43" height="43" alt="" /> One Concept</div>
         <p className="eyebrow">ONE ACCOUNT · TWO EXPERIENCES</p>
         <h1>Learn and review<br />with one account.</h1>
         <p>Your verified email and password work in both the One Concept learning app and this review workspace. Reviewer access is granted by the owner.</p>

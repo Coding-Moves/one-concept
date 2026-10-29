@@ -1,8 +1,9 @@
 # One Concept email templates
 
-These four templates customize the Auth messages used by current product flows. They work with
-the project's configured sender; installing the HTML does not require Resend,
-a purchased domain, or an app update. Provider setup remains separate in
+These four templates customize the Auth messages used by current product flows.
+They work with the project's configured sender when that Supabase project is
+eligible for template customization; installing the HTML does not require an
+app update. Provider setup remains separate in
 [draft PR #187](https://github.com/Coding-Moves/one-concept/pull/187).
 
 **Merging or releasing the app does not install these files in Supabase.**
@@ -12,6 +13,11 @@ stores their reviewed source; it does not synchronize production settings.
 ## Install
 
 1. Open the correct Supabase project, then **Authentication → Emails → Templates**.
+   Confirm the project allows customization before changing a template. New
+   free-tier projects created on or after June 3, 2026 cannot customize Auth
+   templates with Supabase's default mail provider; an eligible older project,
+   custom SMTP, or a paid plan is needed. Do not assume staging and production
+   have the same eligibility.
 2. Open each template listed below and set its subject exactly as shown.
 3. Replace the body with the entire raw HTML file, starting with `<!doctype html>`.
    Copy the file's source, not its rendered browser preview, and save.
@@ -93,11 +99,11 @@ See [Supabase email templates](https://supabase.com/docs/guides/auth/auth-email-
 
 Template customization and sending capacity are separate. Supabase's default
 sender is for testing: it currently sends only to project-team addresses and
-allows two emails per hour. Other recipients require custom SMTP, which can be
-the owner's existing Gmail setup once configured and tested. These templates
-do not remove sender limits or establish delivery. See
-[Supabase SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp)
-(checked 2026-09-12).
+allows two emails per hour. Other recipients require custom SMTP. These
+templates do not remove sender limits or establish delivery. Check both the
+[June 2026 template restriction](https://supabase.com/changelog/46599-changes-to-email-template-customisation-on-free-tier)
+and [Supabase SMTP documentation](https://supabase.com/docs/guides/auth/auth-smtp)
+(checked 2026-10-29) before activating either project.
 
 Before announcing the new emails to users, test with accounts and inboxes you
 control under the configured sender's limits:

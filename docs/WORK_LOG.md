@@ -16,6 +16,7 @@ claims as completed work.
 - Release handoff: deploy the public review-site icon and account page and the matching Edge `api` revision first, verify exact redirect and Auth project settings, then install and test the four source templates through `docs/EMAIL_TEMPLATES.md` in the intended Supabase projects. The repo files do not update Dashboard templates automatically. No PR merge, release PR, migration, or production setting change is included here.
 - [PR #461](https://github.com/Coding-Moves/one-concept/pull/461) targets `develop` and is open. Hosted checks were started on the initial push; their final status must be read before merge. The owner must explicitly confirm a merge under the standing PR rule.
 - Initial hosted mobile/Edge job found an outdated confirmation-page Node harness: it expected immediate success and had no mocked `fetch` for the new verification request. A focused follow-up makes the test await Auth and cover an invalid token; all 98 local Edge API handler tests and all 12 worker test files now pass. Push this correction and recheck hosted CI before handoff.
+- Supabase's June 2026 policy restricts Auth-template customization for newer free projects using the default mail provider. Production and staging eligibility must be checked separately before the manual template install; an older eligible project, custom SMTP, or paid plan can still use the source templates. See the official policy linked in `docs/EMAIL_TEMPLATES.md`.
 
 ### Reviewer invitation PR #436 integration — 2026-10-28
 

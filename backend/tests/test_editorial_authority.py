@@ -27,6 +27,11 @@ async def editorial(session, user):
         {"sid": sid, "uid": user},
     )
     await bootstrap_owner(session, f"{user}@example.invalid", "Initial Owner")
+    # Most authority regressions exercise an existing owner who opted into MFA.
+    await session.execute(
+        text("update public.editorial_memberships set require_mfa=true where user_id=:id"),
+        {"id": user},
+    )
     await session.commit()
     settings = Settings(
         _env_file=None,
@@ -138,6 +143,18 @@ async def test_bootstrap_requires_confirmed_account(session, user):
     with pytest.raises(HTTPException) as exc:
         await bootstrap_owner(session, f"{user}@example.invalid", "Unconfirmed")
     assert exc.value.status_code == 409
+
+
+async def test_first_owner_starts_with_optional_authenticator(session, user):
+    await session.execute(
+        text("truncate editorial_legacy_batch_entries, editorial_legacy_batches, editorial_memberships, editorial_account_events")
+    )
+    await session.execute(
+        text("update auth.users set email_confirmed_at=now() where id=:id"),
+        {"id": user},
+    )
+    member = await bootstrap_owner(session, f"{user}@example.invalid", "Initial Owner")
+    assert member.require_mfa is False
 
 
 async def test_bootstrap_cannot_replace_deleted_team(session, editorial):

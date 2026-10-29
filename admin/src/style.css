@@ -282,14 +282,11 @@ form > button + button {
   font-weight: 500;
 }
 .brand-mark {
-  display: grid;
-  place-items: center;
-  background: var(--primary);
-  color: var(--on-primary);
-  width: 39px;
+  display: block;
+  object-fit: contain;
+  width: 43px;
   height: 43px;
   border-radius: 12px;
-  font-size: 27px;
   flex-shrink: 0;
 }
 .workspace {
@@ -629,7 +626,10 @@ main {
 .lesson-markdown > :last-child { margin-bottom: 0; }
 .lesson-markdown pre { overflow-x: auto; padding: 14px; border-radius: 8px; background: var(--subtle); }
 .lesson-markdown code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; background: var(--subtle); border-radius: 4px; padding: 1px 3px; }
-.lesson-markdown pre code { padding: 0; }
+.lesson-markdown pre code { padding: 0; white-space: pre; background: transparent; overflow-wrap: normal; }
+.lesson-markdown .md-token-comment, .lesson-markdown .md-token-prolog { color: var(--muted); }
+.lesson-markdown .md-token-keyword, .lesson-markdown .md-token-boolean { color: var(--primary); }
+.lesson-markdown .md-token-string, .lesson-markdown .md-token-number { color: var(--success); }
 .lesson-markdown blockquote { border-left: 3px solid var(--primary); margin-left: 0; padding-left: 14px; color: var(--muted); }
 .lesson-markdown table { border-collapse: collapse; display: block; max-width: 100%; overflow-x: auto; }
 .lesson-markdown th, .lesson-markdown td { border: 1px solid var(--line); padding: 6px 10px; }

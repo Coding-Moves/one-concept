@@ -26,7 +26,10 @@ BACKUP_REFERENCE = re.compile(r"[A-Za-z0-9._:-]{8,80}\Z")
 
 
 def pending_files() -> list[Path]:
-    files = sorted(MIGRATIONS.glob("0*.sql"))
+    # This historical one-time runner covers only 0046-0130. Later releases
+    # add higher-numbered migrations through their own manual release process.
+    files = sorted(path for path in MIGRATIONS.glob("0*.sql")
+                   if path.name[:4].isdigit() and int(path.name[:4]) <= 130)
     names = [path.name for path in files]
     if BASELINE not in names or names[-1] != FINAL:
         raise ValueError("The reviewed migration range changed")

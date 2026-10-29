@@ -50,4 +50,7 @@ def render(body: str, dashboard_origin: str) -> str:
             )
         else:
             blocks.append('<p style="margin:0 0 12px;">' + safe + "</p>")
-    return _TEMPLATE.substitute(content="\n".join(blocks))
+    return _TEMPLATE.substitute(
+        content="\n".join(blocks),
+        icon_url=escape(dashboard_origin.rstrip("/") + "/one-concept-icon.png", quote=True),
+    )

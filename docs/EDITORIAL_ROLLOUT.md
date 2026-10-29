@@ -1,5 +1,10 @@
 # Reviewer website: direct production rollout (#281 / #313)
 
+> Historical rollout record. Current Netlify and Supabase Edge setup is in
+> [admin/README.md](../admin/README.md); use
+> [RELEASING.md](../RELEASING.md) for protected production deployment.
+> The former service URLs and instructions below are not current.
+
 The reviewer and owner dashboards are two sections of the same `admin/` site.
 They use the existing production FastAPI service and Supabase Auth; no new
 backend service or paid frontend plan is required. Static hosting needs no
@@ -90,7 +95,8 @@ In Railway's **api** variables:
 
 - Append the exact Netlify HTTPS origin to the comma-separated `ALLOWED_ORIGINS`,
   retaining existing origins. No `*` and no callback path here.
-- Set `EDITORIAL_INVITE_REDIRECT_URL` to that origin plus `/auth/callback`.
+- Set `EDITORIAL_INVITE_REDIRECT_URL` to
+  `https://coding-moves-one-concept-review.netlify.app/auth/callback`.
 - Set `EDITORIAL_EMAIL_DASHBOARD_URL` to the exact origin, with no path.
 - Keep `EDITORIAL_ENABLED=false` and `EDITORIAL_EMAIL_ENABLED=false` until the
   account and sender steps below. Keep `GENERATION_ENABLED` unchanged.
@@ -102,7 +108,9 @@ setup. Do not replace its start command with a schema check; it must remain
 rollout. Supabase Auth → URL Configuration → Redirect URLs must allow the exact
 `https://<project>.netlify.app/auth/callback` URL for invitations and recovery;
 retain the mobile app's existing redirects. Supabase's existing Auth SMTP and
-HTML templates stay as configured.
+HTML templates need the reviewer invitation update in
+[EMAIL_TEMPLATES.md](EMAIL_TEMPLATES.md). The Supabase Site URL stays on the
+working learner fallback; the invite call supplies the reviewer callback.
 
 Wait for the matching API deployment, then check the site root and a direct
 `/auth/callback` reload. Inspect HTTPS response headers on both. Verify the
@@ -130,9 +138,21 @@ can invite each reviewer through **Reviewers**, approve their registered name,
 and grant only the needed capabilities (`review`, plus `approve`/`publish` where
 appropriate). Assignment requires `review`; a separate `approve`-only or
 `publish`-only member can still read the private lesson and shared queue needed
-for that decision, with the same approved-name and MFA checks. Reviewers use
-individual accounts and MFA; no GitHub or database
+for that decision, with the same approved-name and optional authenticator
+checks. New reviewer accounts start with the authenticator requirement off and
+can enable it in **Settings**. Reviewers use individual accounts; no GitHub or database
 console access is required. Set their timezone in **Settings**.
+
+Before sending a real invitation, deploy migrations 0133–0136 with the matching
+API and Edge code, then install the **Invite user** HTML template from
+`backend/email-templates/invite-reviewer.html`. A new reviewer should receive
+the website callback, set a password, and sign in. An existing confirmed
+learner should use their current email and password after the owner adds their
+reviewer membership. Check that the tenth active reviewer is accepted when the
+owner is counted and an eleventh is denied. Remove a test reviewer's access
+through **Reviewers**, then verify their learning account remains usable and
+the review workspace denies access. Never delete their Supabase Auth user as a
+substitute for reviewer removal.
 
 Test the website on its actual HTTPS origin: root/callback/review deep links,
 sign-out and sign-in return, permission denial, topic filter, one existing

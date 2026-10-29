@@ -1,14 +1,11 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Field, Notice, message } from "./ui";
+import { clearPendingSetup } from "./accountSetup";
 export function Login({
   auth,
-  passwordSetup,
-  onPasswordSet,
 }: {
   auth: SupabaseClient;
-  passwordSetup: boolean;
-  onPasswordSet: () => void;
 }) {
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
@@ -22,24 +19,20 @@ export function Login({
     setError("");
     setNotice("");
     try {
-      const result = passwordSetup
-        ? await auth.auth.updateUser({ password })
-        : recovery
-          ? await auth.auth.resetPasswordForEmail(email, {
-              redirectTo: location.origin + "/auth/callback",
-            })
-          : await auth.auth.signInWithPassword({ email, password });
+      const result = recovery
+        ? await auth.auth.resetPasswordForEmail(email, {
+            redirectTo: location.origin + "/auth/callback",
+          })
+        : await auth.auth.signInWithPassword({ email, password });
       if (result.error)
         throw new Error(
-          passwordSetup
-            ? "Password could not be updated. Check password requirements and try again."
-            : recovery
-              ? "Unable to request a recovery email. Try again later."
-              : "Unable to sign in. Check your credentials or contact your administrator.",
+          recovery
+            ? "Unable to request a recovery email. Try again later."
+            : "Unable to sign in. Check your credentials or contact your administrator.",
         );
       setPassword("");
-      if (passwordSetup) onPasswordSet();
-      else if (recovery)
+      if (!recovery) clearPendingSetup();
+      if (recovery)
         setNotice(
           "If this address can recover an account, a password reset email will arrive shortly.",
         );
@@ -53,7 +46,7 @@ export function Login({
     <div className="auth-layout">
       <section className="auth-story">
         <div className="brand">
-          <span className="brand-mark">1</span> One Concept
+          <img className="brand-mark" src="/one-concept-icon.png" width="43" height="43" alt="" /> One Concept
         </div>
         <p className="eyebrow">THE REVIEW WORKSPACE</p>
         <h1>
@@ -75,21 +68,14 @@ export function Login({
         <form onSubmit={submit}>
           <p className="eyebrow">INVITED REVIEWERS</p>
           <h2>
-            {passwordSetup
-              ? "Set your password"
-              : recovery
+            {recovery
                 ? "Recover your account"
                 : "Welcome back"}
           </h2>
-          <p>
-            {passwordSetup
-              ? "Choose a private password. Your administrator never needs to know it."
-              : "Sign in with your own invited account to continue."}
-          </p>
+          <p>{recovery ? "Enter your account email to receive a password reset link." : "Sign in with your own invited account to continue."}</p>
           {error && <Notice error>{error}</Notice>}
           {notice && <Notice>{notice}</Notice>}
-          {!passwordSetup && (
-            <Field title="Email address">
+          <Field title="Email address">
               <input
                 type="email"
                 autoComplete="email"
@@ -97,17 +83,14 @@ export function Login({
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-            </Field>
-          )}
-          {(!recovery || passwordSetup) && (
+          </Field>
+          {!recovery && (
             <Field title="Password">
               <input
                 type="password"
-                autoComplete={
-                  passwordSetup ? "new-password" : "current-password"
-                }
+                autoComplete="current-password"
                 required
-                minLength={passwordSetup ? 12 : 1}
+                minLength={1}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
               />
@@ -116,14 +99,11 @@ export function Login({
           <button className="primary" disabled={busy}>
             {busy
               ? "Please wait…"
-              : passwordSetup
-                ? "Save password"
-                : recovery
+              : recovery
                   ? "Send recovery email"
                   : "Sign in"}
           </button>
-          {!passwordSetup && (
-            <button
+          <button
               type="button"
               className="text-button"
               onClick={() => {
@@ -134,15 +114,76 @@ export function Login({
               }}
             >
               {recovery ? "Back to sign in" : "Forgot your password?"}
-            </button>
-          )}
+          </button>
         </form>
         <p className="muted">
           Private workspace · Your learning app account does not automatically
           grant review access.
         </p>
+        <p><a href="/account">Create or manage a learner account</a></p>
       </section>
     </div>
+  );
+}
+
+export function AccountSetup({
+  auth,
+  email,
+  flow,
+  onPasswordSet,
+}: {
+  auth: SupabaseClient;
+  email: string;
+  flow: "invite" | "recovery" | "setup";
+  onPasswordSet: () => void;
+}) {
+  const [password, setPassword] = useState("");
+  const [confirmation, setConfirmation] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (password !== confirmation) {
+      setError("The passwords do not match.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      const { error } = await auth.auth.updateUser({ password });
+      if (error)
+        throw new Error("Password could not be saved. Check password requirements and try again.");
+      setPassword("");
+      setConfirmation("");
+      onPasswordSet();
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  return (
+    <main className="auth-layout">
+      <section className="auth-story">
+        <div className="brand"><img className="brand-mark" src="/one-concept-icon.png" width="43" height="43" alt="" /> One Concept</div>
+        <p className="eyebrow">ONE ACCOUNT · TWO EXPERIENCES</p>
+        <h1>Learn and review<br />with one account.</h1>
+        <p>Your verified email and password work in both the One Concept learning app and this review workspace. Reviewer access is granted by the owner.</p>
+      </section>
+      <section className="auth-panel">
+        <form onSubmit={submit}>
+          <p className="eyebrow">{flow === "invite" ? "INVITATION ACCEPTED" : "ACCOUNT SECURITY"}</p>
+          <h2>{flow === "invite" ? "Finish creating your account" : "Set your password"}</h2>
+          <p>{flow === "invite" ? "Your email is confirmed. Choose a password to finish setup." : "Choose a new password for your One Concept account."}</p>
+          {error && <Notice error>{error}</Notice>}
+          <Field title="Verified email"><input type="email" value={email} readOnly /></Field>
+          <Field title="Password"><input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
+          <Field title="Confirm password"><input type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /></Field>
+          <button className="primary" disabled={busy}>{busy ? "Saving…" : "Save password and continue"}</button>
+        </form>
+        <p className="muted">{flow === "invite" ? "After setup, submit your reviewer name for owner approval in Settings. Authenticator use starts off and can be enabled there." : "Your existing reviewer permissions and security settings remain in place."}</p>
+      </section>
+    </main>
   );
 }
 export function Mfa({

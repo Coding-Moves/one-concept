@@ -1,5 +1,10 @@
 # 01 | Your app in twelve answers
 
+> Historical September 2026 snapshot. Hosting and release details below record
+> the former deployment. Current production operations are in
+> [RELEASING.md](../../RELEASING.md) and
+> [INCIDENT_RESPONSE.md](../INCIDENT_RESPONSE.md).
+
 One Concept is a daily microlearning app: a signed-in learner receives one short technical concept, reads its explanation and example, and can mark it learned, like it, save it, or share it. Topic follows shape future assignments. The backend is the authority for assignments and learning progress.
 
 | Your question | What the inspected code actually does |

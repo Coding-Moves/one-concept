@@ -28,8 +28,20 @@ test("direct confirmation visit does not claim that an email was verified", asyn
 
 test("verified confirmation link reports success and removes its session fragment", async ({ page }) => {
   await serveAuthPages(page);
+  await page.route(`${origin}/auth/v1/user`, route => route.fulfill({ status: 200,
+    contentType: "application/json", body: JSON.stringify({ email_confirmed_at: "2026-10-28T00:00:00Z" }) }));
   await page.goto(`${base}/confirmed#access_token=confirmed-token&type=signup`);
   await expect(page.getByRole("heading", { name: "Email confirmed ✓" })).toBeVisible();
+  await expect(page).toHaveURL(`${base}/confirmed`);
+});
+
+test("unverified confirmation token never claims success", async ({ page }) => {
+  await serveAuthPages(page);
+  await page.route(`${origin}/auth/v1/user`, route => route.fulfill({ status: 401,
+    contentType: "application/json", body: JSON.stringify({ error: "invalid_token" }) }));
+  await page.goto(`${base}/confirmed#access_token=forged-token&type=signup`);
+  await expect(page.getByRole("heading", { name: "Confirmation did not finish" })).toBeVisible();
+  await expect(page.getByText("Email confirmed ✓")).toHaveCount(0);
   await expect(page).toHaveURL(`${base}/confirmed`);
 });
 
@@ -45,6 +57,8 @@ test("recovery link reaches the reset form and updates the password with its tok
   await serveAuthPages(page);
   let authRequest: { method: string; authorization: string | undefined; apikey: string | undefined; password: string } | undefined;
   await page.route(`${origin}/auth/v1/user`, async route => {
+    if (route.request().method() === "GET") return route.fulfill({ status: 200,
+      contentType: "application/json", body: "{}" });
     authRequest = {
       method: route.request().method(),
       authorization: route.request().headers().authorization,
@@ -68,6 +82,16 @@ test("recovery link reaches the reset form and updates the password with its tok
   });
 });
 
+test("used recovery token does not reveal the reset form", async ({ page }) => {
+  await serveAuthPages(page);
+  await page.route(`${origin}/auth/v1/user`, route => route.fulfill({ status: 401,
+    contentType: "application/json", body: "{}" }));
+  await page.goto(`${base}/reset-password#access_token=used-token&type=recovery`);
+  await expect(page.getByRole("alert")).toContainText("Could not verify this reset link");
+  await expect(page.getByRole("button", { name: "Update password" })).toBeHidden();
+  await expect(page).toHaveURL(`${base}/reset-password`);
+});
+
 test("expired recovery link shows an error and never calls Auth", async ({ page }) => {
   await serveAuthPages(page);
   let called = false;
@@ -85,10 +109,11 @@ test("expired recovery link shows an error and never calls Auth", async ({ page 
 test("password update rejects Auth redirects without forwarding the recovery token", async ({ page }) => {
   await serveAuthPages(page);
   let redirected = false;
-  await page.route(`${origin}/auth/v1/user`, route => route.fulfill({
-    status: 302,
-    headers: { location: `${origin}/auth/v1/redirect-target` },
-  }));
+  await page.route(`${origin}/auth/v1/user`, route => route.request().method() === "GET"
+    ? route.fulfill({ status: 200, contentType: "application/json", body: "{}" })
+    : route.fulfill({ status: 302,
+      headers: { location: `${origin}/auth/v1/redirect-target` },
+    }));
   await page.route(`${origin}/auth/v1/redirect-target`, async route => {
     redirected = true;
     await route.fulfill({ status: 200, contentType: "application/json", body: "{}" });

@@ -32,7 +32,7 @@ Development moves in small, complete phases. Shipped phases are checked.
 
 ## Phase 6 — Deployment ✅
 
-- [x] Backend on Railway (auto-deploys from `main`)
+- [x] Production API and scheduled workers on Supabase Edge Functions
 - [x] EAS Build (APK) and EAS Update (OTA on merge)
 - [x] GitHub Actions automation
 

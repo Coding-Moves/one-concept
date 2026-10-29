@@ -13,7 +13,7 @@ import { Category, ProgressState } from '../types';
 export interface ProgressRepository {
   load(): Promise<ProgressState>;
   updateProfile?(input: { displayName?: string; bio?: string; avatarPreset?: string }, userId: string): Promise<ProgressState>;
-  uploadAvatar?(uri: string, mimeType: string, userId: string): Promise<ProgressState>;
+  uploadAvatar?(jpeg: Blob, userId: string): Promise<ProgressState>;
   removeAvatar?(userId: string): Promise<ProgressState>;
 
   /** Last known state without touching the network, or null if none exists.

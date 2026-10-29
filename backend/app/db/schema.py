@@ -115,6 +115,7 @@ async def snapshot(connection) -> dict:
             'edge_api_editorial_owner_reviewers',
             'edge_api_editorial_owner_events',
             'edge_api_editorial_reviewer_access',
+            'edge_api_editorial_reviewer_remove',
             'edge_api_editorial_invite_prepare',
             'edge_api_editorial_invite_finish',
             'edge_api_editorial_cancel_generation_job',

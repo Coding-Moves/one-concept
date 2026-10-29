@@ -6,6 +6,8 @@ import { useMemo } from 'react';
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { ScreenHeader } from '../components/ScreenHeader';
+import { API_BASE_URL } from '../api/client';
+import { authLandingUrl } from '../services/authRedirect';
 import { scaleIcon, scaleFont, radius, spacing, ThemeColors, typography } from '../theme';
 import { ProfileStackParamList } from './ProfileScreen';
 
@@ -22,10 +24,8 @@ const ISSUES_URL = 'https://github.com/Coding-Moves/one-concept/issues/new';
 const FEEDBACK_EMAIL = 'contactmuawia@gmail.com';
 
 function privacyUrl(): string {
-  const webBaseUrl = process.env.EXPO_PUBLIC_WEB_BASE_URL;
-  return webBaseUrl
-    ? new URL('/privacy', webBaseUrl).toString()
-    : 'https://github.com/Coding-Moves/one-concept/blob/develop/backend/app/privacy.py';
+  return authLandingUrl('privacy', API_BASE_URL)
+    ?? 'https://github.com/Coding-Moves/one-concept/blob/develop/backend/app/privacy.py';
 }
 
 /**

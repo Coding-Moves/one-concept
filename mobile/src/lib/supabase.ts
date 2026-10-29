@@ -31,9 +31,9 @@ export async function readCachedSession(): Promise<Session | null> {
 /**
  * Supabase client, used only for authentication.
  *
- * All application data goes through the FastAPI backend — the app never reads
- * or writes tables directly, so this client's job is to obtain and refresh the
- * access token that the backend verifies.
+ * All application data goes through the Supabase Edge API. The app never reads
+ * or writes tables directly; this client's job is to obtain and refresh the
+ * access token that the Edge API verifies.
  */
 export const supabase = createClient(clientUrl, clientAnonKey, {
   global: { fetch: fetchWithTimeout },

@@ -70,6 +70,7 @@ export async function fixture(
     mfa?: boolean;
     enrollment?: boolean;
     onboarding?: boolean;
+    requireMfa?: boolean;
     userId?: string;
     email?: string;
     name?: string;
@@ -90,7 +91,7 @@ export async function fixture(
     ],
     requested_name: options.onboarding ? null : (options.name || "Amina Khan"),
     approved_name: options.onboarding ? null : (options.name || "Amina Khan"),
-    require_mfa: true,
+    require_mfa: options.requireMfa ?? true,
     version: 1,
   };
   const freshState = {
@@ -173,7 +174,7 @@ export async function fixture(
       headers: {
         "access-control-allow-origin": "*",
         "access-control-allow-headers": "*",
-        "access-control-allow-methods": "GET,POST,PATCH,PUT,OPTIONS",
+        "access-control-allow-methods": "GET,POST,PATCH,PUT,DELETE,OPTIONS",
       },
     });
   await context.route("https://review-auth.test/**", async (route) => {
@@ -213,7 +214,7 @@ export async function fixture(
     const url = new URL(route.request().url()),
       path = url.pathname.replace("/v1/editorial", ""),
       method = route.request().method(),
-      body = method === "GET" ? null : route.request().postDataJSON();
+      body = method === "GET" || method === "DELETE" ? null : route.request().postDataJSON();
     const detail = {
       id: rid,
       concept_id: cid,
@@ -285,6 +286,15 @@ export async function fixture(
           : actorMember,
         method === "GET" ? 200 : 201,
       );
+    if (path.startsWith("/reviewers/") && method === "DELETE") {
+      const subject = path.split("/")[2];
+      const index = state.members.findIndex((item) => item.user_id === subject);
+      if (index < 0) return fulfill(route, { detail: "Reviewer not found" }, 404);
+      if (Number(url.searchParams.get("expected_version")) !== state.members[index].version)
+        return fulfill(route, { detail: "Account changed" }, 409);
+      state.members.splice(index, 1);
+      return fulfill(route, { removed_user_id: subject, unassigned_count: 0 });
+    }
     if (path === "/queue") {
       const kind = url.searchParams.get("kind"),
         status = url.searchParams.get("status"),

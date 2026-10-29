@@ -2,10 +2,11 @@ import type { ReactNode } from "react";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { safeUrl } from "./api";
+import { highlightedCode } from "./markdownCode";
 
 /** Lesson Markdown is untrusted content. React renders HTML as text and images are omitted. */
 export function MarkdownText({ value, inline = false, links = true }: { value: unknown; inline?: boolean; links?: boolean }) {
-  const source = typeof value === "string" ? value : (JSON.stringify(value, null, 2) ?? "Not provided");
+  const source = typeof value === "string" ? value : value == null ? "" : (JSON.stringify(value, null, 2) ?? "");
   const content = inline ? source.replaceAll("\n", " ") : source;
   const inlineElement = ({ children }: { children?: ReactNode }) => <span>{children}</span>;
   const rendered = <Markdown remarkPlugins={[remarkGfm]} components={{
@@ -16,6 +17,7 @@ export function MarkdownText({ value, inline = false, links = true }: { value: u
         li: inlineElement, blockquote: inlineElement, pre: inlineElement,
       } : {}),
       img: ({ alt }) => <span>{alt ?? "[image]"}</span>,
+      code: ({ className, children }) => <code className={className}>{highlightedCode(String(children), className)}</code>,
       a: ({ href, children }) => {
         const url = safeUrl(href ?? "");
         return url && links ? <a href={url} target="_blank" rel="noopener noreferrer">{children}</a> : <span>{children}</span>;

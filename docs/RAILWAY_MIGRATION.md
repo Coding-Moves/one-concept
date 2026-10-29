@@ -1,5 +1,9 @@
 # Railway account migration
 
+> Historical cutover record only. These services were retired in October 2026.
+> Current deployment and recovery steps are in [RELEASING.md](../RELEASING.md)
+> and [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md).
+
 Runbook for [issue #230](https://github.com/Coding-Moves/one-concept/issues/230).
 This moves hosting while retaining the existing Supabase database, Auth project,
 Expo project, Android package/signing credentials, and application behavior.

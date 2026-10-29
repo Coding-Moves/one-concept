@@ -1,58 +1,76 @@
 # Authentication email redirects after the Supabase cutover
 
-Supabase Auth verifies email links before redirecting the browser to an allowed
-HTTPS landing URL. The production mobile release on `main` sends new sign-up and
-recovery links to the Netlify browser pages built from
-`EXPO_PUBLIC_WEB_BASE_URL`. Those pages remain the current explicit redirect
-destinations; their `/confirmed` and `/reset-password` flows are tested in
-`admin/tests/public-pages.spec.ts`.
+Supabase Auth verifies email links, then sends the browser to a permitted HTTPS
+landing URL. Once the pending public-page release is deployed, the Supabase
+`api` Edge function serves three pages:
 
-The Supabase `api` Edge function also serves browser pages at:
+- `/functions/v1/api/confirmed` explains successful email confirmation. If an
+  older client sends a recovery session to the Site URL, this page forwards the
+  URL fragment to the reset page without sending it to the server.
+- `/functions/v1/api/reset-password` accepts a recovery session in the URL
+  fragment and updates the password directly through Supabase Auth. It removes
+  the token from the address bar as soon as the page loads.
+- `/functions/v1/api/privacy` is the learner privacy policy.
 
-- `/functions/v1/api/confirmed`: shows a neutral message on direct visits and a
-  confirmation message after an Auth redirect. A recovery session sent to this
-  page is forwarded to the reset page with its URL fragment.
-- `/functions/v1/api/reset-password`: accepts a recovery session in the URL
-  fragment, removes it from the address bar, and updates the password through
-  Supabase Auth. A missing or expired link displays an error.
-- `/functions/v1/api/privacy`: shows the learner privacy policy.
+The mobile app derives its explicit signup and recovery redirect URLs from
+`EXPO_PUBLIC_API_BASE_URL`. Its production value must be the matching
+`https://PROJECT.supabase.co/functions/v1/api` address. The Edge routes are
+public browser pages; private application routes still authenticate the user.
 
-Once configured as the Site URL, the Edge pages provide a fallback for new
-links that omit an explicit redirect. They also support the API-based redirect
-configuration planned on `develop`. They contain only the
-Supabase project URL and publishable key; no service credential is sent to the
-browser. Their route and browser behavior are covered in
-`supabase/functions/api/handler.test.mjs` and
-`admin/tests/auth-landing.spec.ts`.
+The public web account at `/account` uses the same Supabase Auth project and
+publishable key as the review workspace. It requests the exact
+`https://coding-moves-one-concept-review.netlify.app/account/callback` return
+for confirmation and recovery, verifies the returned session with Supabase,
+then removes credentials from the browser URL. This public page never grants
+editorial membership; the owner invitation remains a separate guarded flow.
 
-## Production deployment and verification
+## Production configuration
 
-1. Deploy the reviewed `api` Edge function revision through the protected
-   production deployment workflow. Confirm `/health` and each public page over
-   HTTPS. A direct visit to `/confirmed` must ask the visitor to open an email
-   link; a direct visit to `/reset-password` must report an invalid link.
-2. In the matching Supabase project, allow the exact `/confirmed` and
-   `/reset-password` Edge URLs under **Authentication → URL Configuration**.
-   Keep the working Netlify redirect URLs while the released mobile app still
-   uses them. Do not add a wildcard or a retired host.
+1. Deploy the tested Edge `api` function revision containing these pages.
+   Check `/health`, `/confirmed`, `/reset-password` and `/privacy` over HTTPS.
+   A direct visit to the reset page without a recovery session should show an
+   invalid-link message, not a blank page or JSON 404.
+2. In the matching Supabase project, open **Authentication → URL Configuration**.
+   Allow these exact redirect URLs, with no wildcard or trailing slash:
 
    ```text
-   https://egdszjoesxlccauahmsx.supabase.co/functions/v1/api/confirmed
-   https://egdszjoesxlccauahmsx.supabase.co/functions/v1/api/reset-password
+   https://PROJECT.supabase.co/functions/v1/api/confirmed
+   https://PROJECT.supabase.co/functions/v1/api/reset-password
+   https://coding-moves-one-concept-review.netlify.app/account/callback
+   https://coding-moves-one-concept-review.netlify.app/auth/callback
    ```
 
-3. Keep the **Site URL** fallback on a working page. Change it to the Edge
-   `/confirmed` page only after that page is deployed and its recovery
-   forwarding is verified. The Site URL is used when a client supplies no
-   explicit redirect.
-4. Check Expo's production `EXPO_PUBLIC_API_BASE_URL`,
-   `EXPO_PUBLIC_SUPABASE_URL`, and `EXPO_PUBLIC_WEB_BASE_URL` against the
-   production Supabase project and current Netlify site. The publishable key
-   must belong to the same project.
-5. With an inbox and account you control, request a fresh signup confirmation
-   and password recovery email. Check that confirmation permits sign-in, and
-   that recovery accepts a new password and permits sign-in with it. Do not
-   share email links, URL fragments, tokens, or passwords in logs or chat.
+3. After the pages are live, set the **Site URL** fallback to the exact
+   `/functions/v1/api/confirmed` page. Its recovery forwarding handles older
+   clients that omitted an explicit reset redirect. Keep previous working
+   redirect URLs until outstanding email links expire; a retired host
+   cannot be repaired by an allowlist entry.
+4. Check Expo's **production** `EXPO_PUBLIC_API_BASE_URL` points to the same
+   Supabase `api` function, and keep the Supabase Auth URL and publishable key
+   matched to that project. Never put a service-role key in mobile or a page.
+5. Deploy the public web `/account` page and icon before installing the branded
+   Auth templates. Confirm its `VITE_SUPABASE_URL` and public key are from the
+   same project as the mobile build. For staging, use that staging project's
+   matching web deployment and exact callback URL; do not point a staging
+   signup into production Auth.
 
-A `200` response from a landing page proves only that the page is served; it
-does not prove that Supabase verified the email or changed the password.
+## Real-device verification
+
+With an inbox and account you control, request a fresh signup confirmation and
+a fresh password recovery email. Confirm that the first link opens the One
+Concept confirmation page and allows sign-in. Confirm that the second opens
+the One Concept reset form, accepts a new password, and allows sign-in with it.
+Do not share email links, URL fragments, tokens, or passwords in logs, screenshots
+or chat. A 200 response from the page alone does not prove the full Auth flow.
+
+Also test public web signup, repeated signup for an existing address, wrong
+password, resend, expired confirmation, recovery on a second device, and
+recovery of a reviewer account. Sign in on mobile with the web-created account;
+verify it has no reviewer access until the owner invitation is approved. Test
+the owner invitation for both a new address and an existing confirmed learner.
+Review the source and status of every Auth email in `EMAIL_TEMPLATES.md`.
+
+The production app must receive the compatible JavaScript update for its About
+screen to link to the Edge privacy page under the API path. Older builds can
+still contain retired host URLs; ask those users to update the app rather
+than restoring the retired service.

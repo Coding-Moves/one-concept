@@ -1,5 +1,9 @@
 # Reviewer email notifications (#279)
 
+> Historical feature rollout and October 2026 cost research. The production
+> sender now runs in the Supabase Edge worker. For current gates and incident
+> checks, use [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) and the owner dashboard.
+
 Assigned reviewers receive batched links to lessons that need review. The queue
 remains the source of truth, including when email is disabled or unavailable.
 No email approves or publishes content. This is phase 6 of #263; deployment and

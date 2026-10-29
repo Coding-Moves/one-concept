@@ -145,7 +145,7 @@ async def session(sessionmaker_for_test):
 
 @pytest_asyncio.fixture
 async def user(session):
-    """A fresh user, bootstrapped by the same trigger production relies on."""
+    """An existing learner with explicit follows for content-selection tests."""
     from sqlalchemy import text
 
     user_id = uuid.uuid4()
@@ -153,6 +153,11 @@ async def user(session):
         text("insert into auth.users (id, email) values (:id, :email)"),
         {"id": user_id, "email": f"{user_id}@example.invalid"},
     )
+    await session.execute(text("""
+        insert into public.user_topics(user_id, topic_id)
+        select :id, id from public.topics where is_active
+        on conflict do nothing
+    """), {"id": user_id})
     await session.commit()
     return user_id
 

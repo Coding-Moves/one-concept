@@ -29,7 +29,7 @@ export interface ProgressContextValue {
   loading: boolean;
   refresh: () => Promise<void>;
   updateProfile: (input: { displayName?: string; bio?: string; avatarPreset?: string }) => Promise<void>;
-  uploadAvatar: (uri: string, mimeType: string) => Promise<void>;
+  uploadAvatar: (jpeg: Blob) => Promise<void>;
   removeAvatar: () => Promise<void>;
   pausedSyncCount: number;
   retrySync: () => Promise<void>;
@@ -55,10 +55,9 @@ export interface ProgressContextValue {
 
 const ProgressContext = createContext<ProgressContextValue | null>(null);
 
-/** Concepts eligible for daily selection: followed topics, or all if none followed. */
+/** Empty follows mean no eligible concepts. Guest demo defaults are explicit. */
 function eligibleConcepts(progress: ProgressState): Concept[] {
-  const pool = CONCEPTS.filter((c) => progress.followedTopics.includes(c.category));
-  return pool.length > 0 ? pool : CONCEPTS;
+  return CONCEPTS.filter((c) => progress.followedTopics.includes(c.category));
 }
 
 interface Props {
@@ -286,9 +285,9 @@ export function ProgressProvider({ children, repository: override }: Props) {
     if (!userId || !repository.updateProfile) throw new Error('Sign in to edit your profile');
     await confirmProfileWrite(() => repository.updateProfile!(input, userId));
   }, [confirmProfileWrite, repository, userId]);
-  const uploadAvatar = useCallback(async (uri: string, mimeType: string) => {
+  const uploadAvatar = useCallback(async (jpeg: Blob) => {
     if (!userId || !repository.uploadAvatar) throw new Error('Sign in to add a photo');
-    await confirmProfileWrite(() => repository.uploadAvatar!(uri, mimeType, userId));
+    await confirmProfileWrite(() => repository.uploadAvatar!(jpeg, userId));
   }, [confirmProfileWrite, repository, userId]);
   const removeAvatar = useCallback(async () => {
     if (!userId || !repository.removeAvatar) throw new Error('Sign in to remove a photo');

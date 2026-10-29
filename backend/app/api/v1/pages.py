@@ -20,6 +20,7 @@ _CONFIRMED = """<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="https://coding-moves-one-concept-review.netlify.app/one-concept-icon.png">
   <title>One Concept — email confirmed</title>
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center;
@@ -61,6 +62,7 @@ _RESET_PASSWORD = """<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="https://coding-moves-one-concept-review.netlify.app/one-concept-icon.png">
   <title>One Concept — reset password</title>
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center;
@@ -187,6 +189,7 @@ _RESET_UNCONFIGURED = """<!doctype html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" type="image/png" href="https://coding-moves-one-concept-review.netlify.app/one-concept-icon.png">
   <title>One Concept — reset password</title>
   <style>
     body { margin: 0; min-height: 100vh; display: grid; place-items: center;

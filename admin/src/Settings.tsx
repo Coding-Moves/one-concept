@@ -57,7 +57,7 @@ export function Settings({
               Your name is waiting for an administrator’s approval.{" "}
               {me.member.approved_name
                 ? "Your current approved name still applies."
-                : "You can start reviewing after approval and authenticator verification."}
+                : "You can start reviewing after approval. If you require an authenticator, verify it too."}
             </Notice>
           )}
           {saved && <Notice>Name submitted for approval.</Notice>}

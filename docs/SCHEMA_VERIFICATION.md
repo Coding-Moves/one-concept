@@ -42,28 +42,14 @@ invalid/missing connection configuration, permission errors or connection failur
 exit nonzero. A failure must be investigated, not bypassed by editing the ledger
 or copying the failing target's schema into the contract.
 
-## One-time Railway setup
+## Production Edge deployment gate
 
-After an image containing this verifier is available, configure **each** of the
-API, reminders and pool-topup services:
-
-1. Preserve the existing real start command and cron schedule.
-2. Verify its private `DIRECT_URL` targets the intended application database.
-3. Set **Settings → Deploy → Pre-deploy command** to
-   `python -m app.workers.schema_check` (optional platform timeout: 60 seconds).
-4. Confirm effective deployment settings and a successful pre-deploy log before
-   completing the rollout. A failed check must stop the new deployment.
-
-The Docker image now includes both the contract and immutable migration files.
-`backend/railway.json` declares the command for services already consuming that
-file. The migrated services may use dashboard configuration; merging this PR
-alone cannot enable their dashboard gate. Do not opt new services into legacy
-Config as Code or assume the API's settings configure the workers.
-
-Railway's pre-deploy command runs in a separate container and a nonzero result
-prevents deployment. This check does not run generation, send reminders, or
-change records. Do not remove a working deployment to test failure on production;
-use the disposable test database described below.
+The protected `supabase-production-deploy.yml` workflow verifies the current
+`main` commit and the actual target schema before publishing the API and worker
+Edge Functions. Its `production-schema` environment holds the private direct
+database URL and project-scoped access token. A failed schema check stops the
+deployment. This read-only check does not run generation, send reminders, or
+change records. Use a disposable test database to test failure cases.
 
 ## Protected GitHub checks and mobile releases
 
@@ -83,17 +69,16 @@ secret the schema check fails and Release cannot publish OTA or a GitHub release
   checks out the current commit, rejects a stale main revision, and reads the
   environment secret only in the verification step. No checkout-ref input or
   `pull_request_target` workflow permits PR code to run with production access.
-- `release.yml` uses its own direct protected job before OTA publication. A
-  reusable workflow call did not receive the environment secret during the
-  v1.10.3 main push, although direct dispatch succeeded. The existing
-  backend-revision attestation still verifies operator intent; the schema gate
-  does not independently identify the Git SHA deployed on Railway.
+- `supabase-production-deploy.yml` verifies schema and current `main` before
+  publishing both Edge Functions, then checks worker boot and API health.
+- `release.yml` uses its own direct protected job before OTA publication. Its
+  backend-revision attestation verifies operator intent; the schema gate does
+  not independently identify the deployed Edge Function revision.
 
 A feature-branch manual dispatch skips the protected job; it is not production
-verification. GitHub environment/branch protections and Railway settings require
-owner setup; workflow files alone cannot establish those dashboard protections.
-The post-merge check does not itself block Railway's independent auto-deploy;
-the Railway pre-deploy setting provides that protection.
+verification. GitHub environment/branch protections require owner setup;
+workflow files alone cannot establish those dashboard protections. A merge to
+`main` does not deploy Edge Functions until the protected workflow succeeds.
 
 ## Adding a migration and maintaining the contract
 
@@ -124,5 +109,4 @@ The portable verifier is extracted from draft PR #231; its VM deployment,
 SSH, billing, and unrelated app changes remain deferred. When that draft resumes,
 reconcile this implementation rather than adding a second verifier.
 
-References: [Railway pre-deploy commands](https://docs.railway.com/deployments/pre-deploy-command),
-[GitHub reusable workflows and environment secrets](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).
+Reference: [GitHub reusable workflows and environment secrets](https://docs.github.com/en/actions/how-tos/reuse-automations/reuse-workflows).

@@ -1,5 +1,8 @@
 # Weekly quiz availability notifications
 
+> Historical feature rollout. Current scheduling is controlled by the Supabase
+> Edge worker gates; see [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md).
+
 Issue [#268](https://github.com/Coding-Moves/one-concept/issues/268) adds optional
 push alerts using the existing Expo registration and Railway reminders worker.
 No additional paid service, API key, native dependency or background mobile task

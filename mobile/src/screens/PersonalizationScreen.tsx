@@ -15,7 +15,7 @@ import { scaleIcon, scaleFont, spacing, ThemeColors, typography } from '../theme
 
 export function PersonalizationScreen() {
   const navigation = useNavigation();
-  const { loading, error, retry, topics, toggle } = useTopics();
+  const { loading, loadError, saveError, syncPending, retry, topics, toggle } = useTopics();
   const online = useOnline();
   const refreshUI = useRefreshControl('subjects', fetchTopics);
   const { colors } = useTheme();
@@ -46,12 +46,28 @@ export function PersonalizationScreen() {
         day’s concept.
       </Text>
 
+      {saveError ? (
+        <Text accessibilityRole="alert" style={styles.errorText}>
+          Your topic change was not saved. Tap Follow or Following again to retry.
+        </Text>
+      ) : null}
+      {syncPending ? (
+        <Text accessibilityLiveRegion="polite" style={styles.topicMeta}>
+          {online ? 'Saving your topic choices…' : 'Offline — your topic choices will sync when connected.'}
+        </Text>
+      ) : null}
+      {loadError && topics.length > 0 ? (
+        <Pressable accessibilityRole="button" onPress={retry} style={styles.retryButton}>
+          <Text style={styles.errorText}>Could not refresh topics. Showing your saved list. Tap to retry.</Text>
+        </Pressable>
+      ) : null}
+
       {loading ? (
         <Text style={styles.topicMeta}>Loading topics…</Text>
-      ) : error && topics.length === 0 ? (
+      ) : loadError && topics.length === 0 ? (
         <UnavailableState
           offline={!online}
-          error={error}
+          error={loadError}
           message="Connect to load your topics and choose what to learn next."
           onRetry={retry}
         />
@@ -134,5 +150,17 @@ const createStyles = (colors: ThemeColors) =>
     topicMeta: {
       fontSize: scaleFont(13),
       color: colors.textMuted,
+    },
+    errorText: {
+      fontSize: scaleFont(14),
+      lineHeight: scaleFont(20),
+      color: colors.text,
+    },
+    retryButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+      padding: spacing.md,
+      borderRadius: 12,
+      backgroundColor: colors.dangerSurface,
     },
   });

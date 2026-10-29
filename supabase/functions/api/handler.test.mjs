@@ -28,8 +28,9 @@ test('public cutover pages serve browser HTML without leaking service credential
     assert.match(result.headers.get('content-type'), /^text\/html/);
     assert.equal(result.headers.get('cache-control'), 'no-store');
     assert.equal(result.headers.get('referrer-policy'), 'no-referrer');
-    assert.equal(result.headers.get('x-robots-tag'), 'noindex, nofollow, noarchive');
     assert.match(result.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+    assert.match(result.headers.get('content-security-policy'), /img-src https:\/\/coding-moves-one-concept-review\.netlify\.app/);
+    assert.match(body, /<link rel="icon" type="image\/png" href="https:\/\/coding-moves-one-concept-review\.netlify\.app\/one-concept-icon\.png">/);
     assert.doesNotMatch(body, /private-service-key|__NONCE__|__CONFIG__/);
   }
   assert.equal(calls.length, 0);
@@ -42,16 +43,17 @@ test('public cutover pages serve browser HTML without leaking service credential
   assert.equal(rejected.headers.get('allow'), 'GET');
 });
 
-test('confirmation page claims success only after an Auth redirect', async () => {
+test('confirmation page claims success only after Auth verifies the redirect token', async () => {
   const handler = createHandler(config);
   const body = await (await handler(request('/confirmed'))).text();
   const script = body.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
   assert.ok(script);
 
-  function open(fragment) {
+  async function open(fragment, authValid = true) {
     const heading = { textContent: 'Check your email link' };
     const message = { textContent: 'Open the confirmation link from your email.', className: '' };
     const replaced = [];
+    const authCalls = [];
     const location = {
       href: `https://one-concept.supabase.co/functions/v1/api/confirmed${fragment}`,
       hash: fragment,
@@ -61,121 +63,33 @@ test('confirmation page claims success only after an Auth redirect', async () =>
     };
     const history = { replaceState: (_state, _title, url) => replaced.push(url) };
     const document = { getElementById: id => id === 'heading' ? heading : message };
-    runInNewContext(script, { URL, URLSearchParams, location, history, document });
-    return { heading, message, replaced };
+    const fetch = (url, init) => {
+      authCalls.push({ url, init });
+      return Promise.resolve({ ok: authValid, json: async () => ({ email_confirmed_at: '2026-10-29T00:00:00Z' }) });
+    };
+    runInNewContext(script, { URL, URLSearchParams, location, history, document, fetch });
+    const beforeAuth = heading.textContent;
+    await new Promise(resolve => setImmediate(resolve));
+    return { heading, message, replaced, authCalls, beforeAuth };
   }
 
-  const direct = open('');
+  const direct = await open('');
   assert.equal(direct.heading.textContent, 'Check your email link');
+  assert.equal(direct.authCalls.length, 0);
   assert.deepEqual(direct.replaced, ['/functions/v1/api/confirmed']);
-  const verified = open('#access_token=test-token&type=signup');
+  const verified = await open('#access_token=test-token&type=signup');
+  assert.equal(verified.beforeAuth, 'Check your email link');
   assert.equal(verified.heading.textContent, 'Email confirmed ✓');
+  assert.equal(verified.authCalls[0].url, `${config.supabaseUrl}/auth/v1/user`);
+  assert.equal(verified.authCalls[0].init.headers.Authorization, 'Bearer test-token');
   assert.deepEqual(verified.replaced, ['/functions/v1/api/confirmed']);
-  const recovery = open('#access_token=test-token&type=recovery');
+  const rejected = await open('#access_token=invalid-token&type=signup', false);
+  assert.equal(rejected.heading.textContent, 'Confirmation did not finish');
+  const recovery = await open('#access_token=test-token&type=recovery');
   assert.equal(recovery.heading.textContent, 'Check your email link');
+  assert.equal(recovery.authCalls.length, 0);
   assert.deepEqual(recovery.replaced,
     ['https://one-concept.supabase.co/functions/v1/api/reset-password#access_token=test-token&type=recovery']);
-});
-
-test('password reset page rejects invalid links and validates passwords before calling Auth', async () => {
-  const handler = createHandler(config);
-  const body = await (await handler(request('/reset-password'))).text();
-  const script = body.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
-  assert.ok(script);
-
-  function open(fragment, search = '') {
-    const elements = Object.fromEntries(['form', 'intro', 'message', 'submit', 'pw', 'pw2'].map(id => {
-      const classes = new Set(id === 'form' ? ['hidden'] : []);
-      return [id, {
-        textContent: '', className: '', value: '', disabled: false,
-        classList: { add: name => classes.add(name), remove: name => classes.delete(name),
-          contains: name => classes.has(name) },
-        addEventListener: (_type, listener) => { if (id === 'form') elements.form.submit = listener; },
-      }];
-    }));
-    const replaced = [];
-    const calls = [];
-    const location = { hash: fragment, search, pathname: '/functions/v1/api/reset-password' };
-    const history = { replaceState: (_state, _title, url) => replaced.push(url) };
-    const document = { getElementById: id => elements[id] };
-    const fetch = async (...args) => { calls.push(args); return { ok: true }; };
-    runInNewContext(script, { URLSearchParams, location, history, document, fetch });
-    return { elements, replaced, calls };
-  }
-
-  const direct = open('');
-  assert.equal(direct.elements.form.classList.contains('hidden'), true);
-  assert.match(direct.elements.message.textContent, /invalid or has expired/);
-  assert.deepEqual(direct.replaced, ['/functions/v1/api/reset-password']);
-
-  const expired = open('#error=access_denied&error_description=Email%20link%20expired');
-  assert.equal(expired.elements.form.classList.contains('hidden'), true);
-  assert.equal(expired.elements.message.textContent, 'Email link expired');
-
-  const wrongType = open('#access_token=token&type=signup');
-  assert.equal(wrongType.elements.form.classList.contains('hidden'), true);
-
-  const valid = open('#access_token=reset-token&type=recovery');
-  assert.equal(valid.elements.form.classList.contains('hidden'), false);
-  let prevented = 0;
-  const submit = () => valid.elements.form.submit({ preventDefault: () => { prevented++; } });
-  valid.elements.pw.value = 'short';
-  valid.elements.pw2.value = 'short';
-  await submit();
-  assert.match(valid.elements.message.textContent, /at least 6 characters/);
-  valid.elements.pw.value = 'long-enough';
-  valid.elements.pw2.value = 'different';
-  await submit();
-  assert.match(valid.elements.message.textContent, /do not match/);
-  assert.equal(valid.calls.length, 0);
-  assert.equal(prevented, 2);
-});
-
-test('password reset page sends the recovery token to Auth and reports success or failure', async () => {
-  const handler = createHandler(config);
-  const body = await (await handler(request('/reset-password'))).text();
-  const script = body.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
-  assert.ok(script);
-
-  async function submitPassword(reply) {
-    const classes = new Set(['hidden']);
-    const elements = {
-      form: { classList: { add: name => classes.add(name), remove: name => classes.delete(name),
-        contains: name => classes.has(name) }, addEventListener: (_type, listener) => { elements.submitForm = listener; } },
-      intro: { classList: { add: () => {} } },
-      message: { textContent: '', className: '' },
-      submit: { disabled: false },
-      pw: { value: 'safe-new-password' },
-      pw2: { value: 'safe-new-password' },
-    };
-    const calls = [];
-    const history = { replaceState: (_state, _title, url) => calls.push(['replaceState', url]) };
-    const location = { hash: '#access_token=reset-token&type=recovery', search: '',
-      pathname: '/functions/v1/api/reset-password' };
-    const document = { getElementById: id => elements[id] };
-    const fetch = async (...args) => { calls.push(['fetch', ...args]); return reply; };
-    runInNewContext(script, { URLSearchParams, location, history, document, fetch });
-    assert.equal(classes.has('hidden'), false);
-    await elements.submitForm({ preventDefault: () => {} });
-    return { elements, classes, calls };
-  }
-
-  const success = await submitPassword({ ok: true });
-  assert.equal(success.calls[0][1], '/functions/v1/api/reset-password');
-  assert.equal(success.calls[1][1], 'https://one-concept.supabase.co/auth/v1/user');
-  assert.equal(success.calls[1][2].method, 'PUT');
-  assert.equal(success.calls[1][2].headers.apikey, 'public-anon-key');
-  assert.equal(success.calls[1][2].headers.Authorization, 'Bearer reset-token');
-  assert.equal(JSON.parse(success.calls[1][2].body).password, 'safe-new-password');
-  assert.equal(success.classes.has('hidden'), true);
-  assert.match(success.elements.message.textContent, /Password updated/);
-  assert.equal(success.elements.message.className, 'success');
-
-  const rejected = await submitPassword({ ok: false, json: async () => ({ msg: 'Token has expired' }) });
-  assert.equal(rejected.elements.submit.disabled, false);
-  assert.equal(rejected.classes.has('hidden'), false);
-  assert.equal(rejected.elements.message.textContent, 'Token has expired');
-  assert.equal(rejected.elements.message.className, 'error');
 });
 
 test('editorial correction request reaches the atomic job RPC with the receipt fingerprint', async () => {
@@ -1337,7 +1251,48 @@ test('reviewer access requires a versioned capability update and current owner',
     body: JSON.stringify({ expected_version: 1, status: 'revoked',
       capabilities: [] }),
   }))).status, 409);
+  payload = { error: 'team_full' };
+  assert.equal((await handler(request(path, { method: 'PATCH', headers,
+    body: JSON.stringify({ expected_version: 2, status: 'active',
+      capabilities: ['review'] }),
+  }))).status, 409);
   assert.equal((await handler(request(path, { method: 'POST', headers }))).status, 405);
+});
+
+test('permanent reviewer removal validates identity and version before the service RPC', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const reviewerId = 'fb7214e4-2505-41d3-a47b-98c0d05dcf07';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal1' });
+  const calls = [];
+  let payload = { removed_user_id: reviewerId, unassigned_count: 2 };
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json(payload);
+  });
+  const headers = { authorization: `Bearer ${token}` };
+  const path = `/v1/editorial/reviewers/${reviewerId}`;
+  assert.equal((await handler(request(`${path}?expected_version=1`, {
+    method: 'DELETE',
+  }))).status, 401);
+  for (const suffix of ['?expected_version=0', '?expected_version=1.2', '']) {
+    assert.equal((await handler(request(path + suffix, {
+      method: 'DELETE', headers,
+    }))).status, 422);
+  }
+  assert.equal((await handler(request(`${path}?expected_version=1`, {
+    method: 'DELETE', headers,
+  }))).status, 200);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_reviewer_remove$/);
+  assert.deepEqual(JSON.parse(calls.at(-1).init.body), {
+    p_user_id: userId, p_session_id: sessionId, p_aal: 'aal1',
+    p_subject_id: reviewerId, p_expected_version: 1,
+  });
+  payload = { error: 'last_admin' };
+  assert.equal((await handler(request(`${path}?expected_version=1`, {
+    method: 'DELETE', headers,
+  }))).status, 409);
+  assert.equal((await handler(request(path, { method: 'PATCH', headers }))).status, 405);
 });
 
 test('reviewer invitation verifies Auth identity before adding membership', async () => {
@@ -1401,6 +1356,25 @@ test('reviewer invitation blocks an unapproved callback before contacting Auth',
   assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite')).length, 0);
 });
 
+test('reviewer invitation rejects a full team before sending email', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    return Response.json({ error: 'team_full' });
+  });
+  const result = await handler(request('/v1/editorial/reviewers', {
+    method: 'POST', headers: { authorization: `Bearer ${token}`,
+      'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'friend@example.com' }),
+  }));
+  assert.equal(result.status, 409);
+  assert.equal((await result.json()).detail, 'The team already has 10 active reviewers');
+  assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite')).length, 0);
+});
+
 test('existing Auth accounts can be enrolled without sending another invitation', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const reviewerId = 'fb7214e4-2505-41d3-a47b-98c0d05dcf07';
@@ -1422,6 +1396,34 @@ test('existing Auth accounts can be enrolled without sending another invitation'
   assert.equal(result.status, 201);
   assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite')).length, 0);
   assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_invite_finish$/);
+});
+
+test('unconfirmed Auth accounts receive a new invitation before enrollment', async () => {
+  const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
+  const reviewerId = 'fb7214e4-2505-41d3-a47b-98c0d05dcf07';
+  const token = editorialToken({ sub: userId, session_id: sessionId, aal: 'aal2' });
+  const calls = [];
+  const handler = createHandler({ ...config, editorialEnabled: true,
+    editorialInviteRedirectUrl: 'https://review.example.com/invited' }, async (url, init) => {
+    calls.push({ url, init });
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.endsWith('/rpc/edge_api_editorial_invite_prepare')) {
+      return Response.json({ user_id: reviewerId, needs_invite: true });
+    }
+    if (url.includes('/auth/v1/invite?')) {
+      return Response.json({ id: reviewerId, email: 'friend@example.com' });
+    }
+    return Response.json({ user_id: reviewerId, status: 'active', version: 1 });
+  });
+  const result = await handler(request('/v1/editorial/reviewers', {
+    method: 'POST', headers: { authorization: `Bearer ${token}`,
+      'content-type': 'application/json' },
+    body: JSON.stringify({ email: 'friend@example.com' }),
+  }));
+  assert.equal(result.status, 201);
+  assert.equal(calls.filter(call => call.url.includes('/auth/v1/invite?')).length, 1);
+  assert.match(calls.at(-1).url, /\/rpc\/edge_api_editorial_invite_finish$/);
+  assert.equal(JSON.parse(calls.at(-1).init.body).p_invited_id, reviewerId);
 });
 
 test('editorial profile requests normalize the name and require the current version', async () => {

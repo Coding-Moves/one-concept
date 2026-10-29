@@ -1,5 +1,9 @@
 # Supabase worker migration (#417)
 
+> Historical handover evidence. Production now uses the Supabase Edge worker;
+> use [RELEASING.md](../RELEASING.md) and
+> [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) for current operations.
+
 This is the implementation and handover record for the second Railway exit PR.
 It records verified live settings separately from source defaults. Keep provider
 credentials, token values, URLs containing secrets, and recipient addresses out

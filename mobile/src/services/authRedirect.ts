@@ -1,10 +1,10 @@
-export type AuthLandingPath = 'confirmed' | 'reset-password';
+export type AuthLandingPath = 'confirmed' | 'reset-password' | 'privacy';
 
 /**
- * Builds a browser landing URL on the configured static website origin.
+ * Builds a browser landing URL on the configured API origin.
  *
  * Email verification happens at Supabase first. `emailRedirectTo` then sends a
- * verified user here, so it must use the separately deployed browser host
+ * verified user here, so it must use the same deployed API origin as the app
  * rather than relying on a potentially stale Supabase Site URL. Returning
  * undefined preserves Supabase's Site URL fallback during an incomplete local
  * configuration; release validation prevents that state from being published.
@@ -15,10 +15,9 @@ export function authLandingUrl(path: AuthLandingPath, baseUrl: string): string |
   try {
     const url = new URL(baseUrl);
     if (!['http:', 'https:'].includes(url.protocol) || !url.hostname
-      || url.username || url.password || url.search || url.hash
-      || url.pathname !== '/') return undefined;
+      || url.username || url.password || url.search || url.hash) return undefined;
 
-    url.pathname = `/${path}`;
+    url.pathname = `${url.pathname.replace(/\/+$/, '')}/${path}`;
     return url.toString();
   } catch {
     return undefined;

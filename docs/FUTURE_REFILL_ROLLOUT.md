@@ -1,105 +1,66 @@
-# Future curated-card refill rollout
+# Future curated-card refill
 
-Issue #353 keeps future lesson refill separate from legacy enrichment and editorial
-corrections. Every generated lesson remains a private draft until a reviewer
-approves the exact version.
+Issue #353 keeps new lesson generation separate from legacy enrichment and
+editorial corrections. Gemini drafts from a human-curated title plan; it does
+not choose the curriculum or publish to learners. Every generated lesson stays
+private until a reviewer approves and publishes its exact revision.
 
-The first reviewed launch plan is
-[`backend/content/curriculum.refill-launch.json`](../backend/content/curriculum.refill-launch.json):
-one distinct lesson for each existing subject, with a learning objective and
-primary source. The production backend image contains this file. It is a
-bounded starting backlog, not an infinite AI curriculum planner. Add further
-reviewed plans as readers use these lessons.
+The original five-subject starting plan is
+[`backend/content/curriculum.refill-launch.json`](../backend/content/curriculum.refill-launch.json).
+It is a bounded historical seed, not an infinite planner. Import further
+reviewed titles as readers consume lessons. An empty pending plan cannot be
+fixed by increasing a model quota or turning on a scheduler.
 
-## Release procedure
+## Before enabling production refill
 
-Migration `0043_future_refill_daily_usage.sql` is already recorded as applied
-in production. Do not reapply or edit it. Enable future refill only after a
-separate release and operator review of the existing-lesson backfill.
+1. Confirm the production API and Edge worker were deployed from the intended
+   `main` commit through the protected workflow in [RELEASING.md](../RELEASING.md).
+   Verify migration `0043_future_refill_daily_usage.sql` and later worker
+   migrations against the actual production schema. Do not edit applied SQL.
+2. Review the current catalog, private drafts and pending revisions. Publish
+   only exact lesson versions that pass the full editorial checklist. A full
+   review queue blocks new claims by design.
+3. Inspect failed planned titles individually. Correct duplicates, content
+   validation problems or provider configuration before granting an audited
+   retry; never reset all failed rows. See [content operations](CONTENT_OPERATIONS.md).
+4. Import a reviewed plan with distinct slugs, objectives, prerequisites and
+   sources. The Python maintainer CLI can import it using the intended Supabase
+   database connection, but verify the project ref and a dry-run plan first.
+   Exact re-import is safe; an overlap warning still needs human inspection.
+5. Verify the production Edge worker has its private Gemini key and model,
+   bounded call caps, and the `content_pool` Cron job. Keep `FUTURE_REFILL_ENABLED`
+   false until the plan and reviewer capacity are ready. Staging and production
+   project refs and secrets must stay separate.
 
-1. Verify the deployed API and worker revisions match the release commit.
-2. Verify the existing `future_refill_daily_usage` tables still have RLS enabled
-   and neither `anon` nor `authenticated` can read or write them.
-3. Deploy the API and every generation-capable Railway worker with the same
-   variables. Keep `GEMINI_API_KEY` in Railway Variables only.
-4. From the deployed backend image, import the reviewed launch plan once with
-   `python -m app.workers.content import-curriculum content/curriculum.refill-launch.json`.
-   The command is transactional and an exact re-import is safe. Inspect any
-   overlap warning against the live catalog before leaving the plans in the
-   queue. A duplicate or missing prerequisite is an import failure that needs
-   a corrected plan; never bypass catalog validation.
+## Controlled activation
 
-## Initial Railway values
+The production Edge worker reads `GENERATION_ENABLED` and
+`FUTURE_REFILL_ENABLED` independently. Both must be true for curated refill.
+Enable the `content_pool` row in `edge_worker_jobs` and its matching Cron job
+only after checking the exact production project and target worker URL. The
+normal path claims at most one private draft per eligible low-supply topic per
+day, bounded by `FUTURE_REFILL_DAILY_CALL_CAP=5` and
+`FUTURE_REFILL_TOPIC_DAILY_CAP=1`. Leave urgent refill disabled on the first day.
+The worker skips topics with no pending plan, a full review queue, no active
+reader demand, or exhausted allowance. Learner HTTP requests do not wait for a
+model call.
 
-Set these values consistently on the API, `pool-topup`/prefetch worker, and any
-other service that runs future refill:
+Reviewer's **Request changes** can queue a separate private AI correction when
+`EDITORIAL_AUTO_CORRECTION_ENABLED=true`. It does not publish a replacement.
+Legacy enrichment uses its own job and review path. Do not infer that either
+worker creates new curriculum titles.
 
-```text
-GEMINI_MODEL=gemini-3.1-flash-lite
-GENERATION_ENABLED=false
-FUTURE_REFILL_ENABLED=false
-LEGACY_ENRICHMENT_ENABLED=false
-CONTENT_LOW_WATERMARK=10
-CONTENT_CRITICAL_WATERMARK=3
-FUTURE_REFILL_DAILY_CALL_CAP=5
-FUTURE_REFILL_TOPIC_DAILY_CAP=1
-FUTURE_REFILL_URGENT_ENABLED=false
-FUTURE_REFILL_URGENT_DAILY_CALL_CAP=10
-FUTURE_REFILL_URGENT_TOPIC_DAILY_CAP=2
-EDITORIAL_AUTO_CORRECTION_ENABLED=true
-```
+## First-day verification and pause
 
-`GENERATION_ENABLED=false`, `FUTURE_REFILL_ENABLED=false`, and
-`FUTURE_REFILL_DAILY_CALL_CAP=0` are independent
-immediate stops. The future-refill worker creates one lesson per eligible topic
-per normal day regardless of the older `CONTENT_GENERATION_BATCH` setting; do
-not lower that general legacy/correction setting for this rollout. Do not enable
-urgent mode during the first rollout.
-`FUTURE_REFILL_ENABLED=false` also blocks owner requests for new planned drafts
-while existing published lessons are being enriched; AI corrections and the
-separately enabled legacy batch remain private review paths.
+Inspect `cron.job`, `edge_worker_jobs`, and the latest terminal
+`edge_worker_runs` for `content_pool`. Confirm `status=succeeded`,
+`disabled=0`, and a valid HTTP receipt. Check the plan, draft, failure and
+`future_refill_daily_usage` counts. No more than five normal calls should be
+reserved globally and one per eligible topic. A generated draft must appear
+in the review queue and become available to learners only after publication.
 
-After the launch plan is imported and the deployed worker is healthy, set
-`GENERATION_ENABLED=true` and `FUTURE_REFILL_ENABLED=true` on the API and
-`pool-topup` services, keeping the caps above. The scheduled worker checks
-active reader demand and prepares at most one new private draft per low-supply
-subject per normal day. It skips subjects with no plan or full review capacity.
-The owner can verify the reason in content health and AI requests. Railway's
-current `22:00 UTC` schedule corresponds to `03:00` in Pakistan; check the
-actual schedule before promising that hour. Do not turn on urgent refill until
-the first normal day has been inspected.
-
-A reviewer's **Request changes** decision queues one private AI correction
-when generation is enabled. The job stays bound to that reviewer and is
-cancelled if the membership is revoked before processing. The worker runs it
-on its next scheduled or manually started pass; it does not edit or publish
-the existing lesson. Set `EDITORIAL_AUTO_CORRECTION_ENABLED=false` to pause
-new automatic correction requests while leaving existing queued jobs intact.
-
-## First-day verification
-
-After deployment, enable `GENERATION_ENABLED=true` and
-`FUTURE_REFILL_ENABLED=true` for one day and use the protected operations
-report to confirm:
-
-- no more than five future-refill calls were reserved;
-- each low topic used no more than one call;
-- only topics at or below ten unread published cards were eligible;
-- generated lessons are drafts and wait for ordinary review;
-- editorial corrections and legacy batch work do not affect the refill ledger.
-
-Approve one draft through the editorial workflow and verify it appears in the
-learner app only after publication. If the provider rate-limits, review capacity
-is full, or an allowance is exhausted, the worker logs a bounded reason and
-stops without retrying on the HTTP request path.
-
-## Urgent mode and rollback
-
-Enable urgent mode only after reviewing a full day of quota and reviewer-load
-evidence. It allows a critical topic (three unread cards or fewer) a second call
-that day, under the separate ten-call global ceiling.
-
-To pause safely, set `FUTURE_REFILL_ENABLED=false`, `GENERATION_ENABLED=false`, or
-`FUTURE_REFILL_DAILY_CALL_CAP=0` on every generation-capable Railway service and
-redeploy or restart them. Existing published lessons and private drafts remain
-unchanged.
+To pause new work, set `FUTURE_REFILL_ENABLED=false` or the daily call cap to
+zero, and turn off the `content_pool` Cron and worker gates if needed. Existing
+published lessons, private drafts and review evidence remain intact. Recheck
+the latest worker run rather than treating a successful dispatch as proof that
+a card was generated or published.

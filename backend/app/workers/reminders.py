@@ -1,7 +1,8 @@
 """Run with: python -m app.workers.reminders
 
-Scheduled on Railway every 15 minutes. Nudges users whose reminder time just
-passed in their own timezone and who have not finished today's concept.
+Legacy Python entry point for controlled maintenance. Production reminders run
+through the Supabase Edge worker. This command nudges users whose reminder time
+just passed in their own timezone and who have not finished today's concept.
 """
 
 import asyncio

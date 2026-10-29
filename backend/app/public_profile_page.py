@@ -6,7 +6,10 @@ from app.config import get_settings
 from app.schemas.profile_sharing import PublicProfile
 
 PRESETS = {'aurora': '✦', 'comet': '✧', 'forest': '❧', 'ocean': '≈', 'sunset': '☼', 'violet': '✿'}
-BASE_CSP = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"
+ICON_ORIGIN = 'https://coding-moves-one-concept-review.netlify.app'
+ICON_URL = ICON_ORIGIN + '/one-concept-icon.png'
+BASE_CSP = ("default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; "
+            f"frame-ancestors 'none'; img-src {ICON_ORIGIN}")
 ICONS = {
     'streak': '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 22c4.4 0 7-3 7-7 0-3.8-2.4-6.1-3.8-7.2.2 2.8-1 4.1-2.1 4.6C13.5 8 10.8 5.5 8 3c.2 3.7-3 5.5-3 11.7C5 19 7.7 22 12 22Z"/><path d="M12 22c2 0 3.2-1.4 3.2-3.3 0-1.5-1-2.6-2.5-3.8-.1 1.7-1.4 2.2-2.4 2.8-.5.4-1.3 1.1-1.3 2.2 0 1.3 1.1 2.1 3 2.1Z"/></svg>',
     'learning': '<svg class="icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 4.5c3-.8 6-.5 9 1.2 3-1.7 6-2 9-1.2v14c-3-.8-6-.5-9 1.2-3-1.7-6-2-9-1.2Z"/><path d="M12 5.7v14"/></svg>',
@@ -29,7 +32,7 @@ def _avatar(profile: PublicProfile) -> tuple[str, str]:
 def _document(name: str, body: str) -> str:
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow">
-<title>{escape(name)} · One Concept</title><style>
+<link rel="icon" type="image/png" href="{ICON_URL}"><title>{escape(name)} · One Concept</title><style>
 :root{{color-scheme:light dark}}*{{box-sizing:border-box}}body{{margin:0;background:#f5f5fb;color:#202131;font:16px/1.5 system-ui}}
 main{{max-width:560px;margin:0 auto;padding:32px 16px 64px;overflow-wrap:anywhere}}.brand{{color:#5045c8;font-size:12px;font-weight:800;letter-spacing:.15em;margin:0 0 22px}}
 .card{{background:#fff;border:1px solid #e5e4f2;border-radius:28px;padding:clamp(20px,5vw,36px);box-shadow:0 12px 32px #24234b12}}
@@ -74,5 +77,5 @@ def render_public_page(profile: PublicProfile, token: str) -> tuple[str, str]:
         parts.append('<p class="empty">No learning highlights have been shared.</p>')
     # This native link opens the app; Connect is an authenticated action there.
     parts.append(f'<a class="connect" href="com.codingmoves.oneconcept://p/{token}">Open in One Concept to connect <span aria-hidden="true">↗</span></a>')
-    csp = BASE_CSP + (f'; img-src {image_origin}' if image_origin else '')
+    csp = BASE_CSP + (f' {image_origin}' if image_origin else '')
     return _document(name, ''.join(parts)), csp

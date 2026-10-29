@@ -26,6 +26,7 @@ const STYLE = `
 
 const CONFIRMED = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="${PUBLIC_ICON}">
 <title>One Concept — email confirmation</title><style nonce="__NONCE__">${STYLE}</style></head>
 <body><main><div class="brand"><img src="${PUBLIC_ICON}" width="44" height="44" alt="">One Concept</div><h1 id="heading">Check your email link</h1>
 <p id="message">Open the confirmation link from your email to finish setting up your account.</p>
@@ -69,6 +70,7 @@ if (hash.get('type') === 'recovery' && hash.get('access_token')) {
 
 const RESET = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="${PUBLIC_ICON}">
 <title>One Concept — reset password</title><style nonce="__NONCE__">${STYLE}</style></head>
 <body><main><div class="brand"><img src="${PUBLIC_ICON}" width="44" height="44" alt="">One Concept</div><h1>Reset your password</h1>
 <p id="intro">Choose a new password for your One Concept account.</p>
@@ -142,6 +144,7 @@ form.addEventListener('submit', async event => {
 // Keep this learner-facing disclosure aligned with backend/app/privacy.py.
 const PRIVACY = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/png" href="${PUBLIC_ICON}">
 <title>One Concept — Privacy Policy</title><style nonce="__NONCE__">${STYLE}
 body { display: block; } main { max-width: 760px; margin: auto; }
 h2 { margin: 2rem 0 .5rem; } li { margin-bottom: .4rem; color: #aeb5c3; }

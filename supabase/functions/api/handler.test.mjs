@@ -29,6 +29,8 @@ test('public cutover pages serve browser HTML without leaking service credential
     assert.equal(result.headers.get('cache-control'), 'no-store');
     assert.equal(result.headers.get('referrer-policy'), 'no-referrer');
     assert.match(result.headers.get('content-security-policy'), /frame-ancestors 'none'/);
+    assert.match(result.headers.get('content-security-policy'), /img-src https:\/\/coding-moves-one-concept-review\.netlify\.app/);
+    assert.match(body, /<link rel="icon" type="image\/png" href="https:\/\/coding-moves-one-concept-review\.netlify\.app\/one-concept-icon\.png">/);
     assert.doesNotMatch(body, /private-service-key|__NONCE__|__CONFIG__/);
   }
   assert.equal(calls.length, 0);

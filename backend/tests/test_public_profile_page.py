@@ -17,7 +17,8 @@ def test_card_renders_selected_content_and_escapes_visitor_text():
     assert '&lt;award&gt;' in html and 'earned &amp; shared' in html
     assert 'Current streak' in html and 'Concepts learned' in html
     assert 'Open in One Concept to connect' in html
-    assert 'img-src' not in csp
+    assert f'rel="icon" type="image/png" href="{public_profile_page.ICON_URL}"' in html
+    assert csp.endswith(f'img-src {public_profile_page.ICON_ORIGIN}')
 
 
 def test_unselected_content_is_absent_and_signed_photo_origin_is_narrow(monkeypatch):
@@ -26,10 +27,16 @@ def test_unselected_content_is_absent_and_signed_photo_origin_is_narrow(monkeypa
     profile = PublicProfile(avatar_url='https://storage.example.test/storage/v1/object/sign/profile-avatars/avatars/id.jpg?token=abc')
     html, csp = public_profile_page.render_public_page(profile, 'b' * 43)
     assert 'src="https://storage.example.test/' in html
-    assert csp.endswith('img-src https://storage.example.test')
+    assert csp.endswith(f'img-src {public_profile_page.ICON_ORIGIN} https://storage.example.test')
     assert 'Current streak' not in html and 'Achievements' not in html
     assert 'No learning highlights have been shared.' in html
     profile.avatar_url = 'https://attacker.example/photo.jpg'
     html, csp = public_profile_page.render_public_page(profile, 'b' * 43)
     assert '<img' not in html and 'attacker.example' not in html
-    assert 'img-src' not in csp
+    assert csp.endswith(f'img-src {public_profile_page.ICON_ORIGIN}')
+
+
+def test_unavailable_profile_keeps_favicon_allowed():
+    html, csp = public_profile_page.render_unavailable_page()
+    assert f'rel="icon" type="image/png" href="{public_profile_page.ICON_URL}"' in html
+    assert csp.endswith(f'img-src {public_profile_page.ICON_ORIGIN}')

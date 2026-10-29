@@ -1,0 +1,29 @@
+:root { color-scheme: light; font: 16px/1.55 Inter, system-ui, sans-serif; color: #171923; background: #f4f5fb; }
+* { box-sizing: border-box; }
+body { margin: 0; }
+button, input { font: inherit; }
+.account-layout { min-height: 100vh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(320px, 440px); gap: clamp(2rem, 7vw, 7rem); align-items: center; max-width: 1200px; margin: auto; padding: clamp(1.5rem, 6vw, 5rem); }
+.account-brand { display: flex; align-items: center; gap: 1rem; width: fit-content; color: inherit; text-decoration: none; font-size: 1.3rem; font-weight: 800; }
+.account-brand img { width: 56px; height: 56px; object-fit: contain; border-radius: 14px; }
+.account-brand small { display: block; font-size: .78rem; font-weight: 500; color: #565d6d; }
+.account-intro h1 { font-size: clamp(2.1rem, 4vw, 3.5rem); line-height: 1.12; letter-spacing: -.04em; max-width: 700px; margin: 2.5rem 0 1rem; }
+.account-intro p { color: #565d6d; max-width: 560px; }
+.account-secondary-link { display: inline-block; margin-top: 1.4rem; color: #3f3db0; }
+.account-panel { background: #fff; border: 1px solid #e4e6f0; border-radius: 22px; padding: clamp(1.5rem, 4vw, 2.5rem); box-shadow: 0 16px 48px #24295012; }
+.account-panel h2 { font-size: 1.65rem; margin: 0 0 .25rem; }
+.account-panel p { color: #565d6d; }
+.account-panel form { display: grid; gap: 1rem; }
+.account-panel label { display: grid; gap: .35rem; font-weight: 600; }
+.account-panel input { width: 100%; padding: .75rem; border: 1px solid #b7bed0; border-radius: 10px; color: #171923; background: #fff; }
+.account-panel input:focus-visible, .account-panel button:focus-visible, .account-panel a:focus-visible { outline: 3px solid #8da5ff; outline-offset: 2px; }
+.account-panel button { cursor: pointer; min-height: 44px; border: 0; border-radius: 10px; padding: .7rem 1rem; background: #4f46e5; color: #fff; font-weight: 700; }
+.account-panel button:disabled { opacity: .6; cursor: default; }
+.account-panel button.account-text-button, .account-switch button { background: transparent; color: #3f3db0; padding: .35rem; min-height: 38px; }
+.account-switch { display: flex; flex-wrap: wrap; gap: .5rem 1rem; }
+.account-error, .account-notice { padding: .8rem 1rem; border-radius: 10px; }
+.account-panel .account-error { color: #9b1830; background: #fff0f2; }
+.account-panel .account-notice { color: #116534; background: #e9f8ef; }
+.account-panel .account-email { overflow-wrap: anywhere; font-weight: 700; color: #171923; }
+.account-unavailable { max-width: 480px; margin: 15vh auto; padding: 2rem; }
+@media (max-width: 760px) { .account-layout { grid-template-columns: 1fr; align-items: start; gap: 2rem; } .account-intro h1 { margin-top: 1.5rem; } }
+@media (prefers-color-scheme: dark) { :root { color-scheme: dark; color: #f2f3fa; background: #0c1019; } .account-brand { color: #f2f3fa; } .account-brand small, .account-intro p { color: #b1b7cb; } .account-panel { color: #f2f3fa; background: #171b2a; border-color: #30374a; } .account-panel p { color: #b1b7cb; } .account-panel input { color: #f2f3fa; background: #0c1019; border-color: #596079; } .account-panel .account-email { color: #f2f3fa; } .account-panel button.account-text-button, .account-switch button, .account-secondary-link { color: #b9beff; } }

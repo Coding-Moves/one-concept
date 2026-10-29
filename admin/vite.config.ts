@@ -14,12 +14,26 @@ export default defineConfig(({ command, mode }) => {
     plugins: [
       react(),
       {
+        name: "public-account-dev-route",
+        configureServer(server) {
+          server.middlewares.use((request, _response, next) => {
+            if (request.url?.match(/^\/account(?:\/callback)?(?:\?|$)/)) {
+              request.url = "/account.html";
+            }
+            next();
+          });
+        },
+      },
+      {
         name: "static-host-security-headers",
         closeBundle() {
           if (config) writeFileSync(resolve("dist/_headers"), pagesHeaders(config));
         },
       },
     ],
-    build: { sourcemap: false },
+    build: {
+      sourcemap: false,
+      rollupOptions: { input: { review: resolve("index.html"), account: resolve("account.html") } },
+    },
   };
 });

@@ -244,7 +244,7 @@ export function App({
       </a>
       <aside className="sidebar">
         <div className="brand">
-          <span className="brand-mark">1</span>
+          <img className="brand-mark" src="/one-concept-icon.png" width="43" height="43" alt="" />
           <div>
             One Concept<small>Review workspace</small>
           </div>

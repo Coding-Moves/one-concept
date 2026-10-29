@@ -1,6 +1,6 @@
 # Codebase map
 
-Source inspection: 2026-10-28. This is a navigation guide to the implementation,
+Source inspection: 2026-10-29. This is a navigation guide to the implementation,
 not a claim that deployed services or every runtime behavior have been verified.
 Refresh the relevant sections when the code changes.
 
@@ -12,7 +12,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | Area | Entry points and purpose |
 | --- | --- |
 | Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. `mobile/src/screens/AboutScreen.tsx` links learners to the public review explanation. |
-| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private Supabase Edge API calls. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Current hosting instructions are in `admin/README.md`. |
+| Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private Supabase Edge API calls. `admin/account.html` and `src/publicAccount.tsx` provide a separate public learner account entry using the same Auth project. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Current hosting instructions are in `admin/README.md`. |
 | Production API | `supabase/functions/api/handler.ts` routes mobile and review-site requests through the protected Supabase Edge API and SQL RPCs. `backend/app/main.py` remains the Python reference and maintenance implementation. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/FUTURE_REFILL_ROLLOUT.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. `docs/CONTENT_OPERATIONS.md` preserves the earlier Python rollout. |

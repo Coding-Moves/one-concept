@@ -17,6 +17,13 @@ The mobile app derives its explicit signup and recovery redirect URLs from
 `https://PROJECT.supabase.co/functions/v1/api` address. The Edge routes are
 public browser pages; private application routes still authenticate the user.
 
+The public web account at `/account` uses the same Supabase Auth project and
+publishable key as the review workspace. It requests the exact
+`https://coding-moves-one-concept-review.netlify.app/account/callback` return
+for confirmation and recovery, verifies the returned session with Supabase,
+then removes credentials from the browser URL. This public page never grants
+editorial membership; the owner invitation remains a separate guarded flow.
+
 ## Production configuration
 
 1. Deploy the tested Edge `api` function revision containing these pages.
@@ -29,6 +36,8 @@ public browser pages; private application routes still authenticate the user.
    ```text
    https://PROJECT.supabase.co/functions/v1/api/confirmed
    https://PROJECT.supabase.co/functions/v1/api/reset-password
+   https://coding-moves-one-concept-review.netlify.app/account/callback
+   https://coding-moves-one-concept-review.netlify.app/auth/callback
    ```
 
 3. After the pages are live, set the **Site URL** fallback to the exact
@@ -39,6 +48,11 @@ public browser pages; private application routes still authenticate the user.
 4. Check Expo's **production** `EXPO_PUBLIC_API_BASE_URL` points to the same
    Supabase `api` function, and keep the Supabase Auth URL and publishable key
    matched to that project. Never put a service-role key in mobile or a page.
+5. Deploy the public web `/account` page and icon before installing the branded
+   Auth templates. Confirm its `VITE_SUPABASE_URL` and public key are from the
+   same project as the mobile build. For staging, use that staging project's
+   matching web deployment and exact callback URL; do not point a staging
+   signup into production Auth.
 
 ## Real-device verification
 
@@ -48,6 +62,13 @@ Concept confirmation page and allows sign-in. Confirm that the second opens
 the One Concept reset form, accepts a new password, and allows sign-in with it.
 Do not share email links, URL fragments, tokens, or passwords in logs, screenshots
 or chat. A 200 response from the page alone does not prove the full Auth flow.
+
+Also test public web signup, repeated signup for an existing address, wrong
+password, resend, expired confirmation, recovery on a second device, and
+recovery of a reviewer account. Sign in on mobile with the web-created account;
+verify it has no reviewer access until the owner invitation is approved. Test
+the owner invitation for both a new address and an existing confirmed learner.
+Review the source and status of every Auth email in `EMAIL_TEMPLATES.md`.
 
 The production app must receive the compatible JavaScript update for its About
 screen to link to the Edge privacy page under the API path. Older builds can

@@ -41,16 +41,17 @@ test('public cutover pages serve browser HTML without leaking service credential
   assert.equal(rejected.headers.get('allow'), 'GET');
 });
 
-test('confirmation page claims success only after an Auth redirect', async () => {
+test('confirmation page claims success only after Auth verifies the redirect token', async () => {
   const handler = createHandler(config);
   const body = await (await handler(request('/confirmed'))).text();
   const script = body.match(/<script nonce="[^"]+">([\s\S]*?)<\/script>/)?.[1];
   assert.ok(script);
 
-  function open(fragment) {
+  async function open(fragment, authValid = true) {
     const heading = { textContent: 'Check your email link' };
     const message = { textContent: 'Open the confirmation link from your email.', className: '' };
     const replaced = [];
+    const authCalls = [];
     const location = {
       href: `https://one-concept.supabase.co/functions/v1/api/confirmed${fragment}`,
       hash: fragment,
@@ -60,18 +61,31 @@ test('confirmation page claims success only after an Auth redirect', async () =>
     };
     const history = { replaceState: (_state, _title, url) => replaced.push(url) };
     const document = { getElementById: id => id === 'heading' ? heading : message };
-    runInNewContext(script, { URL, URLSearchParams, location, history, document });
-    return { heading, message, replaced };
+    const fetch = (url, init) => {
+      authCalls.push({ url, init });
+      return Promise.resolve({ ok: authValid, json: async () => ({ email_confirmed_at: '2026-10-29T00:00:00Z' }) });
+    };
+    runInNewContext(script, { URL, URLSearchParams, location, history, document, fetch });
+    const beforeAuth = heading.textContent;
+    await new Promise(resolve => setImmediate(resolve));
+    return { heading, message, replaced, authCalls, beforeAuth };
   }
 
-  const direct = open('');
+  const direct = await open('');
   assert.equal(direct.heading.textContent, 'Check your email link');
+  assert.equal(direct.authCalls.length, 0);
   assert.deepEqual(direct.replaced, ['/functions/v1/api/confirmed']);
-  const verified = open('#access_token=test-token&type=signup');
+  const verified = await open('#access_token=test-token&type=signup');
+  assert.equal(verified.beforeAuth, 'Check your email link');
   assert.equal(verified.heading.textContent, 'Email confirmed ✓');
+  assert.equal(verified.authCalls[0].url, `${config.supabaseUrl}/auth/v1/user`);
+  assert.equal(verified.authCalls[0].init.headers.Authorization, 'Bearer test-token');
   assert.deepEqual(verified.replaced, ['/functions/v1/api/confirmed']);
-  const recovery = open('#access_token=test-token&type=recovery');
+  const rejected = await open('#access_token=invalid-token&type=signup', false);
+  assert.equal(rejected.heading.textContent, 'Confirmation did not finish');
+  const recovery = await open('#access_token=test-token&type=recovery');
   assert.equal(recovery.heading.textContent, 'Check your email link');
+  assert.equal(recovery.authCalls.length, 0);
   assert.deepEqual(recovery.replaced,
     ['https://one-concept.supabase.co/functions/v1/api/reset-password#access_token=test-token&type=recovery']);
 });

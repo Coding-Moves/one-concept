@@ -35,7 +35,8 @@ def test_email_has_plain_fallback_and_safe_accessible_html():
     assert received.get_body(preferencelist=("plain",)).get_content() == body
     html = received.get_body(preferencelist=("html",)).get_content()
     assert 'lang="en"' in html and "ONE CONCEPT" in html
-    assert "<img" not in html and "&lt;img" in html and "&amp; Engineering" in html
+    assert '<img src="https://review.test.invalid/one-concept-icon.png"' in html
+    assert "&lt;img" in html and "&amp; Engineering" in html
     assert "2026-10-04 18:00 PKT" in html
     assert url.replace("&", "&amp;") in html
     assert "Open assigned lesson 1" in html

@@ -86,6 +86,7 @@ function renderHtml(body: string, origin: string, liveLinks = true): string {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"></head>` +
     `<body style="font-family:Arial,sans-serif;color:#222238;background:#f4f4fc">` +
     `<main style="max-width:600px;margin:auto;padding:28px;background:#fff">` +
+    `<img src="${htmlEscape(origin)}/one-concept-icon.png" width="48" height="48" alt="One Concept" style="display:block;width:48px;height:48px;border:0;border-radius:12px;margin:0 0 12px">` +
     `<h1>Lessons ready for your review</h1>${content}` +
     `<p>Assignments can change after this email is sent. The review workspace always shows their current status.</p>` +
     `</main></body></html>`;

@@ -24,7 +24,10 @@ test('Gmail OAuth then MIME send succeeds without leaking credentials into body'
   assert.equal(calls[1].options.headers.authorization, 'Bearer test-access');
   const raw = JSON.parse(calls[1].options.body).raw;
   assert.equal(raw.includes('test-secret'), false);
-  assert.match(atob(raw.replace(/-/g, '+').replace(/_/g, '/')), /Message-ID: <11111111-1111-4111-8111-111111111111@example.test>/);
+  const mime = atob(raw.replace(/-/g, '+').replace(/_/g, '/'));
+  assert.match(mime, /Message-ID: <11111111-1111-4111-8111-111111111111@example.test>/);
+  const html = atob(mime.split('Content-Type: text/html; charset=UTF-8')[1].split('\r\n\r\n')[1].split('\r\n')[0]);
+  assert.match(html, /src="https:\/\/review.example.test\/one-concept-icon.png"/);
 });
 
 test('expired OAuth token is terminal; temporary OAuth failure retries', async () => {

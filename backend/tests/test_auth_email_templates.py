@@ -8,6 +8,7 @@ import hashlib
 ROOT = Path(__file__).resolve().parents[1] / "email-templates"
 REPO = Path(__file__).resolve().parents[2]
 LOGO = "https://coding-moves-one-concept-review.netlify.app/one-concept-icon.png"
+CODING_MOVES = "https://codingmoves.netlify.app/products/"
 
 
 class TemplateInspector(HTMLParser):
@@ -41,12 +42,15 @@ class TemplateInspector(HTMLParser):
 def test_auth_templates_use_public_existing_icon_and_readable_wordmark():
     for name in ("confirm-signup", "invite-reviewer", "reset-password", "password-changed"):
         parser = TemplateInspector()
-        parser.feed((ROOT / f"{name}.html").read_text(encoding="utf-8"))
+        source = (ROOT / f"{name}.html").read_text(encoding="utf-8")
+        parser.feed(source)
         assert len(parser.images) == 1, name
         assert parser.images[0]["src"] == LOGO, name
         assert parser.images[0]["width"] == parser.images[0]["height"] == "48", name
         assert parser.images[0]["alt"] == "One Concept", name
         assert "One Concept" in " ".join(parser.words), name
+        assert parser.links.count(CODING_MOVES) == 1, name
+        assert 'by <a href="' + CODING_MOVES + '"' in source, name
 
     icon = (REPO / "mobile/assets/icon.png").read_bytes()
     public_icon = (REPO / "admin/public/one-concept-icon.png").read_bytes()

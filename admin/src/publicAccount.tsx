@@ -69,6 +69,15 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         setMode("check-email");
         setNotice("If this address can recover an account, a reset email will arrive shortly.");
       } else if (mode === "reset") {
+        const verified = await auth.auth.getUser();
+        if (verified.error || !verified.data.user) throw new Error("verify");
+        if (verified.data.user.id !== user?.id ||
+            sessionStorage.getItem(recoveryMarker) !== verified.data.user.id) {
+          sessionStorage.removeItem(recoveryMarker);
+          setUser(verified.data.user);
+          setMode("sign-in");
+          throw new Error("account");
+        }
         const result = await auth.auth.updateUser({ password });
         if (result.error) throw new Error(result.error.code === "weak_password" ? "weak" : "reset");
         sessionStorage.removeItem(recoveryMarker);
@@ -86,6 +95,8 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
       setError(code === "rate" ? "Too many email requests. Wait a while and try again."
         : code === "weak" ? "Choose a stronger password and try again."
         : code === "signin" ? "Unable to sign in. Check your email and password, then try again."
+        : code === "verify" ? "Could not verify this reset session. Check your connection and try again."
+        : code === "account" ? "The account changed before the password was updated. Sign out and request a new reset link."
         : code === "reset" ? "Could not update your password. Request a new reset link."
         : "Unable to request an email right now. Try again later.");
     } finally {

@@ -76,6 +76,24 @@ test("recovery email return verifies the session, updates the password, and clea
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
 });
 
+test("recovery form refuses to change a different account's password after a session switch", async ({ page, context }) => {
+  const requests: string[] = [];
+  await mockAuth(context, requests);
+  await page.goto(`/account/callback#access_token=${encodeURIComponent(token)}&refresh_token=fixture-refresh&type=recovery`);
+  await expect(page.getByRole("heading", { name: "Set a new password" })).toBeVisible();
+  const otherUser = { ...user, id: "00000000-0000-4000-8000-000000000002", email: "other@example.test" };
+  await context.route("https://review-auth.test/auth/v1/user", route => route.fulfill({
+    status: 200, contentType: "application/json", body: JSON.stringify(otherUser),
+    headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" },
+  }));
+  await page.getByLabel("New password").fill("new-safe-password");
+  await page.getByLabel("Confirm password").fill("new-safe-password");
+  await page.getByRole("button", { name: "Update password" }).click();
+  await expect(page.getByRole("alert")).toContainText("account changed");
+  await expect(page.getByRole("heading", { name: "Set a new password" })).toHaveCount(0);
+  expect(requests.some(request => request === "PUT /auth/v1/user")).toBe(false);
+});
+
 test("invalid callbacks never offer password setup", async ({ page, context }) => {
   const requests: string[] = [];
   await mockAuth(context, requests);

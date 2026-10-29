@@ -120,7 +120,7 @@ test("wrong password and rate limited signup show safe actionable errors", async
   await expect(page.getByRole("alert")).toContainText("Wait a while and try again");
   await expect(page.getByRole("heading", { name: "Create an account" })).toBeVisible();
   await context.route("https://review-auth.test/auth/v1/signup*", route => route.fulfill({ status: 422,
-    headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" },
+    headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-expose-headers": "x-supabase-api-version", "x-supabase-api-version": "2024-01-01" },
     contentType: "application/json", body: JSON.stringify({ code: "weak_password", msg: "Weak password" }) }));
   await page.getByRole("button", { name: "Create account" }).click();
   await expect(page.getByRole("alert")).toContainText("Choose a stronger password");

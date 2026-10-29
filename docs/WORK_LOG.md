@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### Release 1.10.16 preparation — 2026-10-29
+
+- `develop` at `40f0df3` includes #458, #459, #436 and #461, the 1.10.16 version, a nonempty matching What's New card, and migrations 0131–0136. Production `main` at `7a9a415` also contains the #460 Auth-page hotfix and the verified migration ledger through 0130. The branches cannot merge cleanly without reconciliation; do not treat the release PR as ready while that conflict remains.
+- The reconciliation branch merges current `main` into `develop`, retains the production Release workflow's exact deployment-run check, preview-first OTA and second protected production approval, keeps the current Edge Auth pages, and combines the legacy static-page and new `/account` routes. The automatic merge's website-only `authLandingUrl` conflicted with the new API-based mobile Auth redirects; it was restored to the `develop` implementation before validation.
+- Production application of 0131–0136 has not been verified, and none is recorded in `backend/migrations/applied.txt`. The operator must apply them in order to production, verify the actual schema, then record only verified filenames before the release can pass its migration gate. No live database, Supabase Auth setting, Netlify deployment or mobile OTA was changed by this preparation.
+- Local validation of the reconciled tree: mobile typecheck and 103 Node tests passed; review-site 24 unit tests, fixture production build and all 74 Chromium browser tests passed; Supabase function TypeScript check and 98 API handler tests passed. Hosted PR checks remain pending at this entry.
+- The historical 0046–0130 production cutover helper initially failed its reviewed-range test because 0131–0136 now exist. It now scans only its original numbered range while retaining the existing filename/count guards; its eight focused guard tests pass. This does not authorize rerunning the already completed cutover.
+
 ### Account branding and email flow — issue #438, 2026-10-29
 
 - Scope: one `develop` PR for the existing One Concept icon across the review/public auth surfaces and email source, a public account sign-up/sign-in/recovery entry using the same Supabase Auth project as mobile, email-trigger/redirect inventory, and focused browser/provider-boundary regressions. No production dashboard setting, SQL migration, release PR, or live email delivery changes in this branch. The owner will handle production activation and migrations in a later release step.

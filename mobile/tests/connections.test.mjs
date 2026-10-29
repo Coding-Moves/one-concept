@@ -2,6 +2,7 @@ import './helpers/resolve-ts.mjs';
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 process.env.EXPO_PUBLIC_API_BASE_URL ||= 'https://api.example.org';
+process.env.EXPO_PUBLIC_WEB_BASE_URL = 'https://web.example.org';
 const { apiRequest, apiRetryDelay, invalidateAccountRequests, setTokenProvider, ApiError, API_BASE_URL } = await import('../src/api/client.ts');
 const { connectionList, requestConnection, actOnConnection, connectionError } = await import('../src/services/connections.ts');
 const { openPublicProfile, onPublicProfileOpen } = await import('../src/services/publicProfileNavigation.ts');
@@ -30,7 +31,7 @@ test('connection errors stay friendly and public profile navigation is transient
   assert.ok(!connectionError(privateError).includes('private@example.invalid'));
   const seen=[];const stop=onPublicProfileOpen(url=>seen.push(url));
   assert.equal(openPublicProfile('https://other.invalid/p/'+'a'.repeat(43)),false);
-  const url=API_BASE_URL+'/p/'+'a'.repeat(43);
+  const url=process.env.EXPO_PUBLIC_WEB_BASE_URL+'/p/'+'a'.repeat(43);
   assert.equal(openPublicProfile(url),true);assert.deepEqual(seen,[url]);stop();openPublicProfile(url);assert.equal(seen.length,1);
 });
 test('owned relationship list and block call use the current account token', async t => {

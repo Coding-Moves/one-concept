@@ -138,3 +138,9 @@
 0128_supabase_worker_owner_reporting.sql
 0129_supabase_worker_run_retention.sql
 0130_supabase_email_ambiguous_delivery.sql
+0131_opt_in_followed_topics.sql
+0132_opt_in_edge_bootstrap.sql
+0133_editorial_reviewer_limit.sql
+0134_editorial_reviewer_removal.sql
+0135_optional_authenticator_email_copy.sql
+0136_editorial_reinvite_unconfirmed.sql

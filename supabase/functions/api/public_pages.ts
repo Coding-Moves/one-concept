@@ -1,11 +1,14 @@
-/** Browser landing pages served beside the Supabase learner API. */
+/** Browser landing pages served alongside the Supabase learner API. */
 
 type PageConfig = { supabaseUrl: string; anonKey: string };
+const PUBLIC_ICON = 'https://coding-moves-one-concept-review.netlify.app/one-concept-icon.png';
 
 const STYLE = `
   body { margin: 0; min-height: 100vh; display: grid; place-items: center;
     background: #0f1115; color: #e8eaf0; font: 16px/1.6 system-ui, sans-serif; }
   main { width: 100%; max-width: 420px; padding: 2rem; box-sizing: border-box; }
+  .brand { display: flex; align-items: center; gap: .75rem; margin-bottom: 2rem; font-weight: 700; }
+  .brand img { width: 44px; height: 44px; border-radius: 11px; }
   h1 { font-size: 1.6rem; margin: 0 0 .5rem; }
   p, label { color: #aeb5c3; }
   form { display: grid; gap: .75rem; }
@@ -17,15 +20,18 @@ const STYLE = `
     color: #0f1115; font: inherit; font-weight: 700; cursor: pointer; }
   button:disabled { opacity: .6; cursor: default; }
   .error { color: #ffaaaa; } .success { color: #9cebb5; }
+  a { color: #b5c4ff; }
   .hidden { display: none; }
 `;
 
 const CONFIRMED = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>One Concept — email confirmed</title><style nonce="__NONCE__">${STYLE}</style></head>
-<body><main><h1 id="heading">Check your email link</h1>
+<title>One Concept — email confirmation</title><style nonce="__NONCE__">${STYLE}</style></head>
+<body><main><div class="brand"><img src="${PUBLIC_ICON}" width="44" height="44" alt="">One Concept</div><h1 id="heading">Check your email link</h1>
 <p id="message">Open the confirmation link from your email to finish setting up your account.</p>
+<p><a href="https://coding-moves-one-concept-review.netlify.app/account">Continue on the web</a></p>
 </main><script nonce="__NONCE__">
+const config = __CONFIG__;
 const hash = new URLSearchParams(location.hash.slice(1));
 const query = new URLSearchParams(location.search);
 const error = hash.get('error_description') || query.get('error_description') ||
@@ -40,10 +46,23 @@ if (hash.get('type') === 'recovery' && hash.get('access_token')) {
     document.getElementById('heading').textContent = 'Confirmation did not finish';
     document.getElementById('message').textContent = error;
     document.getElementById('message').className = 'error';
-  } else if (hash.get('access_token')) {
-    document.getElementById('heading').textContent = 'Email confirmed ✓';
-    document.getElementById('message').textContent =
-      "You're all set. Open the One Concept app and sign in to get today's concept.";
+  } else if (hash.get('access_token') && hash.get('type') === 'signup') {
+    const token = hash.get('access_token');
+    fetch(config.url + '/auth/v1/user', {
+      method: 'GET', headers: { apikey: config.anonKey, Authorization: 'Bearer ' + token },
+      cache: 'no-store', credentials: 'omit', redirect: 'error',
+    }).then(async response => {
+      if (!response.ok) throw new Error('invalid');
+      const user = await response.json();
+      if (!user || !user.email_confirmed_at) throw new Error('unconfirmed');
+      document.getElementById('heading').textContent = 'Email confirmed ✓';
+      document.getElementById('message').textContent =
+        "You're all set. Open the One Concept app and sign in to get today's concept.";
+    }).catch(() => {
+      document.getElementById('heading').textContent = 'Confirmation did not finish';
+      document.getElementById('message').textContent = 'Could not verify this link. Check your connection or request a new one from One Concept.';
+      document.getElementById('message').className = 'error';
+    });
   }
 }
 </script></body></html>`;
@@ -51,14 +70,14 @@ if (hash.get('type') === 'recovery' && hash.get('access_token')) {
 const RESET = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>One Concept — reset password</title><style nonce="__NONCE__">${STYLE}</style></head>
-<body><main><h1>Reset your password</h1>
+<body><main><div class="brand"><img src="${PUBLIC_ICON}" width="44" height="44" alt="">One Concept</div><h1>Reset your password</h1>
 <p id="intro">Choose a new password for your One Concept account.</p>
 <form id="form" class="hidden" method="post"><div><label for="pw">New password</label>
 <input id="pw" type="password" autocomplete="new-password" minlength="6" required></div>
 <div><label for="pw2">Confirm new password</label>
 <input id="pw2" type="password" autocomplete="new-password" minlength="6" required></div>
 <button id="submit" type="submit">Update password</button></form>
-<p id="message" role="alert"></p></main><script nonce="__NONCE__">
+<p id="message" role="alert"></p><p><a href="https://coding-moves-one-concept-review.netlify.app/account">Sign in on the web</a></p></main><script nonce="__NONCE__">
 const config = __CONFIG__;
 const form = document.getElementById('form');
 const intro = document.getElementById('intro');
@@ -77,7 +96,18 @@ if (linkError) { hideForm(); fail(linkError); }
 else if (!token || type !== 'recovery') {
   hideForm();
   fail('This reset link is invalid or has expired. Open One Concept and request a new link.');
-} else form.classList.remove('hidden');
+} else {
+  fetch(config.url + '/auth/v1/user', {
+    method: 'GET', headers: { apikey: config.anonKey, Authorization: 'Bearer ' + token },
+    cache: 'no-store', credentials: 'omit', redirect: 'error',
+  }).then(response => {
+    if (!response.ok) throw new Error('invalid');
+    form.classList.remove('hidden');
+  }).catch(() => {
+    hideForm();
+    fail('Could not verify this reset link. Check your connection or request a new link.');
+  });
+}
 form.addEventListener('submit', async event => {
   event.preventDefault();
   const password = document.getElementById('pw').value;
@@ -91,6 +121,7 @@ form.addEventListener('submit', async event => {
       method: 'PUT', headers: { apikey: config.anonKey,
         Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({ password }),
+      cache: 'no-store', credentials: 'omit', redirect: 'error',
     });
     if (!result.ok) {
       const body = await result.json().catch(() => ({}));
@@ -102,7 +133,8 @@ form.addEventListener('submit', async event => {
     message.className = 'success';
   } catch (error) {
     submit.disabled = false;
-    fail(error instanceof Error ? error.message : 'Could not reset your password.');
+    fail(error instanceof Error && !(error instanceof TypeError)
+      ? error.message : 'Could not reset your password. Request a new link from the app.');
   }
 });
 </script></body></html>`;
@@ -114,7 +146,7 @@ const PRIVACY = `<!doctype html><html lang="en"><head><meta charset="utf-8">
 body { display: block; } main { max-width: 760px; margin: auto; }
 h2 { margin: 2rem 0 .5rem; } li { margin-bottom: .4rem; color: #aeb5c3; }
 a { color: #b5c4ff; } strong { color: #e8eaf0; }
-</style></head><body><main><h1>Privacy Policy</h1><p>Effective: October 1, 2026</p>
+</style></head><body><main><div class="brand"><img src="${PUBLIC_ICON}" width="44" height="44" alt="">One Concept</div><h1>Privacy Policy</h1><p>Effective: October 1, 2026</p>
 <p>One Concept is operated by Coding Moves. This policy explains the data used to provide the app and how to contact us about it.</p>
 <h2>Information used to provide the app</h2><ul>
 <li><strong>Account information:</strong> Supabase Auth handles your email address and authentication session. Your verified account identity separates your data from other users.</li>
@@ -155,6 +187,7 @@ export function publicPage(path: string, method: string, config: PageConfig, cor
   headers.set('x-content-type-options', 'nosniff');
   headers.set('referrer-policy', 'no-referrer');
   headers.set('x-frame-options', 'DENY');
-  headers.set('content-security-policy', `default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; connect-src ${config.supabaseUrl}`);
+  headers.set('x-robots-tag', 'noindex, nofollow, noarchive');
+  headers.set('content-security-policy', `default-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; img-src https://coding-moves-one-concept-review.netlify.app; connect-src ${config.supabaseUrl}`);
   return new Response(body, { status: 200, headers });
 }

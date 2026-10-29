@@ -42,10 +42,18 @@ API URL should be your deployed backend, not a LAN IP):
 
 ```bash
 eas env:create --environment production --name EXPO_PUBLIC_API_BASE_URL
+eas env:create --environment production --name EXPO_PUBLIC_WEB_BASE_URL
 eas env:create --environment production --name EXPO_PUBLIC_SUPABASE_URL
 eas env:create --environment production --name EXPO_PUBLIC_SUPABASE_ANON_KEY
 # repeat with --environment preview / development as needed
 ```
+
+`EXPO_PUBLIC_API_BASE_URL` may be the exact Supabase
+`https://<project>.supabase.co/functions/v1/api` endpoint.
+`EXPO_PUBLIC_WEB_BASE_URL` must be the HTTPS origin of the separately deployed
+browser pages, with no path. Keep the previous browser host available for issued
+Auth links; set the optional `EXPO_PUBLIC_LEGACY_WEB_BASE_URL` during transition
+so updated devices can still open old shared-profile QR links.
 
 ## First Android build → your phone
 

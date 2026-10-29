@@ -1,5 +1,5 @@
-# Deploy the Supabase API and worker through the protected production workflow
-# first. Publish only after the operator verifies that exact main commit and health.
+# Publish only after the protected Supabase production deploy succeeded for the
+# current main commit and the operator verified the production API and workers.
 name: Release
 
 on:
@@ -7,6 +7,10 @@ on:
     inputs:
       backend_revision:
         description: 'Full main commit SHA verified on healthy production API and workers'
+        required: true
+        type: string
+      production_deploy_run_id:
+        description: 'Successful Deploy Supabase API and worker to production Actions run ID for this main SHA'
         required: true
         type: string
 
@@ -28,6 +32,7 @@ jobs:
     environment: production-schema
     permissions:
       contents: read
+      actions: read
     steps:
       - uses: actions/checkout@v7
         with:
@@ -35,6 +40,31 @@ jobs:
       - name: Require current main revision
         run: |
           test "$(git ls-remote origin refs/heads/main | cut -f1)" = "$GITHUB_SHA"
+      - name: Require successful matching production deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_RUN_ID: ${{ inputs.production_deploy_run_id }}
+          VERIFIED_BACKEND_SHA: ${{ inputs.backend_revision }}
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_RUN_ID" =~ ^[0-9]+$ ]]
+          test "$VERIFIED_BACKEND_SHA" = "$GITHUB_SHA"
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}" \
+            --jq '[.path, .head_branch, .head_sha, .event, .conclusion] | @tsv' |
+            awk -v sha="$GITHUB_SHA" '$1 == ".github/workflows/supabase-production-deploy.yml" && $2 == "main" && $3 == sha && $4 == "workflow_dispatch" && $5 == "success" { found=1 } END { exit !found }'
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+      - name: Reject an already released app version before publishing any OTA
+        shell: bash
+        run: |
+          set -euo pipefail
+          version=$(node -p "require('./mobile/app.config.js').expo.version")
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+([.-].+)?$ ]]
+          if git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; then
+            echo "::error::Version v${version} already has a release tag."
+            exit 1
+          fi
       - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
@@ -43,10 +73,15 @@ jobs:
       - name: Check actual target schema without writing to the database
         working-directory: backend
         env:
+          PRODUCTION_PROJECT_REF: ${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}
+          STAGING_PROJECT_REF: ${{ vars.SUPABASE_STAGING_PROJECT_REF }}
+          PRODUCTION_SCHEMA_DIRECT_URL: ${{ secrets.PRODUCTION_SCHEMA_DIRECT_URL }}
           DIRECT_URL: ${{ secrets.PRODUCTION_SCHEMA_DIRECT_URL }}
-        run: python -m app.workers.schema_check
+        run: |
+          python -c 'from tools.apply_production_cutover import target_environment; target_environment(); print("production_connection=validated")'
+          python -m app.workers.schema_check
 
-  ota:
+  preview_ota:
     needs: schema
     runs-on: ubuntu-latest
     defaults:
@@ -81,21 +116,50 @@ jobs:
           eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
           eas env:exec preview 'node scripts/validate-public-config.cjs --release' --non-interactive
 
-      # Production first, then preview so preview devices are never left
-      # behind a production release. --environment bundles the EXPO_PUBLIC_*
-      # values; without it the update ships empty config and crashes.
-      - name: Publish production OTA
-        env:
-          MSG: ${{ github.event.head_commit.message || 'release' }}
-        run: eas update --channel production --environment production --message "$MSG" --non-interactive
-
       - name: Publish preview OTA
         env:
           MSG: ${{ github.event.head_commit.message || 'release' }}
         run: eas update --channel preview --environment preview --message "$MSG" --non-interactive
 
+  production_ota:
+    needs: preview_ota
+    runs-on: ubuntu-latest
+    # A second protected approval lets the owner test the preview build before
+    # the installed production runtime receives a new API address.
+    environment: production-schema
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+      - name: Recheck current main after the preview period
+        env:
+          VERIFIED_BACKEND_SHA: ${{ inputs.backend_revision }}
+        run: |
+          REMOTE_MAIN_SHA=$(git ls-remote origin refs/heads/main | cut -f1)
+          export REMOTE_MAIN_SHA
+          bash ../.github/scripts/check-release-revision.sh
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - uses: expo/expo-github-action@v9
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+      - run: npm ci
+      - name: Validate production public configuration
+        run: |
+          eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
+          eas env:exec production 'node ../.github/scripts/check-production-public-config.cjs' --non-interactive
+      - name: Publish production OTA after preview approval
+        env:
+          MSG: ${{ github.event.head_commit.message || 'release' }}
+        run: eas update --channel production --environment production --message "$MSG" --non-interactive
+
   release:
-    needs: ota
+    needs: production_ota
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

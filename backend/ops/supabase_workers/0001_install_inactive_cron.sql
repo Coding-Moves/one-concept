@@ -14,6 +14,12 @@ declare
   item record;
   installed_job bigint;
 begin
+  -- cron.schedule overwrites a job with the same name. Reinstalling after
+  -- handover must not silently deactivate a live production schedule.
+  if exists (select 1 from cron.job where jobname like 'one-concept-%') then
+    raise exception 'One Concept Cron jobs already exist; inspect before reinstalling';
+  end if;
+
   for item in select * from (values
     ('daily_reminders', '*/1 * * * *'),
     ('weekly_quiz', '* * * * *'),

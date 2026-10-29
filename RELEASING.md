@@ -41,15 +41,18 @@ Production release flow. Keep it boring and repeatable.
    gates unchanged during deployment, then verify the release-specific API,
    scheduled-job, and client smoke checks. A merge alone does not deploy them.
 6. Open **GitHub Actions → Release → Run workflow**, select **main**, and enter
-   the full 40-character main commit SHA you verified in the protected Edge
-   deployment and production checks in `backend_revision`. This is an operator
-   attestation; Release does not independently inspect the deployed function
-   revision. Do not submit it until checks are complete.
-7. The workflow first requires protected actual-schema verification (see
-   [setup and checks](docs/SCHEMA_VERIFICATION.md)). It rejects another branch,
-   an older deployment or a main revision that advanced before validation.
-   After those gates, it publishes production + preview OTA,
-   cuts the version tag/GitHub Release, and dispatches the native-gated APK build.
+   the full 40-character main commit SHA in `backend_revision` and the successful
+   protected deployment Actions run ID in `production_deploy_run_id`. The
+   workflow checks that the deployment ran from that exact current `main` SHA,
+   rejects an existing version tag before publishing, and verifies the actual
+   schema. It publishes preview OTA first, then waits at a second
+   `production-schema` approval. Test the compatible preview build on a real
+   device and confirm the effective production API/Auth configuration before
+   approving that gate.
+7. After the second approval, the workflow rechecks current `main`, publishes
+   production OTA, creates the version tag/GitHub Release, and dispatches the
+   native-gated APK build. A changed native `runtimeVersion` requires a new APK;
+   existing older-runtime installations cannot receive the new runtime's OTA.
    Do not merge another release while publication is running. The standalone
    EAS Update workflow publishes preview only; production uses this release path.
 
@@ -60,7 +63,9 @@ by hand against the production Supabase DB before deploying code that uses them.
 For each migration not yet applied to prod:
 1. Run it — Supabase → **SQL Editor** (paste the file), or
    `psql "$DIRECT_URL" -f backend/migrations/<file>` (`DIRECT_URL` = the 5432 session pooler).
-2. Add its filename to **`backend/migrations/applied.txt`**.
+2. Verify the resulting production objects and behavior. Only then add its
+   filename to **`backend/migrations/applied.txt`** on `develop`. Keep already
+   applied SQL immutable. The protected actual-schema check remains required.
 
 `.github/workflows/migrations.yml` fails on `main` and on release PRs if any migration
 isn't listed in `applied.txt`. That required filename check proves only that the

@@ -27,7 +27,17 @@ export default defineConfig(({ command, mode }) => {
       {
         name: "static-host-security-headers",
         closeBundle() {
-          if (config) writeFileSync(resolve("dist/_headers"), pagesHeaders(config));
+          if (config) {
+            writeFileSync(resolve("dist/_headers"), pagesHeaders(config));
+            // Public browser pages use the same validated, publishable-only
+            // configuration as the private reviewer bundle.
+            writeFileSync(resolve("dist/public-config.js"),
+              `window.ONE_CONCEPT_PUBLIC_CONFIG=Object.freeze(${JSON.stringify({
+                apiUrl: config.apiUrl,
+                supabaseUrl: config.supabaseUrl,
+                key: config.key,
+              })});\n`);
+          }
         },
       },
     ],

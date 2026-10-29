@@ -40,7 +40,14 @@ Production release flow. Keep it boring and repeatable.
    worker rejects unsigned calls, and checks API `/health`. Keep generation
    gates unchanged during deployment, then verify the release-specific API,
    scheduled-job, and client smoke checks. A merge alone does not deploy them.
-6. Open **GitHub Actions → Release → Run workflow**, select **main**, and enter
+6. If this release changes `runtimeVersion`, build a compatible **preview APK**
+   from the exact new `main` commit before starting Release:
+   `cd mobile && eas build --platform android --profile preview --non-interactive --wait`.
+   Install it on a spare device; the preview and production APKs use the same
+   Android application ID, so they cannot coexist on one device. This build is
+   what lets the owner test the preview OTA at the second approval gate. Keep
+   the production APK on the regular device until that gate is approved.
+7. Open **GitHub Actions → Release → Run workflow**, select **main**, and enter
    the full 40-character main commit SHA in `backend_revision` and the successful
    protected deployment Actions run ID in `production_deploy_run_id`. The
    workflow checks that the deployment ran from that exact current `main` SHA,
@@ -49,7 +56,7 @@ Production release flow. Keep it boring and repeatable.
    `production-schema` approval. Test the compatible preview build on a real
    device and confirm the effective production API/Auth configuration before
    approving that gate.
-7. After the second approval, the workflow rechecks current `main`, publishes
+8. After the second approval, the workflow rechecks current `main`, publishes
    production OTA, creates the version tag/GitHub Release, and dispatches the
    native-gated APK build. A changed native `runtimeVersion` requires a new APK;
    existing older-runtime installations cannot receive the new runtime's OTA.

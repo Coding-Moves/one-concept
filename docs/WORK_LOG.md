@@ -7,6 +7,15 @@ claims as completed work.
 
 ## Current status
 
+### Profile app regressions after v1.10.16 — 2026-11-02
+
+- The owner confirmed the installed production APK displays v1.10.16 but saving two selected photos still reports local preparation failure, and the keyboard covers Edit profile fields. These are regressions against closed issues #457 and #456; no new problem was reported for #454 or #455.
+- Scope: one `develop` PR on `codex/fix-profile-photo-keyboard-regressions` for the two confirmed mobile flows, with separate focused commits for JPEG preparation and keyboard visibility. Do not change production services, migrate data, publish an OTA, or merge a PR as part of this fix.
+- Investigation: React Native 0.86.3's Blob lacks `arrayBuffer()`, which the current JPEG signature check calls before uploading. The profile screen leaves Android `KeyboardAvoidingView` behavior unset, so its scroll target can be clamped while the keyboard covers the lower form. Confirm both repairs on a device before calling the issues resolved.
+- `14994d7` reads only the JPEG header through supported `FileReader`, preserving the 5 MB limit and encoder-signature guard; a native-style Blob test covers the absent `arrayBuffer()` method and read failure. `5afe528` first added temporary Android scroll room and focused-field scrolling. Second review found that using the full keyboard height could double the inset when Android had already resized the window; the follow-up measures the actual keyboard overlap through the native scroll view, with a focused geometry regression test. The web/iOS avoidance path is unchanged.
+- Validation: mobile TypeScript check passed; all 106 Node tests passed after the second-review geometry case, with the fixture child-process permission required by `publicConfig.test.mjs`; Expo web export passed; the profile browser flow passed in light and dark themes with gallery, camera, failed/retried uploads and both fields on a 320×420 viewport. The normal sandbox run before the follow-up had 104/105 passing because it blocked the fixture subprocess; `npm run validate:config` also correctly rejected the intentionally absent local public environment variables. `adb devices` found no connected phone, so native gallery/camera and Android keyboard behavior require owner verification in a preview OTA before release. No production update has been published.
+- [PR #473](https://github.com/Coding-Moves/one-concept/pull/473) targets `develop` with the two mobile fixes and focused tests. It remains open and unmerged; hosted checks and preview phone verification are the next gates.
+
 ### Release 1.10.16 preparation — 2026-10-29
 
 - [Reconciliation PR #462](https://github.com/Coding-Moves/one-concept/pull/462) merged into `develop` at `7bd03e2`. It incorporates production hotfix #460 and preserves the exact deployment-run check, preview-first OTA and second protected production approval. The final [release PR #463](https://github.com/Coding-Moves/one-concept/pull/463) is `develop` → `main`, mergeable without conflicts, and includes version/runtime `1.10.16`, its matching What's New card, and migrations 0131–0136.

@@ -14,6 +14,22 @@ export class ProfilePhotoPreparationError extends Error {
   }
 }
 
+/** React Native's Blob does not implement arrayBuffer(); FileReader does. */
+export async function hasJpegSignature(blob: Blob): Promise<boolean> {
+  if (blob.size < 3) return false;
+  const prefix = await new Promise<ArrayBuffer>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => reader.result instanceof ArrayBuffer
+      ? resolve(reader.result)
+      : reject(new Error('photo header is unreadable'));
+    reader.onerror = () => reject(reader.error ?? new Error('photo header is unreadable'));
+    reader.onabort = () => reject(new Error('photo header read was cancelled'));
+    reader.readAsArrayBuffer(blob.slice(0, 3));
+  });
+  const signature = new Uint8Array(prefix);
+  return signature[0] === 0xff && signature[1] === 0xd8 && signature[2] === 0xff;
+}
+
 /** The API accepts JPEG bytes up to 5 MB, regardless of picker metadata. */
 export async function prepareProfilePhoto(asset: ImagePickerAsset): Promise<Blob> {
   if (!asset.uri || !Number.isFinite(asset.width) || !Number.isFinite(asset.height)
@@ -37,8 +53,7 @@ export async function prepareProfilePhoto(asset: ImagePickerAsset): Promise<Blob
       const response = await fetch(saved.uri);
       const bytes = await response.blob();
       // Never claim JPEG if the native encoder returned something else.
-      const signature = new Uint8Array(await bytes.slice(0, 3).arrayBuffer());
-      if (signature[0] !== 0xff || signature[1] !== 0xd8 || signature[2] !== 0xff) {
+      if (!await hasJpegSignature(bytes)) {
         throw new Error('native encoder did not return JPEG');
       }
       if (bytes.size > 0 && bytes.size <= MAX_UPLOAD_BYTES) return bytes;

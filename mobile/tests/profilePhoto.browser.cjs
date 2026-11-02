@@ -130,11 +130,20 @@ const server = http.createServer((req, res) => {
       const name = page.getByRole('textbox', { name: 'Preferred name' });
       const bio = page.getByRole('textbox', { name: 'Short bio' });
       await name.fill('Reader');
+      await page.waitForTimeout(150);
+      const nameBounds = await name.boundingBox();
+      assert.ok(nameBounds && nameBounds.y >= 0 && nameBounds.y + nameBounds.height <= 420,
+        'focused name must be visible in a short viewport');
       await bio.fill('A short profile bio that remains editable in a compact viewport.');
       await page.waitForTimeout(150);
       const bioBounds = await bio.boundingBox();
       assert.ok(bioBounds && bioBounds.y >= 0 && bioBounds.y + bioBounds.height <= 420,
         'focused bio must be visible in a short viewport');
+      await name.focus();
+      await bio.focus();
+      await expect(bio).toBeFocused();
+      assert.equal(await bio.inputValue(), 'A short profile bio that remains editable in a compact viewport.',
+        'switching between fields must preserve the bio text');
       await page.getByRole('button', { name: 'Save profile' }).scrollIntoViewIfNeeded();
       await expect(page.getByRole('button', { name: 'Save profile' })).toBeVisible();
       assert.deepEqual(errors, []);

@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Profile photo preparation follow-up — 2026-11-02
+
+- The owner confirmed v1.10.17 fixed the Android keyboard but both gallery and camera photos still fail with the same local preparation message. [PR #477](https://github.com/Coding-Moves/one-concept/pull/477) targets `develop` from `codex/fix-native-photo-upload`; no database or backend changes are planned.
+- `4caebc2` requests the picker's JPEG bytes and saves a bounded result directly; oversized or non-JPEG output uses Expo ImageManipulator's encoded JPEG instead. Both paths check the 5 MB limit and JPEG signature and send binary bytes directly, avoiding the Android local-file fetch and Blob/FileReader bridge. A failed preparation leaves the existing avatar untouched.
+- Validation: mobile TypeScript, focused preparation tests (3 passed), Expo web export, and the browser gallery/camera/upload-recovery/profile smoke test in light and dark themes passed. The full local mobile suite was blocked in its existing `publicConfig` subprocess test because this sandbox denies `spawnSync` with `EPERM`; hosted CI must resolve the suite result. Native Android behavior remains unverified until the owner tests the preview update.
+- Handoff: review PR #477 and its hosted checks, merge only with the owner's PR-specific confirmation, then verify gallery and camera on the preview phone before preparing another production release.
+
 ### v1.10.17 release preparation — 2026-11-02
 
 - The owner asked for a production release PR to test the profile fixes on the regular phone. [PR #473](https://github.com/Coding-Moves/one-concept/pull/473) merged into `develop` at `32b7f97` after all four hosted checks passed; [preview OTA run 41444180393](https://github.com/Coding-Moves/one-concept/actions/runs/41444180393) succeeded. No physical-device result for the repaired gallery/camera or keyboard paths has been reported yet.

@@ -139,7 +139,7 @@ export function EditProfileScreen() {
       }
       await beginProfilePhotoPick(userId);
       const options: ImagePicker.ImagePickerOptions = {
-        mediaTypes: ['images'], allowsEditing: false, quality: 0.85,
+        mediaTypes: ['images'], allowsEditing: false, quality: 0.85, base64: true,
         preferredAssetRepresentationMode: ImagePicker.UIImagePickerPreferredAssetRepresentationMode.Compatible,
       };
       const result = camera ? await ImagePicker.launchCameraAsync(options) : await ImagePicker.launchImageLibraryAsync(options);

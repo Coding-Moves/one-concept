@@ -7,6 +7,11 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.17 production deploy prompt — 2026-11-02
+
+- [Release PR #475](https://github.com/Coding-Moves/one-concept/pull/475) merged at `d84ab92`. The first protected [deployment run 41448370855](https://github.com/Coding-Moves/one-concept/actions/runs/41448370855) passed the live production schema check, then stopped before deploying the API because the current Supabase CLI requires an explicit `--yes` in noninteractive CI. Its log says nothing was changed; worker deploy and health checks did not run. Release was not started and v1.10.17 was not tagged.
+- [Hotfix PR #476](https://github.com/Coding-Moves/one-concept/pull/476) adds that flag to production API/worker and staging candidate function-deploy commands. The protected environment approvals, project checks and post-deploy probes remain in place. Workflow YAML parsed and `git diff --check` passed; the live retry remains to be verified after review and merge. The next deploy and Release must use the new exact `main` SHA. No SQL migration or Cron change is involved.
+
 ### v1.10.17 release preparation — 2026-11-02
 
 - The owner asked for a production release PR to test the profile fixes on the regular phone. [PR #473](https://github.com/Coding-Moves/one-concept/pull/473) merged into `develop` at `32b7f97` after all four hosted checks passed; [preview OTA run 41444180393](https://github.com/Coding-Moves/one-concept/actions/runs/41444180393) succeeded. No physical-device result for the repaired gallery/camera or keyboard paths has been reported yet.

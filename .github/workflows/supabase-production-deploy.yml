@@ -55,10 +55,12 @@ jobs:
       - uses: supabase/setup-cli@45a513f8c64c0bc8e0e3dfe572b5c95be85f6359 # v3.0.1
         with:
           version: latest
+      # The production-schema environment is the human gate. Current CLI
+      # versions also require explicit confirmation in noninteractive CI.
       - name: Deploy API from this main commit
-        run: supabase functions deploy api --project-ref "$PRODUCTION_REF"
+        run: supabase functions deploy api --project-ref "$PRODUCTION_REF" --yes
       - name: Deploy worker from this main commit without activating Cron
-        run: supabase functions deploy worker --project-ref "$PRODUCTION_REF"
+        run: supabase functions deploy worker --project-ref "$PRODUCTION_REF" --yes
       - name: Check worker boot and unsigned dispatch rejection
         env:
           WORKER_URL: https://${{ vars.SUPABASE_PRODUCTION_PROJECT_REF }}.supabase.co/functions/v1/worker

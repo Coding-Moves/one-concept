@@ -54,7 +54,7 @@ jobs:
       - name: Configure staging-only Vault and Edge secrets
         run: python backend/tools/configure_staging_worker.py
       - name: Deploy candidate worker only to staging
-        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF"
+        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF" --yes
       - name: Install all worker schedules inactive in staging
         run: python backend/tools/install_staging_worker_cron.py
       - name: Verify one signed disabled-provider dispatch
@@ -93,7 +93,7 @@ jobs:
       - name: Install temporary staging-only provider settings
         run: python backend/tools/staging_worker_canary_secrets.py configure
       - name: Deploy staged worker with provider settings
-        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF"
+        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF" --yes
       - name: Check phone, inbox and private draft in one provider batch
         run: python backend/tools/run_all_staging_worker_canaries.py
       - name: Close every staging application job gate
@@ -182,7 +182,7 @@ jobs:
       - name: Install temporary email-only staging credentials
         run: python backend/tools/staging_worker_canary_secrets.py configure-email
       - name: Deploy staged worker with refreshed sender
-        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF"
+        run: supabase functions deploy worker --project-ref "$STAGING_PROJECT_REF" --yes
       - name: Retry only the unsent staging email batch
         run: python backend/tools/retry_staging_worker_email_canary.py
       - name: Report bounded email outcome

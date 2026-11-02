@@ -7,6 +7,19 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.18 photo release preparation — 2026-11-02
+
+- The owner has one phone and asked to test the remaining photo fix on the production app. PR #477 merged into `develop` as `2924c81`, its preview OTA passed, and all four PR quality checks passed; the owner has not yet verified the native photo path on a device. [Preparation PR #478](https://github.com/Coding-Moves/one-concept/pull/478) targets `develop` for a JS-only v1.10.18 release with production phone verification after rollout.
+- `fa4c8a1` merges the main-only Supabase CI confirmation history back into `develop`, preserving both work-log entries. `19568da` bumps the marketing version to 1.10.18 and adds its one-time photo-saving highlight. `runtimeVersion` remains 1.10.16 because this release adds no native module or config change.
+- The `develop` → `main` diff adds no migration file; no manual SQL is required. Mobile TypeScript and the browser What's New check passed across phone/landscape layouts, both themes, and offline dismissal using the local test fixture. The photo browser smoke and hosted mobile suite passed on #477; the native Android result remains unverified. Next: merge the release-preparation PR with owner confirmation, open the `develop` → `main` release PR, and run the protected production release after its approval.
+
+### Profile photo preparation follow-up — 2026-11-02
+
+- The owner confirmed v1.10.17 fixed the Android keyboard but both gallery and camera photos still fail with the same local preparation message. [PR #477](https://github.com/Coding-Moves/one-concept/pull/477) targets `develop` from `codex/fix-native-photo-upload`; no database or backend changes are planned.
+- `4caebc2` requests the picker's JPEG bytes and saves a bounded result directly; oversized or non-JPEG output uses Expo ImageManipulator's encoded JPEG instead. Both paths check the 5 MB limit and JPEG signature and send binary bytes directly, avoiding the Android local-file fetch and Blob/FileReader bridge. A failed preparation leaves the existing avatar untouched.
+- Validation: mobile TypeScript, focused preparation tests (3 passed), Expo web export, and the browser gallery/camera/upload-recovery/profile smoke test in light and dark themes passed. The full local mobile suite was blocked in its existing `publicConfig` subprocess test because this sandbox denies `spawnSync` with `EPERM`; hosted CI must resolve the suite result. Native Android behavior remains unverified until the owner tests the preview update.
+- Handoff: PR #477 merged as `2924c81`; its preview OTA passed in run 41475892844. The owner has one phone and chose a production release for the final device check, so physical Android photo saving is still unverified.
+
 ### v1.10.17 production deploy prompt — 2026-11-02
 
 - [Release PR #475](https://github.com/Coding-Moves/one-concept/pull/475) merged at `d84ab92`. The first protected [deployment run 41448370855](https://github.com/Coding-Moves/one-concept/actions/runs/41448370855) passed the live production schema check, then stopped before deploying the API because the current Supabase CLI requires an explicit `--yes` in noninteractive CI. Its log says nothing was changed; worker deploy and health checks did not run. Release was not started and v1.10.17 was not tagged.

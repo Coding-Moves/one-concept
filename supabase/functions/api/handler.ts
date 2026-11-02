@@ -1059,7 +1059,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
     const requestUrl = new URL(request.url);
     const path = routePath(requestUrl.pathname);
     if (path === null) return httpError(404, 'Not Found', cors);
-    const page = publicPage(path, request.method, config, cors);
+    const page = publicPage(path, request.method, requestUrl, cors);
     if (page) return page;
     const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
     const publicProfile = /^\/v1\/public-profiles\/([^/]+)$/.exec(path);

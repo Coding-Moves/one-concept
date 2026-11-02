@@ -13,6 +13,7 @@ import { useOnline } from '../context/ConnectivityContext';
 import { beginProfilePhotoPick, claimProfilePhotoPick } from '../services/profilePhotoPicker';
 import { prepareProfilePhoto, ProfilePhotoPreparationError } from '../services/profilePhotoPreparation';
 import { normalizeProfileName } from '../services/profileName';
+import { profileKeyboardInset } from '../services/profileKeyboardInset';
 
 function photoSaveError(error: unknown): string {
   if (error instanceof ProfilePhotoPreparationError) return error.message;
@@ -50,6 +51,7 @@ export function EditProfileScreen() {
   const currentUserId = useRef(userId);
   const scroll = useRef<ScrollView>(null);
   const pendingKeyboardScroll = useRef(false);
+  const keyboardVisible = useRef(false);
   const focusedFieldY = useRef<number | null>(null);
   const nameFieldY = useRef(0);
   const bioFieldY = useRef(0);
@@ -59,17 +61,26 @@ export function EditProfileScreen() {
   useEffect(() => {
     if (Platform.OS === 'web') return;
     const shown = Keyboard.addListener('keyboardDidShow', event => {
-      // Android can leave the tab screen at its original height while the IME
-      // covers it. Add scrollable room, then move the focused field after layout.
+      // Some Android windows resize for the IME; others leave this screen under
+      // it. Measure the actual overlap to avoid double spacing on resize.
       if (Platform.OS === 'android') {
-        pendingKeyboardScroll.current = true;
-        setKeyboardInset(event.endCoordinates.height);
+        keyboardVisible.current = true;
+        scroll.current?.getNativeScrollRef()?.measureInWindow((_x, y, _width, height) => {
+          if (!active.current || !keyboardVisible.current) return;
+          const inset = profileKeyboardInset(y + height, event.endCoordinates.screenY);
+          pendingKeyboardScroll.current = inset > 0;
+          setKeyboardInset(inset);
+          if (inset === 0 && focusedFieldY.current !== null) {
+            scroll.current?.scrollTo({ y: Math.max(0, focusedFieldY.current - 72), animated: true });
+          }
+        });
       }
       else if (focusedFieldY.current !== null) {
         scroll.current?.scrollTo({ y: Math.max(0, focusedFieldY.current - 72), animated: true });
       }
     });
     const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      keyboardVisible.current = false;
       pendingKeyboardScroll.current = false;
       setKeyboardInset(0);
     });

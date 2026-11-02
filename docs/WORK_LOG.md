@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.18 photo release preparation — 2026-11-02
+
+- The owner has one phone and asked to test the remaining photo fix on the production app. PR #477 merged into `develop` as `2924c81`, its preview OTA passed, and all four PR quality checks passed; the owner has not yet verified the native photo path on a device. [Preparation PR #478](https://github.com/Coding-Moves/one-concept/pull/478) targets `develop` for a JS-only v1.10.18 release with production phone verification after rollout.
+- `fa4c8a1` merges the main-only Supabase CI confirmation history back into `develop`, preserving both work-log entries. `19568da` bumps the marketing version to 1.10.18 and adds its one-time photo-saving highlight. `runtimeVersion` remains 1.10.16 because this release adds no native module or config change.
+- The `develop` → `main` diff adds no migration file; no manual SQL is required. Mobile TypeScript and the browser What's New check passed across phone/landscape layouts, both themes, and offline dismissal using the local test fixture. The photo browser smoke and hosted mobile suite passed on #477; the native Android result remains unverified. Next: merge the release-preparation PR with owner confirmation, open the `develop` → `main` release PR, and run the protected production release after its approval.
+
 ### Profile photo preparation follow-up — 2026-11-02
 
 - The owner confirmed v1.10.17 fixed the Android keyboard but both gallery and camera photos still fail with the same local preparation message. [PR #477](https://github.com/Coding-Moves/one-concept/pull/477) targets `develop` from `codex/fix-native-photo-upload`; no database or backend changes are planned.

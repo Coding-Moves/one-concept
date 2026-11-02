@@ -29,7 +29,7 @@ export interface ProgressContextValue {
   loading: boolean;
   refresh: () => Promise<void>;
   updateProfile: (input: { displayName?: string; bio?: string; avatarPreset?: string }) => Promise<void>;
-  uploadAvatar: (jpeg: Blob) => Promise<void>;
+  uploadAvatar: (jpeg: Uint8Array<ArrayBuffer>) => Promise<void>;
   removeAvatar: () => Promise<void>;
   pausedSyncCount: number;
   retrySync: () => Promise<void>;
@@ -285,7 +285,7 @@ export function ProgressProvider({ children, repository: override }: Props) {
     if (!userId || !repository.updateProfile) throw new Error('Sign in to edit your profile');
     await confirmProfileWrite(() => repository.updateProfile!(input, userId));
   }, [confirmProfileWrite, repository, userId]);
-  const uploadAvatar = useCallback(async (jpeg: Blob) => {
+  const uploadAvatar = useCallback(async (jpeg: Uint8Array<ArrayBuffer>) => {
     if (!userId || !repository.uploadAvatar) throw new Error('Sign in to add a photo');
     await confirmProfileWrite(() => repository.uploadAvatar!(jpeg, userId));
   }, [confirmProfileWrite, repository, userId]);

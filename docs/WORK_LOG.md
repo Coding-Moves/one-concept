@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### Profile app regressions after v1.10.16 — 2026-11-02
+
+- The owner confirmed the installed production APK displays v1.10.16 but saving two selected photos still reports local preparation failure, and the keyboard covers Edit profile fields. These are regressions against closed issues #457 and #456; no new problem was reported for #454 or #455.
+- Scope: one `develop` PR on `codex/fix-profile-photo-keyboard-regressions` for the two confirmed mobile flows, with separate focused commits for JPEG preparation and keyboard visibility. Do not change production services, migrate data, publish an OTA, or merge a PR as part of this fix.
+- Investigation: React Native 0.86.3's Blob lacks `arrayBuffer()`, which the current JPEG signature check calls before uploading. The profile screen leaves Android `KeyboardAvoidingView` behavior unset, so its scroll target can be clamped while the keyboard covers the lower form. Confirm both repairs on a device before calling the issues resolved.
+- `14994d7` reads only the JPEG header through supported `FileReader`, preserving the 5 MB limit and encoder-signature guard; a native-style Blob test covers the absent `arrayBuffer()` method and read failure. `5afe528` gives Android's profile form temporary scroll room equal to the open keyboard, scrolls the focused field after layout, lets users scroll between fields while it is open, and clears the inset on dismissal. The web/iOS avoidance path is unchanged.
+- Validation: mobile TypeScript check passed; all 105 Node tests passed with the fixture child-process permission required by `publicConfig.test.mjs`; Expo web export passed; the profile browser flow passed in light and dark themes with gallery, camera, failed/retried uploads and both fields on a 320×420 viewport. The normal sandbox run of `npm test` had 104/105 passing because it blocked the fixture subprocess; `npm run validate:config` also correctly rejected the intentionally absent local public environment variables. `adb devices` found no connected phone, so native gallery/camera and Android keyboard behavior require owner verification in a preview OTA before release. No production update has been published.
+
 ### Release 1.10.16 preparation — 2026-10-29
 
 - [Reconciliation PR #462](https://github.com/Coding-Moves/one-concept/pull/462) merged into `develop` at `7bd03e2`. It incorporates production hotfix #460 and preserves the exact deployment-run check, preview-first OTA and second protected production approval. The final [release PR #463](https://github.com/Coding-Moves/one-concept/pull/463) is `develop` → `main`, mergeable without conflicts, and includes version/runtime `1.10.16`, its matching What's New card, and migrations 0131–0136.

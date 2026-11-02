@@ -22,6 +22,12 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.18',
+    highlights: [
+      'Save a camera or gallery photo to your profile with smoother handling for larger images.',
+    ],
+  },
+  {
     version: '1.10.17',
     highlights: [
       'Save a profile photo from your gallery or camera more reliably.',

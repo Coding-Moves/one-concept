@@ -43,11 +43,13 @@ export function EditProfileScreen() {
   const [photoSuccess, setPhotoSuccess] = useState('');
   const [saving, setSaving] = useState(false);
   const [savingPhoto, setSavingPhoto] = useState(false);
+  const [keyboardInset, setKeyboardInset] = useState(0);
   const [message, setMessage] = useState('');
   const busy = useRef(false);
   const active = useRef(true);
   const currentUserId = useRef(userId);
   const scroll = useRef<ScrollView>(null);
+  const pendingKeyboardScroll = useRef(false);
   const focusedFieldY = useRef<number | null>(null);
   const nameFieldY = useRef(0);
   const bioFieldY = useRef(0);
@@ -56,12 +58,22 @@ export function EditProfileScreen() {
   useEffect(() => { active.current = true; return () => { active.current = false; }; }, []);
   useEffect(() => {
     if (Platform.OS === 'web') return;
-    const subscription = Keyboard.addListener('keyboardDidShow', () => {
-      if (focusedFieldY.current !== null) {
+    const shown = Keyboard.addListener('keyboardDidShow', event => {
+      // Android can leave the tab screen at its original height while the IME
+      // covers it. Add scrollable room, then move the focused field after layout.
+      if (Platform.OS === 'android') {
+        pendingKeyboardScroll.current = true;
+        setKeyboardInset(event.endCoordinates.height);
+      }
+      else if (focusedFieldY.current !== null) {
         scroll.current?.scrollTo({ y: Math.max(0, focusedFieldY.current - 72), animated: true });
       }
     });
-    return () => subscription.remove();
+    const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      pendingKeyboardScroll.current = false;
+      setKeyboardInset(0);
+    });
+    return () => { shown.remove(); hidden.remove(); };
   }, []);
   useEffect(() => {
     if (!userId) return;
@@ -166,8 +178,19 @@ export function EditProfileScreen() {
     }, 80);
   };
 
+  const scrollFocusedField = () => {
+    if (focusedFieldY.current !== null) {
+      scroll.current?.scrollTo({ y: Math.max(0, focusedFieldY.current - 72), animated: true });
+    }
+  };
+
   return <KeyboardAvoidingView style={{ flex: 1, backgroundColor: colors.background }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 24 + insets.bottom, gap: 18 }}>
+    <ScrollView ref={scroll} keyboardShouldPersistTaps="handled" keyboardDismissMode={Platform.OS === 'android' ? 'none' : 'on-drag'} onContentSizeChange={() => {
+      if (pendingKeyboardScroll.current && keyboardInset > 0) {
+        pendingKeyboardScroll.current = false;
+        scrollFocusedField();
+      }
+    }} style={{ flex: 1 }} contentContainerStyle={{ padding: 24, paddingBottom: 24 + insets.bottom + keyboardInset, gap: 18 }}>
     <Pressable accessibilityRole="button" accessibilityLabel="Back" onPress={() => navigation.goBack()} style={{ minHeight: 44, justifyContent: 'center' }}><Text style={{ color: colors.primary }}>← Back</Text></Pressable>
     <ScreenHeader title="Edit profile" subtitle="Your sign-in email stays private. Choose what feels like you." />
     <View style={{ alignItems: 'center', gap: 10 }}>

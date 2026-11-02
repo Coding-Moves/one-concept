@@ -12,7 +12,12 @@ claims as completed work.
 - The owner confirmed v1.10.17 fixed the Android keyboard but both gallery and camera photos still fail with the same local preparation message. [PR #477](https://github.com/Coding-Moves/one-concept/pull/477) targets `develop` from `codex/fix-native-photo-upload`; no database or backend changes are planned.
 - `4caebc2` requests the picker's JPEG bytes and saves a bounded result directly; oversized or non-JPEG output uses Expo ImageManipulator's encoded JPEG instead. Both paths check the 5 MB limit and JPEG signature and send binary bytes directly, avoiding the Android local-file fetch and Blob/FileReader bridge. A failed preparation leaves the existing avatar untouched.
 - Validation: mobile TypeScript, focused preparation tests (3 passed), Expo web export, and the browser gallery/camera/upload-recovery/profile smoke test in light and dark themes passed. The full local mobile suite was blocked in its existing `publicConfig` subprocess test because this sandbox denies `spawnSync` with `EPERM`; hosted CI must resolve the suite result. Native Android behavior remains unverified until the owner tests the preview update.
-- Handoff: review PR #477 and its hosted checks, merge only with the owner's PR-specific confirmation, then verify gallery and camera on the preview phone before preparing another production release.
+- Handoff: PR #477 merged as `2924c81`; its preview OTA passed in run 41475892844. The owner has one phone and chose a production release for the final device check, so physical Android photo saving is still unverified.
+
+### v1.10.17 production deploy prompt — 2026-11-02
+
+- [Release PR #475](https://github.com/Coding-Moves/one-concept/pull/475) merged at `d84ab92`. The first protected [deployment run 41448370855](https://github.com/Coding-Moves/one-concept/actions/runs/41448370855) passed the live production schema check, then stopped before deploying the API because the current Supabase CLI requires an explicit `--yes` in noninteractive CI. Its log says nothing was changed; worker deploy and health checks did not run. Release was not started and v1.10.17 was not tagged.
+- [Hotfix PR #476](https://github.com/Coding-Moves/one-concept/pull/476) adds that flag to production API/worker and staging candidate function-deploy commands. The protected environment approvals, project checks and post-deploy probes remain in place. Workflow YAML parsed and `git diff --check` passed; the live retry remains to be verified after review and merge. The next deploy and Release must use the new exact `main` SHA. No SQL migration or Cron change is involved.
 
 ### v1.10.17 release preparation — 2026-11-02
 

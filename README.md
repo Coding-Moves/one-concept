@@ -2,7 +2,7 @@
 
 **Learn one new concept every day.**
 
-One Concept is a [Coding Moves Product](https://codingmoves.netlify.app/products/).
+One Concept is a [Coding Moves Product](https://codingmoves.com/products/).
 
 > One day. One concept. One small step forward.
 

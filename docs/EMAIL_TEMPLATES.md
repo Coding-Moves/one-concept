@@ -36,7 +36,7 @@ review site while retaining a text wordmark when an email client blocks images.
 Deploy that asset before installing the templates. The image is public and
 contains no personal data or authentication token.
 The **Coding Moves** text in the byline links to the
-[Coding Moves products page](https://codingmoves.netlify.app/products/) in
+[Coding Moves products page](https://codingmoves.com/products/) in
 these four Auth templates and both editorial email HTML sources. The brand link
 is separate from each email's account or review action link.
 

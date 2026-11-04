@@ -8,6 +8,8 @@ Learners may choose a built-in avatar, select a library photo, or take a camera 
 
 The Supabase Edge candidate for #416 retains the 25 MP JPEG limit and applies an 8 MP limit to PNG/WebP because those formats must be decoded at full size within the hosted memory limit. A larger PNG/WebP returns 422; the mobile client can ask for a smaller photo or JPEG during the #418 cutover.
 
+On 2026-11-04, the production bucket was found missing even though the API and app were deployed. Creating the private bucket with the settings below restored gallery and camera photo saves on the owner's production Android phone. The production deploy guard now verifies these settings before publishing future Edge code.
+
 The photo picker stores only the initiating account ID until it returns. Sign-out clears that marker; a result recovered after Android activity recreation appears as a preview only for the initiating account. The selected photo stays in memory until Save or Cancel, and an upload failure preserves the last confirmed avatar for retry.
 
 Public-profile sharing remains private by default. The dedicated **Profile avatar** choice must be reviewed and published before a visitor receives a short-lived delivery URL. Turning that choice off removes it from future public responses immediately.

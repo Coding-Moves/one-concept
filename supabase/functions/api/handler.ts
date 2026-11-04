@@ -55,11 +55,11 @@ class ClientBodyError extends Error {
 }
 
 class UpstreamError extends Error {
-  readonly component: 'auth' | 'database';
+  readonly component: 'auth' | 'database' | 'storage' | 'image';
   readonly status: number;
   readonly operation?: string;
   readonly reason?: 'timeout' | 'network';
-  constructor(component: 'auth' | 'database', status: number,
+  constructor(component: 'auth' | 'database' | 'storage' | 'image', status: number,
     operation?: string, reason?: 'timeout' | 'network') {
     super('Upstream unavailable');
     this.component = component;
@@ -929,9 +929,10 @@ async function readAvatar(request: Request): Promise<Uint8Array> {
 }
 
 async function uploadAvatar(key: string, bytes: Uint8Array,
-  config: ApiConfig, fetcher: Fetcher): Promise<boolean> {
+  config: ApiConfig, fetcher: Fetcher): Promise<void> {
+  let result: Response;
   try {
-    const result = await fetcher(config.supabaseUrl + '/storage/v1/object/profile-avatars/' + key, {
+    result = await fetcher(config.supabaseUrl + '/storage/v1/object/profile-avatars/' + key, {
       method: 'POST',
       headers: {
         apikey: config.serviceRoleKey,
@@ -943,8 +944,11 @@ async function uploadAvatar(key: string, bytes: Uint8Array,
       signal: AbortSignal.timeout(15000),
       redirect: 'error',
     });
-    return result.ok;
-  } catch { return false; }
+  } catch (error) {
+    throw new UpstreamError('storage', 0, 'avatar-upload',
+      error instanceof DOMException && error.name === 'TimeoutError' ? 'timeout' : 'network');
+  }
+  if (!result.ok) throw new UpstreamError('storage', result.status, 'avatar-upload');
 }
 
 function historyCursor(query: URLSearchParams): string | null {
@@ -2337,11 +2341,15 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
             throw new AvatarInputError(415, 'Choose a JPEG, PNG, or WebP photo');
           }
           const bytes = await readAvatar(request);
-          const normalized = await avatarNormalizer(bytes, contentType);
-          key = 'avatars/' + userId + '/' + crypto.randomUUID().replaceAll('-', '') + '.jpg';
-          if (!await uploadAvatar(key, normalized, config, fetcher)) {
-            return httpError(503, 'We could not save your photo. Please try again.', cors);
+          let normalized: Uint8Array;
+          try {
+            normalized = await avatarNormalizer(bytes, contentType);
+          } catch (error) {
+            if (error instanceof AvatarInputError) throw error;
+            throw new UpstreamError('image', 0, 'avatar-normalize');
           }
+          key = 'avatars/' + userId + '/' + crypto.randomUUID().replaceAll('-', '') + '.jpg';
+          await uploadAvatar(key, normalized, config, fetcher);
         }
         const data = await rpc('edge_api_set_avatar', {
           p_user_id: userId, p_avatar_key: key, p_compact: compact, p_today: null,

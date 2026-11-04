@@ -13,6 +13,21 @@ test('stalled fetch aborts after 15 seconds', async (t) => {
   await rejected;
 });
 
+test('photo-sized requests may use a longer deadline without changing the default', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  let signal;
+  t.mock.method(globalThis, 'fetch', (_, init) => new Promise((_, reject) => {
+    signal = init.signal;
+    signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
+  }));
+  const pending = fetchWithTimeout('https://example.invalid/photo', { method: 'PUT' }, 60_000);
+  const rejected = assert.rejects(pending, { name: 'AbortError' });
+  t.mock.timers.tick(15_000);
+  assert.equal(signal.aborted, false);
+  t.mock.timers.tick(45_000);
+  await rejected;
+});
+
 test('forwards caller cancellation and successful responses', async (t) => {
   const response = new Response('{}');
   const fetch = t.mock.method(globalThis, 'fetch', async (_, { signal }) => {

@@ -79,6 +79,8 @@ interface RequestOptions {
   /** Raw body for a narrow authenticated upload; never queued or persisted. */
   rawBody?: BodyInit;
   contentType?: string;
+  /** Give bounded uploads time for the first Edge image worker to start. */
+  timeoutMs?: number;
   signal?: AbortSignal;
   /** A domain-specific invitation cooldown must not pause daily learning. */
   rateLimitScope?: 'request';
@@ -111,7 +113,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       headers,
       body: options.rawBody ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
       signal: options.signal,
-    });
+    }, options.timeoutMs);
   } catch (cause) {
     if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
     // Offline or unreachable host: callers fall back to cached state.

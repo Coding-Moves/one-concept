@@ -36,7 +36,7 @@ def test_email_has_plain_fallback_and_safe_accessible_html():
     html = received.get_body(preferencelist=("html",)).get_content()
     assert 'lang="en"' in html and "ONE CONCEPT" in html
     assert '<img src="https://review.test.invalid/one-concept-icon.png"' in html
-    assert 'by <a href="https://codingmoves.netlify.app/products/"' in html
+    assert 'by <a href="https://codingmoves.com/products/"' in html
     assert "&lt;img" in html and "&amp; Engineering" in html
     assert "2026-10-04 18:00 PKT" in html
     assert url.replace("&", "&amp;") in html

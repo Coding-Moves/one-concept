@@ -38,6 +38,15 @@ async def main() -> int:
                           and to_regprocedure('public.edge_worker_claim_email(integer)') is not null
                           and position('delivery_unknown' in coalesce(pg_get_functiondef(
                             to_regprocedure('public.edge_worker_claim_email(integer)')), '')) > 0
+                          and exists (
+                            select 1 from storage.buckets
+                            where id = 'profile-avatars'
+                              and public = false
+                              and file_size_limit = 262144
+                              and allowed_mime_types @> array[
+                                'image/jpeg', 'image/png', 'image/webp'
+                              ]::text[]
+                          )
                     """))
         print("supabase_cutover_schema=" + ("ready" if ready else "missing"))
         return 0 if ready else 1

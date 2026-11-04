@@ -8,7 +8,7 @@ test('stalled fetch aborts after 15 seconds', async (t) => {
     signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
   }));
   const pending = fetchWithTimeout('https://example.invalid');
-  const rejected = assert.rejects(pending, { name: 'RequestTimeoutError' });
+  const rejected = assert.rejects(pending, { name: 'AbortError' });
   t.mock.timers.tick(15000);
   await rejected;
 });
@@ -38,5 +38,6 @@ test('forwards caller cancellation and successful responses', async (t) => {
   const controller = new AbortController();
   controller.abort();
   await assert.rejects(fetchWithTimeout('https://example.invalid', { signal: controller.signal }), { name: 'AbortError' });
-  assert.equal(fetch.mock.callCount(), 2);
+  await assert.rejects(fetchWithTimeout('https://example.invalid', { signal: controller.signal }, 60_000), { name: 'AbortError' });
+  assert.equal(fetch.mock.callCount(), 3);
 });

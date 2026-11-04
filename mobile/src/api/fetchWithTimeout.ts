@@ -9,7 +9,7 @@ export class RequestTimeoutError extends Error {
 export const fetchWithTimeout = async (
   input: RequestInfo | URL,
   init?: Parameters<typeof fetch>[1],
-  timeoutMs = 15000,
+  timeoutMs?: number,
 ): Promise<Response> => {
   const controller = new AbortController();
   let timedOut = false;
@@ -17,11 +17,13 @@ export const fetchWithTimeout = async (
   const abort = () => controller.abort();
   if (signal?.aborted) abort();
   signal?.addEventListener('abort', abort);
-  const timeout = setTimeout(() => { timedOut = true; abort(); }, timeoutMs);
+  const timeout = setTimeout(() => { timedOut = true; abort(); }, timeoutMs ?? 15000);
   try {
     return await fetch(input, { ...init, signal: controller.signal });
   } catch (error) {
-    if (timedOut) throw new RequestTimeoutError();
+    // Only explicitly extended requests opt into the new timeout error.
+    // Supabase Auth and other existing callers keep their prior AbortError.
+    if (timedOut && timeoutMs !== undefined) throw new RequestTimeoutError();
     throw error;
   } finally {
     clearTimeout(timeout);

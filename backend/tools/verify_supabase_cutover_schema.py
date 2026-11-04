@@ -16,6 +16,7 @@ from app.workers.schema_check import connection_url
 
 async def main() -> int:
     engine = None
+    stage = "supabase_cutover_schema"
     try:
         engine = create_async_engine(
             connection_url(os.environ.get("DIRECT_URL", "")),
@@ -29,7 +30,7 @@ async def main() -> int:
                         "set transaction isolation level repeatable read, read only"
                     ))
                     await connection.execute(text("set local statement_timeout = '10s'"))
-                    ready = await connection.scalar(text("""
+                    schema_ready = await connection.scalar(text("""
                         select to_regclass('public.edge_worker_jobs') is not null
                           and to_regclass('public.edge_worker_runs') is not null
                           and to_regprocedure('public.edge_api_public_profile(text)') is not null
@@ -39,10 +40,23 @@ async def main() -> int:
                           and position('delivery_unknown' in coalesce(pg_get_functiondef(
                             to_regprocedure('public.edge_worker_claim_email(integer)')), '')) > 0
                     """))
-        print("supabase_cutover_schema=" + ("ready" if ready else "missing"))
-        return 0 if ready else 1
+                    stage = "profile_avatar_bucket"
+                    bucket_ready = await connection.scalar(text("""
+                        select exists (
+                          select 1 from storage.buckets
+                          where id = 'profile-avatars'
+                            and public = false
+                            and file_size_limit = 262144
+                            and allowed_mime_types @> array[
+                              'image/jpeg', 'image/png', 'image/webp'
+                            ]::text[]
+                        )
+                    """))
+        print("supabase_cutover_schema=" + ("ready" if schema_ready else "missing"))
+        print("profile_avatar_bucket=" + ("ready" if bucket_ready else "missing"))
+        return 0 if schema_ready and bucket_ready else 1
     except Exception as exc:
-        print("supabase_cutover_schema=error:" + type(exc).__name__)
+        print(stage + "=error:" + type(exc).__name__)
         return 1
     finally:
         if engine is not None:

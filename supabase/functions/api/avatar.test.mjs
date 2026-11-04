@@ -54,6 +54,47 @@ test('avatar upload and removal save private keys and clean old objects', async 
     method: 'GET', headers: auth }))).status, 405);
 });
 
+test('avatar storage failures return an incident without changing the profile', async (t) => {
+  const logs = [];
+  t.mock.method(console, 'error', line => logs.push(line));
+  let avatarWrites = 0;
+  const handler = createHandler(config, async (url) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.includes('/storage/v1/object/profile-avatars/')) return Response.json({}, { status: 404 });
+    if (url.endsWith('edge_api_set_avatar')) avatarWrites++;
+    return Response.json({});
+  }, async () => Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]));
+  const result = await handler(request('/v1/me/avatar', {
+    method: 'PUT', headers: { authorization: 'Bearer user-token', 'content-type': 'image/jpeg' },
+    body: Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]),
+  }));
+  assert.equal(result.status, 503);
+  assert.equal(avatarWrites, 0);
+  assert.match(result.headers.get('x-incident-id'), /^[a-f0-9]{32}$/);
+  assert.equal((await result.json()).error.code, 'service_unavailable');
+  assert.match(logs[0], /storage:404:avatar-upload:status/);
+  assert.doesNotMatch(logs[0], new RegExp(userId));
+});
+
+test('avatar normalization failures are distinguishable from Storage failures', async (t) => {
+  const logs = [];
+  t.mock.method(console, 'error', line => logs.push(line));
+  let storageCalls = 0;
+  const handler = createHandler(config, async (url) => {
+    if (url.endsWith('/auth/v1/user')) return Response.json({ id: userId });
+    if (url.includes('/storage/v1/')) storageCalls++;
+    return Response.json({});
+  }, async () => { throw new Error('WASM unavailable'); });
+  const result = await handler(request('/v1/me/avatar', {
+    method: 'PUT', headers: { authorization: 'Bearer user-token', 'content-type': 'image/jpeg' },
+    body: Uint8Array.from([0xff, 0xd8, 0xff, 0xd9]),
+  }));
+  assert.equal(result.status, 503);
+  assert.equal(storageCalls, 0);
+  assert.match(logs[0], /image:0:avatar-normalize:status/);
+  assert.doesNotMatch(logs[0], /WASM unavailable/);
+});
+
 test('avatar rejects invalid and oversized uploads before storage', async () => {
   const calls = [];
   const handler = createHandler(config, async (url) => {

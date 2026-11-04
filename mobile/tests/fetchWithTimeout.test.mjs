@@ -8,7 +8,7 @@ test('stalled fetch aborts after 15 seconds', async (t) => {
     signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
   }));
   const pending = fetchWithTimeout('https://example.invalid');
-  const rejected = assert.rejects(pending, { name: 'AbortError' });
+  const rejected = assert.rejects(pending, { name: 'RequestTimeoutError' });
   t.mock.timers.tick(15000);
   await rejected;
 });
@@ -21,7 +21,7 @@ test('photo-sized requests may use a longer deadline without changing the defaul
     signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')));
   }));
   const pending = fetchWithTimeout('https://example.invalid/photo', { method: 'PUT' }, 60_000);
-  const rejected = assert.rejects(pending, { name: 'AbortError' });
+  const rejected = assert.rejects(pending, { name: 'RequestTimeoutError' });
   t.mock.timers.tick(15_000);
   assert.equal(signal.aborted, false);
   t.mock.timers.tick(45_000);

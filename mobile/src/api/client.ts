@@ -7,7 +7,7 @@
  * module never imports the auth stack (and never stores a token itself).
  */
 
-import { fetchWithTimeout } from './fetchWithTimeout';
+import { fetchWithTimeout, RequestTimeoutError } from './fetchWithTimeout';
 import { ApiConfigurationError, ApiError } from './errors';
 
 export { ApiConfigurationError, ApiError } from './errors';
@@ -116,6 +116,10 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     }, options.timeoutMs);
   } catch (cause) {
     if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
+    if (cause instanceof RequestTimeoutError) {
+      // A stalled request does not prove that the device lost connectivity.
+      throw new ApiError(0, 'Request timed out', 'timeout');
+    }
     // Offline or unreachable host: callers fall back to cached state.
     setConnectivity(false);
     throw new ApiError(0, 'Network request failed', cause);

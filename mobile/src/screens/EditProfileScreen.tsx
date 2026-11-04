@@ -19,6 +19,7 @@ function photoSaveError(error: unknown): string {
   if (error instanceof ProfilePhotoPreparationError) return error.message;
   if (error instanceof ApiConfigurationError) return 'Install the latest app update before saving a photo.';
   if (error instanceof ApiError) {
+    if (error.status === 0 && error.detail === 'timeout') return 'Photo saving took too long. Please try again.';
     if (error.status === 0) return 'Could not reach the photo service. Check your connection and try again.';
     if (error.status === 400 || error.status === 422) return 'This photo could not be processed. Choose another image.';
     if (error.status === 401 || error.status === 403) return 'Your session needs attention. Sign in again, then retry your photo.';

@@ -82,7 +82,7 @@ interface RequestOptions {
   /** Give bounded uploads time for the first Edge image worker to start. */
   timeoutMs?: number;
   signal?: AbortSignal;
-  /** A domain-specific invitation cooldown must not pause daily learning. */
+  /** A request-local failure must not pause daily learning. */
   rateLimitScope?: 'request';
 }
 
@@ -141,7 +141,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         ? (payload as { detail: unknown }).detail
         : null;
     const retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'));
-    if ((response.status === 429 && options.rateLimitScope !== 'request') || response.status === 503) {
+    if ((response.status === 429 || response.status === 503) && options.rateLimitScope !== 'request') {
       retryUntil = Math.max(retryUntil, Date.now() + retryAfterMs);
     }
     throw new ApiError(response.status, `Request failed: ${response.status}`, detail, retryAfterMs);

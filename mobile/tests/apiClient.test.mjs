@@ -48,6 +48,24 @@ test('a photo request timeout stays distinct from an offline transport failure',
   assert.equal(getConnectivity(), true);
 });
 
+test('a photo Storage failure does not pause unrelated lesson requests', async t => {
+  invalidateAccountRequests(); setTokenProvider(async () => 'token');
+  let calls = 0;
+  t.mock.method(globalThis, 'fetch', async () => {
+    calls++;
+    return calls === 1
+      ? new Response('{"detail":"unavailable"}', { status: 503, headers: { 'Retry-After': '30' } })
+      : new Response('{"daily":true}', { status: 200 });
+  });
+  await assert.rejects(apiRequest('/v1/me/avatar', {
+    method: 'PUT', rawBody: new Uint8Array([0xff, 0xd8, 0xff]),
+    contentType: 'image/jpeg', rateLimitScope: 'request',
+  }), error => error instanceof ApiError && error.status === 503);
+  assert.equal(apiRetryDelay(), 0);
+  assert.deepEqual(await apiRequest('/v1/daily'), { daily: true });
+  assert.equal(calls, 2);
+});
+
 test('429 Retry-After prevents subsequent requests until the server deadline', async t => {
   invalidateAccountRequests(); setTokenProvider(async () => 'token');
   let now = 100000;

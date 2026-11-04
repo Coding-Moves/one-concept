@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #457 production photo upload follow-up — 2026-11-04
+
+- The owner confirmed v1.10.18 still cannot save a profile photo on Android. Two November 2 screenshots show a completed photo preview followed by either “Could not reach the photo service” (no HTTP response) or “Photo saving is unavailable right now” (HTTP 5xx). These no longer show the earlier local photo-preparation error. Issue #457 was reopened; do not close it until a real production device save succeeds.
+- This `develop` follow-up uses separate changes for a 60-second photo-only request deadline and safe Edge incident logs that distinguish image normalization from Storage upload failures. The default 15-second deadline for other requests remains unchanged. No SQL migration, production deploy, or Cron change is involved.
+- A production read-only query returned **no row** for `storage.buckets.id='profile-avatars'`. This is a confirmed configuration blocker: a normalized JPEG cannot be stored. The supplied function-log excerpt showed normal profile GET/PATCH traffic but no photo PUT, so the independent no-response symptom is still unverified. The owner reports creating the private 256 KiB production bucket; a real device retry remains pending. The protected schema guard now detects a missing or misconfigured bucket before future Edge deployments.
+- Focused commits: `39bca53` extends only the photo upload deadline; `dee5839` adds data-free normalization/Storage incident categories and 503 regressions; `b5227ae` adds the read-only production bucket gate. Validation passed: mobile TypeScript, focused mobile client/timeout tests, Edge TypeScript and avatar handler tests, Python syntax, and whitespace. No physical device success or live Storage upload has been reported yet.
+
 ### v1.10.18 photo release preparation — 2026-11-02
 
 - The owner has one phone and asked to test the remaining photo fix on the production app. PR #477 merged into `develop` as `2924c81`, its preview OTA passed, and all four PR quality checks passed; the owner has not yet verified the native photo path on a device. [Preparation PR #478](https://github.com/Coding-Moves/one-concept/pull/478) targets `develop` for a JS-only v1.10.18 release with production phone verification after rollout.

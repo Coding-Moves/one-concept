@@ -22,6 +22,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Require the reviewed branch for this build profile
+        shell: bash
+        env:
+          PROFILE: ${{ github.event.inputs.profile }}
+        run: |
+          set -euo pipefail
+          if [[ "$PROFILE" == production ]]; then
+            target=main
+          else
+            target=develop
+          fi
+          test "$GITHUB_REF" = "refs/heads/$target"
+          test "$(git ls-remote origin "refs/heads/$target" | cut -f1)" = "$GITHUB_SHA"
+
       - uses: actions/setup-node@v7
         with:
           node-version: 22

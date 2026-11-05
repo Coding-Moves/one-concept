@@ -15,6 +15,7 @@
     "expo": "~57.0.31",
     "expo-camera": "~57.0.6",
     "expo-constants": "~57.0.21",
+    "expo-dev-client": "~57.0.20",
     "expo-device": "~57.0.2",
     "expo-font": "~57.0.4",
     "expo-image-manipulator": "57.0.21",
@@ -49,11 +50,12 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test --test-isolation=none tests/*.test.mjs",
     "build:android:preview": "eas build --platform android --profile preview",
+    "build:android:staging-development": "eas build --platform android --profile staging-development",
     "build:android:production": "eas build --platform android --profile production",
-    "update:preview": "eas update --channel preview",
-    "update:production": "eas update --channel production",
+    "update:preview": "APP_VARIANT=staging eas env:exec preview 'node scripts/validate-public-config.cjs --release --variant=staging' --non-interactive && APP_VARIANT=staging eas update --channel preview --environment preview",
+    "update:production": "APP_VARIANT=production eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive && APP_VARIANT=production eas update --channel production --environment production",
     "validate:config": "node scripts/validate-public-config.cjs",
-    "eas-build-post-install": "node scripts/validate-public-config.cjs"
+    "eas-build-post-install": "node scripts/validate-public-config.cjs && node scripts/validate-google-services.cjs"
   },
   "private": true
 }

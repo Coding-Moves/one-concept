@@ -41,3 +41,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Package-specific Firebase configuration for a staging Android client.
+google-services.staging.json

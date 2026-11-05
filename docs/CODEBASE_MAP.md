@@ -581,7 +581,7 @@ and the session pooler. Applied migrations must not be rewritten.
   worker through the protected staging environment after schema verification.
 - `release.yml` is manually dispatched on `main` after operator confirmation of
   the deployed backend/worker SHA; its guard rejects missing/mismatched revisions
-  and non-main dispatches. It publishes production then preview OTA, creates a
+  and non-main dispatches. It publishes preview then production OTA, creates a
   version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
   is gated on native `runtimeVersion` changes. The Supabase Edge API and worker
   deploy through a separate protected workflow; follow `RELEASING.md` for ordering.
@@ -595,8 +595,8 @@ and the session pooler. Applied migrations must not be rewritten.
   `production-schema.yml` remains independently dispatchable. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
   files findings as issues. `cleanup.yml` manages stale issues; Dependabot
   schedules dependency updates with Expo-managed version restrictions.
-- `mobile/app.config.js` currently has app version `1.10.4` and native runtime
-  `1.10.1`; `package.json`'s `1.0.0` is not the release-version authority.
+- `mobile/app.config.js` owns the marketing version and separate production and
+  staging native runtimes; `package.json`'s `1.0.0` is not the release-version authority.
 
 ## Documentation drift to remember
 

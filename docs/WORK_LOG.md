@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #321 compatible dependency fixes — 2026-11-05
+
+- The owner requested the next issue PR after #484. [PR #485](https://github.com/Coding-Moves/one-concept/pull/485) targets `develop`. A fresh audit found one review-site high finding in Vite 8.3.2 and mobile critical/high findings in transitive `shell-quote` 1.10.0 and `node-forge` 1.4.0. Patch releases exist within the current dependency families. Scope this PR to compatible patches and validation; keep #321 open for remaining Expo SDK 57 advisories that require a separately reviewed SDK/native upgrade. Do not use `npm audit fix --force` or change the production app version here.
+- `130224a` updates only the mobile lockfile's `node-forge` to 1.4.3 and `shell-quote` to 1.12.0. `a620740` updates review-site Vite to 8.3.5 and its resolved build dependencies. Fresh lockfile audits changed mobile from 19 findings (one critical, three high) to 15 (no critical, two high) and review site from one high to zero findings.
+- Validation passed after clean `npm ci` in both packages: mobile TypeScript and all 113 Node tests (the subprocess test required running outside the restricted sandbox), review-site build with public fixture values, 24 Vitest tests, and all 66 Playwright browser tests. `git diff --check` passed. The current Expo compatibility checker still flags pre-existing React 19.2.9, React DOM 19.2.9, and TypeScript 7.0.2 against SDK 57's recommended versions; this PR does not change those direct dependencies. Remaining audit findings are not claimed fixed, and #321 stays open.
+
 ### #237 lesson resources — 2026-11-04
 
 - The owner asked for the next issue PRs before a later release. Scope this `develop` PR to topic-specific external searches from the two shared full-lesson surfaces: Today and the detail opened by History/Saved. Use the card title and topic, open YouTube and web reading searches without transmitting account data, and handle a failed external open in the UI. The links are search results, not vetted lesson references. No backend, database, native module, or release-version change.

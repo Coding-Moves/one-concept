@@ -20,6 +20,17 @@ test('shared links and QR use only an opaque public URL', () => {
   assert.ok(matrix.length >= 21);
   assert.ok(matrix.every(row => row.length === matrix.length && row.every(cell => typeof cell === 'boolean')));
 });
+test('a staging app opens only its own custom profile scheme', () => {
+  const previous = process.env.EXPO_PUBLIC_APP_VARIANT;
+  try {
+    process.env.EXPO_PUBLIC_APP_VARIANT = 'staging';
+    assert.equal(profileTokenFromLink(`com.codingmoves.oneconcept.staging://p/${token}`), token);
+    assert.equal(profileTokenFromLink(`com.codingmoves.oneconcept://p/${token}`), null);
+  } finally {
+    if (previous === undefined) delete process.env.EXPO_PUBLIC_APP_VARIANT;
+    else process.env.EXPO_PUBLIC_APP_VARIANT = previous;
+  }
+});
 test('public profile requests send no authentication and never serve cached revoked content', async t => {
   let requests = [];
   t.mock.method(globalThis, 'fetch', async (url, init) => { requests.push({url,init}); return new Response('{"achievements":[]}'); });

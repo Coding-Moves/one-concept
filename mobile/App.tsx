@@ -19,6 +19,7 @@ import { AppRecoveryBoundary } from './src/components/AppRecoveryBoundary';
 import { ConfigurationState } from './src/components/ConfigurationState';
 import { OfflineBanner } from './src/components/OfflineBanner';
 import { SyncStatusBanner } from './src/components/SyncStatusBanner';
+import { StagingBanner } from './src/components/StagingBanner';
 import { WhatsNewCard } from './src/components/WhatsNewCard';
 import { AchievementsProvider } from './src/context/AchievementsContext';
 import { AuthProvider, useAuth } from './src/context/AuthContext';
@@ -124,12 +125,13 @@ function ThemedApp() {
 
   if (!session) {
     return (
-      <View style={{ flex: 1 }}>
-        {!online && <OfflineBanner />}
+      <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
+        <StagingBanner />
+        {!online && <OfflineBanner insetTop={false} />}
         <AuthScreen />
         <PublicProfileLink />
         <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      </View>
+      </SafeAreaView>
     );
   }
 
@@ -148,6 +150,7 @@ function ThemedApp() {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
+      <StagingBanner />
       {!online && <OfflineBanner insetTop={false} />}
       <SyncStatusBanner />
       <PublicProfileLink />

@@ -559,7 +559,10 @@ and the session pooler. Applied migrations must not be rewritten.
   built-in runner for session recovery, auth messages, request timeouts, offline
   cache cleanup, outbox ordering, topic persistence, and sync scheduling.
   Expo provides Android/iOS/web development commands. Native project folders are
-  not tracked. EAS profiles separate development, preview, production, and production APKs.
+  not tracked. `app.config.js` selects production or a separately installable staging
+  package/runtime via `APP_VARIANT`; `eas.json` pairs preview/staging-development
+  with staging and production profiles with production. The staging setup and
+  local-phone flow are in [STAGING_APP.md](STAGING_APP.md).
 - Backend dependencies are pinned in `requirements.txt`/`requirements-dev.txt`.
   From `backend/`, run `.venv/bin/python -m uvicorn app.main:app --reload --port 8000`
   for development and `.venv/bin/python -m pytest` for tests after configuration.
@@ -570,12 +573,15 @@ and the session pooler. Applied migrations must not be rewritten.
   `tests/conftest.py` supplies a disposable PostgreSQL 16 database through Podman
   on port 55433, applies every migration, and disables live generation. HTTP calls
   to Gemini/Expo are mocked. Database-dependent tests skip if Podman cannot start.
-- `.github/workflows/eas-update.yml` publishes preview OTA on qualifying mobile
-  pushes to `develop`; manual dispatch also publishes preview only. `eas-build.yml` is
-  a manual Android build workflow.
+- `.github/workflows/eas-update.yml` publishes preview OTA from the current
+  `develop` revision after a matching protected staging deploy run. The public
+  config validator rejects cross-project API/Auth pairs before publication.
+  `eas-build.yml` is a manual Android build workflow with distinct staging
+  profiles; `supabase-staging-deploy.yml` deploys the current `develop` API and
+  worker through the protected staging environment after schema verification.
 - `release.yml` is manually dispatched on `main` after operator confirmation of
   the deployed backend/worker SHA; its guard rejects missing/mismatched revisions
-  and non-main dispatches. It publishes production then preview OTA, creates a
+  and non-main dispatches. It publishes preview then production OTA, creates a
   version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
   is gated on native `runtimeVersion` changes. The Supabase Edge API and worker
   deploy through a separate protected workflow; follow `RELEASING.md` for ordering.
@@ -589,8 +595,8 @@ and the session pooler. Applied migrations must not be rewritten.
   `production-schema.yml` remains independently dispatchable. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
   files findings as issues. `cleanup.yml` manages stale issues; Dependabot
   schedules dependency updates with Expo-managed version restrictions.
-- `mobile/app.config.js` currently has app version `1.10.4` and native runtime
-  `1.10.1`; `package.json`'s `1.0.0` is not the release-version authority.
+- `mobile/app.config.js` owns the marketing version and separate production and
+  staging native runtimes; `package.json`'s `1.0.0` is not the release-version authority.
 
 ## Documentation drift to remember
 

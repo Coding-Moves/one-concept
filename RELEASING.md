@@ -40,19 +40,21 @@ Production release flow. Keep it boring and repeatable.
    worker rejects unsigned calls, and checks API `/health`. Keep generation
    gates unchanged during deployment, then verify the release-specific API,
    scheduled-job, and client smoke checks. A merge alone does not deploy them.
-6. If this release changes `runtimeVersion`, build a compatible **preview APK**
-   from the exact new `main` commit before starting Release:
-   `cd mobile && eas build --platform android --profile preview --non-interactive --wait`.
-   Install it on a spare device; the preview and production APKs use the same
-   Android application ID, so they cannot coexist on one device. This build is
-   what lets the owner test the preview OTA at the second approval gate. Keep
-   the production APK on the regular device until that gate is approved.
+6. On `develop`, apply the reviewed staging migrations, run **Deploy Supabase API
+   and worker to staging**, and record its successful run ID. If this release
+   changes `runtimeVersion`, build a compatible **One Concept Staging** APK from
+   the reviewed `develop` commit before starting Release (EAS Build profile
+   `preview`). The staging and production packages can coexist on one phone.
+   Verify the staging runtime matches the preview OTA target and keep the
+   production app installed while testing.
 7. Open **GitHub Actions → Release → Run workflow**, select **main**, and enter
    the full 40-character main commit SHA in `backend_revision` and the successful
-   protected deployment Actions run ID in `production_deploy_run_id`. The
+   protected production deployment Actions run ID in `production_deploy_run_id`,
+   and the successful staging deployment run ID in `staging_deploy_run_id`. The
    workflow checks that the deployment ran from that exact current `main` SHA,
-   rejects an existing version tag before publishing, and verifies the actual
-   schema. It publishes preview OTA first, then waits at a second
+   that the staging backend matches the release backend, rejects an existing
+   version tag before publishing, and verifies the actual schema. It publishes
+   preview OTA first, then waits at a second
    `production-schema` approval. Test the compatible preview build on a real
    device and confirm the effective production API/Auth configuration before
    approving that gate.
@@ -115,14 +117,19 @@ the effective runtime and app version before export; do not use a feature branch
 or bump native runtime merely to move the API. Recheck remote `main` immediately
 before publication and stop if it differs from the verified checkout/deployment.
 
-Publish the candidate with the preview environment first, using a compatible
-preview installation for validation. Once approved, the explicit EAS commands
-from that checkout's `mobile/` directory are:
+Publish the candidate to staging first, using a compatible staging installation
+for validation. Apply any reviewed staging migrations and run the protected
+staging Edge deployment on the current `develop` revision. Then dispatch
+**EAS Update (OTA)** with that successful staging deploy run ID; the workflow
+checks the source revision and publication target. Once the owner approves the
+production switch, publish the production update from the verified `main`
+checkout with the production variant explicitly selected:
 
 ```sh
-eas update --channel preview --environment preview --message "Verify API endpoint" --non-interactive
-# Only after candidate validation and approval of the production switch:
-eas update --channel production --environment production --message "Update API endpoint" --non-interactive
+APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production \
+  eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
+APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production \
+  eas update --channel production --environment production --message "Update API endpoint" --non-interactive
 ```
 
 Record the source SHA, environment URL, runtime, update group, channel and device

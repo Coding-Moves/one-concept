@@ -125,13 +125,13 @@ function ThemedApp() {
 
   if (!session) {
     return (
-      <View style={{ flex: 1 }}>
+      <SafeAreaView edges={['top', 'left', 'right']} style={{ flex: 1, backgroundColor: colors.background }}>
         <StagingBanner />
-        {!online && <OfflineBanner />}
+        {!online && <OfflineBanner insetTop={false} />}
         <AuthScreen />
         <PublicProfileLink />
         <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      </View>
+      </SafeAreaView>
     );
   }
 

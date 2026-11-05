@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Separate staging app — issue #255, 2026-11-05
+
+- Scope: build a separately installable staging variant from current `develop` in `codex/255-staging-app`. Keep the existing production identity and release path. Add app/build identity, strict public project pairing, preview OTA guards, and a local/staging activation guide. The live EAS preview variables, staging web origin, Firebase registration, cloud build, and same-phone acceptance require operator verification; keep #255 open until they pass. Intended commits: variant identity and tests; publication guards and tests; staging runbook and handoff.
+- `c350fdf` adds the staging Android/iOS identity, native runtime, Firebase-file guard, EAS profiles and SDK 57 dev client. `eccf99d` rejects cross-project API/Auth and production review URLs in staging, pairs OTA workflows with the right variant and keeps staging deep links distinct. `48c7765` adds the visible staging banner and uses the configured review site in About. `24c38c9` adds a protected, schema-checked staging Edge deployment. `9c8fe54` moves the old development-client profile to the staging package so it cannot overwrite production. The release workflow still needs a new production APK when this native dependency reaches `main`.
+- Verification: the full mobile Node suite passed 119/119 and typecheck passed before the development-profile follow-up; its focused 13 tests and typecheck passed afterward. Expo config output confirmed distinct Android package, iOS staging identifier, scheme and runtime, with production name/package unchanged. The existing staging API/database `/health` returned 200 with `database=reachable`; staging Auth, EAS preview values, Firebase, staging website/email, and side-by-side phone installation remain unverified. No cloud build or production deployment was triggered.
+
+
 ### #321 compatible dependency fixes — 2026-11-05
 
 - The owner requested the next issue PR after #484. [PR #485](https://github.com/Coding-Moves/one-concept/pull/485) targets `develop`. A fresh audit found one review-site high finding in Vite 8.3.2 and mobile critical/high findings in transitive `shell-quote` 1.10.0 and `node-forge` 1.4.0. Patch releases exist within the current dependency families. Scope this PR to compatible patches and validation; keep #321 open for remaining Expo SDK 57 advisories that require a separately reviewed SDK/native upgrade. Do not use `npm audit fix --force` or change the production app version here.

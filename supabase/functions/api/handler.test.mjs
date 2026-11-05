@@ -48,6 +48,27 @@ test('public browser links redirect to hosted pages without exposing credentials
   assert.equal(calls.length, 0);
 });
 
+test('public browser links can switch to the verified first-party origin without leaking fragments', async () => {
+  const site = 'https://review.oneconcept.codingmoves.com';
+  const handler = createHandler({ ...config, publicSiteUrl: site }, async () => {
+    throw new Error('Public redirects must not use a service request');
+  });
+  const callback = await handler(request('/reset-password?code=one-time-code#access_token=secret'));
+  assert.equal(callback.status, 302);
+  assert.equal(callback.headers.get('location'), `${site}/account/callback?code=one-time-code`);
+  assert.doesNotMatch(callback.headers.get('location'), /secret|#/);
+  const privacy = await handler(request('/privacy'));
+  assert.equal(privacy.headers.get('location'), `${site}/privacy`);
+  for (const invalid of [
+    'http://review.oneconcept.codingmoves.com',
+    `${site}/account`, `${site}/`, `${site}?next=evil`,
+    'https://user:password@review.oneconcept.codingmoves.com',
+  ]) {
+    assert.throws(() => createHandler({ ...config, publicSiteUrl: invalid }),
+      /PUBLIC_SITE_URL must be an exact HTTPS origin/);
+  }
+});
+
 test('editorial correction request reaches the atomic job RPC with the receipt fingerprint', async () => {
   const sessionId = 'a5a94932-62e0-4780-91c7-af48b93e27ab';
   const revisionId = 'f285ee8a-0bdd-4a94-ac16-ce96c9c3a272';

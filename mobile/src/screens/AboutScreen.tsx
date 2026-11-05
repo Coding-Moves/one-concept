@@ -18,7 +18,7 @@ const HOW_IT_WORKS = [
 ];
 
 const GITHUB_ORG = 'https://github.com/Coding-Moves';
-const REVIEW_INFO_URL = 'https://coding-moves-one-concept-review.netlify.app/about.html';
+const REVIEW_INFO_URL = `${(process.env.EXPO_PUBLIC_WEB_BASE_URL ?? '').replace(/\/$/, '')}/about.html`;
 const PORTFOLIO_URL = 'https://muawiya-contact.github.io/muawiya-portfolio/';
 const ISSUES_URL = 'https://github.com/Coding-Moves/one-concept/issues/new';
 const FEEDBACK_EMAIL = 'contactmuawia@gmail.com';
@@ -72,7 +72,7 @@ export function AboutScreen() {
         <View style={styles.badge}>
           <Ionicons name="bulb" size={scaleIcon(30)} color={colors.primary} />
         </View>
-        <Text style={styles.appName}>One Concept</Text>
+        <Text style={styles.appName}>{Constants.expoConfig?.name ?? 'One Concept'}</Text>
         <Text style={styles.version}>Version {version}</Text>
       </View>
 

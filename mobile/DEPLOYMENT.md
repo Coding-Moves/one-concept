@@ -6,10 +6,11 @@ reaches installed phones without a reinstall.
 
 ## How the pieces fit
 
-- **Channels** — every build is pinned to a channel (`development`, `preview`,
-  `production` in [eas.json](eas.json)). `eas update --channel X` publishes only
-  to builds from channel X. Preview also has a distinct staging package and
-  native runtime; see [the staging app guide](../docs/STAGING_APP.md).
+- **Channels** — staging builds, including the development client, use the
+  `preview` channel; live builds use `production` in [eas.json](eas.json).
+  `eas update --channel X` publishes only to builds from channel X. Staging
+  also has a distinct package and native runtime; see
+  [the staging app guide](../docs/STAGING_APP.md).
 - **Runtime version** — pinned explicitly in [app.config.js](app.config.js), decoupled
   from the marketing `version` (which release PRs bump freely). An update is
   only delivered to builds with the same `runtimeVersion`. **Bump

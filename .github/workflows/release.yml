@@ -13,6 +13,10 @@ on:
         description: 'Successful Deploy Supabase API and worker to production Actions run ID for this main SHA'
         required: true
         type: string
+      staging_deploy_run_id:
+        description: 'Successful staging API/worker deploy run for the reviewed develop backend'
+        required: true
+        type: string
 
 # One release at a time: two quick merges must not race the tag check.
 concurrency:
@@ -92,6 +96,26 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v7
+
+      - name: Require matching staging backend before preview publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING_DEPLOY_RUN_ID: ${{ inputs.staging_deploy_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$STAGING_DEPLOY_RUN_ID" =~ ^[0-9]+$ ]]
+          read -r workflow branch sha event conclusion <<< "$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${STAGING_DEPLOY_RUN_ID}" --jq '[.path, .head_branch, .head_sha, .event, .conclusion] | @tsv')"
+          test "$workflow" = '.github/workflows/supabase-staging-deploy.yml'
+          test "$branch" = 'develop'
+          test "$event" = 'workflow_dispatch'
+          test "$conclusion" = 'success'
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags --depth=1 origin "$sha"
+          git diff --quiet "$sha" "$GITHUB_SHA" -- backend supabase/functions || {
+            echo '::error::Staging backend differs from this production release. Deploy reviewed develop to staging first.'
+            exit 1
+          }
 
       - name: Verify deployed revision before publishing
         env:

@@ -96,6 +96,6 @@ repository secret for EAS:
 
 - **release.yml** — manual production release after backend/worker verification,
   followed by preview OTA, release tagging and native-gated APK dispatch.
-- **eas-update.yml** — qualifying mobile pushes to `develop` and manual runs
-  publish preview only.
+- **eas-update.yml** — manual runs on the current `develop` revision publish
+  preview only after a matching successful protected staging Edge deployment.
 - **eas-build.yml** — manual build; choose the profile.

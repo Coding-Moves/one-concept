@@ -40,19 +40,21 @@ Production release flow. Keep it boring and repeatable.
    worker rejects unsigned calls, and checks API `/health`. Keep generation
    gates unchanged during deployment, then verify the release-specific API,
    scheduled-job, and client smoke checks. A merge alone does not deploy them.
-6. If this release changes `runtimeVersion`, build a compatible **preview APK**
-   from the exact new `main` commit before starting Release:
-   `cd mobile && eas build --platform android --profile preview --non-interactive --wait`.
-   Install it on a spare device; the preview and production APKs use the same
-   Android application ID, so they cannot coexist on one device. This build is
-   what lets the owner test the preview OTA at the second approval gate. Keep
-   the production APK on the regular device until that gate is approved.
+6. On `develop`, apply the reviewed staging migrations, run **Deploy Supabase API
+   and worker to staging**, and record its successful run ID. If this release
+   changes `runtimeVersion`, build a compatible **One Concept Staging** APK from
+   the reviewed `develop` commit before starting Release (EAS Build profile
+   `preview`). The staging and production packages can coexist on one phone.
+   Verify the staging runtime matches the preview OTA target and keep the
+   production app installed while testing.
 7. Open **GitHub Actions → Release → Run workflow**, select **main**, and enter
    the full 40-character main commit SHA in `backend_revision` and the successful
-   protected deployment Actions run ID in `production_deploy_run_id`. The
+   protected production deployment Actions run ID in `production_deploy_run_id`,
+   and the successful staging deployment run ID in `staging_deploy_run_id`. The
    workflow checks that the deployment ran from that exact current `main` SHA,
-   rejects an existing version tag before publishing, and verifies the actual
-   schema. It publishes preview OTA first, then waits at a second
+   that the staging backend matches the release backend, rejects an existing
+   version tag before publishing, and verifies the actual schema. It publishes
+   preview OTA first, then waits at a second
    `production-schema` approval. Test the compatible preview build on a real
    device and confirm the effective production API/Auth configuration before
    approving that gate.

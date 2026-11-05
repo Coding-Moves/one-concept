@@ -573,8 +573,8 @@ and the session pooler. Applied migrations must not be rewritten.
   `tests/conftest.py` supplies a disposable PostgreSQL 16 database through Podman
   on port 55433, applies every migration, and disables live generation. HTTP calls
   to Gemini/Expo are mocked. Database-dependent tests skip if Podman cannot start.
-- `.github/workflows/eas-update.yml` publishes preview OTA on qualifying mobile
-  pushes to `develop`; manual dispatch also publishes preview only. The public
+- `.github/workflows/eas-update.yml` publishes preview OTA from the current
+  `develop` revision after a matching protected staging deploy run. The public
   config validator rejects cross-project API/Auth pairs before publication.
   `eas-build.yml` is a manual Android build workflow with distinct staging
   profiles; `supabase-staging-deploy.yml` deploys the current `develop` API and

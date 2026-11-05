@@ -47,7 +47,7 @@ APP_VARIANT=staging EXPO_PUBLIC_APP_VARIANT=staging npx expo start --dev-client 
 
 Set `EXPO_PUBLIC_API_BASE_URL=http://<PC-LAN-IP>:8000` in `mobile/.env.local`; keep `EXPO_PUBLIC_SUPABASE_URL` and its publishable key on the staging project, and use the actual staging browser origin. The phone cannot use `localhost` for the PC. Allow inbound ports 8000 and 8081 on the PC firewall for the LAN, open the Metro QR/deep link in **One Concept Staging**, and test the exact PR flow. Run `npm run typecheck`, `npm test`, and relevant backend tests before proposing the PR. Stop Metro and the local API afterward. Reinstall the regular staging APK if you want to return to normal preview OTA behavior.
 
-After a feature PR merges into `develop`, apply any reviewed staging migrations, run the protected staging Edge deployment, and let **EAS Update (OTA)** publish the `preview` update for mobile changes. Verify the integrated staging flow before preparing a production release. Do not publish a feature-branch OTA or use a PC address in an EAS release build.
+After a feature PR merges into `develop`, apply any reviewed staging migrations and run the protected staging Edge deployment. Then manually run **EAS Update (OTA)** on the same `develop` commit with that successful staging deploy run ID. It verifies the matching deployment before publishing to the `preview` channel. Verify the integrated staging flow before preparing a production release. The production Release workflow also requires a successful staging deployment whose backend/function tree matches the new `main` release. Do not publish a feature-branch OTA or use a PC address in an EAS release build.
 
 ## Acceptance and rollback
 

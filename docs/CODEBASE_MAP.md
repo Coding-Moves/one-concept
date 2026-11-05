@@ -249,7 +249,7 @@ inside a root stack, with a concept-detail modal above them.
 
 | Screen | Responsibility |
 | --- | --- |
-| `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states, and a server-confirmed topic-selection prompt when no topics are followed. |
+| `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states, a server-confirmed topic-selection prompt when no topics are followed, and external video/reading searches for the full lesson. |
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
 | `AnalyticsScreen.tsx` | Profile-linked, server-confirmed concepts, reviews, activity, quizzes, topics, learning paths and achievements with empty/recovery states. |
@@ -260,7 +260,7 @@ inside a root stack, with a concept-detail modal above them.
 | `ProfileSharingScreen.tsx` / `ProfilePublishReviewSheet.tsx` / `PublicProfileLink.tsx` | Opt-in, independently selected sharing fields, a private review-before-publish step, explicit unpublish confirmation, native share/local QR, and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
-| `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |
+| `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. History and Saved open this detail, which offers external video/reading searches. |
 | `AuthScreen.tsx` | Sign-in, sign-up, password recovery, and accessible show/hide password controls that reset on mode changes or submission. |
 | `AboutScreen.tsx` | Branding and app information. |
 
@@ -271,6 +271,8 @@ code tokenizer,
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.
+`LessonResources` uses `services/lessonResources.ts` to construct external
+searches from public lesson title and topic only; the app does not vet results.
 `ScreenHeader` supplies the common eyebrow/title/supporting-copy hierarchy and
 `Surface` supplies the borderless elevated containers. `useReducedMotion` gates
 tap feedback, while `UnavailableState` uses a single short entrance motion and

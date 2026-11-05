@@ -7,6 +7,12 @@ claims as completed work.
 
 ## Current status
 
+### #237 lesson resources — 2026-11-04
+
+- The owner asked for the next issue PRs before a later release. Scope this `develop` PR to topic-specific external searches from the two shared full-lesson surfaces: Today and the detail opened by History/Saved. Use the card title and topic, open YouTube and web reading searches without transmitting account data, and handle a failed external open in the UI. The links are search results, not vetted lesson references. No backend, database, native module, or release-version change.
+- `a387db3` builds fixed-host search URLs from normalized title/topic metadata, with encoding and malformed-input coverage. `49b6e3d` adds the accessible links and honest external-results label on both full-lesson surfaces; a mocked browser exercises Today, History, Saved, both themes, search queries, and failed external open at 320px.
+- Passed: focused Node test, mobile TypeScript, Expo web export, browser test in light/dark, visual inspection at 320px, and whitespace checks. The full local mobile suite had 112 passes and one environment-only `publicConfig` subprocess failure because this sandbox denied its child process; hosted CI must settle that check. Native browser handoff still needs a device check after a later release.
+
 ### #457 production photo upload follow-up — 2026-11-04
 
 - The owner confirmed v1.10.18 still cannot save a profile photo on Android. Two November 2 screenshots show a completed photo preview followed by either “Could not reach the photo service” (no HTTP response) or “Photo saving is unavailable right now” (HTTP 5xx). These no longer show the earlier local photo-preparation error. Issue #457 was reopened; do not close it until a real production device save succeeds.

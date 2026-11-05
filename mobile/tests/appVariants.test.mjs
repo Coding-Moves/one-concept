@@ -21,9 +21,10 @@ test('staging and production can install beside each other and cannot receive ea
   const staging = configFor('staging');
   assert.equal(production.name, 'One Concept');
   assert.equal(production.android.package, 'com.codingmoves.oneconcept');
+  assert.equal(production.ios.bundleIdentifier, 'com.codingmoves.oneconcept');
   assert.equal(production.android.googleServicesFile, './google-services.json');
   assert.equal(production.runtimeVersion, '1.10.19');
-  assert.equal(production.scheme, undefined);
+  assert.equal(production.scheme, 'com.codingmoves.oneconcept');
   assert.equal(staging.name, 'One Concept Staging');
   assert.equal(staging.android.package, 'com.codingmoves.oneconcept.staging');
   assert.equal(staging.ios.bundleIdentifier, 'com.codingmoves.oneconcept.staging');

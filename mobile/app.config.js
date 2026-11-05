@@ -25,13 +25,13 @@ module.exports = {
     slug: 'one-concept',
     owner: 'coding-moves',
     version: '1.10.18',
-    ...(staging ? { scheme: 'com.codingmoves.oneconcept.staging' } : {}),
+    scheme: staging ? 'com.codingmoves.oneconcept.staging' : 'com.codingmoves.oneconcept',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
     ios: {
       supportsTablet: true,
-      ...(staging ? { bundleIdentifier: 'com.codingmoves.oneconcept.staging' } : {}),
+      bundleIdentifier: staging ? 'com.codingmoves.oneconcept.staging' : 'com.codingmoves.oneconcept',
     },
     android: {
       package: staging ? 'com.codingmoves.oneconcept.staging' : 'com.codingmoves.oneconcept',

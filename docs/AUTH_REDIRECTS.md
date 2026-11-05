@@ -18,8 +18,9 @@ The mobile app derives its explicit signup and recovery redirect URLs from
 public browser pages; private application routes still authenticate the user.
 
 The public web account at `/account` uses the same Supabase Auth project and
-publishable key as the review workspace. It requests the exact
-`https://coding-moves-one-concept-review.netlify.app/account/callback` return
+publishable key as the review workspace. After the first-party domain cutover,
+it requests the exact
+`https://review.oneconcept.codingmoves.com/account/callback` return
 for confirmation and recovery, verifies the returned session with Supabase,
 then removes credentials from the browser URL. This public page never grants
 editorial membership; the owner invitation remains a separate guarded flow.
@@ -36,6 +37,8 @@ editorial membership; the owner invitation remains a separate guarded flow.
    ```text
    https://PROJECT.supabase.co/functions/v1/api/confirmed
    https://PROJECT.supabase.co/functions/v1/api/reset-password
+   https://review.oneconcept.codingmoves.com/account/callback
+   https://review.oneconcept.codingmoves.com/auth/callback
    https://coding-moves-one-concept-review.netlify.app/account/callback
    https://coding-moves-one-concept-review.netlify.app/auth/callback
    ```
@@ -48,7 +51,10 @@ editorial membership; the owner invitation remains a separate guarded flow.
 4. Check Expo's **production** `EXPO_PUBLIC_API_BASE_URL` points to the same
    Supabase `api` function, and keep the Supabase Auth URL and publishable key
    matched to that project. Never put a service-role key in mobile or a page.
-5. Deploy the public web `/account` page and icon before installing the branded
+5. Complete the first-party hostname rollout in [REVIEW_DOMAIN_ROLLOUT.md](REVIEW_DOMAIN_ROLLOUT.md).
+   Retain the old Netlify allowlist entries during the transition; changing an
+   allowlist does not make an unverified custom hostname work.
+6. Deploy the public web `/account` page and icon before installing the branded
    Auth templates. Confirm its `VITE_SUPABASE_URL` and public key are from the
    same project as the mobile build. For staging, use that staging project's
    matching web deployment and exact callback URL; do not point a staging

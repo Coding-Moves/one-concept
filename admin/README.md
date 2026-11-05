@@ -149,6 +149,14 @@ deploy before entering them in Google Cloud. The root remains the invited-user
 sign-in page; it is not the public OAuth homepage. Do not substitute the mobile
 app's separate API privacy page for this site's privacy URL.
 
+The first-party production origin is planned as
+`https://review.oneconcept.codingmoves.com`. Its Netlify, DNS, Supabase Auth,
+Edge URL, mobile public URL, and Google Cloud OAuth cutover must follow
+[the domain rollout](../docs/REVIEW_DOMAIN_ROLLOUT.md). Keep the existing Netlify
+hostname working for issued links until the real flows pass. The same site
+serves owner and reviewer roles; staging must never use the production review
+origin for its Auth or API.
+
 Merging a code PR into `develop` does not publish the website or change
 production Edge Function flags. After the compatible API and website are live,
 an approved and published card enters normal server selection automatically;

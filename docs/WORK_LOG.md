@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### First-party reviewer domain and content activation — 2026-11-05
+
+- The owner confirmed `codingmoves.com` for Google Cloud OAuth and the shared review origin `review.oneconcept.codingmoves.com` from #480. Scope this chunk to a safe domain cutover in `codex/480-review-domain`; keep the existing Netlify hostname working until live HTTPS, Auth, email, and OAuth checks pass. Content refill activation is a separate operational step that still requires a reviewed title plan, queue capacity, and live worker verification.
+- Netlify's GitHub login reported an existing account with the same email and requires the owner's email sign-in. No Netlify, DNS, Google Cloud, Supabase, or production generation settings changed. The owner has been asked to sign in without sharing credentials.
+- `2928891` adds an exact-origin `PUBLIC_SITE_URL` setting to the Supabase Edge API's confirmation, recovery, and privacy redirects, with the existing Netlify host as fallback until cutover. All 100 Node Edge API handler/avatar tests passed, including query preservation, fragment exclusion, and invalid-origin rejection.
+- `f36397c` prepares the four repository-managed Supabase Auth templates for the first-party icon and reviewer sign-in URL. Three focused template tests passed in the existing backend virtual environment. These files are source only; Supabase dashboard templates have not been reinstalled.
+- `869511f` documents the DNS/HTTPS, Search Console Domain-property, Google Cloud OAuth Branding, Supabase Auth/Edge, email, and mobile URL activation order with a rollback path. Documentation links and `git diff --check` passed. No live domain/Google verification or controlled invitation/recovery test is claimed.
+
 ### Separate staging app — issue #255, 2026-11-05
 
 - [PR #486](https://github.com/Coding-Moves/one-concept/pull/486) targets `develop` and leaves #255 open for the live EAS, Firebase, website, Auth, build, and phone acceptance steps. All five hosted checks passed at `a940fbb` (backend, mobile, review website, architecture, and release guard validation).

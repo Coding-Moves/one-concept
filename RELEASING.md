@@ -117,14 +117,19 @@ the effective runtime and app version before export; do not use a feature branch
 or bump native runtime merely to move the API. Recheck remote `main` immediately
 before publication and stop if it differs from the verified checkout/deployment.
 
-Publish the candidate with the preview environment first, using a compatible
-preview installation for validation. Once approved, the explicit EAS commands
-from that checkout's `mobile/` directory are:
+Publish the candidate to staging first, using a compatible staging installation
+for validation. Apply any reviewed staging migrations and run the protected
+staging Edge deployment on the current `develop` revision. Then dispatch
+**EAS Update (OTA)** with that successful staging deploy run ID; the workflow
+checks the source revision and publication target. Once the owner approves the
+production switch, publish the production update from the verified `main`
+checkout with the production variant explicitly selected:
 
 ```sh
-eas update --channel preview --environment preview --message "Verify API endpoint" --non-interactive
-# Only after candidate validation and approval of the production switch:
-eas update --channel production --environment production --message "Update API endpoint" --non-interactive
+APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production \
+  eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
+APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production \
+  eas update --channel production --environment production --message "Update API endpoint" --non-interactive
 ```
 
 Record the source SHA, environment URL, runtime, update group, channel and device

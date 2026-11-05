@@ -75,8 +75,11 @@ before distributing it; the old preview EAS values may still target production.
 For production, follow [the release runbook](../RELEASING.md): merge the release,
 verify the new backend and workers, then manually run **Release** on `main` with
 the verified full commit SHA. Merging alone does not publish a mobile update.
-Use **EAS Update (OTA)** for preview updates. Direct local production publishing
-bypasses the deployment check and is not the normal release procedure.
+Use **EAS Update (OTA)** with the matching successful protected staging deploy
+run ID for preview updates. The repository no longer provides a local preview
+publication shortcut.
+Direct local production publishing bypasses the deployment check and is not the
+normal release procedure.
 
 Installed apps fetch the update on next launch (`checkAutomatically: ON_LOAD`).
 

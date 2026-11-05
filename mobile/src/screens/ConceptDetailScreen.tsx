@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
+import { LessonResources } from '../components/LessonResources';
 import { ReviewAttribution } from '../components/ReviewAttribution';
 import { UnavailableState } from '../components/UnavailableState';
 import { useOnline } from '../context/ConnectivityContext';
@@ -117,6 +118,7 @@ export function ConceptDetailScreen() {
           <ConceptCard concept={concept} />
           <ReviewAttribution concept={concept} />
           <ConceptActions concept={concept} />
+          <LessonResources concept={concept} />
         </ScrollView>
       )}
     </View>

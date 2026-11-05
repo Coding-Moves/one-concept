@@ -29,4 +29,6 @@ test('missing or malformed lesson text does not open a search', () => {
   assert.equal(lessonResourceUrl({ title: ' ', category: 'Math' }, 'video'), null);
   assert.equal(lessonResourceUrl({ title: 'Limits', category: ' ' }, 'reading'), null);
   assert.equal(lessonResourceUrl({ title: '\ud800', category: 'Math' }, 'video'), null);
+  assert.equal(lessonResourceUrl({ title: 'Limits', category: undefined }, 'video'), null);
+  assert.equal(lessonResourceUrl({ title: null, category: 'Math' }, 'reading'), null);
 });

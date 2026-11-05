@@ -5,6 +5,8 @@ export type LessonResource = 'video' | 'reading';
 
 /** Only public lesson metadata goes into an external search URL. */
 export function lessonResourceUrl(lesson: SearchableLesson, resource: LessonResource): string | null {
+  // Older cached records can violate today's TypeScript shape at runtime.
+  if (typeof lesson.title !== 'string' || typeof lesson.category !== 'string') return null;
   const title = lesson.title.replace(/\s+/gu, ' ').trim();
   const topic = lesson.category.replace(/\s+/gu, ' ').trim();
   if (!title || !topic) return null;

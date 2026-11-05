@@ -91,17 +91,23 @@ const server = http.createServer((req, res) => {
       await page.getByRole('button', { name: 'Open Feature Flags' }).click();
       await expect(video.last()).toBeVisible();
       await expect(reading.last()).toBeVisible();
+      await video.last().click();
+      urls = await page.evaluate(() => window.externalSearches);
+      assert.equal(new URL(urls.at(-1)).searchParams.get('search_query'), 'Feature Flags in Software Engineering');
       await page.getByRole('button', { name: 'Close', exact: true }).click();
       await page.getByRole('tab', { name: 'Profile' }).click();
       await page.getByText('Saved concepts', { exact: true }).click();
       await page.getByRole('button', { name: 'Open Feature Flags' }).click();
       await expect(video.last()).toBeVisible();
       await expect(reading.last()).toBeVisible();
+      await reading.last().click();
+      urls = await page.evaluate(() => window.externalSearches);
+      assert.equal(new URL(urls.at(-1)).searchParams.get('q'), 'Feature Flags in Software Engineering');
       await page.evaluate(() => { window.open = () => { throw Error('No browser'); }; });
       await reading.last().click();
       await expect(page.getByText('Couldn’t open that search. Check your browser and connection, then try again.')).toBeVisible();
       urls = await page.evaluate(() => window.externalSearches);
-      assert.equal(urls.length, 2, 'failed external open must not navigate elsewhere');
+      assert.equal(urls.length, 4, 'failed external open must not navigate elsewhere');
       assert.deepEqual(errors, []);
       await context.close();
     }

@@ -1,0 +1,49 @@
+# External, read-only database activity for the Free staging project (#472).
+# A database trigger cannot wake a paused project. This is a best-effort probe,
+# not an availability guarantee; see docs/STAGING_ACTIVITY.md.
+name: Check staging database activity
+
+on:
+  schedule:
+    # Off the hour to reduce GitHub scheduler contention; three requests/day.
+    - cron: '17 2,10,18 * * *'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: staging-database-activity
+  cancel-in-progress: false
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Require a successful staging database health response
+        shell: bash
+        run: |
+          set -euo pipefail
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          probe_url="https://zhrulokgngjceqgjkcmw.supabase.co/functions/v1/api/health?activity=$(date -u +%s)"
+          if ! status="$(curl --silent --show-error --fail --max-time 20 --connect-timeout 8 \
+            --retry 2 --retry-delay 3 --retry-all-errors \
+            --header 'Cache-Control: no-cache' \
+            --output "$response_file" --write-out '%{http_code}' "$probe_url")"; then
+            echo '::error::Staging health request failed. Check whether the Supabase staging project is paused; resume it and rerun this workflow.'
+            exit 1
+          fi
+          python - "$response_file" "$status" <<'PY'
+          import json
+          import sys
+
+          try:
+              with open(sys.argv[1], encoding='utf-8') as result:
+                  body = json.load(result)
+          except (OSError, ValueError):
+              sys.exit('Staging health did not return JSON')
+          if sys.argv[2] != '200' or body != {'status': 'ok', 'database': 'reachable'}:
+              sys.exit('Staging API or database is not healthy')
+          print('Staging API and database are reachable')
+          PY

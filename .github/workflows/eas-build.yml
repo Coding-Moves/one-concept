@@ -39,7 +39,7 @@ jobs:
         env:
           PROFILE: ${{ github.event.inputs.profile }}
         run: |
-          if [[ "$PROFILE" == preview || "$PROFILE" == staging-development ]]; then
+          if [[ "$PROFILE" == development || "$PROFILE" == preview || "$PROFILE" == staging-development ]]; then
             APP_VARIANT=staging EXPO_PUBLIC_APP_VARIANT=staging eas env:exec preview 'node scripts/validate-public-config.cjs --release --variant=staging' --non-interactive
           elif [[ "$PROFILE" == production ]]; then
             APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive

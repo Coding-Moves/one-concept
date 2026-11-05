@@ -1,7 +1,7 @@
 const fs = require('node:fs');
 const { resolve } = require('node:path');
 
-const stagingProfiles = new Set(['preview', 'staging-development']);
+const stagingProfiles = new Set(['development', 'preview', 'staging-development']);
 
 function stagingGoogleServicesErrors(file) {
   if (!file) return ['Staging Firebase file is missing'];

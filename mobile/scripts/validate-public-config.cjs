@@ -1,9 +1,9 @@
 const { publicConfigErrors } = require('../public-config.cjs');
 
 const release = process.argv.includes('--release')
-  || ['preview', 'staging-development', 'production', 'production-apk'].includes(process.env.EAS_BUILD_PROFILE);
+  || ['development', 'preview', 'staging-development', 'production', 'production-apk'].includes(process.env.EAS_BUILD_PROFILE);
 const requestedVariant = process.argv.find(arg => arg.startsWith('--variant='))?.split('=')[1];
-const profileVariant = ['preview', 'staging-development'].includes(process.env.EAS_BUILD_PROFILE) ? 'staging'
+const profileVariant = ['development', 'preview', 'staging-development'].includes(process.env.EAS_BUILD_PROFILE) ? 'staging'
   : ['production', 'production-apk'].includes(process.env.EAS_BUILD_PROFILE) ? 'production' : null;
 const variant = requestedVariant || profileVariant || process.env.APP_VARIANT;
 const errors = publicConfigErrors(process.env, release, variant);

@@ -50,8 +50,11 @@ test('EAS build profiles bind staging identity to preview updates only', () => {
   assert.equal(build.preview.env.EXPO_PUBLIC_APP_VARIANT, 'staging');
   assert.equal(build.preview.environment, 'preview');
   assert.equal(build.preview.channel, 'preview');
-  assert.equal(build['staging-development'].extends, 'preview');
-  assert.equal(build['staging-development'].developmentClient, true);
+  assert.equal(build['staging-development'].extends, 'development');
+  assert.equal(build.development.env.APP_VARIANT, 'staging');
+  assert.equal(build.development.environment, 'preview');
+  assert.equal(build.development.channel, 'preview');
+  assert.equal(build.development.developmentClient, true);
   assert.equal(build.production.env.APP_VARIANT, 'production');
   assert.equal(build.production.env.EXPO_PUBLIC_APP_VARIANT, 'production');
   assert.equal(build.production.environment, 'production');

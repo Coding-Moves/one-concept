@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### #237 lesson resources — 2026-11-04
+
+- The owner asked for the next issue PRs before a later release. Scope this `develop` PR to topic-specific external searches from the two shared full-lesson surfaces: Today and the detail opened by History/Saved. Use the card title and topic, open YouTube and web reading searches without transmitting account data, and handle a failed external open in the UI. The links are search results, not vetted lesson references. No backend, database, native module, or release-version change.
+- `a387db3` builds fixed-host search URLs from normalized title/topic metadata, with encoding and malformed-input coverage. `49b6e3d` adds the accessible links and honest external-results label on both full-lesson surfaces; a mocked browser exercises Today, History, Saved, both themes, search queries, and failed external open at 320px.
+- Passed: focused Node test, mobile TypeScript, Expo web export, browser test in light/dark, visual inspection at 320px, and whitespace checks. The full local mobile suite had 112 passes and one environment-only `publicConfig` subprocess failure because this sandbox denied its child process; hosted CI must settle that check. Native browser handoff still needs a device check after a later release.
+- Re-review of [PR #484](https://github.com/Coding-Moves/one-concept/pull/484) guarded against old cached lessons with absent/non-string title or topic; those links now hide safely. The browser test now activates both links from History and Saved, in addition to Today, and confirms their query. Focused Node, mobile TypeScript, fresh web export and browser checks passed after the correction.
+
 ### #472 staging activity check — 2026-11-04
 
 - The owner asked to move to the next open issues after #457 closed through PR #482. Scope this chunk to a scheduled, read-only check of the existing staging API/database and an operator recovery note; keep the production release separate. Supabase says Free projects may pause after low user database activity and a few external requests each day usually help but do not guarantee availability. A database trigger cannot wake a paused project. The existing staging hostname did not resolve from this environment on 2026-11-04; do not claim a live staging check until it runs successfully.

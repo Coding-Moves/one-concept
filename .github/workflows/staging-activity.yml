@@ -26,10 +26,14 @@ jobs:
           set -euo pipefail
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
-          status="$(curl --silent --show-error --fail --max-time 20 --connect-timeout 8 \
+          probe_url="https://zhrulokgngjceqgjkcmw.supabase.co/functions/v1/api/health?activity=$(date -u +%s)"
+          if ! status="$(curl --silent --show-error --fail --max-time 20 --connect-timeout 8 \
             --retry 2 --retry-delay 3 --retry-all-errors \
-            --output "$response_file" --write-out '%{http_code}' \
-            'https://zhrulokgngjceqgjkcmw.supabase.co/functions/v1/api/health')"
+            --header 'Cache-Control: no-cache' \
+            --output "$response_file" --write-out '%{http_code}' "$probe_url")"; then
+            echo '::error::Staging health request failed. Check whether the Supabase staging project is paused; resume it and rerun this workflow.'
+            exit 1
+          fi
           python - "$response_file" "$status" <<'PY'
           import json
           import sys

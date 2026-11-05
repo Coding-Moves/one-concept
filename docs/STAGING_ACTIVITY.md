@@ -8,7 +8,8 @@ is active; it cannot wake a paused project.
 
 `.github/workflows/staging-activity.yml` makes an external, read-only request to
 the staging Edge API's public `/health` route three times per day. That route
-calls the database-backed `edge_api_health` RPC, and the job accepts only HTTP
+calls the database-backed `edge_api_health` RPC with a unique, uncached URL,
+and the job accepts only HTTP
 200 with `{"status":"ok","database":"reachable"}`. It uses no account,
 service-role key, email, or test data. The URL is fixed to the **staging**
 project so this schedule never exercises production. GitHub runs scheduled

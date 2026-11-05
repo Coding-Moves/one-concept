@@ -11,6 +11,7 @@ claims as completed work.
 
 - The owner asked to move to the next open issues after #457 closed through PR #482. Scope this chunk to a scheduled, read-only check of the existing staging API/database and an operator recovery note; keep the production release separate. Supabase says Free projects may pause after low user database activity and a few external requests each day usually help but do not guarantee availability. A database trigger cannot wake a paused project. The existing staging hostname did not resolve from this environment on 2026-11-04; do not claim a live staging check until it runs successfully.
 - `53a14a0` adds a three-times-daily GitHub Actions request to staging `/health`, whose Edge handler invokes the database-backed `edge_api_health` RPC. The workflow has a manual trigger, no credentials, and a strict 200/JSON response check. YAML and Bash parsed; mocked healthy, unhealthy, HTTP-error, and malformed-JSON responses behaved as intended. The production `/health` response shape was confirmed live; staging remains unverified because its hostname did not resolve. After review/merge, restore staging if paused, run the new workflow once, then close #472 only if the live probe succeeds. No SQL migration or production release is involved.
+- Re-review added a unique no-cache request so each scheduled run reaches the API/database, and an actionable CI error when the staging request cannot connect. The live staging check is still pending.
 
 ### #457 production photo upload follow-up — 2026-11-04
 

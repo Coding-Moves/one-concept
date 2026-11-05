@@ -36,7 +36,8 @@ export function publicProfileUrl(path: string): string {
   return `${base.origin}${path}`;
 }
 export function profileTokenFromLink(link: string): string | null {
-  const scheme = 'com.codingmoves.oneconcept://';
+  const scheme = process.env.EXPO_PUBLIC_APP_VARIANT === 'staging'
+    ? 'com.codingmoves.oneconcept.staging://' : 'com.codingmoves.oneconcept://';
   if (link.startsWith(scheme)) return /^p\/([A-Za-z0-9_-]{43})$/.exec(link.slice(scheme.length))?.[1] ?? null;
   try {
     const url = new URL(link);

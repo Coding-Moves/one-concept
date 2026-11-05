@@ -84,6 +84,9 @@ jobs:
   preview_ota:
     needs: schema
     runs-on: ubuntu-latest
+    env:
+      APP_VARIANT: staging
+      EXPO_PUBLIC_APP_VARIANT: staging
     defaults:
       run:
         working-directory: mobile
@@ -113,8 +116,8 @@ jobs:
 
       - name: Validate mobile configuration before publication
         run: |
-          eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
-          eas env:exec preview 'node scripts/validate-public-config.cjs --release' --non-interactive
+          APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
+          eas env:exec preview 'node scripts/validate-public-config.cjs --release --variant=staging' --non-interactive
 
       - name: Publish preview OTA
         env:
@@ -124,6 +127,9 @@ jobs:
   production_ota:
     needs: preview_ota
     runs-on: ubuntu-latest
+    env:
+      APP_VARIANT: production
+      EXPO_PUBLIC_APP_VARIANT: production
     # A second protected approval lets the owner test the preview build before
     # the installed production runtime receives a new API address.
     environment: production-schema
@@ -151,7 +157,7 @@ jobs:
       - run: npm ci
       - name: Validate production public configuration
         run: |
-          eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
+          eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
           eas env:exec production 'node ../.github/scripts/check-production-public-config.cjs' --non-interactive
       - name: Publish production OTA after preview approval
         env:

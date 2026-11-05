@@ -11,7 +11,7 @@ on:
         description: "Build profile from eas.json"
         type: choice
         default: preview
-        options: [development, preview, production]
+        options: [development, preview, staging-development, production]
 
 jobs:
   build:
@@ -34,6 +34,16 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - run: npm ci
+
+      - name: Validate target public configuration
+        env:
+          PROFILE: ${{ github.event.inputs.profile }}
+        run: |
+          if [[ "$PROFILE" == preview || "$PROFILE" == staging-development ]]; then
+            APP_VARIANT=staging EXPO_PUBLIC_APP_VARIANT=staging eas env:exec preview 'node scripts/validate-public-config.cjs --release --variant=staging' --non-interactive
+          elif [[ "$PROFILE" == production ]]; then
+            APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
+          fi
 
       - name: Build Android
         run: eas build --platform android --profile ${{ github.event.inputs.profile }} --non-interactive --no-wait

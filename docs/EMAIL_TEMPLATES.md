@@ -86,9 +86,11 @@ origin. The public web account requests `/account/callback` for both flows.
 The Site URL remains the fallback for earlier app versions, and all three
 HTTPS destinations must be allowed in Supabase's URL Configuration.
 Reviewer invitations instead request the exact
-`https://coding-moves-one-concept-review.netlify.app/auth/callback` URL from the
-server. Add it to the allowed Redirect URLs and set the API's
-`EDITORIAL_INVITE_REDIRECT_URL` to that value. The invitation template does not
+`https://review.oneconcept.codingmoves.com/auth/callback` URL from the
+server **after** the first-party domain and HTTPS are verified. Add it to the
+allowed Redirect URLs and set the API's `EDITORIAL_INVITE_REDIRECT_URL` to that
+value. Retain the old Netlify callback during the transition. The invitation
+template does not
 use Supabase's `{{ .SiteURL }}`, which is why its visible copy no longer says
 `localhost:3000`. Keep the Supabase Site URL on the working public learner
 fallback described in [AUTH_REDIRECTS.md](AUTH_REDIRECTS.md); a template cannot
@@ -98,6 +100,8 @@ editorial membership.
 Do not replace verification links with those landing-page URLs. Follow the
 [authentication redirect runbook](AUTH_REDIRECTS.md) before testing the emails.
 See [Supabase email templates](https://supabase.com/docs/guides/auth/auth-email-templates).
+Follow [REVIEW_DOMAIN_ROLLOUT.md](REVIEW_DOMAIN_ROLLOUT.md) before installing
+the updated templates: their icon and reviewer sign-in link use the new host.
 
 ## Sending and activation
 

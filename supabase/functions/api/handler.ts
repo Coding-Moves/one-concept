@@ -2,7 +2,7 @@
 
 import { conceptPreview, editorialDigest, revisionPreview, stageLessonBody } from './editorial_preview.ts';
 import { AvatarInputError, normalizeAvatar } from './avatar_image.ts';
-import { publicPage } from './public_pages.ts';
+import { DEFAULT_PUBLIC_SITE, publicPage } from './public_pages.ts';
 
 export type ApiConfig = {
   supabaseUrl: string;
@@ -10,6 +10,7 @@ export type ApiConfig = {
   serviceRoleKey: string;
   rateLimit?: { readsPerMinute: number; writesPerMinute: number };
   allowedOrigins: readonly string[];
+  publicSiteUrl?: string;
   contentLowWatermark?: number;
   contentReservePerTopic?: number;
   contentActiveDays?: number;
@@ -1037,6 +1038,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
     const parsed = new URL(origin);
     return parsed.origin !== origin || (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1');
   })) throw new Error('Allowed origins must be exact HTTPS origins or local development origins');
+  const publicSiteUrl = config.publicSiteUrl ?? DEFAULT_PUBLIC_SITE;
+  const site = new URL(publicSiteUrl);
+  if (site.origin !== publicSiteUrl || (site.protocol !== 'https:' &&
+      !['localhost', '127.0.0.1'].includes(site.hostname))) {
+    throw new Error('PUBLIC_SITE_URL must be an exact HTTPS origin or a local development origin');
+  }
   const low = config.contentLowWatermark ?? 10;
   const reserve = config.contentReservePerTopic ?? 60;
   const activeDays = config.contentActiveDays ?? 90;
@@ -1063,7 +1070,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
     const requestUrl = new URL(request.url);
     const path = routePath(requestUrl.pathname);
     if (path === null) return httpError(404, 'Not Found', cors);
-    const page = publicPage(path, request.method, requestUrl, cors);
+    const page = publicPage(path, request.method, requestUrl, cors, publicSiteUrl);
     if (page) return page;
     const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
     const publicProfile = /^\/v1\/public-profiles\/([^/]+)$/.exec(path);

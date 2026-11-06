@@ -82,11 +82,10 @@ The Edge `worker` function runs a bounded revision batch before refill;
 same SQL statement as a published lesson. `schemas/daily.py` adds nullable
 `ConceptOut.review`; detail, daily selection and folded state/review paths use it.
 `mobile/src/services/conceptMapping.ts` shares version validation across detail,
-daily and cached reads. `components/ReviewAttribution.tsx` renders borderless
-credit in `ConceptDetailScreen` and below the Today lesson card. Legacy and
-mismatched-version metadata have no label.
-`components/CardInformation.tsx` supplies the shared card's three-dot metadata
-sheet on Today and saved/history detail, using that same exact-version check.
+daily and cached reads. `components/CardInformation.tsx` supplies the shared
+card's three-dot metadata sheet on Today and saved/history detail, including
+exact-version reviewer name and date. There is no reviewer footer below the
+card; legacy and mismatched-version metadata have no reviewer label.
 `services/state.py` and `schemas/me.py` expose `bookmark_versions` aligned with
 all saved slugs in `/v1/me/state`, including compact responses.
 `mobile/src/services/savedConceptSync.ts` uses these versions to replace only

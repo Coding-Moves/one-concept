@@ -2881,3 +2881,10 @@ Copy this structure when a task is assigned; replace placeholders with facts.
 - `b38aaf2` stores reviewed MCQs with published concepts, backfills exact-version approved revisions, and adds frozen weekly quiz/append-only attempt tables with the schema contract. `574de6b` adds the authenticated server selection and scoring endpoints plus PostgreSQL integration coverage. `32edf5c` adds the mobile Quiz tab with eligibility, seven answer choices, result feedback and reattempts.
 - Passed: disposable PostgreSQL 16 focused schema/publication/quiz tests (**16 passed**) and mobile TypeScript. The full mobile suite reported **70 passed, 1 failed** in the unrelated public-config subprocess test; a focused rerun also failed without its expected diagnostics.
 - No production migration, deployment, release version or OTA update has occurred. Next: inspect the final diff and hosted CI, resolve any actionable review finding, then mark the PR ready for owner review.
+
+### 2026-11-06 flashcard recall layout and reviewer placement
+
+- Branch `codex/flashcard-detail-layout` targets `develop`. The recall face now starts below its flip and Card information controls, including for long prompts at 320px. Today and Concept detail no longer show a separate reviewer footer; exact-version reviewer name and date remain in Card information.
+- Mobile TypeScript and all 120 Node tests passed. Exported web browser fixtures passed in light and dark themes for recall layout, Today/History/Saved reviewer details, offline cache, corrected content, and unavailable cards. A phone-size mocked screenshot was inspected; native Android still needs a post-release check.
+- No migration, Edge Function, Cron, or production deployment change. [PR #492](https://github.com/Coding-Moves/one-concept/pull/492) targets `develop`; all four hosted checks passed on its original tip. The owner chose to merge it personally. The release PR follows that merge.
+- Re-review of PR #492 found a stale provenance guide and rollout check that still described the removed footer; both now point to Card information. The code and browser checks needed no further change.

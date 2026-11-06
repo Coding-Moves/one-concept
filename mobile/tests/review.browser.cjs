@@ -5,7 +5,7 @@ const rejectReview=process.argv.includes('--reject-review');
 if(!root || !fs.existsSync(path.join(root,'index.html'))) throw Error('Pass the exported web directory');
 const version=require('../app.config.js').expo.version;
 const today=new Date().toISOString().slice(0,10);
-const concept={id:'33333333-3333-4333-8333-333333333333',slug:'known-lesson',title:'Reviewing invariants',summary:'An invariant is a rule that stays true while a system changes. Use it to check whether each operation keeps your data consistent.',example:'A library book can have one active borrower. Returning and lending it should preserve that rule.',flashcard:{front:'What is an invariant?',back:'A rule that stays true as a system changes.'},topic_slug:'computer-science',topic_name:'Computer Science',content_version:2,like_count:0,review:{name:'Registered Reviewer',reviewed_at:'2026-10-01T12:00:00Z',content_version:2}};
+const concept={id:'33333333-3333-4333-8333-333333333333',slug:'known-lesson',title:'Reviewing invariants',summary:'An invariant is a rule that stays true while a system changes. Use it to check whether each operation keeps your data consistent.',example:'A library book can have one active borrower. Returning and lending it should preserve that rule.',flashcard:{front:'What changes when a blue-green deployment promotes the new version and keeps the previous environment available for rollback?',back:'A rule that stays true as a system changes.'},topic_slug:'computer-science',topic_name:'Computer Science',content_version:2,like_count:0,review:{name:'Registered Reviewer',reviewed_at:'2026-10-01T12:00:00Z',content_version:2}};
 const session={access_token:'fixture',refresh_token:'fixture-refresh',token_type:'bearer',expires_in:864000,expires_at:Math.floor(Date.now()/1000)+864000,user:{id:'11111111-1111-1111-1111-111111111111',email:'fixture@example.invalid',aud:'authenticated',role:'authenticated',app_metadata:{},user_metadata:{},created_at:'2026-01-01T00:00:00Z'}};
 const server=http.createServer((req,res)=>{
  const relative=decodeURIComponent(new URL(req.url,'http://localhost').pathname);
@@ -13,6 +13,14 @@ const server=http.createServer((req,res)=>{
  try {res.setHeader('Content-Type',({'.html':'text/html','.js':'application/javascript','.ttf':'font/ttf','.png':'image/png'})[path.extname(file)]||'application/octet-stream');res.end(fs.readFileSync(file));}
  catch{res.statusCode=404;res.end();}
 });
+async function assertRecallClearsControls(page){
+ const prompt=await page.getByText(concept.flashcard.front,{exact:true}).last().boundingBox();
+ const flip=await page.getByRole('button',{name:'Show lesson'}).boundingBox();
+ const info=await page.getByRole('button',{name:'Card information'}).boundingBox();
+ assert.ok(prompt&&flip&&info,'Recall prompt and controls must be visible');
+ const controlsBottom=Math.max(flip.y+flip.height,info.y+info.height);
+ assert.ok(prompt.y>=controlsBottom+4,`Recall prompt starts at ${prompt.y}, controls end at ${controlsBottom}`);
+}
 (async()=>{
  await new Promise(r=>server.listen(4781,'127.0.0.1',r));
  const browser=await chromium.launch({executablePath:process.env.PLAYWRIGHT_CHROMIUM_PATH,headless:true,args:['--no-sandbox']});
@@ -67,12 +75,24 @@ const server=http.createServer((req,res)=>{
    await page.getByRole('button',{name:'Close card information'}).click();
    await page.getByRole('button',{name:'Show recall answer'}).click();
    await expect(page.getByText('A rule that stays true as a system changes.',{exact:true})).toBeVisible();
+   await page.waitForTimeout(350);
+   await assertRecallClearsControls(page);
    await page.getByRole('button',{name:'Show lesson'}).click();
    await page.getByRole('tab',{name:'History'}).click();
    await page.getByRole('button',{name:'Open Reviewing invariants'}).click();
    await page.getByRole('button',{name:'Card information'}).click();
    await expect(page.getByText('Registered Reviewer',{exact:true})).toBeVisible();
    await page.getByRole('button',{name:'Close card information'}).click();
+   await page.getByRole('button',{name:'Show recall answer'}).click();
+   await page.waitForTimeout(350);
+   await assertRecallClearsControls(page);
+   if(process.env.CARD_LAYOUT_SCREENSHOT_DIR){
+    fs.mkdirSync(process.env.CARD_LAYOUT_SCREENSHOT_DIR,{recursive:true});
+    await page.screenshot({path:path.join(process.env.CARD_LAYOUT_SCREENSHOT_DIR,`quick-recall-detail-${theme}.png`)});
+   }
+   await page.setViewportSize({width:320,height:568});
+   await assertRecallClearsControls(page);
+   await page.setViewportSize({width:390,height:844});
    await page.getByRole('button',{name:'Close',exact:true}).click();
    await page.getByRole('tab',{name:'Today'}).click();
    assert.equal(completions,0);

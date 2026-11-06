@@ -50,59 +50,71 @@ fs.mkdirSync(output,{recursive:true});
    });
    await context.route('**/auth/v1/**',route=>route.fulfill({status:200,contentType:'application/json',body:JSON.stringify(session)}));
    const page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
-   const credit=()=>page.getByText(/^Reviewed by /).filter({visible:true});
+   const footer=()=>page.getByText(/^Reviewed by /).filter({visible:true});
+   const expectReviewer=async name=>{
+    await expect(footer()).toHaveCount(0);
+    await page.getByRole('button',{name:'Card information',exact:true}).click();
+    await expect(page.getByRole('heading',{name:'Card information',exact:true})).toBeVisible();
+    if(name){
+     await expect(page.getByText('Reviewed by',{exact:true})).toBeVisible();
+     await expect(page.getByText(name,{exact:true})).toBeVisible();
+    } else await expect(page.getByText('No verified reviewer is recorded for this card version.')).toBeVisible();
+    await page.getByRole('button',{name:'Close card information'}).click();
+   };
+   const expectNoCard=async()=>{
+    await expect(footer()).toHaveCount(0);
+    await expect(page.getByRole('button',{name:'Card information',exact:true})).toHaveCount(0);
+   };
    await page.goto('http://127.0.0.1:4781');
    await expect(page.getByText(lesson.title,{exact:true})).toBeVisible();
-   await expect(credit()).toHaveCount(0);
+   await expectReviewer(null);
    // Same-version legacy attestation should appear after online refresh.
    const longName='Alexandra Maria Elizabeth Catherine Williams Thompson';
    lesson.review={name:longName,reviewed_at:'2026-10-01T12:00:00Z',content_version:2};
    await page.getByRole('button',{name:'Refresh today',exact:true}).click();
-   // The Today lesson and its detail use the same exact-version reviewer credit.
-   await expect(credit()).toHaveText('Reviewed by '+longName);
-   await credit().scrollIntoViewIfNeeded();
+   // Reviewer details remain in Card information, never below the card.
+   await expectReviewer(longName);
    await page.screenshot({path:path.join(output,`today-${theme}.png`)});
    await page.getByRole('tab',{name:'History'}).click();
    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
-   await expect(credit().last()).toHaveText('Reviewed by '+longName);
-   await credit().scrollIntoViewIfNeeded();
-   const metrics=await credit().evaluate(el=>({width:el.getBoundingClientRect().width,scroll:el.scrollWidth,client:el.clientWidth,border:getComputedStyle(el).borderTopWidth}));
+   await expectReviewer(longName);
+   await page.getByRole('button',{name:'Card information',exact:true}).click();
+   const metrics=await page.getByText(longName,{exact:true}).evaluate(el=>({width:el.getBoundingClientRect().width,scroll:el.scrollWidth,client:el.clientWidth}));
    assert.ok(metrics.width<=360 && metrics.scroll<=metrics.client+1,JSON.stringify(metrics));
-   assert.equal(parseFloat(metrics.border),0);
+   await page.getByRole('button',{name:'Close card information'}).click();
    await page.screenshot({path:path.join(output,`detail-${theme}.png`)});
    await page.getByRole('button',{name:'Close',exact:true}).click();
    await page.getByRole('tab',{name:'Profile'}).click();
    await page.getByText('Saved concepts',{exact:true}).click();
    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
-   await expect(credit().last()).toHaveText('Reviewed by '+longName);
+   await expectReviewer(longName);
    // Fresh version without evidence must remove the cached label entirely.
    lesson.content_version=3;lesson.summary='A newly published lesson body with no matching attribution.';lesson.review=null;
    await page.getByRole('button',{name:'Refresh lesson',exact:true}).click();
    await expect(page.getByText(lesson.summary,{exact:true}).last()).toBeVisible();
-   await expect(credit()).toHaveCount(0);
+   await expectReviewer(null);
    // New version receives its own name, including while the recall side is open.
    lesson.review={name:'Second Reviewer',reviewed_at:'2026-10-02T12:00:00Z',content_version:3};
    lesson.flashcard={front:'What must stay paired?',back:'The displayed body and its review evidence.'};
    await page.getByRole('button',{name:'Refresh lesson',exact:true}).click();
-   await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+   await expectReviewer('Second Reviewer');
    await page.getByRole('button',{name:'Show recall answer'}).click();
    await page.waitForTimeout(350); // Let the 280ms flip finish before inspecting its image.
    await expect(page.getByText(lesson.flashcard.back,{exact:true})).toBeVisible();
-   await expect(credit()).toHaveText('Reviewed by Second Reviewer');
-   await credit().scrollIntoViewIfNeeded();
+   await expectReviewer('Second Reviewer');
    await page.screenshot({path:path.join(output,`detail-recall-${theme}.png`)});
    await page.getByRole('button',{name:'Close',exact:true}).click();
    await page.getByRole('button',{name:'Back',exact:true}).click();
    await page.getByRole('tab',{name:'Today'}).click();
    await page.getByRole('button',{name:'Refresh today',exact:true}).click();
-   await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+   await expectReviewer('Second Reviewer');
    // Restart offline from a full cached state; no live metadata request needed.
    online=false;await page.reload();
    await expect(page.getByText(lesson.summary,{exact:true}).last()).toBeVisible();
-   await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+   await expectReviewer('Second Reviewer');
    await page.getByRole('tab',{name:'History'}).click();
    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
-   await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+   await expectReviewer('Second Reviewer');
    await page.getByRole('button',{name:'Close',exact:true}).click();
    // The fixture slug also exists in the bundled catalog: no demo resurrection.
    // A confirmed removal must replace an already painted cache, including on refresh.
@@ -110,30 +122,30 @@ fs.mkdirSync(output,{recursive:true});
    for(const status of [403,404,410]) {
     conceptStatus=200;
     await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
-    await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+    await expectReviewer('Second Reviewer');
     await expect(page.getByRole('button',{name:'Refresh lesson',exact:true})).toBeEnabled();
     // A temporary service error still permits reading the downloaded pair.
     conceptStatus=503;
     await page.getByRole('button',{name:'Refresh lesson',exact:true}).click();
     await expect(page.getByRole('button',{name:'Refresh lesson',exact:true})).toBeEnabled();
-    await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+    await expectReviewer('Second Reviewer');
     conceptStatus=status;
     await page.getByRole('button',{name:'Refresh lesson',exact:true}).click();
     await expect(page.getByRole('button',{name:'Try again',exact:true})).toBeVisible();
-    await expect(credit()).toHaveCount(0);
+    await expectNoCard();
     await expect(page.getByText(lesson.summary,{exact:true}).filter({visible:true})).toHaveCount(0);
     await expect.poll(()=>page.evaluate(slug=>localStorage.getItem('one-concept/concepts/v1/'+slug),lesson.slug)).toBe(null);
     await page.getByRole('button',{name:'Close',exact:true}).click();
     // The next detail visit must also respect the server's denial.
     await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
     await expect(page.getByRole('button',{name:'Try again',exact:true})).toBeVisible();
-    await expect(credit()).toHaveCount(0);
+    await expectNoCard();
     await page.getByRole('button',{name:'Close',exact:true}).click();
    }
    // Refill before the existing offline/corrupt-cache checks.
    conceptStatus=200;
    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
-   await expect(credit()).toHaveText('Reviewed by Second Reviewer');
+   await expectReviewer('Second Reviewer');
    await page.getByRole('button',{name:'Close',exact:true}).click();
    online=false;
    // A corrupted/stale cache pair must never show a mismatched version label.
@@ -149,18 +161,18 @@ fs.mkdirSync(output,{recursive:true});
    });
    await page.reload();
    await expect(page.getByText(lesson.summary,{exact:true}).last()).toBeVisible();
-   await expect(credit()).toHaveCount(0);
+   await expectReviewer(null);
    await page.getByRole('tab',{name:'History'}).click();
    await page.getByRole('button',{name:'Open '+lesson.title,exact:true}).click();
    await expect(page.getByText(lesson.summary,{exact:true}).last()).toBeVisible();
-   await expect(credit()).toHaveCount(0);
+   await expectReviewer(null);
    await page.getByRole('button',{name:'Close',exact:true}).click();
    await page.getByRole('tab',{name:'Profile'}).click();
    await page.getByText('Sign out',{exact:true}).click();
    await expect(page.getByText('Welcome back',{exact:true})).toBeVisible();
    await expect.poll(async()=>page.evaluate(()=>Object.keys(localStorage).filter(k=>k.startsWith('one-concept/concepts/')).length)).toBe(0);
    assert.deepEqual(errors,[]);
-   console.log(`${theme}: legacy/attested/corrected attribution, Today/History/Saved, recall, offline restart, confirmed removal, temporary server failure, invalid cache, sign-out and wrapped borderless credit passed`);
+   console.log(`${theme}: reviewer details in Card information only, Today/History/Saved, recall, offline restart, confirmed removal, temporary server failure, invalid cache, sign-out passed`);
    await context.close();
   }
  } finally {await browser.close();server.close();}

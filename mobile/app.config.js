@@ -24,7 +24,7 @@ module.exports = {
     name: staging ? 'One Concept Staging' : 'One Concept',
     slug: 'one-concept',
     owner: 'coding-moves',
-    version: '1.10.18',
+    version: '1.10.19',
     scheme: staging ? 'com.codingmoves.oneconcept.staging' : 'com.codingmoves.oneconcept',
     orientation: 'portrait',
     icon: './assets/icon.png',

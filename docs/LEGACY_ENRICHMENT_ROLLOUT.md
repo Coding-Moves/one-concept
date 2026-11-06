@@ -48,7 +48,8 @@ does not deploy the live website, API, or worker.
    publish each revision only after a human decision. Blocked/failed entries
    remain visible for manual correction or a later batch.
 6. In the learner app, confirm a published revised lesson displays the exact
-   reviewer credit and current body. A prepared draft must not change the
+   reviewer name and date in Card information and the current body on the card.
+   A prepared draft must not change the
    learner card. Use another account to check reviewer permissions and assignment
    notifications. Check the backend deployment commit and Netlify production
    branch before treating this as a live test.

@@ -7,7 +7,6 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { ConceptActions } from '../components/ConceptActions';
 import { ConceptCard } from '../components/ConceptCard';
 import { LessonResources } from '../components/LessonResources';
-import { ReviewAttribution } from '../components/ReviewAttribution';
 import { PrimaryButton } from '../components/PrimaryButton';
 import { SkeletonBlock, SkeletonConceptCard } from '../components/Skeleton';
 import { SubtopicCompletionCard } from '../components/SubtopicCompletionCard';
@@ -168,7 +167,6 @@ export function TodayScreen() {
           ) : concept ? (
             <>
               <ConceptCard concept={concept} />
-              <ReviewAttribution concept={concept} />
               <ConceptActions concept={concept} />
               <LessonResources concept={concept} />
             </>

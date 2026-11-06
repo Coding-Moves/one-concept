@@ -212,8 +212,8 @@ Using the fixture export above, run:
 node tests/reviewAttribution.browser.cjs /tmp/one-concept-offline
 ```
 
-This checks light/dark Today without reviewer credit, History/Saved detail
-with credit, long reviewer names, legacy
+This checks light/dark Today, History and Saved reviewer details only within
+Card information, including long reviewer names and legacy
 attestation without a version change, removal/replacement after corrections,
 recall, offline restart, invalid cached metadata and sign-out cleanup. Screenshots
 are written to `/tmp/one-concept-280-screens` (override `UI_SCREENSHOT_DIR`). The

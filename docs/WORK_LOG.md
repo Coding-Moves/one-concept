@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### First-party reviewer domain live setup — 2026-11-06
+
+- The replacement `coding-moves-one-concept-review` Netlify site is published under the intended owner account. Cloudflare has a DNS-only `review.oneconcept` CNAME to `coding-moves-one-concept-review.netlify.app`. The first-party origin now has a valid HTTPS certificate, and `/`, `/about.html`, `/privacy.html`, `/one-concept-icon.png`, `/account`, and `/auth/callback` each returned HTTP 200 over HTTPS. The legacy Netlify hostname remains available.
+- Google Search Console already showed the `codingmoves.com` Domain property as verified by the Google account associated with the OAuth project. Google Cloud OAuth Branding now uses the first-party About and Privacy URLs and lists `codingmoves.com` alongside the legacy Netlify domain. Reverification succeeded, and Google Cloud reports that the verified branding is being shown to users. The OAuth client's existing `https://developers.google.com/oauthplayground` redirect was not changed.
+- A Netlify SSL support request was submitted while certificate provisioning was failing; the certificate became valid afterward. Netlify's confirmation page asks for an email reply to confirm the request. The owner can tell support the certificate is working if that message arrives.
+- The code and template changes remain in draft PR #487. Production Supabase Auth redirects, Edge URL settings, dashboard email templates, EAS public URL, and controlled signup/recovery/invitation tests have **not** been changed or completed. Keep the legacy origin and redirects until those tests pass. Content generation and review queue switches are separate from this domain cutover.
+
 ### First-party reviewer domain and content activation — 2026-11-05
 
 - The owner confirmed `codingmoves.com` for Google Cloud OAuth and the shared review origin `review.oneconcept.codingmoves.com` from #480. Scope this chunk to a safe domain cutover in `codex/480-review-domain`; keep the existing Netlify hostname working until live HTTPS, Auth, email, and OAuth checks pass. Content refill activation is a separate operational step that still requires a reviewed title plan, queue capacity, and live worker verification.

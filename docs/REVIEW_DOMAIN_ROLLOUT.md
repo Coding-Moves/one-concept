@@ -78,7 +78,8 @@ review origin.
    `EXPO_PUBLIC_WEB_BASE_URL` to the new origin for the next compatible app
    release. This is a public URL, not a key. The staging EAS values remain
    isolated. The production Release workflow's staging prerequisite is tracked
-   in #255 and must be resolved before that release if staging stays deferred.
+   in #255; while staging remains deferred, Release skips preview and retains
+   its two protected production gates.
 
 ## Live acceptance
 

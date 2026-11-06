@@ -40,24 +40,25 @@ Production release flow. Keep it boring and repeatable.
    worker rejects unsigned calls, and checks API `/health`. Keep generation
    gates unchanged during deployment, then verify the release-specific API,
    scheduled-job, and client smoke checks. A merge alone does not deploy them.
-6. On `develop`, apply the reviewed staging migrations, run **Deploy Supabase API
-   and worker to staging**, and record its successful run ID. If this release
-   changes `runtimeVersion`, build a compatible **One Concept Staging** APK from
-   the reviewed `develop` commit before starting Release (EAS Build profile
-   `preview`). The staging and production packages can coexist on one phone.
-   Verify the staging runtime matches the preview OTA target and keep the
-   production app installed while testing.
+6. When the staging app is active, apply the reviewed staging migrations on
+   `develop`, run **Deploy Supabase API and worker to staging**, and record its
+   successful run ID. For a changed `runtimeVersion`, build a compatible **One
+   Concept Staging** APK from the reviewed `develop` commit before Release (EAS
+   Build profile `preview`) and test it beside the production app. While staging
+   activation is deferred under #255, leave the staging run ID blank; Release
+   skips preview without using production credentials or URLs as substitutes.
 7. Open **GitHub Actions → Release → Run workflow**, select **main**, and enter
    the full 40-character main commit SHA in `backend_revision` and the successful
    protected production deployment Actions run ID in `production_deploy_run_id`,
-   and the successful staging deployment run ID in `staging_deploy_run_id`. The
-   workflow checks that the deployment ran from that exact current `main` SHA,
-   that the staging backend matches the release backend, rejects an existing
-   version tag before publishing, and verifies the actual schema. It publishes
-   preview OTA first, then waits at a second
-   `production-schema` approval. Test the compatible preview build on a real
-   device and confirm the effective production API/Auth configuration before
-   approving that gate.
+   and, when staging is active, its successful deployment run ID in
+   `staging_deploy_run_id`. The workflow checks that production deployment ran
+   from the exact current `main` SHA, rejects an existing version tag, and
+   verifies the actual schema. A supplied staging ID must match the release
+   backend and publish preview successfully; a blank ID skips preview. Both
+   paths wait at the second `production-schema` approval before production OTA.
+   Test the compatible preview build when used and confirm the effective
+   production API/Auth configuration before approving that gate. A release that
+   changes native runtime also needs a new production APK and phone check.
 8. After the second approval, the workflow rechecks current `main`, publishes
    production OTA, creates the version tag/GitHub Release, and dispatches the
    native-gated APK build. A changed native `runtimeVersion` requires a new APK;

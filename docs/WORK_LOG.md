@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Release 1.10.19 preparation — 2026-11-06
+
+- [PR #493](https://github.com/Coding-Moves/one-concept/pull/493) targets `develop` after the merged flashcard fix #492. Commits `bf188c4`, `a4edb1e`, and `59b226b` prepare the app version/card, guarded Release workflow, and handoff docs. The app version is `1.10.19`, with a matching What's New card for lesson links, readable recall questions with reviewer details in Card information, and clearer photo timeout guidance. The native runtime was already `1.10.19` because the staging-app work introduced `expo-dev-client`; this release needs a new production APK, and v1.10.18 installs cannot receive its OTA.
+- Issue #255 defers staging app activation. The Release workflow therefore accepts a blank staging deploy ID and skips preview OTA, while retaining the exact-main production deployment check, schema verification, and both protected production approvals. A supplied staging ID still requires a successful matching staging deployment and preview update; failure or cancellation cannot proceed to production.
+- No SQL migrations or migration-ledger changes appear in `main...develop`; all 136 ordered SQL files are recorded in `applied.txt`. Production's protected schema check still runs after the release merge. Production Edge deployment, EAS configuration checks, production OTA/APK, and phone acceptance remain post-merge actions. The first-party review domain still needs its separately documented Edge destination, dashboard email template, EAS public URL, and controlled auth/invite checks before declaring the cutover complete.
+- Local validation: mobile typecheck, 120 Node tests, Expo web fixture export, six light/dark browser card screenshots including narrow and landscape layouts, workflow YAML/guard assertions, version/card match, migration-ledger check, and `git diff --check` passed. The physical staging app and production phone have not been tested for this version.
+
 ### First-party reviewer domain live setup — 2026-11-06
 
 - The replacement `coding-moves-one-concept-review` Netlify site is published under the intended owner account. Cloudflare has a DNS-only `review.oneconcept` CNAME to `coding-moves-one-concept-review.netlify.app`. The first-party origin now has a valid HTTPS certificate, and `/`, `/about.html`, `/privacy.html`, `/one-concept-icon.png`, `/account`, and `/auth/callback` each returned HTTP 200 over HTTPS. The legacy Netlify hostname remains available.

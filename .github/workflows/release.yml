@@ -14,8 +14,8 @@ on:
         required: true
         type: string
       staging_deploy_run_id:
-        description: 'Successful staging API/worker deploy run for the reviewed develop backend'
-        required: true
+        description: 'Optional staging deploy run ID; leave blank while staging app activation is deferred'
+        required: false
         type: string
 
 # One release at a time: two quick merges must not race the tag check.
@@ -87,6 +87,7 @@ jobs:
 
   preview_ota:
     needs: schema
+    if: inputs.staging_deploy_run_id != ''
     runs-on: ubuntu-latest
     env:
       APP_VARIANT: staging
@@ -149,20 +150,23 @@ jobs:
         run: eas update --channel preview --environment preview --message "$MSG" --non-interactive
 
   production_ota:
-    needs: preview_ota
+    needs: [schema, preview_ota]
+    # A blank staging ID intentionally skips preview until #255 is activated.
+    # A supplied ID must produce a successful preview; failure never falls through.
+    if: ${{ always() && !cancelled() && needs.schema.result == 'success' && ((inputs.staging_deploy_run_id == '' && needs.preview_ota.result == 'skipped') || (inputs.staging_deploy_run_id != '' && needs.preview_ota.result == 'success')) }}
     runs-on: ubuntu-latest
     env:
       APP_VARIANT: production
       EXPO_PUBLIC_APP_VARIANT: production
-    # A second protected approval lets the owner test the preview build before
-    # the installed production runtime receives a new API address.
+    # A second protected approval allows the owner to verify preview when used
+    # and confirm production configuration before publication.
     environment: production-schema
     defaults:
       run:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v7
-      - name: Recheck current main after the preview period
+      - name: Recheck current main before production publication
         env:
           VERIFIED_BACKEND_SHA: ${{ inputs.backend_revision }}
         run: |
@@ -183,7 +187,7 @@ jobs:
         run: |
           eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
           eas env:exec production 'node ../.github/scripts/check-production-public-config.cjs' --non-interactive
-      - name: Publish production OTA after preview approval
+      - name: Publish production OTA after protected approval
         env:
           MSG: ${{ github.event.head_commit.message || 'release' }}
         run: eas update --channel production --environment production --message "$MSG" --non-interactive

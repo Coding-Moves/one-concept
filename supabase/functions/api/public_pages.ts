@@ -2,9 +2,13 @@
  * Supabase Edge Functions serve HTML responses as text/plain. Redirect browser
  * entry points to the hosted pages so confirmation and recovery can execute.
  */
-const PUBLIC_SITE = 'https://coding-moves-one-concept-review.netlify.app';
+// Keep the existing host as the fallback until the custom domain has working
+// HTTPS and its matching Auth redirect is configured. The cutover then needs
+// only PUBLIC_SITE_URL, not a redeploy or a change to issued email links.
+export const DEFAULT_PUBLIC_SITE = 'https://coding-moves-one-concept-review.netlify.app';
 
-export function publicPage(path: string, method: string, requestUrl: URL, cors: Headers): Response | null {
+export function publicPage(path: string, method: string, requestUrl: URL, cors: Headers,
+  siteOrigin: string): Response | null {
   if (!['/confirmed', '/reset-password', '/privacy'].includes(path)) return null;
   const headers = new Headers(cors);
   headers.set('cache-control', 'no-store');
@@ -16,7 +20,7 @@ export function publicPage(path: string, method: string, requestUrl: URL, cors: 
     return new Response(JSON.stringify({ detail: 'Method Not Allowed' }), { status: 405, headers });
   }
 
-  const target = new URL(path === '/privacy' ? '/privacy' : '/account/callback', PUBLIC_SITE);
+  const target = new URL(path === '/privacy' ? '/privacy' : '/account/callback', siteOrigin);
   if (path !== '/privacy') target.search = requestUrl.search;
   // Do not set a fragment on Location. Browsers inherit the incoming fragment
   // (which can hold Supabase auth tokens) without sending it to this function.

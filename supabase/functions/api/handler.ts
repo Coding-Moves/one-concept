@@ -2,7 +2,7 @@
 
 import { conceptPreview, editorialDigest, revisionPreview, stageLessonBody } from './editorial_preview.ts';
 import { AvatarInputError, normalizeAvatar } from './avatar_image.ts';
-import { publicPage } from './public_pages.ts';
+import { DEFAULT_PUBLIC_SITE, publicPage } from './public_pages.ts';
 
 export type ApiConfig = {
   supabaseUrl: string;
@@ -10,6 +10,7 @@ export type ApiConfig = {
   serviceRoleKey: string;
   rateLimit?: { readsPerMinute: number; writesPerMinute: number };
   allowedOrigins: readonly string[];
+  publicSiteUrl?: string;
   contentLowWatermark?: number;
   contentReservePerTopic?: number;
   contentActiveDays?: number;
@@ -55,11 +56,11 @@ class ClientBodyError extends Error {
 }
 
 class UpstreamError extends Error {
-  readonly component: 'auth' | 'database';
+  readonly component: 'auth' | 'database' | 'storage' | 'image';
   readonly status: number;
   readonly operation?: string;
   readonly reason?: 'timeout' | 'network';
-  constructor(component: 'auth' | 'database', status: number,
+  constructor(component: 'auth' | 'database' | 'storage' | 'image', status: number,
     operation?: string, reason?: 'timeout' | 'network') {
     super('Upstream unavailable');
     this.component = component;
@@ -929,9 +930,10 @@ async function readAvatar(request: Request): Promise<Uint8Array> {
 }
 
 async function uploadAvatar(key: string, bytes: Uint8Array,
-  config: ApiConfig, fetcher: Fetcher): Promise<boolean> {
+  config: ApiConfig, fetcher: Fetcher): Promise<void> {
+  let result: Response;
   try {
-    const result = await fetcher(config.supabaseUrl + '/storage/v1/object/profile-avatars/' + key, {
+    result = await fetcher(config.supabaseUrl + '/storage/v1/object/profile-avatars/' + key, {
       method: 'POST',
       headers: {
         apikey: config.serviceRoleKey,
@@ -943,8 +945,11 @@ async function uploadAvatar(key: string, bytes: Uint8Array,
       signal: AbortSignal.timeout(15000),
       redirect: 'error',
     });
-    return result.ok;
-  } catch { return false; }
+  } catch (error) {
+    throw new UpstreamError('storage', 0, 'avatar-upload',
+      error instanceof DOMException && error.name === 'TimeoutError' ? 'timeout' : 'network');
+  }
+  if (!result.ok) throw new UpstreamError('storage', result.status, 'avatar-upload');
 }
 
 function historyCursor(query: URLSearchParams): string | null {
@@ -1033,6 +1038,12 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
     const parsed = new URL(origin);
     return parsed.origin !== origin || (parsed.protocol !== 'https:' && parsed.hostname !== 'localhost' && parsed.hostname !== '127.0.0.1');
   })) throw new Error('Allowed origins must be exact HTTPS origins or local development origins');
+  const publicSiteUrl = config.publicSiteUrl ?? DEFAULT_PUBLIC_SITE;
+  const site = new URL(publicSiteUrl);
+  if (site.origin !== publicSiteUrl || (site.protocol !== 'https:' &&
+      !['localhost', '127.0.0.1'].includes(site.hostname))) {
+    throw new Error('PUBLIC_SITE_URL must be an exact HTTPS origin or a local development origin');
+  }
   const low = config.contentLowWatermark ?? 10;
   const reserve = config.contentReservePerTopic ?? 60;
   const activeDays = config.contentActiveDays ?? 90;
@@ -1059,7 +1070,7 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
     const requestUrl = new URL(request.url);
     const path = routePath(requestUrl.pathname);
     if (path === null) return httpError(404, 'Not Found', cors);
-    const page = publicPage(path, request.method, requestUrl, cors);
+    const page = publicPage(path, request.method, requestUrl, cors, publicSiteUrl);
     if (page) return page;
     const concept = /^\/v1\/concepts\/([^/]+?)(?:\/(like|save))?$/.exec(path);
     const publicProfile = /^\/v1\/public-profiles\/([^/]+)$/.exec(path);
@@ -2337,11 +2348,15 @@ export function createHandler(config: ApiConfig, fetcher: Fetcher = fetch,
             throw new AvatarInputError(415, 'Choose a JPEG, PNG, or WebP photo');
           }
           const bytes = await readAvatar(request);
-          const normalized = await avatarNormalizer(bytes, contentType);
-          key = 'avatars/' + userId + '/' + crypto.randomUUID().replaceAll('-', '') + '.jpg';
-          if (!await uploadAvatar(key, normalized, config, fetcher)) {
-            return httpError(503, 'We could not save your photo. Please try again.', cors);
+          let normalized: Uint8Array;
+          try {
+            normalized = await avatarNormalizer(bytes, contentType);
+          } catch (error) {
+            if (error instanceof AvatarInputError) throw error;
+            throw new UpstreamError('image', 0, 'avatar-normalize');
           }
+          key = 'avatars/' + userId + '/' + crypto.randomUUID().replaceAll('-', '') + '.jpg';
+          await uploadAvatar(key, normalized, config, fetcher);
         }
         const data = await rpc('edge_api_set_avatar', {
           p_user_id: userId, p_avatar_key: key, p_compact: compact, p_today: null,

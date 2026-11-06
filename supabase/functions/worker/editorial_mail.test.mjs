@@ -28,7 +28,7 @@ test('Gmail OAuth then MIME send succeeds without leaking credentials into body'
   assert.match(mime, /Message-ID: <11111111-1111-4111-8111-111111111111@example.test>/);
   const html = atob(mime.split('Content-Type: text/html; charset=UTF-8')[1].split('\r\n\r\n')[1].split('\r\n')[0]);
   assert.match(html, /src="https:\/\/review.example.test\/one-concept-icon.png"/);
-  assert.match(html, /by <a href="https:\/\/codingmoves.netlify.app\/products\/"/);
+  assert.match(html, /by <a href="https:\/\/codingmoves.com\/products\/"/);
 });
 
 test('expired OAuth token is terminal; temporary OAuth failure retries', async () => {
@@ -83,6 +83,6 @@ test('staging email identifies itself and has no live review button', async () =
   const htmlPart = mime.split('Content-Type: text/html; charset=UTF-8')[1];
   const html = atob(htmlPart.split('\r\n\r\n')[1].split('\r\n')[0]);
   assert.match(html, /STAGING DELIVERY TEST/);
-  assert.match(html, /by <a href="https:\/\/codingmoves.netlify.app\/products\/"/);
+  assert.match(html, /by <a href="https:\/\/codingmoves.com\/products\/"/);
   assert.equal(html.includes('Open assigned lesson'), false);
 });

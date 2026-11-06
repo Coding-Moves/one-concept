@@ -11,7 +11,7 @@ on:
         description: "Build profile from eas.json"
         type: choice
         default: preview
-        options: [development, preview, production]
+        options: [development, preview, staging-development, production]
 
 jobs:
   build:
@@ -21,6 +21,20 @@ jobs:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v7
+
+      - name: Require the reviewed branch for this build profile
+        shell: bash
+        env:
+          PROFILE: ${{ github.event.inputs.profile }}
+        run: |
+          set -euo pipefail
+          if [[ "$PROFILE" == production ]]; then
+            target=main
+          else
+            target=develop
+          fi
+          test "$GITHUB_REF" = "refs/heads/$target"
+          test "$(git ls-remote origin "refs/heads/$target" | cut -f1)" = "$GITHUB_SHA"
 
       - uses: actions/setup-node@v7
         with:
@@ -34,6 +48,16 @@ jobs:
           token: ${{ secrets.EXPO_TOKEN }}
 
       - run: npm ci
+
+      - name: Validate target public configuration
+        env:
+          PROFILE: ${{ github.event.inputs.profile }}
+        run: |
+          if [[ "$PROFILE" == development || "$PROFILE" == preview || "$PROFILE" == staging-development ]]; then
+            APP_VARIANT=staging EXPO_PUBLIC_APP_VARIANT=staging eas env:exec preview 'node scripts/validate-public-config.cjs --release --variant=staging' --non-interactive
+          elif [[ "$PROFILE" == production ]]; then
+            APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
+          fi
 
       - name: Build Android
         run: eas build --platform android --profile ${{ github.event.inputs.profile }} --non-interactive --no-wait

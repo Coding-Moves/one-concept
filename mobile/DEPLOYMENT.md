@@ -6,9 +6,11 @@ reaches installed phones without a reinstall.
 
 ## How the pieces fit
 
-- **Channels** — every build is pinned to a channel (`development`, `preview`,
-  `production` in [eas.json](eas.json)). `eas update --channel X` publishes only
-  to builds from channel X, so production phones never receive preview code.
+- **Channels** — staging builds, including the development client, use the
+  `preview` channel; live builds use `production` in [eas.json](eas.json).
+  `eas update --channel X` publishes only to builds from channel X. Staging
+  also has a distinct package and native runtime; see
+  [the staging app guide](../docs/STAGING_APP.md).
 - **Runtime version** — pinned explicitly in [app.config.js](app.config.js), decoupled
   from the marketing `version` (which release PRs bump freely). An update is
   only delivered to builds with the same `runtimeVersion`. **Bump
@@ -59,21 +61,25 @@ so updated devices can still open old shared-profile QR links.
 
 ```bash
 cd mobile
-eas build --platform android --profile preview   # produces an installable APK
+eas build --platform android --profile preview   # separate staging APK after staging setup
 ```
 
 When it finishes, open the build page link (or expo.dev → project → builds) on
 your phone and install the APK directly, or scan the QR code the CLI prints.
 The `production` profile builds an AAB for Play Store submission; use
-`preview` for sideloading.
+`preview` for the staging APK. See [STAGING_APP.md](../docs/STAGING_APP.md)
+before distributing it; the old preview EAS values may still target production.
 
 ## OTA update (JS, UI, styling, assets — no reinstall)
 
 For production, follow [the release runbook](../RELEASING.md): merge the release,
 verify the new backend and workers, then manually run **Release** on `main` with
 the verified full commit SHA. Merging alone does not publish a mobile update.
-Use **EAS Update (OTA)** for preview updates. Direct local production publishing
-bypasses the deployment check and is not the normal release procedure.
+Use **EAS Update (OTA)** with the matching successful protected staging deploy
+run ID for preview updates. The repository no longer provides a local preview
+publication shortcut.
+Direct local production publishing bypasses the deployment check and is not the
+normal release procedure.
 
 Installed apps fetch the update on next launch (`checkAutomatically: ON_LOAD`).
 
@@ -81,7 +87,7 @@ Installed apps fetch the update on next launch (`checkAutomatically: ON_LOAD`).
 
 OTA cannot ship native code. Instead:
 
-1. Bump `expo.version` in [app.config.js](app.config.js) (e.g. 1.0.0 → 1.1.0), and set `runtimeVersion` to match the new build.
+1. Bump `expo.version` in the release PR with its What's New card; set `runtimeVersion` to the new native runtime (not automatically to the marketing version).
 2. `eas build --platform android --profile production` (and/or `preview`).
 3. Reinstall the new binary on devices; subsequent OTA updates target the new
    runtime version.
@@ -91,8 +97,9 @@ OTA cannot ship native code. Instead:
 Workflows in [.github/workflows](../.github/workflows) use the `EXPO_TOKEN`
 repository secret for EAS:
 
-- **release.yml** — manual production release after backend/worker verification,
-  followed by preview OTA, release tagging and native-gated APK dispatch.
-- **eas-update.yml** — qualifying mobile pushes to `develop` and manual runs
-  publish preview only.
+- **release.yml** — manual production release after backend/worker verification;
+  preview OTA runs when an active staging deployment ID is supplied. Both paths
+  retain the protected production OTA gate, release tag, and native-gated APK dispatch.
+- **eas-update.yml** — manual runs on the current `develop` revision publish
+  preview only after a matching successful protected staging Edge deployment.
 - **eas-build.yml** — manual build; choose the profile.

@@ -99,6 +99,20 @@ controls during requests, signup confirmation, remasking on mode changes and rel
 and 44px+ targets at 320/390/960px in both themes. Set `PASSWORD_SCREENSHOT_DIR`
 to save light/dark previews with empty fields. No real emails or accounts are used.
 
+`lessonResources.browser.cjs` uses that same export and port to check the
+external search links on Today and on details opened from History and Saved at
+320px in light/dark themes. It verifies the topic-specific query, link-open
+failure message, and absence of browser errors. Run it sequentially with the
+other browser scripts:
+
+```sh
+node tests/lessonResources.browser.cjs /tmp/one-concept-offline
+```
+
+Set `LESSON_RESOURCES_SCREENSHOT_DIR` to save the two Today previews. The
+browser test uses dummy account data; native browser/app handoff still needs a
+preview-device check.
+
 For #182, full saved-body caching is already implemented on `develop`. Let the
 app finish downloading lessons while online before testing offline; a device
 cannot read a body it has never downloaded. App upgrades preserve existing
@@ -198,8 +212,8 @@ Using the fixture export above, run:
 node tests/reviewAttribution.browser.cjs /tmp/one-concept-offline
 ```
 
-This checks light/dark Today without reviewer credit, History/Saved detail
-with credit, long reviewer names, legacy
+This checks light/dark Today, History and Saved reviewer details only within
+Card information, including long reviewer names and legacy
 attestation without a version change, removal/replacement after corrections,
 recall, offline restart, invalid cached metadata and sign-out cleanup. Screenshots
 are written to `/tmp/one-concept-280-screens` (override `UI_SCREENSHOT_DIR`). The

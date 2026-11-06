@@ -13,6 +13,10 @@ on:
         description: 'Successful Deploy Supabase API and worker to production Actions run ID for this main SHA'
         required: true
         type: string
+      staging_deploy_run_id:
+        description: 'Optional staging deploy run ID; leave blank while staging app activation is deferred'
+        required: false
+        type: string
 
 # One release at a time: two quick merges must not race the tag check.
 concurrency:
@@ -83,12 +87,36 @@ jobs:
 
   preview_ota:
     needs: schema
+    if: inputs.staging_deploy_run_id != ''
     runs-on: ubuntu-latest
+    env:
+      APP_VARIANT: staging
+      EXPO_PUBLIC_APP_VARIANT: staging
     defaults:
       run:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v7
+
+      - name: Require matching staging backend before preview publication
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          STAGING_DEPLOY_RUN_ID: ${{ inputs.staging_deploy_run_id }}
+        run: |
+          set -euo pipefail
+          [[ "$STAGING_DEPLOY_RUN_ID" =~ ^[0-9]+$ ]]
+          read -r workflow branch sha event conclusion <<< "$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${STAGING_DEPLOY_RUN_ID}" --jq '[.path, .head_branch, .head_sha, .event, .conclusion] | @tsv')"
+          test "$workflow" = '.github/workflows/supabase-staging-deploy.yml'
+          test "$branch" = 'develop'
+          test "$event" = 'workflow_dispatch'
+          test "$conclusion" = 'success'
+          [[ "$sha" =~ ^[0-9a-f]{40}$ ]]
+          git fetch --no-tags --depth=1 origin "$sha"
+          git diff --quiet "$sha" "$GITHUB_SHA" -- backend supabase/functions || {
+            echo '::error::Staging backend differs from this production release. Deploy reviewed develop to staging first.'
+            exit 1
+          }
 
       - name: Verify deployed revision before publishing
         env:
@@ -113,8 +141,8 @@ jobs:
 
       - name: Validate mobile configuration before publication
         run: |
-          eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
-          eas env:exec preview 'node scripts/validate-public-config.cjs --release' --non-interactive
+          APP_VARIANT=production EXPO_PUBLIC_APP_VARIANT=production eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
+          eas env:exec preview 'node scripts/validate-public-config.cjs --release --variant=staging' --non-interactive
 
       - name: Publish preview OTA
         env:
@@ -122,17 +150,23 @@ jobs:
         run: eas update --channel preview --environment preview --message "$MSG" --non-interactive
 
   production_ota:
-    needs: preview_ota
+    needs: [schema, preview_ota]
+    # A blank staging ID intentionally skips preview until #255 is activated.
+    # A supplied ID must produce a successful preview; failure never falls through.
+    if: ${{ always() && !cancelled() && needs.schema.result == 'success' && ((inputs.staging_deploy_run_id == '' && needs.preview_ota.result == 'skipped') || (inputs.staging_deploy_run_id != '' && needs.preview_ota.result == 'success')) }}
     runs-on: ubuntu-latest
-    # A second protected approval lets the owner test the preview build before
-    # the installed production runtime receives a new API address.
+    env:
+      APP_VARIANT: production
+      EXPO_PUBLIC_APP_VARIANT: production
+    # A second protected approval allows the owner to verify preview when used
+    # and confirm production configuration before publication.
     environment: production-schema
     defaults:
       run:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v7
-      - name: Recheck current main after the preview period
+      - name: Recheck current main before production publication
         env:
           VERIFIED_BACKEND_SHA: ${{ inputs.backend_revision }}
         run: |
@@ -151,9 +185,9 @@ jobs:
       - run: npm ci
       - name: Validate production public configuration
         run: |
-          eas env:exec production 'node scripts/validate-public-config.cjs --release' --non-interactive
+          eas env:exec production 'node scripts/validate-public-config.cjs --release --variant=production' --non-interactive
           eas env:exec production 'node ../.github/scripts/check-production-public-config.cjs' --non-interactive
-      - name: Publish production OTA after preview approval
+      - name: Publish production OTA after protected approval
         env:
           MSG: ${{ github.event.head_commit.message || 'release' }}
         run: eas update --channel production --environment production --message "$MSG" --non-interactive

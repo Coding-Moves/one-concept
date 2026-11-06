@@ -11,6 +11,7 @@ def test_card_renders_selected_content_and_escapes_visitor_text():
         achievements=[PublicAchievement(name='<award>', description='earned & shared')],
     )
     html, csp = public_profile_page.render_public_page(profile, 'a' * 43)
+    assert public_profile_page.ICON_ORIGIN == 'https://review.oneconcept.codingmoves.com'
     assert '<script>' not in html and '<b>bio</b>' not in html
     assert '&lt;script&gt;name&lt;/script&gt;' in html
     assert '&lt;b&gt;bio&lt;/b&gt;' in html

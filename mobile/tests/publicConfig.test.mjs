@@ -32,6 +32,41 @@ test('release validation rejects non-public URLs and missing authentication conf
     EXPO_PUBLIC_API_BASE_URL: 'https://project.supabase.co/functions/v1/other' }, true).length);
 });
 
+test('publication cannot cross staging and production projects or review origins', () => {
+  const staging = {
+    ...validConfiguration,
+    EXPO_PUBLIC_APP_VARIANT: 'staging',
+    EXPO_PUBLIC_API_BASE_URL: 'https://zhrulokgngjceqgjkcmw.supabase.co/functions/v1/api',
+    EXPO_PUBLIC_SUPABASE_URL: 'https://zhrulokgngjceqgjkcmw.supabase.co',
+    EXPO_PUBLIC_WEB_BASE_URL: 'https://staging-review.example.org',
+  };
+  const production = {
+    ...validConfiguration,
+    EXPO_PUBLIC_APP_VARIANT: 'production',
+    EXPO_PUBLIC_API_BASE_URL: 'https://egdszjoesxlccauahmsx.supabase.co/functions/v1/api',
+    EXPO_PUBLIC_SUPABASE_URL: 'https://egdszjoesxlccauahmsx.supabase.co',
+    EXPO_PUBLIC_WEB_BASE_URL: 'https://coding-moves-one-concept-review.netlify.app',
+  };
+  assert.deepEqual(publicConfigErrors(staging, true, 'staging'), []);
+  assert.deepEqual(publicConfigErrors(production, true, 'production'), []);
+  assert.ok(publicConfigErrors(staging, true, 'production').length);
+  assert.ok(publicConfigErrors(production, true, 'staging').length);
+  assert.ok(publicConfigErrors({ ...staging, EXPO_PUBLIC_SUPABASE_URL: production.EXPO_PUBLIC_SUPABASE_URL }, true, 'staging').length);
+  assert.ok(publicConfigErrors({ ...staging, EXPO_PUBLIC_API_BASE_URL: production.EXPO_PUBLIC_API_BASE_URL }, true, 'staging').length);
+  assert.ok(publicConfigErrors({ ...staging, EXPO_PUBLIC_WEB_BASE_URL: production.EXPO_PUBLIC_WEB_BASE_URL }, true, 'staging').length);
+  assert.ok(publicConfigErrors({ ...staging, EXPO_PUBLIC_LEGACY_WEB_BASE_URL: production.EXPO_PUBLIC_WEB_BASE_URL }, true, 'staging').length);
+  assert.ok(publicConfigErrors({ ...staging, EXPO_PUBLIC_WEB_BASE_URL: 'https://staging-review.example.org/confirmed' }, true, 'staging').length);
+});
+
+test('release CLI rejects a preview profile that claims production', () => {
+  const env = { ...process.env, ...validConfiguration, APP_VARIANT: 'production', EAS_BUILD_PROFILE: 'preview' };
+  delete env.NODE_TEST_CONTEXT;
+  const result = spawnSync(process.execPath, ['scripts/validate-public-config.cjs', '--release', '--variant=staging'], { env, encoding: 'utf8' });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /APP_VARIANT|EAS_BUILD_PROFILE/);
+  assert.doesNotMatch(result.stderr, /test-public-key/);
+});
+
 test('validator fails safely without exposing a supplied public key', () => {
   const env = { ...process.env, ...validConfiguration, EXPO_PUBLIC_API_BASE_URL: '' };
   delete env.NODE_TEST_CONTEXT;

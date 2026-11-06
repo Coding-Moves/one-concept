@@ -7,8 +7,8 @@ import hashlib
 
 ROOT = Path(__file__).resolve().parents[1] / "email-templates"
 REPO = Path(__file__).resolve().parents[2]
-LOGO = "https://coding-moves-one-concept-review.netlify.app/one-concept-icon.png"
-CODING_MOVES = "https://codingmoves.netlify.app/products/"
+LOGO = "https://review.oneconcept.codingmoves.com/one-concept-icon.png"
+CODING_MOVES = "https://codingmoves.com/products/"
 
 
 class TemplateInspector(HTMLParser):

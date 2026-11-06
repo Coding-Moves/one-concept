@@ -1,5 +1,5 @@
-# Preview-channel OTA for the develop branch (the developer's own devices),
-# plus a manual preview dispatch. Production OTA
+# Preview-channel OTA for the current develop branch after its protected
+# staging Edge deployment. Production OTA
 # for a release lives in release.yml, so the release tag is only cut after
 # that publish succeeds. Native changes need a new build — see
 # mobile/DEPLOYMENT.md.
@@ -9,21 +9,47 @@
 name: EAS Update (OTA)
 
 on:
-  push:
-    branches: [develop]
-    paths:
-      - "mobile/**"
-      - "!mobile/**.md"
   workflow_dispatch:
+    inputs:
+      staging_deploy_run_id:
+        description: 'Successful staging API/worker deploy run for the current develop SHA'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  actions: read
 
 jobs:
   update:
+    if: github.ref == 'refs/heads/develop'
     runs-on: ubuntu-latest
+    env:
+      APP_VARIANT: staging
+      EXPO_PUBLIC_APP_VARIANT: staging
     defaults:
       run:
         working-directory: mobile
     steps:
       - uses: actions/checkout@v7
+
+      - name: Require the current develop revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git ls-remote origin refs/heads/develop | cut -f1)" = "$GITHUB_SHA"
+
+      - name: Require matching successful staging deployment
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEPLOY_RUN_ID: ${{ inputs.staging_deploy_run_id }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$DEPLOY_RUN_ID" =~ ^[0-9]+$ ]]
+          gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${DEPLOY_RUN_ID}" \
+            --jq '[.path, .head_branch, .head_sha, .event, .conclusion] | @tsv' |
+            awk -v sha="$GITHUB_SHA" '$1 == ".github/workflows/supabase-staging-deploy.yml" && $2 == "develop" && $3 == sha && $4 == "workflow_dispatch" && $5 == "success" { found=1 } END { exit !found }'
 
       - uses: actions/setup-node@v7
         with:
@@ -39,11 +65,11 @@ jobs:
       - run: npm ci
 
       - name: Validate preview configuration before publication
-        run: eas env:exec preview 'node scripts/validate-public-config.cjs --release' --non-interactive
+        run: eas env:exec preview 'node scripts/validate-public-config.cjs --release --variant=staging' --non-interactive
 
       # --environment pulls the EXPO_PUBLIC_* variables from EAS into the
       # bundle; without it the update ships with empty config and crashes.
       - name: Publish OTA update (preview)
         env:
-          MSG: ${{ github.event.head_commit.message || 'manual dispatch' }}
+          MSG: ${{ github.event.head_commit.message || 'staging deploy verified' }}
         run: eas update --channel preview --environment preview --message "$MSG" --non-interactive

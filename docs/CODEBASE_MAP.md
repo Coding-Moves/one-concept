@@ -13,11 +13,11 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | --- | --- |
 | Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. `mobile/src/screens/AboutScreen.tsx` links learners to the public review explanation. |
 | Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private Supabase Edge API calls. `admin/account.html` and `src/publicAccount.tsx` provide a separate public learner account entry using the same Auth project. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Current hosting instructions are in `admin/README.md`. |
-| Production API | `supabase/functions/api/handler.ts` routes mobile and review-site requests through the protected Supabase Edge API and SQL RPCs. `backend/app/main.py` remains the Python reference and maintenance implementation. |
+| Production API | `supabase/functions/api/handler.ts` routes mobile and review-site requests through the protected Supabase Edge API and SQL RPCs. `public_pages.ts` redirects browser confirmation/recovery to the configured `PUBLIC_SITE_URL` (old host fallback until #480 cutover); see `REVIEW_DOMAIN_ROLLOUT.md`. `backend/app/main.py` remains the Python reference and maintenance implementation. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/FUTURE_REFILL_ROLLOUT.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. `docs/CONTENT_OPERATIONS.md` preserves the earlier Python rollout. |
 | Content engine | `supabase/functions/worker/` runs scheduled Gemini drafting, reminders and reconciliation; `backend/app/services/generation.py`, `pool.py`, `prefetch.py` retain Python maintenance and reference paths. |
-| Operations | `.github/workflows/supabase-production-deploy.yml`, `.github/workflows/supabase-production-cron-install.yml`, `backend/ops/supabase_workers/`, `mobile/eas.json`, `mobile/app.config.js`. |
+| Operations | `.github/workflows/supabase-production-deploy.yml`, `.github/workflows/supabase-production-cron-install.yml`, `.github/workflows/staging-activity.yml`, `backend/ops/supabase_workers/`, `mobile/eas.json`, `mobile/app.config.js`. Staging activity and recovery are in [STAGING_ACTIVITY.md](STAGING_ACTIVITY.md). |
 | Hosting history | `docs/RAILWAY_MIGRATION.md` and `docs/SUPABASE_WORKER_MIGRATION.md` retain factual cutover evidence. Current deployment and release instructions are in `RELEASING.md`, `docs/SCHEMA_VERIFICATION.md`, and `docs/INCIDENT_RESPONSE.md`. |
 | Supabase scheduled workers | `supabase/functions/worker/` validates signed Cron calls; migrations 0119–0120 own the run ledger and HTTP reconciliation; migrations 0128–0129 feed owner reporting and bound run history; migration 0130 fences uncertain Gmail delivery; `backend/ops/supabase_workers/` installs platform Cron jobs. |
 | Documentation | Root `README.md`, `RELEASING.md`, `CONTRIBUTING.md`, `docs/ARCHITECTURE.md`, `docs/ROADMAP.md`, and the backend/mobile guides. |
@@ -82,11 +82,10 @@ The Edge `worker` function runs a bounded revision batch before refill;
 same SQL statement as a published lesson. `schemas/daily.py` adds nullable
 `ConceptOut.review`; detail, daily selection and folded state/review paths use it.
 `mobile/src/services/conceptMapping.ts` shares version validation across detail,
-daily and cached reads. `components/ReviewAttribution.tsx` renders borderless
-credit in `ConceptDetailScreen` and below the Today lesson card. Legacy and
-mismatched-version metadata have no label.
-`components/CardInformation.tsx` supplies the shared card's three-dot metadata
-sheet on Today and saved/history detail, using that same exact-version check.
+daily and cached reads. `components/CardInformation.tsx` supplies the shared
+card's three-dot metadata sheet on Today and saved/history detail, including
+exact-version reviewer name and date. There is no reviewer footer below the
+card; legacy and mismatched-version metadata have no reviewer label.
 `services/state.py` and `schemas/me.py` expose `bookmark_versions` aligned with
 all saved slugs in `/v1/me/state`, including compact responses.
 `mobile/src/services/savedConceptSync.ts` uses these versions to replace only
@@ -249,18 +248,18 @@ inside a root stack, with a concept-detail modal above them.
 
 | Screen | Responsibility |
 | --- | --- |
-| `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states, and a server-confirmed topic-selection prompt when no topics are followed. |
+| `TodayScreen.tsx` | Daily lesson, learned action, streak, loading/exhausted/offline states, a server-confirmed topic-selection prompt when no topics are followed, and external video/reading searches for the full lesson. |
 | `HistoryScreen.tsx` | Paginated learning history, search within loaded records, offline pages and navigation to concept details. |
 | `StatsScreen.tsx` | Learned-only overall/topic counts and separate compact review activity; no catalog denominators or completion bars. |
 | `AnalyticsScreen.tsx` | Profile-linked, server-confirmed concepts, reviews, activity, quizzes, topics, learning paths and achievements with empty/recovery states. |
 | `WeeklyQuizScreen.tsx` | Optional server-backed weekly quiz: eligibility progress, seven reviewed questions, icon-marked accessible answer selection, result feedback and reattempts. |
 | `SubtopicQuizzesScreen.tsx` / `SubtopicQuizScreen.tsx` | Profile-linked optional quizzes for completed subtopics, frozen reviewed questions, icon-marked accessible answer selection, retries, and prior-score history. |
 | `ProfileScreen.tsx` | Task-grouped account hub: profile/privacy, learning, topics, preferences, library and support. It keeps clear reminder prerequisites and immediate per-control queued reminder writes. |
-| `EditProfileScreen.tsx` / `services/profilePhotoPicker.ts` / `services/profilePhotoPreparation.ts` | Name and bio editing with temporary Android keyboard scroll room, camera/library photo preview and explicit save, account-bound picker recovery, bounded JPEG bytes from the picker or converter with a signature check, and confirmed avatar writes. |
+| `EditProfileScreen.tsx` / `services/profilePhotoPicker.ts` / `services/profilePhotoPreparation.ts` | Name and bio editing with temporary Android keyboard scroll room, camera/library photo preview and explicit save, account-bound picker recovery, bounded JPEG bytes from the picker or converter with a signature check, and confirmed avatar writes. `remoteProgressRepository.ts` gives the photo upload a 60-second request deadline and keeps photo-only 503 cooldowns off unrelated lesson requests; the screen labels a timeout separately from a connection failure. |
 | `ProfileSharingScreen.tsx` / `ProfilePublishReviewSheet.tsx` / `PublicProfileLink.tsx` | Opt-in, independently selected sharing fields, a private review-before-publish step, explicit unpublish confirmation, native share/local QR, and uncached incoming public-profile view. |
 | `PersonalizationScreen.tsx` | Server topic catalog and follow controls through `useTopics`. |
 | `SavedScreen.tsx` | Recent/cached saved concepts, older metadata pagination, search/category filters, and detail navigation. |
-| `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. |
+| `ConceptDetailScreen.tsx` | Cached full lesson first, then online refresh by slug; bundled catalog fallback. History and Saved open this detail, which offers external video/reading searches. |
 | `AuthScreen.tsx` | Sign-in, sign-up, password recovery, and accessible show/hide password controls that reset on mode changes or submission. |
 | `AboutScreen.tsx` | Branding and app information. |
 
@@ -271,6 +270,8 @@ code tokenizer,
 like counts, streak/flame visuals, buttons, skeletons, the offline banner,
 `SearchField` and `CollectionConceptRow` for compact accessible Saved/History collections,
 `UnavailableState` (animated offline/retry UI), and the What's New card.
+`LessonResources` uses `services/lessonResources.ts` to construct external
+searches from public lesson title and topic only; the app does not vet results.
 `ScreenHeader` supplies the common eyebrow/title/supporting-copy hierarchy and
 `Surface` supplies the borderless elevated containers. `useReducedMotion` gates
 tap feedback, while `UnavailableState` uses a single short entrance motion and
@@ -376,6 +377,8 @@ The production Supabase API from #416 lives in `supabase/functions/api/` and
 All 73 JSON paths have candidate handlers, including private avatar upload,
 short-lived Storage signing, and editorial read/command routes. The avatar
 image module bundles a pinned ImageMagick WASM file for 512px JPEG conversion.
+Photo normalization and Storage upload failures produce distinct, data-free
+incident log categories while the client receives a generic 503.
 Its `public_pages.ts` serves the browser confirmation, recovery, and learner
 privacy pages at the same API path.
 Production clients use the Edge route. The historical parity checklist is in
@@ -555,7 +558,10 @@ and the session pooler. Applied migrations must not be rewritten.
   built-in runner for session recovery, auth messages, request timeouts, offline
   cache cleanup, outbox ordering, topic persistence, and sync scheduling.
   Expo provides Android/iOS/web development commands. Native project folders are
-  not tracked. EAS profiles separate development, preview, production, and production APKs.
+  not tracked. `app.config.js` selects production or a separately installable staging
+  package/runtime via `APP_VARIANT`; `eas.json` pairs preview/staging-development
+  with staging and production profiles with production. The staging setup and
+  local-phone flow are in [STAGING_APP.md](STAGING_APP.md).
 - Backend dependencies are pinned in `requirements.txt`/`requirements-dev.txt`.
   From `backend/`, run `.venv/bin/python -m uvicorn app.main:app --reload --port 8000`
   for development and `.venv/bin/python -m pytest` for tests after configuration.
@@ -566,13 +572,18 @@ and the session pooler. Applied migrations must not be rewritten.
   `tests/conftest.py` supplies a disposable PostgreSQL 16 database through Podman
   on port 55433, applies every migration, and disables live generation. HTTP calls
   to Gemini/Expo are mocked. Database-dependent tests skip if Podman cannot start.
-- `.github/workflows/eas-update.yml` publishes preview OTA on qualifying mobile
-  pushes to `develop`; manual dispatch also publishes preview only. `eas-build.yml` is
-  a manual Android build workflow.
+- `.github/workflows/eas-update.yml` publishes preview OTA from the current
+  `develop` revision after a matching protected staging deploy run. The public
+  config validator rejects cross-project API/Auth pairs before publication.
+  `eas-build.yml` is a manual Android build workflow with distinct staging
+  profiles; `supabase-staging-deploy.yml` deploys the current `develop` API and
+  worker through the protected staging environment after schema verification.
 - `release.yml` is manually dispatched on `main` after operator confirmation of
   the deployed backend/worker SHA; its guard rejects missing/mismatched revisions
-  and non-main dispatches. It publishes production then preview OTA, creates a
-  version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
+  and non-main dispatches. Preview OTA requires a supplied successful staging
+  deployment ID; it can be skipped while #255 remains deferred. Both paths
+  retain the protected production OTA gate, create a version tag/GitHub release,
+  and dispatch `release-apk.yml`. APK publication
   is gated on native `runtimeVersion` changes. The Supabase Edge API and worker
   deploy through a separate protected workflow; follow `RELEASING.md` for ordering.
 - `pr-quality.yml` is the general pull-request gate for `develop` and `main`.
@@ -585,8 +596,8 @@ and the session pooler. Applied migrations must not be rewritten.
   `production-schema.yml` remains independently dispatchable. `audit.yml` runs dependency audits, Ruff, and TypeScript checks and
   files findings as issues. `cleanup.yml` manages stale issues; Dependabot
   schedules dependency updates with Expo-managed version restrictions.
-- `mobile/app.config.js` currently has app version `1.10.4` and native runtime
-  `1.10.1`; `package.json`'s `1.0.0` is not the release-version authority.
+- `mobile/app.config.js` owns the marketing version and separate production and
+  staging native runtimes; `package.json`'s `1.0.0` is not the release-version authority.
 
 ## Documentation drift to remember
 

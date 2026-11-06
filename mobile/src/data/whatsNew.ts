@@ -22,6 +22,14 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.19',
+    highlights: [
+      'Keep learning from each lesson with quick links to video tutorials and more reading.',
+      'Read long flashcard questions clearly, with reviewer details available from Card information.',
+      'Save profile photos with clearer guidance when a connection takes too long.',
+    ],
+  },
+  {
     version: '1.10.18',
     highlights: [
       'Save a camera or gallery photo to your profile with smoother handling for larger images.',

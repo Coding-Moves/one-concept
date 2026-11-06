@@ -6,7 +6,7 @@ from app.config import get_settings
 from app.schemas.profile_sharing import PublicProfile
 
 PRESETS = {'aurora': '✦', 'comet': '✧', 'forest': '❧', 'ocean': '≈', 'sunset': '☼', 'violet': '✿'}
-ICON_ORIGIN = 'https://coding-moves-one-concept-review.netlify.app'
+ICON_ORIGIN = 'https://review.oneconcept.codingmoves.com'
 ICON_URL = ICON_ORIGIN + '/one-concept-icon.png'
 BASE_CSP = ("default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; "
             f"frame-ancestors 'none'; img-src {ICON_ORIGIN}")

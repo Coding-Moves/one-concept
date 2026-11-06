@@ -8,6 +8,8 @@ Learners may choose a built-in avatar, select a library photo, or take a camera 
 
 The Supabase Edge candidate for #416 retains the 25 MP JPEG limit and applies an 8 MP limit to PNG/WebP because those formats must be decoded at full size within the hosted memory limit. A larger PNG/WebP returns 422; the mobile client can ask for a smaller photo or JPEG during the #418 cutover.
 
+On 2026-11-04, the production bucket was found missing even though the API and app were deployed. Creating the private bucket with the settings below restored gallery and camera photo saves on the owner's production Android phone. The production deploy guard now verifies these settings before publishing future Edge code.
+
 The photo picker stores only the initiating account ID until it returns. Sign-out clears that marker; a result recovered after Android activity recreation appears as a preview only for the initiating account. The selected photo stays in memory until Save or Cancel, and an upload failure preserves the last confirmed avatar for retry.
 
 Public-profile sharing remains private by default. The dedicated **Profile avatar** choice must be reviewed and published before a visitor receives a short-lived delivery URL. Turning that choice off removes it from future public responses immediately.
@@ -17,7 +19,8 @@ Public-profile sharing remains private by default. The dedicated **Profile avata
 Before merging and deploying the feature:
 
 1. Apply migration `0040_profile_avatar_bio.sql` through the normal migration process. Do not add it to `backend/migrations/applied.txt` until production confirms it.
-2. In Supabase Storage, create `profile-avatars` as a **private** bucket with a 256 KiB file limit and JPEG/PNG/WebP allowlist. Storage buckets are managed by Supabase Storage, not the application PostgreSQL migration runner.
+2. In Supabase Storage, create `profile-avatars` as a **private** bucket with a 256 KiB file limit and JPEG/PNG/WebP allowlist. Use the [Storage dashboard or API](https://supabase.com/docs/guides/storage/buckets/creating-buckets); the application PostgreSQL migration runner does not create buckets.
+   The protected production deployment check now reads the bucket metadata and reports `profile_avatar_bucket=missing` before deploying API code if this bucket is absent or misconfigured.
 3. Confirm the production Supabase Edge API has its server-only Storage credential; it must never be copied to Expo variables.
 4. Build and install a new Android/iOS binary. `expo-image-picker` and its camera/photo permission messages are native configuration, so an OTA alone cannot enable photo selection on existing installs.
 5. On a staging account, test each preset, denied library/camera permission, picker cancellation, preview Save/Cancel, an oversized/invalid image, photo replacement/removal, sign-out during picker or upload, and public-avatar sharing on/off from another browser. Check the Android activity-recreation path on a physical device; web tests do not prove native picker behavior.

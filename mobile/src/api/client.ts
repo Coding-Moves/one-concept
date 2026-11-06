@@ -7,7 +7,7 @@
  * module never imports the auth stack (and never stores a token itself).
  */
 
-import { fetchWithTimeout } from './fetchWithTimeout';
+import { fetchWithTimeout, RequestTimeoutError } from './fetchWithTimeout';
 import { ApiConfigurationError, ApiError } from './errors';
 
 export { ApiConfigurationError, ApiError } from './errors';
@@ -79,8 +79,10 @@ interface RequestOptions {
   /** Raw body for a narrow authenticated upload; never queued or persisted. */
   rawBody?: BodyInit;
   contentType?: string;
+  /** Give bounded uploads time for the first Edge image worker to start. */
+  timeoutMs?: number;
   signal?: AbortSignal;
-  /** A domain-specific invitation cooldown must not pause daily learning. */
+  /** A request-local failure must not pause daily learning. */
   rateLimitScope?: 'request';
 }
 
@@ -111,9 +113,13 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
       headers,
       body: options.rawBody ?? (options.body === undefined ? undefined : JSON.stringify(options.body)),
       signal: options.signal,
-    });
+    }, options.timeoutMs);
   } catch (cause) {
     if (epoch !== accountEpoch) throw new ApiError(401, 'Account changed');
+    if (cause instanceof RequestTimeoutError) {
+      // A stalled request does not prove that the device lost connectivity.
+      throw new ApiError(0, 'Request timed out', 'timeout');
+    }
     // Offline or unreachable host: callers fall back to cached state.
     setConnectivity(false);
     throw new ApiError(0, 'Network request failed', cause);
@@ -135,7 +141,7 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
         ? (payload as { detail: unknown }).detail
         : null;
     const retryAfterMs = parseRetryAfter(response.headers.get('Retry-After'));
-    if ((response.status === 429 && options.rateLimitScope !== 'request') || response.status === 503) {
+    if ((response.status === 429 || response.status === 503) && options.rateLimitScope !== 'request') {
       retryUntil = Math.max(retryUntil, Date.now() + retryAfterMs);
     }
     throw new ApiError(response.status, `Request failed: ${response.status}`, detail, retryAfterMs);

@@ -580,8 +580,10 @@ and the session pooler. Applied migrations must not be rewritten.
   worker through the protected staging environment after schema verification.
 - `release.yml` is manually dispatched on `main` after operator confirmation of
   the deployed backend/worker SHA; its guard rejects missing/mismatched revisions
-  and non-main dispatches. It publishes preview then production OTA, creates a
-  version tag/GitHub release, and dispatches `release-apk.yml`. APK publication
+  and non-main dispatches. Preview OTA requires a supplied successful staging
+  deployment ID; it can be skipped while #255 remains deferred. Both paths
+  retain the protected production OTA gate, create a version tag/GitHub release,
+  and dispatch `release-apk.yml`. APK publication
   is gated on native `runtimeVersion` changes. The Supabase Edge API and worker
   deploy through a separate protected workflow; follow `RELEASING.md` for ordering.
 - `pr-quality.yml` is the general pull-request gate for `develop` and `main`.

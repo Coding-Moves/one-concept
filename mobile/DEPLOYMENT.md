@@ -97,8 +97,9 @@ OTA cannot ship native code. Instead:
 Workflows in [.github/workflows](../.github/workflows) use the `EXPO_TOKEN`
 repository secret for EAS:
 
-- **release.yml** — manual production release after backend/worker verification,
-  followed by preview OTA, release tagging and native-gated APK dispatch.
+- **release.yml** — manual production release after backend/worker verification;
+  preview OTA runs when an active staging deployment ID is supplied. Both paths
+  retain the protected production OTA gate, release tag, and native-gated APK dispatch.
 - **eas-update.yml** — manual runs on the current `develop` revision publish
   preview only after a matching successful protected staging Edge deployment.
 - **eas-build.yml** — manual build; choose the profile.

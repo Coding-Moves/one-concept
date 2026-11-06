@@ -1,14 +1,16 @@
 # First-party review domain rollout (#480)
 
 The single owner/reviewer website uses one production Netlify site owned by
-the `contactmuawia@gmail.com` account. Its intended production origin is
+the `contactmuawia@gmail.com` account. Its production origin is
 `https://review.oneconcept.codingmoves.com`.
-Preserve the existing `coding-moves-one-concept-review.netlify.app` hostname
-through the move so issued links can work again under the new owner. Reusing
-the exact hostname requires the old project to release it and may cause a
-temporary gap; verify the new publication before considering the move done.
-Do not configure staging
-Auth, API, or invitations to use either production review origin.
+The hostname, HTTPS, Google branding, Supabase Auth redirect allowlist, and
+Edge CORS origin are live as of November 6, 2026. The Edge destination URLs,
+dashboard email templates, mobile public URL, and controlled email-flow tests
+remain pending. See [the current work log](WORK_LOG.md) for exact status.
+Keep the existing `coding-moves-one-concept-review.netlify.app` hostname and
+old Auth redirects available for previously issued links until live flows pass.
+Do not configure staging Auth, API, or invitations to use either production
+review origin.
 
 ## Order of operations
 

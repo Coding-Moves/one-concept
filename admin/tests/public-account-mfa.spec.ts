@@ -5,6 +5,7 @@ import { fixture, login } from "./fixture";
 test("a learner recovery link verifies MFA before updating the password", async ({ page, context }) => {
   await fixture(context, { mfa: true, requireMfa: false });
   await login(page);
+  await page.waitForFunction(() => !!localStorage.getItem("one-concept-review-auth"));
   const tokens = await page.evaluate(() => {
     const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
     return { access: session.access_token as string, refresh: session.refresh_token as string };

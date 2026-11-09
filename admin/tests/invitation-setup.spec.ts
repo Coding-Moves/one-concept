@@ -60,6 +60,7 @@ test("a recovery email returns to the same password setup without creating a sec
 test("a reviewer recovery link requires the enrolled authenticator before saving a password", async ({ page, context }) => {
   await fixture(context, { mfa: true, requireMfa: false });
   await login(page);
+  await page.waitForFunction(() => !!localStorage.getItem("one-concept-review-auth"));
   const tokens = await page.evaluate(() => {
     const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
     return { access: session.access_token as string, refresh: session.refresh_token as string };

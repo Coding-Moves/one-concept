@@ -21,6 +21,10 @@ export function publicPage(path: string, method: string, requestUrl: URL, cors: 
 
   const target = new URL(path === '/privacy' ? '/privacy' : '/account/callback', siteOrigin);
   if (path !== '/privacy') target.search = requestUrl.search;
+  // A code-only return does not carry a fragment with Supabase's recovery type.
+  // Preserve that intent when the original email targeted the reset endpoint.
+  if (path === '/reset-password' && target.searchParams.has('code') &&
+      !target.searchParams.get('type')) target.searchParams.set('type', 'recovery');
   // Do not set a fragment on Location. Browsers inherit the incoming fragment
   // (which can hold Supabase auth tokens) without sending it to this function.
   headers.set('location', target.toString());

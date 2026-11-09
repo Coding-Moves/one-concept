@@ -9,7 +9,12 @@
   if (recoverySession || recoveryCode) {
     // The shared account flow verifies the session, checks the account identity,
     // and supports enrolled authenticators. It clears the token on arrival.
-    location.replace(`/account/callback${location.search}${location.hash}`);
+    const destination = new URL('/account/callback', location.origin);
+    destination.search = location.search;
+    if (recoveryCode && !destination.searchParams.get('type'))
+      destination.searchParams.set('type', 'recovery');
+    destination.hash = location.hash;
+    location.replace(destination.toString());
     return;
   }
   history.replaceState(null, '', location.pathname);

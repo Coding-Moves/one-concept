@@ -55,7 +55,7 @@ test('public browser links can override the first-party origin without leaking f
   });
   const callback = await handler(request('/reset-password?code=one-time-code#access_token=secret'));
   assert.equal(callback.status, 302);
-  assert.equal(callback.headers.get('location'), `${site}/account/callback?code=one-time-code`);
+  assert.equal(callback.headers.get('location'), `${site}/account/callback?code=one-time-code&type=recovery`);
   assert.doesNotMatch(callback.headers.get('location'), /secret|#/);
   const privacy = await handler(request('/privacy'));
   assert.equal(privacy.headers.get('location'), `${site}/privacy`);

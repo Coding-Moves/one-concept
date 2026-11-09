@@ -88,3 +88,17 @@ test("legacy reset links forward only complete recovery sessions and clear inval
   await expect(page.locator("#status")).toContainText("invalid or has expired");
   await expect(page).toHaveURL(/\/reset-password$/);
 });
+
+test("legacy code-only reset links retain recovery intent at the shared callback", async ({ page }) => {
+  const html = await readFile(resolve("public/reset-password/index.html"), "utf8");
+  await page.route("**/reset-password?*", route => route.fulfill({ contentType: "text/html", body: html }));
+  let callback = "";
+  await page.route("**/account/callback?*", route => {
+    callback = route.request().url();
+    return route.fulfill({ contentType: "text/html", body: "<h1>Account callback</h1>" });
+  });
+  await page.goto("/reset-password?code=fixture-one-time-code");
+  await expect(page.getByRole("heading", { name: "Account callback" })).toBeVisible();
+  expect(new URL(callback).searchParams.get("type")).toBe("recovery");
+  expect(new URL(callback).searchParams.get("code")).toBe("fixture-one-time-code");
+});

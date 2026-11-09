@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.20 publication and skipped tag-job repair — 2026-11-09
+
+- Release PR #500 merged to `main` at `006833ed179df45532618825afc4c454ab764a64`. [Production Supabase deploy 42622251876](https://github.com/Coding-Moves/one-concept/actions/runs/42622251876) passed its protected schema check, deployed API and worker, and passed the unsigned-worker and API health checks. It did not change Cron or generation flags.
+- [Release run 42622721034](https://github.com/Coding-Moves/one-concept/actions/runs/42622721034) passed schema verification and production OTA for that same commit. The optional staging preview was skipped as intended, but GitHub propagated that skip through the dependency chain and skipped the tag job despite the successful OTA. The workflow's overall `success` conclusion was therefore not evidence that a GitHub Release existed.
+- After verifying the current `main` SHA, successful production OTA, absent `v1.10.20` tag, and unchanged `1.10.19` native runtime, the owner identity `Muawiya-contact` published [v1.10.20](https://github.com/Coding-Moves/one-concept/releases/tag/v1.10.20) at the exact merged commit. [Release APK run 42623819221](https://github.com/Coding-Moves/one-concept/actions/runs/42623819221) succeeded and retained the existing binary for the JS-only release.
+- Commit `cc8b039` adds an explicit successful-`production_ota` condition to the tag job so a skipped optional preview no longer suppresses it. Local YAML parsing and `git diff --check` passed; a future full Release run is needed to exercise the job graph on GitHub. Live reviewer-site and phone acceptance are still pending. New-lesson generation remains gated until the backlog and curated plan are reviewed.
+- [Workflow repair PR #501](https://github.com/Coding-Moves/one-concept/pull/501) targets `develop`. Hosted workflow validation, mobile, website browser, and architecture checks passed. The first backend suite run failed an unchanged subtopic quiz progress assertion (857 other tests passed); its rerun passed. The first-party review domain returned HTTP 200 and served the new password/review UI assets; authenticated reviewer decisions and phone acceptance remain unverified.
+
 ### v1.10.20 release preparation — 2026-11-09
 
 - PR #498 merged into `develop` at `ee9076d`; the current `develop` → `main` diff contains the reviewer workflow and password recovery changes, with no SQL migration or native app change. Production still runs v1.10.19 until a reviewed release PR is merged and the protected deployment and release workflows complete.

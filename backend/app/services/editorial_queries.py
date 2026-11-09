@@ -72,6 +72,7 @@ async def queue(
           join topics t on t.id=c.topic_id join subtopics s on s.id=c.subtopic_id
           where ((cast(:status as text) is not null and r.status=:status)
             or (:status is null and r.status not in ('published','retired')))
+          and (r.base_version=c.content_version or :status in ('published','retired'))
           and (cast(:topic as uuid) is null or c.topic_id=:topic)
           and (cast(:subtopic as uuid) is null or c.subtopic_id=:subtopic)
           and (cast(:assignee as uuid) is null or r.assigned_to=:assignee)

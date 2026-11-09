@@ -15,7 +15,12 @@ const callback = location.pathname === "/auth/callback";
 const hasTokens = fragment.has("access_token") && fragment.has("refresh_token");
 const hasAuthFragment = fragment.has("access_token") || fragment.has("refresh_token") || fragment.has("error");
 const authReturn = hasAuthFragment || !!code;
-if (authReturn)
+// A generic recovery link can land at the site root. Keep its fragment intact
+// until the public account page consumes it; a learner has no review workspace.
+const publicRecovery = location.pathname === "/" && hasTokens && fragment.get("type") === "recovery";
+if (publicRecovery)
+  location.replace(`/account/callback${location.search}${location.hash}`);
+else if (authReturn)
   history.replaceState(null, "", "/auth/callback");
 async function start() {
   // The demo is selected before constructing Auth or any production API client.
@@ -96,4 +101,4 @@ async function start() {
     );
   }
 }
-void start();
+if (!publicRecovery) void start();

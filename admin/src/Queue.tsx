@@ -25,9 +25,7 @@ export function Queue({
   const [search, setSearch] = useState(""),
     [topic, setTopic] = useState(""),
     [subtopic, setSubtopic] = useState(""),
-    [status, setStatus] = useState(
-      view === "approved" ? "approved" : "pending_review",
-    ),
+    [status, setStatus] = useState(view === "approved" ? "approved" : ""),
     [assignee, setAssignee] = useState(""),
     [urgency, setUrgency] = useState(""),
     [pages, setPages] = useState<string[]>([""]),
@@ -108,7 +106,7 @@ export function Queue({
                 ? "One approval per revision. These lessons are ready for a permitted publisher."
                 : view === "legacy"
                   ? "Existing lessons remain available while your team reviews them."
-                  : "Choose a topic, open a lesson, and give it your full attention."}
+                  : "All new drafts and pending reviews appear here. Any reviewer can open a card without waiting for owner assignment."}
           </p>
         </div>
         <button
@@ -189,7 +187,7 @@ export function Queue({
                     "retired",
                   ].map((s) => (
                     <option key={s} value={s}>
-                      {s.replaceAll("_", " ")}
+                      {s === "draft" ? "new drafts" : s.replaceAll("_", " ")}
                     </option>
                   ))}
                 </select>

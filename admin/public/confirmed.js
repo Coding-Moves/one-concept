@@ -4,7 +4,7 @@ const hash = new URLSearchParams(location.hash.slice(1));
 const query = new URLSearchParams(location.search);
 const error = hash.get('error_description') || query.get('error_description') ||
   hash.get('error') || query.get('error');
-if (hash.get('type') === 'recovery' && hash.get('access_token') && !error) {
+if (hash.get('type') === 'recovery' && hash.get('access_token') && hash.get('refresh_token') && !error) {
   const reset = new URL('/reset-password', location.origin);
   reset.hash = location.hash;
   location.replace(reset.toString());

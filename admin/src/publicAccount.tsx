@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { createClient, type SupabaseClient, type User } from "@supabase/supabase-js";
 import { readConfig } from "./config";
 import { accountCallbackPath, callbackUrl, emailReturn } from "./publicAccountLink";
+import { minimumPasswordLength, passwordInputError, passwordUpdateError } from "./passwordPolicy";
 import "./publicAccount.css";
 
 type Mode = "sign-in" | "sign-up" | "forgot" | "check-email" | "reset";
@@ -23,11 +24,13 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
   const [factor, setFactor] = useState("");
   const [code, setCode] = useState("");
   const [needsMfa, setNeedsMfa] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   function switchMode(next: Mode) {
     setMode(next);
     setPassword("");
     setConfirmation("");
+    setShowPassword(false);
     setNotice("");
     setError("");
     setNeedsMfa(false);
@@ -48,9 +51,9 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
-    if ((mode === "sign-up" || mode === "reset") && password !== confirmation) {
-      setError("The passwords do not match.");
-      return;
+    if (mode === "sign-up" || mode === "reset") {
+      const inputError = passwordInputError(password, confirmation);
+      if (inputError) { setError(inputError); return; }
     }
     setBusy(true);
     setError("");
@@ -61,6 +64,7 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         if (result.error || !result.data.user) throw new Error("signin");
         setUser(result.data.user);
         setPassword("");
+        setShowPassword(false);
       } else if (mode === "sign-up") {
         const result = await auth.auth.signUp({
           email: email.trim(), password,
@@ -105,13 +109,13 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
           setNeedsMfa(true);
           throw new Error("mfa-required");
         }
-        if (result.error) throw new Error(result.error.code === "weak_password" ? "weak"
-          : result.error.code === "same_password" ? "same" : "reset");
+        if (result.error) { setError(passwordUpdateError(result.error)); return; }
         sessionStorage.removeItem(recoveryMarker);
         const signedOut = await auth.auth.signOut({ scope: "local" });
         if (!signedOut.error) setUser(null);
         setPassword("");
         setConfirmation("");
+        setShowPassword(false);
         setMode("sign-in");
         setNotice(signedOut.error
           ? "Password updated. Please sign out of this browser when finished."
@@ -120,7 +124,7 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
     } catch (cause) {
       const code = cause instanceof Error ? cause.message : "";
       setError(code === "rate" ? "Too many email requests. Wait a while and try again."
-        : code === "weak" ? "Choose a stronger password and try again."
+        : code === "weak" ? "Choose a stronger password. Use at least 12 characters and follow your account's security requirements."
         : code === "same" ? "Choose a password different from your current one."
         : code === "signin" ? "Unable to sign in. Check your email and password, then try again."
         : code === "verify" ? "Could not verify this reset session. Check your connection and try again."
@@ -128,8 +132,8 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         : code === "mfa-required" ? "Enter the current code from your authenticator app, then update your password again."
         : code === "mfa-code" ? "The authenticator code was not accepted. Try the current six-digit code."
         : code === "mfa-unavailable" ? "This account needs an authenticator to change its password. Contact your account administrator if you cannot access it."
-        : code === "reset" ? "Could not update your password. Request a new reset link."
-        : "Unable to request an email right now. Try again later.");
+        : code === "send" ? "Unable to request an email right now. Try again later."
+        : "Could not complete this request. Check your connection and try again.");
     } finally {
       setBusy(false);
     }
@@ -187,7 +191,7 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
     <section className="account-panel" aria-label="Account access">
       {error && <p className="account-error" role="alert">{error}</p>}
       {notice && <p className="account-notice" role="status">{notice}</p>}
-      {user && mode !== "reset" ? <>
+      {user && mode !== "reset" && mode !== "forgot" ? <>
         <h2>You're signed in</h2>
         <p>Your One Concept account is ready on this device.</p>
         <p className="account-email">{user.email}</p>
@@ -200,11 +204,14 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         <button type="button" className="account-text-button" onClick={() => switchMode("sign-in")}>Back to sign in</button>
       </> : <form onSubmit={event => void submit(event)}>
         <h2>{mode === "sign-up" ? "Create an account" : mode === "forgot" ? "Recover your account" : mode === "reset" ? "Set a new password" : "Sign in"}</h2>
-        <p>{mode === "reset" ? "Choose a new password for your verified account." : "Use your One Concept email address."}</p>
+        <p>{mode === "reset" ? "Choose a new password for your verified account. After saving it, return to the One Concept app." : "Use your One Concept email address."}</p>
         {mode !== "reset" && <label>Email address<input type="email" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} /></label>}
-        {mode !== "forgot" && <label>{mode === "reset" ? "New password" : "Password"}<input type="password" autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={mode === "sign-in" ? 1 : 12} required value={password} onChange={event => setPassword(event.target.value)} /></label>}
-        {(mode === "sign-up" || mode === "reset") && <label>Confirm password<input type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label>}
+        {(mode === "sign-up" || mode === "reset") && <p>Use at least {minimumPasswordLength} characters. Your account may require additional character types.</p>}
+        {mode !== "forgot" && <label>{mode === "reset" ? "New password" : "Password"}<input type={showPassword ? "text" : "password"} autoComplete={mode === "sign-in" ? "current-password" : "new-password"} required value={password} onChange={event => { setPassword(event.target.value); setError(""); }} /></label>}
+        {(mode === "sign-up" || mode === "reset") && <label>Confirm password<input type={showPassword ? "text" : "password"} autoComplete="new-password" required value={confirmation} onChange={event => { setConfirmation(event.target.value); setError(""); }} /></label>}
+        {mode !== "forgot" && <button type="button" className="account-text-button password-visibility" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? "Hide passwords" : "Show passwords"}</button>}
         {mode === "reset" && needsMfa && <>
+          <p>This account has an enrolled authenticator. Supabase requires its current code to change the password.</p>
           {factors.length > 1 && <label>Authenticator<select value={factor} onChange={event => setFactor(event.target.value)}>
             {factors.map(item => <option key={item.id} value={item.id}>{item.friendly_name || "Authenticator"}</option>)}
           </select></label>}
@@ -233,7 +240,9 @@ async function start() {
     const auth = createClient(config.supabaseUrl, config.key, {
       auth: { detectSessionInUrl: false, flowType: "implicit", storageKey: "one-concept-public-account" },
     });
-    let initial: Initial = { user: null, mode: "sign-in", notice: "", error: "" };
+    let initial: Initial = { user: null,
+      mode: incoming.pathname === "/account" && incoming.searchParams.get("mode") === "forgot" ? "forgot" : "sign-in",
+      notice: "", error: "" };
     if (link.kind === "error" || (callback && link.kind === "none")) {
       initial.error = "This email link is invalid or has expired. Request a new one.";
     } else if (link.kind === "session" || link.kind === "code") {

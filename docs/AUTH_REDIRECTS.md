@@ -1,16 +1,17 @@
 # Authentication email redirects after the Supabase cutover
 
 Supabase Auth verifies email links, then sends the browser to a permitted HTTPS
-landing URL. Once the pending public-page release is deployed, the Supabase
-`api` Edge function serves three pages:
+landing URL. The Supabase `api` Edge function routes three public paths:
 
-- `/functions/v1/api/confirmed` explains successful email confirmation. If an
-  older client sends a recovery session to the Site URL, this page forwards the
-  URL fragment to the reset page without sending it to the server.
-- `/functions/v1/api/reset-password` accepts a recovery session in the URL
-  fragment and updates the password directly through Supabase Auth. It removes
-  the token from the address bar as soon as the page loads.
-- `/functions/v1/api/privacy` is the learner privacy policy.
+- `/functions/v1/api/confirmed` forwards confirmation to the public account
+  page. If an older client sends a recovery session to the Site URL, the same
+  account page handles it without sending the URL fragment to the server.
+- `/functions/v1/api/reset-password` redirects to the public `/account/callback`
+  form, which verifies the recovery session, supports an enrolled authenticator,
+  and removes the token from the address bar as soon as the page loads. When an
+  older reset link returns a code without a type, the redirect marks it as a
+  recovery so the account page opens password setup after verification.
+- `/functions/v1/api/privacy` opens the learner privacy policy on the public site.
 
 The mobile app derives its explicit signup and recovery redirect URLs from
 `EXPO_PUBLIC_API_BASE_URL`. Its production value must be the matching

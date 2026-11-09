@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Field, Notice, message } from "./ui";
 import { clearPendingSetup, pendingSetupFor } from "./accountSetup";
+import { minimumPasswordLength, passwordInputError, passwordUpdateError } from "./passwordPolicy";
 export function Login({
   auth,
 }: {
@@ -9,33 +10,18 @@ export function Login({
 }) {
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
-    [recovery, setRecovery] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [error, setError] = useState("");
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    setNotice("");
     try {
-      const result = recovery
-        ? await auth.auth.resetPasswordForEmail(email, {
-            redirectTo: location.origin + "/auth/callback",
-          })
-        : await auth.auth.signInWithPassword({ email, password });
+      const result = await auth.auth.signInWithPassword({ email, password });
       if (result.error)
-        throw new Error(
-          recovery
-            ? "Unable to request a recovery email. Try again later."
-            : "Unable to sign in. Check your credentials or contact your administrator.",
-        );
+        throw new Error("Unable to sign in. Check your credentials or contact your administrator.");
       setPassword("");
-      if (!recovery) clearPendingSetup();
-      if (recovery)
-        setNotice(
-          "If this address can recover an account, a password reset email will arrive shortly.",
-        );
+      clearPendingSetup();
     } catch (e) {
       setError(message(e));
     } finally {
@@ -67,14 +53,9 @@ export function Login({
       <section className="auth-panel">
         <form onSubmit={submit}>
           <p className="eyebrow">INVITED REVIEWERS</p>
-          <h2>
-            {recovery
-                ? "Recover your account"
-                : "Welcome back"}
-          </h2>
-          <p>{recovery ? "Enter your account email to receive a password reset link." : "Sign in with your own invited account to continue."}</p>
+          <h2>Welcome back</h2>
+          <p>Sign in with your own invited account to continue.</p>
           {error && <Notice error>{error}</Notice>}
-          {notice && <Notice>{notice}</Notice>}
           <Field title="Email address">
               <input
                 type="email"
@@ -84,37 +65,14 @@ export function Login({
                 onChange={(e) => setEmail(e.target.value)}
               />
           </Field>
-          {!recovery && (
-            <Field title="Password">
-              <input
-                type="password"
-                autoComplete="current-password"
-                required
-                minLength={1}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
-          )}
+          <Field title="Password">
+            <input type="password" autoComplete="current-password" required minLength={1}
+              value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
           <button className="primary" disabled={busy}>
-            {busy
-              ? "Please wait…"
-              : recovery
-                  ? "Send recovery email"
-                  : "Sign in"}
+            {busy ? "Please wait…" : "Sign in"}
           </button>
-          <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                setRecovery(!recovery);
-                setError("");
-                setNotice("");
-                setPassword("");
-              }}
-            >
-              {recovery ? "Back to sign in" : "Forgot your password?"}
-          </button>
+          <a href="/account?mode=forgot">Forgot your password?</a>
         </form>
         <p className="muted">
           Private workspace · Your learning app account does not automatically
@@ -145,6 +103,7 @@ export function AccountSetup({
   const [factor, setFactor] = useState("");
   const [code, setCode] = useState("");
   const [needsMfa, setNeedsMfa] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   async function verifyAccount() {
     const { data, error } = await auth.auth.getUser();
     if (error || !data.user)
@@ -156,8 +115,9 @@ export function AccountSetup({
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (password !== confirmation) {
-      setError("The passwords do not match.");
+    const inputError = passwordInputError(password, confirmation);
+    if (inputError) {
+      setError(inputError);
       return;
     }
     setBusy(true);
@@ -183,12 +143,8 @@ export function AccountSetup({
         setNeedsMfa(true);
         throw new Error("Enter the current code from your authenticator app, then save your password again.");
       }
-      if (error?.code === "weak_password")
-        throw new Error("Choose a stronger password and try again.");
-      if (error?.code === "same_password")
-        throw new Error("Choose a password different from your current one.");
       if (error)
-        throw new Error("Password could not be saved. Request a new link and try again.");
+        throw new Error(passwordUpdateError(error));
       setPassword("");
       setConfirmation("");
       onPasswordSet();
@@ -213,9 +169,12 @@ export function AccountSetup({
           <p>{flow === "invite" ? "Your email is confirmed. Choose a password to finish setup." : "Choose a new password for your One Concept account."}</p>
           {error && <Notice error>{error}</Notice>}
           <Field title="Verified email"><input type="email" value={email} readOnly /></Field>
-          <Field title="Password"><input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
-          <Field title="Confirm password"><input type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /></Field>
+          <p>Use at least {minimumPasswordLength} characters. The password must also meet your account's security requirements.</p>
+          <Field title="Password"><input type={showPassword ? "text" : "password"} autoComplete="new-password" required value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} /></Field>
+          <Field title="Confirm password"><input type={showPassword ? "text" : "password"} autoComplete="new-password" required value={confirmation} onChange={(e) => { setConfirmation(e.target.value); setError(""); }} /></Field>
+          <button type="button" className="text-button password-visibility" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? "Hide passwords" : "Show passwords"}</button>
           {needsMfa && <>
+            <p>This account has an enrolled authenticator. Supabase requires its current code to change the password; the reset link alone cannot remove that protection.</p>
             {factors.length > 1 && <Field title="Authenticator"><select value={factor} onChange={(e) => setFactor(e.target.value)}>
               {factors.map((item) => <option key={item.id} value={item.id}>{item.friendly_name || "Authenticator"}</option>)}
             </select></Field>}

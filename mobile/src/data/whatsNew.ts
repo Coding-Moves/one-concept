@@ -22,6 +22,13 @@ export interface WhatsNewEntry {
 
 export const WHATS_NEW: WhatsNewEntry[] = [
   {
+    version: '1.10.20',
+    highlights: [
+      'Reset your password with clear requirements and a choice to show what you typed.',
+      'Reviewers can check and publish lessons with fewer steps in the review workspace.',
+    ],
+  },
+  {
     version: '1.10.19',
     highlights: [
       'Keep learning from each lesson with quick links to video tutorials and more reading.',

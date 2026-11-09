@@ -107,3 +107,26 @@ test("a reviewer recovery link cannot update a different active account", async 
   await expect(page.getByRole("alert")).toContainText("The account changed");
   expect(passwordWrites).toBe(0);
 });
+
+test("a reviewer is told when the new password matches the old one", async ({ page, context }) => {
+  await fixture(context, { requireMfa: false });
+  await login(page);
+  await page.waitForFunction(() => !!localStorage.getItem("one-concept-review-auth"));
+  const tokens = await page.evaluate(() => {
+    const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
+    return { access: session.access_token as string, refresh: session.refresh_token as string };
+  });
+  await page.goto(`/auth/callback#access_token=${encodeURIComponent(tokens.access)}&refresh_token=${encodeURIComponent(tokens.refresh)}&type=recovery`);
+  await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  await context.route("https://review-auth.test/auth/v1/user", route =>
+    route.request().method() === "PUT"
+      ? route.fulfill({ status: 422, contentType: "application/json",
+          headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*",
+            "access-control-expose-headers": "x-supabase-api-version", "x-supabase-api-version": "2024-01-01" },
+          body: JSON.stringify({ code: "same_password", msg: "New password should be different" }) })
+      : route.fallback());
+  await page.getByLabel("Password", { exact: true }).fill("new-private-password");
+  await page.getByLabel("Confirm password").fill("new-private-password");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByRole("alert")).toContainText("Choose a password different from your current one");
+});

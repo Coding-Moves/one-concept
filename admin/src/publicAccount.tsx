@@ -105,7 +105,8 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
           setNeedsMfa(true);
           throw new Error("mfa-required");
         }
-        if (result.error) throw new Error(result.error.code === "weak_password" ? "weak" : "reset");
+        if (result.error) throw new Error(result.error.code === "weak_password" ? "weak"
+          : result.error.code === "same_password" ? "same" : "reset");
         sessionStorage.removeItem(recoveryMarker);
         const signedOut = await auth.auth.signOut({ scope: "local" });
         if (!signedOut.error) setUser(null);
@@ -120,6 +121,7 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
       const code = cause instanceof Error ? cause.message : "";
       setError(code === "rate" ? "Too many email requests. Wait a while and try again."
         : code === "weak" ? "Choose a stronger password and try again."
+        : code === "same" ? "Choose a password different from your current one."
         : code === "signin" ? "Unable to sign in. Check your email and password, then try again."
         : code === "verify" ? "Could not verify this reset session. Check your connection and try again."
         : code === "account" ? "The account changed before the password was updated. Sign out and request a new reset link."

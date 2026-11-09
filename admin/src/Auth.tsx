@@ -185,6 +185,8 @@ export function AccountSetup({
       }
       if (error?.code === "weak_password")
         throw new Error("Choose a stronger password and try again.");
+      if (error?.code === "same_password")
+        throw new Error("Choose a password different from your current one.");
       if (error)
         throw new Error("Password could not be saved. Request a new link and try again.");
       setPassword("");

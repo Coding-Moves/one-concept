@@ -13,6 +13,7 @@ export function AuthenticatorSetting({ auth, api, me, reloadMe }: {
   reloadMe: () => Promise<void>;
 }) {
   const [confirmOff, setConfirmOff] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
   const [factors, setFactors] = useState<Factor[]>([]);
   const [factor, setFactor] = useState("");
   const [code, setCode] = useState("");
@@ -39,6 +40,49 @@ export function AuthenticatorSetting({ auth, api, me, reloadMe }: {
       setFactors(verified);
       setFactor(verified[0].id);
       setConfirmOff(true);
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function beginRemove() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await checkAccount();
+      const { data, error } = await auth.auth.mfa.listFactors();
+      if (error) throw new Error("Unable to load your authenticators. Try again.");
+      const verified = data.totp.filter((item) => item.status === "verified");
+      if (!verified.length) throw new Error("No enrolled authenticator was found on this account.");
+      setFactors(verified);
+      setFactor(verified[0].id);
+      setConfirmRemove(true);
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeAuthenticators() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      await checkAccount();
+      const verified = await auth.auth.mfa.challengeAndVerify({ factorId: factor, code });
+      if (verified.error) throw new Error("The authenticator code was not accepted. Try the current six-digit code.");
+      await checkAccount();
+      const removed = await auth.auth.mfa.unenroll({ factorId: factor });
+      if (removed.error) throw new Error("Could not remove this authenticator. Try again from this page.");
+      setConfirmRemove(false);
+      setCode("");
+      setNotice(factors.length > 1
+        ? "Authenticator removed. Another enrolled authenticator may still be required for password changes."
+        : "Authenticator removed. Future password resets will not ask for its code.");
     } catch (e) {
       setError(message(e));
     } finally {
@@ -88,6 +132,8 @@ export function AuthenticatorSetting({ auth, api, me, reloadMe }: {
       <input type="checkbox" role="switch" checked={me.member.require_mfa} disabled={busy}
         onChange={() => me.member.require_mfa ? void beginDisable() : void save(true)} />
     </label>
+    <p className="muted">Turning off the workspace requirement leaves your Supabase authenticator enrolled. An enrolled factor can still be required for password changes.</p>
+    {!me.member.require_mfa && !confirmRemove && <button type="button" disabled={busy} onClick={() => void beginRemove()}>Remove authenticator from account</button>}
     {confirmOff && <form onSubmit={(event) => { event.preventDefault(); void save(false); }}>
       <Notice>Turning this off lets anyone with your password access your review permissions. Your authenticator stays enrolled, so you can turn the requirement back on later.</Notice>
       {factors.length > 1 && <Field title="Authenticator"><select value={factor} onChange={(event) => setFactor(event.target.value)}>
@@ -97,6 +143,15 @@ export function AuthenticatorSetting({ auth, api, me, reloadMe }: {
         pattern="[0-9]{6}" required value={code} onChange={(event) => setCode(event.target.value)} /></Field>
       <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? "Verifying…" : "Confirm and turn off"}</button>
         <button type="button" disabled={busy} onClick={() => { setConfirmOff(false); setCode(""); setError(""); }}>Cancel</button></div>
+    </form>}
+    {confirmRemove && <form onSubmit={(event) => { event.preventDefault(); void removeAuthenticators(); }}>
+      <Notice>Removing this authenticator can stop its second check during password resets and account changes. If you have others enrolled, remove each separately. Verify once to remove this one.</Notice>
+      {factors.length > 1 && <Field title="Authenticator"><select value={factor} onChange={(event) => setFactor(event.target.value)}>
+        {factors.map((item) => <option key={item.id} value={item.id}>{item.friendly_name || "Authenticator"}</option>)}
+      </select></Field>}
+      <Field title="Current six-digit code"><input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required value={code} onChange={(event) => setCode(event.target.value)} /></Field>
+      <div className="actions"><button type="submit" className="primary" disabled={busy}>{busy ? "Removing…" : "Verify and remove authenticator"}</button>
+        <button type="button" disabled={busy} onClick={() => { setConfirmRemove(false); setCode(""); setError(""); }}>Cancel</button></div>
     </form>}
   </section>;
 }

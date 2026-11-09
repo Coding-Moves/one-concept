@@ -194,6 +194,9 @@ jobs:
 
   release:
     needs: production_ota
+    # The optional preview job may be skipped. GitHub propagates that skipped
+    # dependency through the chain unless this job has an explicit condition.
+    if: ${{ always() && !cancelled() && needs.production_ota.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7

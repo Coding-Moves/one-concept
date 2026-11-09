@@ -51,6 +51,7 @@ test("owner sees an incomplete existing lesson as readable sections and cannot v
 }) => {
   await fixture(context, { legacyIncomplete: true });
   await login(page);
+  await page.getByRole("heading", { name: /Review queue/ }).waitFor();
   await page.goto(`/?view=review&kind=legacy&id=${cid}`);
   await expect(page.getByRole("heading", { name: "Review this lesson" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Worked example" })).toBeVisible();

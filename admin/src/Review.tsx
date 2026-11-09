@@ -499,17 +499,18 @@ export function Review({
                 </fieldset>
                 <button
                   className="primary"
-                  disabled={blocked || !noted}
+                  disabled={blocked}
                   onClick={() =>
                     void op.send({
                       path: `/concepts/${cid}/revisions`,
                       method: "POST",
-                      body: command(stageToken, note, { body: edit }),
+                      body: command(stageToken, note.trim() || "Prepared a corrected lesson for review.", { body: edit }),
                     })
                   }
                 >
                   Save as new draft
                 </button>
+                <p className="muted">A review note is optional here. Your correction is saved as a draft for human review.</p>
               </>
             ) : (
               <>

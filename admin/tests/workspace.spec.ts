@@ -329,6 +329,17 @@ test("change request, diff, AI correction status and manual revision", async ({
   expect(state.body.prompt_version).toBeNull();
   await expect(page.getByRole("heading", { name: "Generation record" })).toHaveCount(0);
 });
+test("manual correction can be saved without an optional review note", async ({ page, context }) => {
+  const state = await fixture(context);
+  await login(page);
+  await openLesson(page);
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Explanation", { exact: true }).fill("A clearer, corrected migration explanation for review.");
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeEnabled();
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+  expect(state.commands.at(-1).note).toBe("Prepared a corrected lesson for review.");
+});
 test("requesting changes shows an automatically queued private correction", async ({
   page,
   context,

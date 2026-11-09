@@ -380,9 +380,10 @@ test("denied access reveals no queue and recovery stays generic", async ({
   ).toBeVisible();
   await expect(page.getByText("Database Migrations")).toHaveCount(0);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await page.getByRole("button", { name: "Forgot your password?" }).click();
+  await page.getByRole("link", { name: "Forgot your password?" }).click();
+  await expect(page.getByRole("heading", { name: "Recover your account" })).toBeVisible();
   await page.getByLabel("Email address").fill("reviewer@example.test");
-  await page.getByRole("button", { name: "Send recovery email" }).click();
+  await page.getByRole("button", { name: "Send reset email" }).click();
   await expect(
     page.getByText("If this address can recover an account", { exact: false }),
   ).toBeVisible();

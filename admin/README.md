@@ -128,7 +128,9 @@ survives a browser refresh for the same signed-in account until the password
 is saved. The browser stores only the pending account ID and setup type for
 this purpose, never the email-link tokens or password.
 Legacy `/reset-password` links now forward to the public `/account/callback`
-page. Both reset forms explain the minimum length and server password errors;
+page. The reviewer sign-in Forgot password link also opens the shared public
+account recovery entry, including for ordinary learners. Both reset forms
+explain the minimum length and server password errors;
 an enrolled authenticator still requires a current code for a password change.
 Turning off the review workspace MFA requirement does not unenroll the factor.
 After turning it off, an account holder can remove the factor in Settings with

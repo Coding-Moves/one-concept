@@ -101,7 +101,8 @@ for compatibility, historical offline semantics and rollout.
 requests; the API client refreshes an idle token and fences account changes and
 late denials without discarding recoverable review work.
 `Auth.tsx` renders a dedicated verified invitation/recovery password setup form,
-direct sign-in and MFA; `main.tsx` sends generic learner recovery links at `/`
+direct sign-in and MFA; its Forgot password link opens the shared public account
+recovery entry. `main.tsx` sends generic learner recovery links at `/`
 to the public account page and removes other callback credentials before rendering
 and opens setup only after a valid Supabase session exchange. `Settings.tsx` handles
 registered identity, and `AuthenticatorSetting.tsx` lets owners and reviewers

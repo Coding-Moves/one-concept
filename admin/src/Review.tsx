@@ -23,6 +23,11 @@ export function Review({
   me,
   id,
   kind,
+  backView,
+  nextLesson,
+  previousLesson,
+  position,
+  onMove,
   navigate,
   setDirty,
 }: {
@@ -30,6 +35,11 @@ export function Review({
   me: Me;
   id: string;
   kind: string;
+  backView?: string;
+  nextLesson?: { id: string; title: string };
+  previousLesson?: { id: string; title: string };
+  position?: { current: number; total: number };
+  onMove: (step: -1 | 1) => void;
   navigate: (r: Route) => void;
   setDirty: (v: boolean) => void;
 }) {
@@ -312,21 +322,21 @@ export function Review({
     : null;
   return (
     <>
-      <button
-        className="text-button"
-        onClick={() =>
-          navigate({
-            view:
-              kind === "published"
-                ? "published"
-                : kind === "legacy"
-                  ? "legacy"
-                  : "queue",
-          })
-        }
-      >
-        ← Back to lessons
-      </button>
+      <div className="heading-row review-navigation">
+        <button
+          className="text-button"
+          onClick={() => navigate({
+            view: backView || (kind === "published" ? "published" : kind === "legacy" ? "legacy" : "queue"),
+          })}
+        >
+          ← Back to {backView === "legacy" ? "existing lessons" : backView === "approved" ? "approved lessons" : backView === "published" ? "published lessons" : "review queue"}
+        </button>
+        {position && <span className="muted">On this page: {position.current} of {position.total}</span>}
+        <div className="review-navigation-actions">
+          {previousLesson && <button className="text-button" onClick={() => onMove(-1)}>← Previous lesson</button>}
+          {nextLesson && <button className="text-button" onClick={() => onMove(1)}>Next: {nextLesson.title} →</button>}
+        </div>
+      </div>
       <div className="page-heading heading-row">
         <div>
           <p className="eyebrow">
@@ -828,6 +838,14 @@ export function Review({
                 </div>
               ))}
             </section>
+          )}
+          {nextLesson && (
+            <div className="card review-continue">
+              <p className="muted">Ready for another lesson?</p>
+              <button className="primary" onClick={() => onMove(1)}>
+                Next: {nextLesson.title} →
+              </button>
+            </div>
           )}
         </aside>
       </div>

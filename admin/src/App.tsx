@@ -7,6 +7,7 @@ import { Notice, message } from "./ui";
 import type { Me } from "./types";
 import { Settings } from "./Settings";
 import { Queue } from "./Queue";
+import type { QueueState } from "./Queue";
 import { Review } from "./Review";
 import { Team } from "./Team";
 import { Notifications } from "./Notifications";
@@ -51,7 +52,12 @@ export function App({
   const account = useRef<string | null>(null),
     dirty = useRef(false),
     sessionRef = useRef<Session | null>(null),
-    url = useRef(location.href);
+    url = useRef(location.href),
+    queueStates = useRef<Record<string, QueueState>>({}),
+    reviewJourney = useRef<{ view: string; kind: string; items: { id: string; title: string }[]; index: number } | null>(null);
+  const rememberQueue = useCallback((view: string, state: QueueState) => {
+    queueStates.current[view] = state;
+  }, []);
   const reloadMe = useCallback(async () => {
     try {
       const value = await api.request<Me>("/me");
@@ -85,6 +91,8 @@ export function App({
         setMe(null);
         if (event !== "INITIAL_SESSION" && event !== "SIGNED_OUT") setError("");
         dirty.current = false;
+        queueStates.current = {};
+        reviewJourney.current = null;
         setEpoch((n) => n + 1);
       }
       if (event === "SIGNED_OUT") {
@@ -161,13 +169,14 @@ export function App({
       window.removeEventListener("popstate", pop);
     };
   }, []);
-  function navigate(next: Route) {
+  function navigate(next: Route): boolean {
     if (
       dirty.current &&
       !confirm("Leave this page and discard unsaved review changes?")
     )
-      return;
+      return false;
     dirty.current = false;
+    if (next.view !== "review") reviewJourney.current = null;
     const p = new URLSearchParams({
       view: next.view,
       ...(next.id ? { id: next.id } : {}),
@@ -177,6 +186,7 @@ export function App({
     url.current = location.href;
     setCurrent(next);
     window.scrollTo(0, 0);
+    return true;
   }
   async function signOut() {
     if (
@@ -240,6 +250,9 @@ export function App({
     ["settings", "Settings", "⚙"],
   ];
   const active = !!me?.member.approved_name && !me?.mfa_required;
+  const journey = reviewJourney.current;
+  const nextLesson = journey?.items[journey.index + 1];
+  const previousLesson = journey?.items[journey.index - 1];
   return (
     <div className="workspace">
       <a className="skip" href="#main">
@@ -354,6 +367,18 @@ export function App({
                   me={me}
                   id={current.id}
                   kind={current.kind || "revisions"}
+                  backView={journey?.view}
+                  nextLesson={nextLesson}
+                  previousLesson={previousLesson}
+                  position={journey ? { current: journey.index + 1, total: journey.items.length } : undefined}
+                  onMove={(step) => {
+                    const currentJourney = reviewJourney.current;
+                    if (!currentJourney) return;
+                    const item = currentJourney.items[currentJourney.index + step];
+                    if (!item) return;
+                    if (navigate({ view: "review", id: item.id, kind: currentJourney.kind }))
+                      currentJourney.index += step;
+                  }}
                   navigate={navigate}
                   setDirty={(value) => {
                     dirty.current = value;
@@ -366,6 +391,11 @@ export function App({
                   me={me}
                   view={current.view}
                   navigate={navigate}
+                  initialState={queueStates.current[current.view]}
+                  onStateChange={rememberQueue}
+                  onOpen={(view, kind, items, index) => {
+                    reviewJourney.current = { view, kind, items, index };
+                  }}
                 />
               ) : (
                 <Notice>

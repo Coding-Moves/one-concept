@@ -4,7 +4,6 @@ import type { Api } from "./api";
 import type { Route } from "./App";
 import { checklist, label, shortId } from "./types";
 import type {
-  CheckKey,
   Detail,
   Event,
   Job,
@@ -40,8 +39,7 @@ export function Review({
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [note, setNote] = useState(""),
-    [checks, setChecks] = useState<Partial<Record<CheckKey, boolean>>>({}),
-    [sensitive, setSensitive] = useState(""),
+    [reviewConfirmed, setReviewConfirmed] = useState(false),
     [tab, setTab] = useState("lesson"),
     [stale, setStale] = useState(false),
     [edit, setEdit] = useState<Lesson | null>(null),
@@ -80,8 +78,7 @@ export function Review({
     setDetail(d);
     current.current = d;
     setStale(false);
-    setChecks({});
-    setSensitive("");
+    setReviewConfirmed(false);
     setAssignee(d.assigned_to || "");
     setDue(d.review_due_at ? localTime(d.review_due_at) : "");
     const concept = d.concept_id || id;
@@ -98,8 +95,7 @@ export function Review({
   }
   const op = useCommand(api, async (result, submitted) => {
     setNote("");
-    setChecks({});
-    setSensitive("");
+    setReviewConfirmed(false);
     setEdit(null);
     setDirty(false);
     const action = (submitted.body as { action?: string }).action;
@@ -207,21 +203,25 @@ export function Review({
         <button onClick={() => void load()}>Reload lesson</button>
       </section>
     );
-  const approvalKeys = Object.keys(checklist) as CheckKey[];
-  const complete = approvalKeys.every((k) => checks[k]) && !!sensitive;
+  const complete = reviewConfirmed;
   const blocked =
     op.busy || !!op.pending || op.conflict || stale || editNeedsReview;
   const decisionBlocked = blocked || !!edit;
   const noted = note.trim().length >= 10;
   const quality = {
-    ...Object.fromEntries(approvalKeys.map((k) => [k, !!checks[k]])),
-    sensitive_topic_handling: sensitive,
+    ...Object.fromEntries(Object.keys(checklist).map((k) => [k, reviewConfirmed])),
+    sensitive_topic_handling: "reviewed",
   };
   function act(action: string, extra: Record<string, unknown> = {}) {
+    const defaultNote = action === "submit"
+      ? "Submitted complete draft for human review."
+      : action === "publish"
+        ? "Published the previously approved revision."
+        : "Reviewed the lesson, practice answers, and cited references.";
     void op.send({
       path: path + "/actions",
       method: "POST",
-      body: command(detail!.token, note, { action, ...extra }),
+      body: command(detail!.token, note.trim() || defaultNote, { action, ...extra }),
     });
   }
   async function beginEdit() {
@@ -307,6 +307,9 @@ export function Review({
     }
   }
   const approvedBy = detail.approved_by || detail.provenance?.registered_name;
+  const readyCorrection = !revision && !detail.validation.valid
+    ? historyRows.items.find((row) => row.base_version === detail.content_version && row.status === "pending_review")
+    : null;
   return (
     <>
       <button
@@ -341,6 +344,14 @@ export function Review({
         <Badge status={detail.status} />
       </div>
       {notice && <Notice>{notice}</Notice>}
+      {readyCorrection && (
+        <Notice>
+          A complete correction is waiting for review. Review its full lesson and sources before approval.{" "}
+          <button onClick={() => navigate({ view: "review", id: readyCorrection.id, kind: "revisions" })}>
+            Open correction
+          </button>
+        </Notice>
+      )}
       {(error || op.error) && <Notice error>{error || op.error}</Notice>}
       {(stale || op.conflict) && (
         <Notice error>
@@ -406,13 +417,19 @@ export function Review({
           </div>
           <div className="card document-card">
             {tab === "lesson" ? (
-              detail.validation.valid ? (
+              detail.body && typeof detail.body === "object" && !Array.isArray(detail.body) ? (
+                <>
+                  {!detail.validation.valid && (
+                    <Notice error>
+                      This older lesson is incomplete. Read what exists below, then prepare a correction before verification.
+                    </Notice>
+                  )}
                 <LessonView body={detail.body} links={detail.source_links} />
+                </>
               ) : (
                 <>
                   <Notice error>
-                    This package needs structural corrections. Its complete
-                    original content is shown below.
+                    This lesson needs a complete correction before review.
                   </Notice>
                   <Value value={detail.body} />
                 </>
@@ -554,7 +571,7 @@ export function Review({
               Automated checks do not verify facts. Read every section and check
               the sources.
             </p>
-            {((revision &&
+            {detail.validation.valid && ((revision &&
               detail.status === "pending_review" &&
               can("approve")) ||
               (!revision &&
@@ -563,31 +580,16 @@ export function Review({
                 can("approve") &&
                 can("publish"))) && (
               <fieldset disabled={decisionBlocked}>
-                <legend>Human review checklist</legend>
-                <div className="checks vertical">
-                  {approvalKeys.map((k) => (
-                    <label key={k}>
-                      <input
-                        type="checkbox"
-                        checked={!!checks[k]}
-                        onChange={(e) =>
-                          setChecks({ ...checks, [k]: e.target.checked })
-                        }
-                      />
-                      {checklist[k]}
-                    </label>
-                  ))}
-                </div>
-                <Field title="Sensitive content">
-                  <select
-                    value={sensitive}
-                    onChange={(e) => setSensitive(e.target.value)}
-                  >
-                    <option value="">Choose after review</option>
-                    <option value="not_applicable">Not applicable</option>
-                    <option value="reviewed">Reviewed for safe handling</option>
-                  </select>
-                </Field>
+                <legend>Ready to approve?</legend>
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={reviewConfirmed}
+                    onChange={(e) => setReviewConfirmed(e.target.checked)}
+                  />
+                  I checked the facts, objective, example, topic, flashcard,
+                  all three answers, every cited reference, and sensitive content.
+                </label>
               </fieldset>
             )}
             <Field title="Review note or comment">
@@ -596,7 +598,7 @@ export function Review({
                 maxLength={4000}
                 value={note}
                 disabled={op.busy || !!op.pending}
-                placeholder="What did you check? What should change? (At least 10 characters)"
+                placeholder="Optional for approval or submitting a draft. For changes or comments, explain what needs attention (at least 10 characters)."
                 onChange={(e) => setNote(e.target.value)}
               />
             </Field>
@@ -624,7 +626,6 @@ export function Review({
                     className="primary"
                     disabled={
                       decisionBlocked ||
-                      !noted ||
                       !complete ||
                       !detail.validation.valid
                     }
@@ -643,7 +644,7 @@ export function Review({
                 <button
                   className="primary"
                   disabled={
-                    decisionBlocked || !noted || !detail.validation.valid
+                    decisionBlocked || !detail.validation.valid
                   }
                   onClick={() => act("publish")}
                 >
@@ -653,7 +654,7 @@ export function Review({
               {revision && detail.status === "draft" && can("review") && (
                 <button
                   className="primary"
-                  disabled={decisionBlocked || !noted}
+                  disabled={decisionBlocked || !detail.validation.valid}
                   onClick={() => act("submit")}
                 >
                   Submit for review
@@ -693,7 +694,6 @@ export function Review({
                     className="primary"
                     disabled={
                       decisionBlocked ||
-                      !noted ||
                       !complete ||
                       !detail.validation.valid
                     }
@@ -730,7 +730,8 @@ export function Review({
               )}
             </div>
             {(detail.status === "approved" ||
-              detail.status === "published") && (
+              (revision && detail.status === "published") ||
+              (!revision && !!detail.provenance)) && (
               <p className="valid">
                 ✓ Already approved for the team. No second approval needed.
               </p>
@@ -739,8 +740,9 @@ export function Review({
           {can("manage_reviewers") &&
             revision &&
             !["published", "retired"].includes(detail.status) && (
-              <section className="card">
-                <h2>Assignment & deadline</h2>
+              <details className="card">
+                <summary>Optional: assign a reviewer or deadline</summary>
+                <p className="muted">The shared queue is open to every active reviewer. Assignment only coordinates who plans to review this card.</p>
                 <Field title="Assign to">
                   <select
                     value={assignee}
@@ -783,7 +785,7 @@ export function Review({
                 <p className="muted">
                   A deadline never approves or publishes a lesson automatically.
                 </p>
-              </section>
+              </details>
             )}
           {jobs.length > 0 && (
             <section className="card">

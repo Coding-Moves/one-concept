@@ -18,6 +18,22 @@ export function LessonView({
   body: Lesson;
   links: { title: string; url: string }[];
 }) {
+  // Published legacy lessons may predate the curriculum and recall fields.
+  // Show their available text without making an incomplete card look complete.
+  const curriculum = body.curriculum;
+  const packageData = body.learning_package;
+  const references = Array.isArray(curriculum?.references)
+    ? curriculum.references
+    : [];
+  const prerequisites = Array.isArray(curriculum?.prerequisites)
+    ? curriculum.prerequisites.filter((slug): slug is string => typeof slug === "string")
+    : [];
+  const safeLinks = links.filter((link) => safeUrl(link.url));
+  const hasGroundingRedirect = safeLinks.some((link) =>
+    new URL(link.url).hostname === "vertexaisearch.cloud.google.com",
+  );
+  const flashcard = packageData?.flashcard;
+  const questions = Array.isArray(packageData?.mcqs) ? packageData.mcqs : [];
   return (
     <div className="lesson-document">
       <section>
@@ -32,15 +48,17 @@ export function LessonView({
       <section>
         <p className="eyebrow">02 · CURRICULUM</p>
         <h3>Learning objective</h3>
-        <MarkdownText value={body.curriculum?.objective} />
+        {curriculum?.objective
+          ? <MarkdownText value={curriculum.objective} />
+          : <p>Learning objective needs to be added.</p>}
         <div className="metadata">
-          <span>Difficulty {body.curriculum?.difficulty ?? "—"}</span>
+          <span>Difficulty {curriculum?.difficulty ?? "—"}</span>
           <span>Subtopic: {body.subtopic_slug}</span>
         </div>
         <h3>Prerequisites</h3>
-        {body.curriculum.prerequisites.length ? (
+        {prerequisites.length ? (
           <ul>
-            {body.curriculum.prerequisites.map((slug) => (
+            {prerequisites.map((slug) => (
               <li key={slug}>{slug.replaceAll("-", " ")}</li>
             ))}
           </ul>
@@ -48,63 +66,74 @@ export function LessonView({
           <p>No prerequisites.</p>
         )}
         <h3>References</h3>
-        <ul>
-          {links
-            .filter((link) => safeUrl(link.url))
-            .map((link, i) => (
-              <li key={i}>
-                <a
-                  href={safeUrl(link.url)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  <MarkdownText value={link.title} inline links={false} /> ↗
-                </a>
-              </li>
-            ))}
-        </ul>
+        {references.length && safeLinks.length ? (
+          <>
+            <ul>
+              {safeLinks.map((link, i) => (
+                <li key={i}>
+                  <a
+                    href={safeUrl(link.url)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <MarkdownText value={link.title} inline links={false} /> ↗
+                  </a>
+                </li>
+              ))}
+            </ul>
+            {hasGroundingRedirect && (
+              <p className="muted">Some citations use Google redirect links. Open each one; replace any link that fails before approving this lesson.</p>
+            )}
+          </>
+        ) : <p>References need to be added and checked.</p>}
       </section>
       <section>
         <p className="eyebrow">03 · RECALL</p>
         <h3>Flashcard</h3>
-        <div className="flashcard">
-          <span className="muted">FRONT</span>
-          <MarkdownText value={body.learning_package?.flashcard?.front} />
-          <span className="muted">BACK</span>
-          <MarkdownText value={body.learning_package?.flashcard?.back} />
-        </div>
+        {flashcard ? (
+          <div className="flashcard">
+            <span className="muted">FRONT</span>
+            <MarkdownText value={flashcard.front} />
+            <span className="muted">BACK</span>
+            <MarkdownText value={flashcard.back} />
+          </div>
+        ) : <p>Flashcard needs to be added.</p>}
       </section>
       <section>
         <p className="eyebrow">04 · PRACTICE</p>
         <h3>All questions & answers</h3>
-        {Array.isArray(body.learning_package?.mcqs) ? (
-          body.learning_package.mcqs.map((q, i) => (
+        {questions.length ? (
+          questions.map((q, i) => (
             <article key={i} className="question">
               <h4>Question {i + 1}</h4>
-              <MarkdownText value={q.question} />
-              <ol type="A">
-                {Array.isArray(q.options)
-                  ? q.options.map((o, n) => (
-                      <li
-                        key={n}
-                        className={
-                          q.correct_index === n ? "correct-answer" : ""
-                        }
-                      >
-                        <MarkdownText value={o} inline />
-                        {q.correct_index === n && (
-                          <strong> · Correct answer</strong>
-                        )}
-                      </li>
-                    ))
-                  : null}
-              </ol>
-              {q.explanation && (
+              {q && typeof q === "object" ? (
                 <>
-                  <h4>Explanation</h4>
-                  <MarkdownText value={q.explanation} />
+                  <MarkdownText value={q.question} />
+                  <ol type="A">
+                    {Array.isArray(q.options)
+                      ? q.options.map((o, n) => (
+                          <li
+                            key={n}
+                            className={
+                              q.correct_index === n ? "correct-answer" : ""
+                            }
+                          >
+                            <MarkdownText value={o} inline />
+                            {q.correct_index === n && (
+                              <strong> · Correct answer</strong>
+                            )}
+                          </li>
+                        ))
+                      : null}
+                  </ol>
+                  {q.explanation && (
+                    <>
+                      <h4>Explanation</h4>
+                      <MarkdownText value={q.explanation} />
+                    </>
+                  )}
                 </>
-              )}
+              ) : <p>Question needs to be corrected.</p>}
             </article>
           ))
         ) : (

@@ -76,6 +76,7 @@ export async function fixture(
     name?: string;
     shared?: unknown;
     autoCorrection?: boolean;
+    legacyIncomplete?: boolean;
   } = {},
 ) {
   const member = {
@@ -117,6 +118,7 @@ export async function fixture(
     commands: [] as any[],
     jobs: [] as any[],
     autoCorrection: options.autoCorrection || false,
+    legacyIncomplete: options.legacyIncomplete || false,
     member,
     members: [member],
   };
@@ -458,10 +460,25 @@ export async function fixture(
       return fulfill(route, {
         ...detail,
         id: cid,
-        body: state.liveBody ?? state.body,
+        body: state.legacyIncomplete ? {
+          title: state.body.title,
+          summary: state.body.summary,
+          example: state.body.example,
+          subtopic_slug: state.body.subtopic_slug,
+          curriculum: {},
+          learning_package: { flashcard: null, mcqs: null },
+        } : state.liveBody ?? state.body,
         concept_id: undefined,
         content_version: state.contentVersion,
         unchanged_legacy: true,
+        validation: state.legacyIncomplete ? {
+          valid: false,
+          errors: [
+            { field: "curriculum.objective", message: "Expected 15–500 characters" },
+            { field: "learning_package.flashcard", message: "A flashcard is required" },
+          ],
+        } : detail.validation,
+        source_links: state.legacyIncomplete ? [] : detail.source_links,
         provenance: state.approvedBy
           ? { registered_name: state.approvedBy }
           : null,
@@ -487,8 +504,7 @@ export async function openLesson(page: Page) {
   await page.getByRole("heading", { name: "Review this lesson" }).waitFor();
 }
 export async function checkAll(page: Page) {
-  for (const box of await page.getByRole("checkbox").all()) await box.check();
-  await page.getByLabel("Sensitive content").selectOption("not_applicable");
+  await page.getByRole("checkbox", { name: /I checked the facts/ }).check();
   await page
     .getByLabel("Review note or comment")
     .fill("Checked the full lesson and all answers against the references.");

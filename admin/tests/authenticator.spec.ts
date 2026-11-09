@@ -38,3 +38,17 @@ for (const [role, caps] of [
     await expect(page.getByRole("heading", { name: "Verify your authenticator" })).toBeVisible();
   });
 }
+
+test("an opted-out reviewer can remove an enrolled factor so password resets stop asking for its code", async ({ page, context }) => {
+  await fixture(context, { mfa: true, requireMfa: false });
+  await login(page);
+  await expect(page.getByRole("heading", { name: "A little care. Better learning." })).toBeVisible();
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Remove authenticator from account" }).click();
+  await expect(page.getByText("If you have others enrolled, remove each separately", { exact: false })).toBeVisible();
+  await page.getByLabel("Current six-digit code").fill("123456");
+  await page.getByRole("button", { name: "Verify and remove authenticator" }).click();
+  await expect(page.getByText("Authenticator removed. Future password resets will not ask for its code.")).toBeVisible();
+  await page.getByRole("button", { name: "Remove authenticator from account" }).click();
+  await expect(page.getByText("No enrolled authenticator was found")).toBeVisible();
+});

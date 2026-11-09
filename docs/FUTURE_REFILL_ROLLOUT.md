@@ -20,6 +20,16 @@ fixed by increasing a model quota or turning on a scheduler.
 2. Review the current catalog, private drafts and pending revisions. Publish
    only exact lesson versions that pass the full editorial checklist. A full
    review queue blocks new claims by design.
+   The **Existing lessons** view shows the old published version. If it lacks
+   required fields, open its pending correction from that lesson and review the
+   complete revision; do not try to verify the incomplete old version. The
+   shared **Review queue** includes new drafts and pending corrections. An
+   active reviewer can open either without an owner assignment. Drafts must be
+   submitted for review before approval, and every exact revision still needs
+   a human decision. Assignment is optional coordination.
+   Some existing corrections contain Google grounding redirect citations. If a
+   redirect no longer opens the cited page, replace it through a manual
+   correction before approval. A domain label alone is not source verification.
 3. Inspect failed planned titles individually. Correct duplicates, content
    validation problems or provider configuration before granting an audited
    retry; never reset all failed rows. See [content operations](CONTENT_OPERATIONS.md).
@@ -36,6 +46,9 @@ fixed by increasing a model quota or turning on a scheduler.
 
 The production Edge worker reads `GENERATION_ENABLED` and
 `FUTURE_REFILL_ENABLED` independently. Both must be true for curated refill.
+Keep new-lesson refill paused while the existing revision queue is being
+reviewed. `editorial_generation` and `legacy_enrichment` are separate workers;
+their success does not prove new titles are being drafted.
 Enable the `content_pool` row in `edge_worker_jobs` and its matching Cron job
 only after checking the exact production project and target worker URL. The
 normal path claims at most one private draft per eligible low-supply topic per

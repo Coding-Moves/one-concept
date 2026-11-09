@@ -45,6 +45,58 @@ test("topic filtering, full package, comments and atomic publication", async ({
     page.getByText("Approved by Amina Khan", { exact: false }),
   ).toBeVisible();
 });
+test("owner sees an incomplete existing lesson as readable sections and cannot verify it", async ({
+  page,
+  context,
+}) => {
+  await fixture(context, { legacyIncomplete: true });
+  await login(page);
+  await page.getByRole("heading", { name: /Review queue/ }).waitFor();
+  await page.goto(`/?view=review&kind=legacy&id=${cid}`);
+  await expect(page.getByRole("heading", { name: "Review this lesson" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Worked example" })).toBeVisible();
+  await expect(page.getByText("Flashcard needs to be added.")).toBeVisible();
+  await expect(page.getByText("References need to be added and checked.")).toBeVisible();
+  await expect(page.locator(".document-card pre.plain-value")).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Verify existing lesson" })).toBeDisabled();
+  await expect(page.getByText("Already approved for the team", { exact: false })).toHaveCount(0);
+  await page.getByRole("button", { name: "Open correction" }).click();
+  await expect(page.getByRole("heading", { name: "Question 3" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Approve and publish" })).toBeVisible();
+});
+test("a reviewer can approve an unassigned complete card with one explicit verification", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context, { caps: ["review", "approve", "publish"] });
+  await login(page);
+  await openLesson(page);
+  await expect(page.getByRole("button", { name: "Approve and publish" })).toBeDisabled();
+  await page.getByRole("checkbox", { name: /I checked the facts/ }).check();
+  await page.getByRole("button", { name: "Approve and publish" }).click();
+  await expect(page.getByText("Published successfully", { exact: false })).toBeVisible();
+  expect(state.assignedTo).toBeNull();
+  expect(state.commands[0].quality_review).toBeUndefined();
+  expect(state.commands[0].quality.factual_accuracy).toBe(true);
+  expect(state.commands[0].quality.sensitive_topic_handling).toBe("reviewed");
+});
+test("an unassigned AI draft is visible to a reviewer in the shared queue", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context, { caps: ["review", "approve"] });
+  state.status = "draft";
+  await login(page);
+  await expect(page.getByRole("button", { name: /Database Migrations.*Draft/ })).toBeVisible();
+  await openLesson(page);
+  await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Submit for review" })).toBeEnabled();
+  await expect(page.getByText("Optional: assign a reviewer or deadline")).toHaveCount(0);
+  await page.getByRole("button", { name: "Submit for review" }).click();
+  await expect(page.getByRole("button", { name: "Approve revision" })).toBeVisible();
+  expect(state.commands[0].action).toBe("submit");
+  expect(state.commands[0].note).toBe("Submitted complete draft for human review.");
+});
 test("a published revision remains a structured, readable history entry", async ({
   page,
   context,
@@ -125,6 +177,7 @@ test("owner and reviewer sessions see one assignment, comment and publication", 
   });
   await login(page);
   await openLesson(page);
+  await page.getByText("Optional: assign a reviewer or deadline").click();
   await page.getByLabel("Assign to", { exact: true }).selectOption(reviewerId);
   await page.getByLabel("Review note or comment").fill(
     "Please review the whole lesson and its reference.",
@@ -327,9 +380,10 @@ test("denied access reveals no queue and recovery stays generic", async ({
   ).toBeVisible();
   await expect(page.getByText("Database Migrations")).toHaveCount(0);
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
-  await page.getByRole("button", { name: "Forgot your password?" }).click();
+  await page.getByRole("link", { name: "Forgot your password?" }).click();
+  await expect(page.getByRole("heading", { name: "Recover your account" })).toBeVisible();
   await page.getByLabel("Email address").fill("reviewer@example.test");
-  await page.getByRole("button", { name: "Send recovery email" }).click();
+  await page.getByRole("button", { name: "Send reset email" }).click();
   await expect(
     page.getByText("If this address can recover an account", { exact: false }),
   ).toBeVisible();
@@ -430,6 +484,7 @@ test("owner assigns a deadline, invites a reviewer and requests bounded drafts",
   const state = await fixture(context);
   await login(page);
   await openLesson(page);
+  await page.getByText("Optional: assign a reviewer or deadline").click();
   await page
     .getByLabel("Assign to", { exact: true })
     .selectOption({ label: "Amina Khan" });
@@ -534,6 +589,7 @@ test("assignment changes warn before navigation and exclude non-reviewers", asyn
   });
   await login(page);
   await openLesson(page);
+  await page.getByText("Optional: assign a reviewer or deadline").click();
   const assignee = page.getByLabel("Assign to", { exact: true });
   await expect(assignee.locator("option", { hasText: "Approval Only" })).toHaveCount(0);
   await assignee.selectOption({ label: "Amina Khan" });

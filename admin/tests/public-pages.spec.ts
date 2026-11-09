@@ -44,14 +44,13 @@ test("Netlify confirmation stays neutral until an Auth redirect and clears its s
   await expect(page).toHaveURL(/\/confirmed$/);
 });
 
-test("Netlify confirmation forwards a recovery session to its reset form", async ({ page }) => {
+test("Netlify confirmation forwards a recovery session through the legacy reset link to the account page", async ({ page }) => {
   const html = await readFile(resolve("public/confirmed/index.html"), "utf8");
   const reset = await readFile(resolve("public/reset-password/index.html"), "utf8");
   await page.route("**/confirmed", route => route.fulfill({ contentType: "text/html", body: html }));
   await page.route("**/reset-password", route => route.fulfill({ contentType: "text/html", body: reset }));
-  await page.goto("/confirmed#access_token=recovery-token&type=recovery");
-  await expect(page).toHaveURL(/\/reset-password$/);
-  await expect(page.locator("#reset-form")).toBeVisible();
+  await page.goto("/confirmed#access_token=recovery-token&refresh_token=refresh-token&type=recovery");
+  await expect(page).toHaveURL(/\/account$/);
 });
 
 test("shared profile reads only public JSON and hides a revoked profile", async ({ page }) => {
@@ -79,24 +78,27 @@ test("shared profile reads only public JSON and hides a revoked profile", async 
   await expect(page.locator("#name")).toHaveText("Shared profile");
 });
 
-test("recovery consumes only a recovery fragment and clears it before submission", async ({ page }) => {
+test("legacy reset links forward only complete recovery sessions and clear invalid fragments", async ({ page }) => {
   const html = await readFile(resolve("public/reset-password/index.html"), "utf8");
   await page.route("**/reset-password", (route) => route.fulfill({ contentType: "text/html", body: html }));
-  let authHeader = "";
-  await page.route(`${config.supabaseUrl}/auth/v1/user`, (route) => {
-    authHeader = route.request().headers().authorization;
-    return route.fulfill({ contentType: "application/json", headers: { "Access-Control-Allow-Origin": "*" }, body: "{}" });
-  });
-  await page.goto("/reset-password#access_token=test-recovery-token&type=recovery");
-  await expect(page).toHaveURL(/\/reset-password$/);
-  await page.locator("#password").fill("new-password-123");
-  await page.locator("#confirm-password").fill("new-password-123");
-  await page.getByRole("button", { name: "Update password" }).click();
-  await expect(page.locator("#status")).toContainText("Password updated");
-  expect(authHeader).toBe("Bearer test-recovery-token");
-
-  await page.goto("/");
+  await page.goto("/reset-password#access_token=test-recovery-token&refresh_token=test-refresh-token&type=recovery");
+  await expect(page).toHaveURL(/\/account$/);
+  await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
   await page.goto("/reset-password#access_token=wrong-type&type=signup");
-  await expect(page.locator("#reset-form")).toBeHidden();
   await expect(page.locator("#status")).toContainText("invalid or has expired");
+  await expect(page).toHaveURL(/\/reset-password$/);
+});
+
+test("legacy code-only reset links retain recovery intent at the shared callback", async ({ page }) => {
+  const html = await readFile(resolve("public/reset-password/index.html"), "utf8");
+  await page.route("**/reset-password?*", route => route.fulfill({ contentType: "text/html", body: html }));
+  let callback = "";
+  await page.route("**/account/callback?*", route => {
+    callback = route.request().url();
+    return route.fulfill({ contentType: "text/html", body: "<h1>Account callback</h1>" });
+  });
+  await page.goto("/reset-password?code=fixture-one-time-code");
+  await expect(page.getByRole("heading", { name: "Account callback" })).toBeVisible();
+  expect(new URL(callback).searchParams.get("type")).toBe("recovery");
+  expect(new URL(callback).searchParams.get("code")).toBe("fixture-one-time-code");
 });

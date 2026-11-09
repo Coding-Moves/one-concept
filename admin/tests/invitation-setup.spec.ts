@@ -33,6 +33,15 @@ test("a verified invitation opens dedicated setup for the shared learning and re
   await expect(page.getByRole("heading", { name: "Finish creating your account" })).toBeVisible();
   await expect(page.getByLabel("Verified email")).toHaveValue("reviewer@example.test");
   await page.getByLabel("Password", { exact: true }).fill("new-private-password");
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Show passwords" }).click();
+  await expect(page.getByLabel("Password", { exact: true })).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Hide passwords" }).click();
+  await page.getByLabel("Password", { exact: true }).fill("short");
+  await page.getByLabel("Confirm password").fill("short");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByRole("alert")).toContainText("12 characters");
+  await page.getByLabel("Password", { exact: true }).fill("new-private-password");
   await page.getByLabel("Confirm password").fill("different-password");
   await page.getByRole("button", { name: "Save password and continue" }).click();
   await expect(page.getByText("The passwords do not match.")).toBeVisible();

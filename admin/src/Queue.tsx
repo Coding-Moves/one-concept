@@ -55,7 +55,10 @@ export function Queue({
     let active = true;
     allPages<Taxon>(api, "/taxonomy")
       .then((data) => {
-        if (active) setTaxonomy(data);
+        if (active) {
+          setTaxonomy(data);
+          setFilterError("");
+        }
       })
       .catch(() => {
         if (active)

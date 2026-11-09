@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### v1.10.20 release preparation — 2026-11-09
+
+- PR #498 merged into `develop` at `ee9076d`; the current `develop` → `main` diff contains the reviewer workflow and password recovery changes, with no SQL migration or native app change. Production still runs v1.10.19 until a reviewed release PR is merged and the protected deployment and release workflows complete.
+- Commit `ef7de93` updates `expo.version` to 1.10.20 and adds its one-time What's New card. Production and staging `runtimeVersion` values remain pinned to their existing native builds. The card describes clearer password recovery and the simpler reviewer workflow; it does not claim that generation or bulk lesson approval is enabled.
+- Local validation: mobile TypeScript typecheck passed using the existing installed SDK packages, both Expo config variants and the matching nonempty card were read directly, and `git diff --check` passed. A fresh `npm ci` could not reach the npm registry (`EAI_AGAIN`); the child-process variant test could not run in this sandbox (`EPERM`), so hosted CI must provide that evidence.
+- Next: pass the version/card checks, merge the small preparation PR into `develop` after the required PR-specific confirmation, then open and review the `develop` → `main` release PR. After release, verify live owner and reviewer flows before approving individual lessons; keep new-lesson generation gated until the backlog and provider settings are checked.
+
 ### Password recovery usability follow-up in PR #498 — 2026-11-09
 
 - The owner reported that short passwords silently stopped reset submission, password text could not be shown, an ordinary learner landed in the review workspace, and owner/reviewer password changes asked for a six-digit authenticator code. Native `minLength` validation caused the silent stop. Supabase's `insufficient_aal` response comes from an enrolled account factor even when the workspace MFA requirement is off; it cannot be bypassed by the website.

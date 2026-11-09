@@ -56,3 +56,26 @@ test("a recovery email returns to the same password setup without creating a sec
   await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Finish creating your account" })).toHaveCount(0);
 });
+
+test("a reviewer recovery link requires the enrolled authenticator before saving a password", async ({ page, context }) => {
+  await fixture(context, { mfa: true, requireMfa: false });
+  await login(page);
+  const tokens = await page.evaluate(() => {
+    const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
+    return { access: session.access_token as string, refresh: session.refresh_token as string };
+  });
+  await page.goto(`/auth/callback#access_token=${encodeURIComponent(tokens.access)}&refresh_token=${encodeURIComponent(tokens.refresh)}&type=recovery`);
+  await page.getByLabel("Password", { exact: true }).fill("new-private-password");
+  await page.getByLabel("Confirm password").fill("new-private-password");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByLabel("Current six-digit code")).toBeVisible();
+  await expect(page.getByText("Enter the current code from your authenticator app", { exact: false })).toBeVisible();
+  await page.getByLabel("Current six-digit code").fill("000000");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByText("The authenticator code was not accepted", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  await page.getByLabel("Current six-digit code").fill("123456");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByRole("heading", { name: "Set your password" })).toHaveCount(0);
+  await expect(page).toHaveURL(/\?view=queue$/);
+});

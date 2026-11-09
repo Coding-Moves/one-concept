@@ -172,6 +172,7 @@ export async function fixture(
       contentType: "application/json",
       body: JSON.stringify(json),
       headers: {
+        "x-supabase-api-version": "2024-01-01",
         "access-control-allow-origin": "*",
         "access-control-allow-headers": "*",
         "access-control-allow-methods": "GET,POST,PATCH,PUT,DELETE,OPTIONS",
@@ -199,11 +200,20 @@ export async function fixture(
         expires_at: Date.now() + 60000,
       });
     if (path.includes("/verify")) {
+      if (route.request().postDataJSON()?.code !== "123456")
+        return fulfill(route, { code: "mfa_verification_failed", message: "Invalid code" }, 422);
       state.mfa = false;
       state.challenges++;
       return fulfill(route, session());
     }
-    if (path.endsWith("/user")) return fulfill(route, user);
+    if (path.endsWith("/user")) {
+      if (route.request().method() === "PUT" && state.mfa)
+        return fulfill(route, {
+          code: "insufficient_aal",
+          message: "AAL2 session is required to update email or password when MFA is enabled.",
+        }, 401);
+      return fulfill(route, user);
+    }
     return fulfill(route, session());
   });
   await context.route("http://127.0.0.1:8000/**", async (route) => {

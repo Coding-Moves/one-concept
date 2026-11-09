@@ -109,8 +109,11 @@ enforces that persisted choice for every editorial capability. Disabling it
 requires a recent TOTP method timestamp from the verified Supabase JWT;
 `0045_editorial_authenticator_choice.sql` defaults existing accounts to on and
 extends the account audit. `Queue.tsx` supplies topic/status/deadline filtering and
-shared approved/published views. `Review.tsx` and `LessonView.tsx` render complete
-packages, diffs, history, comments, checklist decisions and safe corrections.
+shows unassigned drafts in the shared queue. `Review.tsx` and `LessonView.tsx`
+render complete and incomplete legacy packages, give a direct route to a pending
+correction, record the reviewer's explicit full-package confirmation, and keep
+assignment as optional coordination. Diffs, history, comments and safe corrections
+remain available.
 `Team.tsx` manages owner-only membership; `Generation.tsx` requests bounded work.
 `LegacyEnrichment.tsx` previews eligible existing lessons and controls one
 subject batch at a time. `services/legacy_generation.py` builds a grounded

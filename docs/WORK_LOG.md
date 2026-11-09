@@ -7,6 +7,13 @@ claims as completed work.
 
 ## Current status
 
+### Password recovery usability follow-up in PR #498 — 2026-11-09
+
+- The owner reported that short passwords silently stopped reset submission, password text could not be shown, an ordinary learner landed in the review workspace, and owner/reviewer password changes asked for a six-digit authenticator code. Native `minLength` validation caused the silent stop. Supabase's `insufficient_aal` response comes from an enrolled account factor even when the workspace MFA requirement is off; it cannot be bypassed by the website.
+- The review and public account forms now show the 12-character rule, give explicit short/mismatch/server errors, and have show/hide controls. A generic recovery link at the site root and older static reset links route into the public account recovery flow. The Edge public-page default uses the verified first-party origin; staging must set `PUBLIC_SITE_URL` explicitly. Settings offers a verified self-service factor removal after the workspace requirement is off, so future resets stop asking for that factor's code.
+- TypeScript, 26 unit tests, Edge API handler tests, and 36 affected browser tests passed locally; three focused browser redirect tests passed after the legacy-link change. Live recovery email, authenticator removal, and Netlify publication remain unverified. No SQL migration, lesson approval, generation switch, or production release is part of this follow-up.
+- Commits `2c65afc` (reset form feedback), `9eaca89` (verified factor removal), `ec184b9` (shared recovery destination), and `a8cd3fd` (first-party Edge default) stay in the same open PR #498. A production Vite build with public fixture settings and a final focused factor-removal browser test passed. The docs commit records the revised routing and release handoff.
+
 ### Shared editorial review and refill handoff — 2026-11-09
 
 - The owner asked to simplify production review, let reviewers work without owner assignment, clear the existing backlog before activating low-supply generation, and verify both roles. Live first-party owner and legacy-host reviewer sessions each showed 120 pending revisions; the owner also saw 120 old published lessons awaiting verification. One sampled old lesson lacked curriculum, references, flashcard, and questions, while its complete correction was already pending review. Two sampled pending revisions contained Google grounding redirects, and an opened redirect returned 404, so their sources could not be verified. The live owner Operations report showed new-lesson refill paused and `content_pool` disabled; `editorial_generation` and `legacy_enrichment` were running. No production lesson was approved or generation flag changed during this code chunk.

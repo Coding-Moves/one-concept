@@ -69,9 +69,10 @@ review origin.
    | `EDITORIAL_EMAIL_DASHBOARD_URL` | `https://review.oneconcept.codingmoves.com` |
    | `ALLOWED_ORIGINS` | Append `https://review.oneconcept.codingmoves.com` while keeping the old live origin. |
 
-   The Edge API falls back to the old host when `PUBLIC_SITE_URL` is unset, so
-   deploying this code before the DNS cutover preserves confirmation, recovery,
-   and privacy redirects. Configure the worker's dashboard URL and origins as
+   The Edge API now defaults to the verified first-party host when
+   `PUBLIC_SITE_URL` is unset. Set this value explicitly for staging or any
+   alternate deployment. Keep old Auth redirect allowlist entries while issued
+   links remain valid. Configure the worker's dashboard URL and origins as
    needed for editorial email; do not enable a sender merely by changing URLs.
 7. Install the repository's updated Supabase Auth templates only after the
    new public icon loads. Update production EAS

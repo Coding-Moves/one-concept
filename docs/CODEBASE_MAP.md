@@ -13,7 +13,7 @@ learned history, streaks, likes, saved concepts, and push reminders.
 | --- | --- |
 | Mobile | `mobile/README.md` is the local developer on-ramp; `mobile/index.ts` registers `mobile/App.tsx`; Expo SDK 57, React Native 0.86, React 19, TypeScript. `mobile/src/screens/AboutScreen.tsx` links learners to the public review explanation. |
 | Review website | `admin/README.md`, `admin/src/main.tsx`, `App.tsx`; independent React/TypeScript/Vite static editorial workspace with Supabase Auth and private Supabase Edge API calls. `admin/account.html` and `src/publicAccount.tsx` provide a separate public learner account entry using the same Auth project. `admin/public/about.html` and `privacy.html` are public OAuth information pages. `admin/src/hosting.ts` generates exact-origin static response headers during build; `admin/public/_redirects` handles Netlify SPA deep links. Current hosting instructions are in `admin/README.md`. |
-| Production API | `supabase/functions/api/handler.ts` routes mobile and review-site requests through the protected Supabase Edge API and SQL RPCs. `public_pages.ts` redirects browser confirmation/recovery to the configured `PUBLIC_SITE_URL` (old host fallback until #480 cutover); see `REVIEW_DOMAIN_ROLLOUT.md`. `backend/app/main.py` remains the Python reference and maintenance implementation. |
+| Production API | `supabase/functions/api/handler.ts` routes mobile and review-site requests through the protected Supabase Edge API and SQL RPCs. `public_pages.ts` redirects browser confirmation/recovery to the configured `PUBLIC_SITE_URL` (first-party review origin by default); see `REVIEW_DOMAIN_ROLLOUT.md`. `backend/app/main.py` remains the Python reference and maintenance implementation. |
 | Database | `backend/migrations/`; Supabase PostgreSQL schema, RLS, seeds, and incremental migrations. |
 | Content lifecycle | `docs/CONTENT_ARCHITECTURE.md`, `docs/FUTURE_REFILL_ROLLOUT.md`; portable subject/curriculum imports, durable refill, reviewed publication, daily review, protected health report. `docs/CONTENT_OPERATIONS.md` preserves the earlier Python rollout. |
 | Content engine | `supabase/functions/worker/` runs scheduled Gemini drafting, reminders and reconciliation; `backend/app/services/generation.py`, `pool.py`, `prefetch.py` retain Python maintenance and reference paths. |
@@ -101,10 +101,15 @@ for compatibility, historical offline semantics and rollout.
 requests; the API client refreshes an idle token and fences account changes and
 late denials without discarding recoverable review work.
 `Auth.tsx` renders a dedicated verified invitation/recovery password setup form,
-direct sign-in and MFA; `main.tsx` removes callback credentials before rendering
+direct sign-in and MFA; `main.tsx` sends generic learner recovery links at `/`
+to the public account page and removes other callback credentials before rendering
 and opens setup only after a valid Supabase session exchange. `Settings.tsx` handles
 registered identity, and `AuthenticatorSetting.tsx` lets owners and reviewers
-choose whether MFA is required for their own account. `editorial_accounts.py`
+choose whether MFA is required for their own workspace and remove an enrolled
+factor after one verified code when that requirement is off. `publicAccount.tsx`
+handles learner recovery, with visible password rules, show/hide controls, and
+specific Auth errors. Older `/reset-password` links forward to the same account
+page. `editorial_accounts.py`
 enforces that persisted choice for every editorial capability. Disabling it
 requires a recent TOTP method timestamp from the verified Supabase JWT;
 `0045_editorial_authenticator_choice.sql` defaults existing accounts to on and

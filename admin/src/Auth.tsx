@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Field, Notice, message } from "./ui";
-import { clearPendingSetup } from "./accountSetup";
+import { clearPendingSetup, pendingSetupFor } from "./accountSetup";
 export function Login({
   auth,
 }: {
@@ -145,6 +145,15 @@ export function AccountSetup({
   const [factor, setFactor] = useState("");
   const [code, setCode] = useState("");
   const [needsMfa, setNeedsMfa] = useState(false);
+  async function verifyAccount() {
+    const { data, error } = await auth.auth.getUser();
+    if (error || !data.user)
+      throw new Error("Could not verify this account. Check your connection and try again.");
+    if (!pendingSetupFor(data.user.id)) {
+      clearPendingSetup();
+      throw new Error("The account changed. Sign out and open a new password link for the right account.");
+    }
+  }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirmation) {
@@ -154,12 +163,14 @@ export function AccountSetup({
     setBusy(true);
     setError("");
     try {
+      await verifyAccount();
       if (needsMfa) {
         const verified = await auth.auth.mfa.challengeAndVerify({ factorId: factor, code });
         if (verified.error)
           throw new Error("The authenticator code was not accepted. Try the current six-digit code.");
         setCode("");
         setNeedsMfa(false);
+        await verifyAccount();
       }
       const { error } = await auth.auth.updateUser({ password });
       if (error && (error.code === "insufficient_aal" || error.message.includes("AAL2 session is required to update email or password"))) {

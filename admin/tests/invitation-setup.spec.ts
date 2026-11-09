@@ -80,3 +80,30 @@ test("a reviewer recovery link requires the enrolled authenticator before saving
   await expect(page.getByRole("heading", { name: "Set your password" })).toHaveCount(0);
   await expect(page).toHaveURL(/\?view=queue$/);
 });
+
+test("a reviewer recovery link cannot update a different active account", async ({ page, context }) => {
+  await fixture(context, { requireMfa: false });
+  await login(page);
+  await page.waitForFunction(() => !!localStorage.getItem("one-concept-review-auth"));
+  const tokens = await page.evaluate(() => {
+    const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
+    return { access: session.access_token as string, refresh: session.refresh_token as string };
+  });
+  await page.goto(`/auth/callback#access_token=${encodeURIComponent(tokens.access)}&refresh_token=${encodeURIComponent(tokens.refresh)}&type=recovery`);
+  await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  let passwordWrites = 0;
+  await context.route("https://review-auth.test/auth/v1/user", route => {
+    if (route.request().method() === "PUT") {
+      passwordWrites++;
+      return route.fallback();
+    }
+    return route.fulfill({ status: 200, contentType: "application/json",
+      headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" },
+      body: JSON.stringify({ id: "00000000-0000-4000-8000-000000000002", email: "other@example.test" }) });
+  });
+  await page.getByLabel("Password", { exact: true }).fill("new-private-password");
+  await page.getByLabel("Confirm password").fill("new-private-password");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByRole("alert")).toContainText("The account changed");
+  expect(passwordWrites).toBe(0);
+});

@@ -34,6 +34,18 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
     setCode("");
   }
 
+  async function verifyResetAccount() {
+    const verified = await auth.auth.getUser();
+    if (verified.error || !verified.data.user) throw new Error("verify");
+    if (verified.data.user.id !== user?.id ||
+        sessionStorage.getItem(recoveryMarker) !== verified.data.user.id) {
+      sessionStorage.removeItem(recoveryMarker);
+      setUser(verified.data.user);
+      setMode("sign-in");
+      throw new Error("account");
+    }
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     if ((mode === "sign-up" || mode === "reset") && password !== confirmation) {
@@ -75,20 +87,13 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         setMode("check-email");
         setNotice("If this address can recover an account, a reset email will arrive shortly.");
       } else if (mode === "reset") {
-        const verified = await auth.auth.getUser();
-        if (verified.error || !verified.data.user) throw new Error("verify");
-        if (verified.data.user.id !== user?.id ||
-            sessionStorage.getItem(recoveryMarker) !== verified.data.user.id) {
-          sessionStorage.removeItem(recoveryMarker);
-          setUser(verified.data.user);
-          setMode("sign-in");
-          throw new Error("account");
-        }
+        await verifyResetAccount();
         if (needsMfa) {
           const challenge = await auth.auth.mfa.challengeAndVerify({ factorId: factor, code });
           if (challenge.error) throw new Error("mfa-code");
           setCode("");
           setNeedsMfa(false);
+          await verifyResetAccount();
         }
         const result = await auth.auth.updateUser({ password });
         if (result.error && (result.error.code === "insufficient_aal" || result.error.message.includes("AAL2 session is required to update email or password"))) {

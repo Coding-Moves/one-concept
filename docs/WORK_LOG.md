@@ -7,6 +7,14 @@ claims as completed work.
 
 ## Current status
 
+### MFA-protected password recovery — 2026-11-09
+
+- A production reviewer recovery attempt returned Supabase Auth `401 insufficient_aal`: an account with an enrolled authenticator must reach AAL2 before `updateUser({ password })`. The reviewer setup form and public learner reset form previously hid this as a generic password failure. The CSP console warnings are unrelated to that Auth response.
+- Commits `5f6d9b0` and `62a96e0` make the reviewer and learner reset forms ask for a current code from an existing verified authenticator after this error, call `challengeAndVerify`, and save the password only after verification. An incorrect code leaves the password unchanged; accounts without an accessible verified factor receive an account-administrator message. MFA is not disabled or bypassed.
+- [PR #496](https://github.com/Coding-Moves/one-concept/pull/496) targets `develop` as a website change. Production remains unchanged until a reviewed site release reaches `main` and Netlify publishes it. No SQL migration or phone APK is required.
+- Validation: admin TypeScript typecheck, 24 Vitest tests, production build with dummy public configuration, browser regressions for both reviewer and learner recovery, and nine existing authenticator/public-account browser tests passed. The browser tests exercised the Supabase `insufficient_aal` response, a rejected code, and a successful code. Live account testing remains for after deployment.
+- Re-review added a server-verified account check before the reviewer password write and after MFA verification in both reset forms. A reviewer account-switch regression confirms no password write occurs for a different active account. Both forms now explain Supabase's `same_password` response without suggesting a new email link. TypeScript, all 24 unit tests, a production build with dummy public credentials, the account-switch browser regression, and both unchanged-password browser regressions passed. The other 13 affected browser cases passed in the same review cycle. Commits `8008661` and `ac0be9d` contain these focused corrections.
+
 ### Release 1.10.19 preparation — 2026-11-06
 
 - [PR #493](https://github.com/Coding-Moves/one-concept/pull/493) targets `develop` after the merged flashcard fix #492. Commits `bf188c4`, `a4edb1e`, and `59b226b` prepare the app version/card, guarded Release workflow, and handoff docs. The app version is `1.10.19`, with a matching What's New card for lesson links, readable recall questions with reviewer details in Card information, and clearer photo timeout guidance. The native runtime was already `1.10.19` because the staging-app work introduced `expo-dev-client`; this release needs a new production APK, and v1.10.18 installs cannot receive its OTA.

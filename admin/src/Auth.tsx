@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Field, Notice, message } from "./ui";
-import { clearPendingSetup } from "./accountSetup";
+import { clearPendingSetup, pendingSetupFor } from "./accountSetup";
 export function Login({
   auth,
 }: {
@@ -141,6 +141,19 @@ export function AccountSetup({
   const [confirmation, setConfirmation] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [factors, setFactors] = useState<{ id: string; friendly_name?: string }[]>([]);
+  const [factor, setFactor] = useState("");
+  const [code, setCode] = useState("");
+  const [needsMfa, setNeedsMfa] = useState(false);
+  async function verifyAccount() {
+    const { data, error } = await auth.auth.getUser();
+    if (error || !data.user)
+      throw new Error("Could not verify this account. Check your connection and try again.");
+    if (!pendingSetupFor(data.user.id)) {
+      clearPendingSetup();
+      throw new Error("The account changed. Sign out and open a new password link for the right account.");
+    }
+  }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     if (password !== confirmation) {
@@ -150,9 +163,32 @@ export function AccountSetup({
     setBusy(true);
     setError("");
     try {
+      await verifyAccount();
+      if (needsMfa) {
+        const verified = await auth.auth.mfa.challengeAndVerify({ factorId: factor, code });
+        if (verified.error)
+          throw new Error("The authenticator code was not accepted. Try the current six-digit code.");
+        setCode("");
+        setNeedsMfa(false);
+        await verifyAccount();
+      }
       const { error } = await auth.auth.updateUser({ password });
+      if (error && (error.code === "insufficient_aal" || error.message.includes("AAL2 session is required to update email or password"))) {
+        const listed = await auth.auth.mfa.listFactors();
+        const verified = listed.data?.totp.filter((item) => item.status === "verified") || [];
+        if (listed.error || !verified.length)
+          throw new Error("This account needs an authenticator to change its password. Contact your account administrator if you cannot access it.");
+        setFactors(verified);
+        setFactor(verified[0].id);
+        setNeedsMfa(true);
+        throw new Error("Enter the current code from your authenticator app, then save your password again.");
+      }
+      if (error?.code === "weak_password")
+        throw new Error("Choose a stronger password and try again.");
+      if (error?.code === "same_password")
+        throw new Error("Choose a password different from your current one.");
       if (error)
-        throw new Error("Password could not be saved. Check password requirements and try again.");
+        throw new Error("Password could not be saved. Request a new link and try again.");
       setPassword("");
       setConfirmation("");
       onPasswordSet();
@@ -179,6 +215,12 @@ export function AccountSetup({
           <Field title="Verified email"><input type="email" value={email} readOnly /></Field>
           <Field title="Password"><input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
           <Field title="Confirm password"><input type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /></Field>
+          {needsMfa && <>
+            {factors.length > 1 && <Field title="Authenticator"><select value={factor} onChange={(e) => setFactor(e.target.value)}>
+              {factors.map((item) => <option key={item.id} value={item.id}>{item.friendly_name || "Authenticator"}</option>)}
+            </select></Field>}
+            <Field title="Current six-digit code"><input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required value={code} onChange={(e) => setCode(e.target.value)} /></Field>
+          </>}
           <button className="primary" disabled={busy}>{busy ? "Saving…" : "Save password and continue"}</button>
         </form>
         <p className="muted">{flow === "invite" ? "After setup, submit your reviewer name for owner approval in Settings. Authenticator use starts off and can be enabled there." : "Your existing reviewer permissions and security settings remain in place."}</p>

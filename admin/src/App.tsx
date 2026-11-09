@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session, SupabaseClient } from "@supabase/supabase-js";
 import { Api, ApiError } from "./api";
 import { AccountSetup, Login, Mfa } from "./Auth";
-import { clearPendingSetup } from "./accountSetup";
+import { clearPendingSetup, rememberPendingSetup } from "./accountSetup";
 import { Notice, message } from "./ui";
 import type { Me } from "./types";
 import { Settings } from "./Settings";
@@ -91,7 +91,10 @@ export function App({
         clearPendingSetup();
         setSetup(null);
       }
-      if (event === "PASSWORD_RECOVERY") setSetup("recovery");
+      if (event === "PASSWORD_RECOVERY" && next) {
+        rememberPendingSetup(next.user.id, "recovery");
+        setSetup("recovery");
+      }
     });
     api.onDenied = (status) => {
       api.setToken(

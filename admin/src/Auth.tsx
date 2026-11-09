@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { Field, Notice, message } from "./ui";
 import { clearPendingSetup, pendingSetupFor } from "./accountSetup";
+import { minimumPasswordLength, passwordInputError, passwordUpdateError } from "./passwordPolicy";
 export function Login({
   auth,
 }: {
@@ -145,6 +146,7 @@ export function AccountSetup({
   const [factor, setFactor] = useState("");
   const [code, setCode] = useState("");
   const [needsMfa, setNeedsMfa] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   async function verifyAccount() {
     const { data, error } = await auth.auth.getUser();
     if (error || !data.user)
@@ -156,8 +158,9 @@ export function AccountSetup({
   }
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (password !== confirmation) {
-      setError("The passwords do not match.");
+    const inputError = passwordInputError(password, confirmation);
+    if (inputError) {
+      setError(inputError);
       return;
     }
     setBusy(true);
@@ -183,12 +186,8 @@ export function AccountSetup({
         setNeedsMfa(true);
         throw new Error("Enter the current code from your authenticator app, then save your password again.");
       }
-      if (error?.code === "weak_password")
-        throw new Error("Choose a stronger password and try again.");
-      if (error?.code === "same_password")
-        throw new Error("Choose a password different from your current one.");
       if (error)
-        throw new Error("Password could not be saved. Request a new link and try again.");
+        throw new Error(passwordUpdateError(error));
       setPassword("");
       setConfirmation("");
       onPasswordSet();
@@ -213,9 +212,12 @@ export function AccountSetup({
           <p>{flow === "invite" ? "Your email is confirmed. Choose a password to finish setup." : "Choose a new password for your One Concept account."}</p>
           {error && <Notice error>{error}</Notice>}
           <Field title="Verified email"><input type="email" value={email} readOnly /></Field>
-          <Field title="Password"><input type="password" autoComplete="new-password" minLength={12} required value={password} onChange={(e) => setPassword(e.target.value)} /></Field>
-          <Field title="Confirm password"><input type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={(e) => setConfirmation(e.target.value)} /></Field>
+          <p>Use at least {minimumPasswordLength} characters. The password must also meet your account's security requirements.</p>
+          <Field title="Password"><input type={showPassword ? "text" : "password"} autoComplete="new-password" required value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }} /></Field>
+          <Field title="Confirm password"><input type={showPassword ? "text" : "password"} autoComplete="new-password" required value={confirmation} onChange={(e) => { setConfirmation(e.target.value); setError(""); }} /></Field>
+          <button type="button" className="text-button password-visibility" aria-pressed={showPassword} onClick={() => setShowPassword(!showPassword)}>{showPassword ? "Hide passwords" : "Show passwords"}</button>
           {needsMfa && <>
+            <p>This account has an enrolled authenticator. Supabase requires its current code to change the password; the reset link alone cannot remove that protection.</p>
             {factors.length > 1 && <Field title="Authenticator"><select value={factor} onChange={(e) => setFactor(e.target.value)}>
               {factors.map((item) => <option key={item.id} value={item.id}>{item.friendly_name || "Authenticator"}</option>)}
             </select></Field>}

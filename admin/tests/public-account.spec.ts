@@ -67,6 +67,16 @@ test("recovery email return verifies the session, updates the password, and clea
   await expect(page).toHaveURL("http://127.0.0.1:4173/account");
   await page.reload();
   await expect(page.getByRole("heading", { name: "Set a new password" })).toBeVisible();
+  await expect(page.getByLabel("New password")).toHaveAttribute("type", "password");
+  await page.getByRole("button", { name: "Show passwords" }).click();
+  await expect(page.getByLabel("New password")).toHaveAttribute("type", "text");
+  await expect(page.getByLabel("Confirm password")).toHaveAttribute("type", "text");
+  await page.getByRole("button", { name: "Hide passwords" }).click();
+  await page.getByLabel("New password").fill("short");
+  await page.getByLabel("Confirm password").fill("short");
+  await page.getByRole("button", { name: "Update password" }).click();
+  await expect(page.getByRole("alert")).toContainText("12 characters");
+  expect(requests.some(request => request === "PUT /auth/v1/user")).toBe(false);
   await page.getByLabel("New password").fill("new-safe-password");
   await page.getByLabel("Confirm password").fill("new-safe-password");
   await page.getByRole("button", { name: "Update password" }).click();
@@ -74,6 +84,15 @@ test("recovery email return verifies the session, updates the password, and clea
   expect(requests.some(request => request === "PUT /auth/v1/user")).toBe(true);
   await page.reload();
   await expect(page.getByRole("heading", { name: "Sign in" })).toBeVisible();
+});
+
+test("a generic learner recovery link at the site root opens the public account reset page", async ({ page, context }) => {
+  const requests: string[] = [];
+  await mockAuth(context, requests);
+  await page.goto(`/#access_token=${encodeURIComponent(token)}&refresh_token=fixture-refresh&type=recovery`);
+  await expect(page.getByRole("heading", { name: "Set a new password" })).toBeVisible();
+  await expect(page).toHaveURL("http://127.0.0.1:4173/account");
+  expect(requests.some(request => request.includes("/editorial"))).toBe(false);
 });
 
 test("recovery form refuses to change a different account's password after a session switch", async ({ page, context }) => {

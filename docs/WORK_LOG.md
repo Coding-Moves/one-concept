@@ -11,8 +11,8 @@ claims as completed work.
 
 - A production reviewer recovery attempt returned Supabase Auth `401 insufficient_aal`: an account with an enrolled authenticator must reach AAL2 before `updateUser({ password })`. The reviewer setup form and public learner reset form previously hid this as a generic password failure. The CSP console warnings are unrelated to that Auth response.
 - Commits `5f6d9b0` and `62a96e0` make the reviewer and learner reset forms ask for a current code from an existing verified authenticator after this error, call `challengeAndVerify`, and save the password only after verification. An incorrect code leaves the password unchanged; accounts without an accessible verified factor receive an account-administrator message. MFA is not disabled or bypassed.
-- The fix targets `develop` as a website change. Production remains unchanged until a reviewed site release reaches `main` and Netlify publishes it. No SQL migration or phone APK is required.
-- Validation: admin TypeScript typecheck, 24 Vitest tests, production build with dummy public configuration, and browser regressions for both reviewer and learner recovery passed. The browser tests exercised the Supabase `insufficient_aal` response, a rejected code, and a successful code. Live account testing remains for after deployment.
+- [PR #496](https://github.com/Coding-Moves/one-concept/pull/496) targets `develop` as a website change. Production remains unchanged until a reviewed site release reaches `main` and Netlify publishes it. No SQL migration or phone APK is required.
+- Validation: admin TypeScript typecheck, 24 Vitest tests, production build with dummy public configuration, browser regressions for both reviewer and learner recovery, and nine existing authenticator/public-account browser tests passed. The browser tests exercised the Supabase `insufficient_aal` response, a rejected code, and a successful code. Live account testing remains for after deployment.
 
 ### Release 1.10.19 preparation — 2026-11-06
 

@@ -30,6 +30,7 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
     setMode(next);
     setPassword("");
     setConfirmation("");
+    setShowPassword(false);
     setNotice("");
     setError("");
     setNeedsMfa(false);
@@ -63,6 +64,7 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         if (result.error || !result.data.user) throw new Error("signin");
         setUser(result.data.user);
         setPassword("");
+        setShowPassword(false);
       } else if (mode === "sign-up") {
         const result = await auth.auth.signUp({
           email: email.trim(), password,
@@ -113,6 +115,7 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         if (!signedOut.error) setUser(null);
         setPassword("");
         setConfirmation("");
+        setShowPassword(false);
         setMode("sign-in");
         setNotice(signedOut.error
           ? "Password updated. Please sign out of this browser when finished."
@@ -188,7 +191,7 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
     <section className="account-panel" aria-label="Account access">
       {error && <p className="account-error" role="alert">{error}</p>}
       {notice && <p className="account-notice" role="status">{notice}</p>}
-      {user && mode !== "reset" ? <>
+      {user && mode !== "reset" && mode !== "forgot" ? <>
         <h2>You're signed in</h2>
         <p>Your One Concept account is ready on this device.</p>
         <p className="account-email">{user.email}</p>
@@ -237,7 +240,9 @@ async function start() {
     const auth = createClient(config.supabaseUrl, config.key, {
       auth: { detectSessionInUrl: false, flowType: "implicit", storageKey: "one-concept-public-account" },
     });
-    let initial: Initial = { user: null, mode: "sign-in", notice: "", error: "" };
+    let initial: Initial = { user: null,
+      mode: incoming.pathname === "/account" && incoming.searchParams.get("mode") === "forgot" ? "forgot" : "sign-in",
+      notice: "", error: "" };
     if (link.kind === "error" || (callback && link.kind === "none")) {
       initial.error = "This email link is invalid or has expired. Request a new one.";
     } else if (link.kind === "session" || link.kind === "code") {

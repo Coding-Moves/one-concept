@@ -10,33 +10,18 @@ export function Login({
 }) {
   const [email, setEmail] = useState(""),
     [password, setPassword] = useState(""),
-    [recovery, setRecovery] = useState(false),
     [busy, setBusy] = useState(false),
-    [error, setError] = useState(""),
-    [notice, setNotice] = useState("");
+    [error, setError] = useState("");
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    setNotice("");
     try {
-      const result = recovery
-        ? await auth.auth.resetPasswordForEmail(email, {
-            redirectTo: location.origin + "/auth/callback",
-          })
-        : await auth.auth.signInWithPassword({ email, password });
+      const result = await auth.auth.signInWithPassword({ email, password });
       if (result.error)
-        throw new Error(
-          recovery
-            ? "Unable to request a recovery email. Try again later."
-            : "Unable to sign in. Check your credentials or contact your administrator.",
-        );
+        throw new Error("Unable to sign in. Check your credentials or contact your administrator.");
       setPassword("");
-      if (!recovery) clearPendingSetup();
-      if (recovery)
-        setNotice(
-          "If this address can recover an account, a password reset email will arrive shortly.",
-        );
+      clearPendingSetup();
     } catch (e) {
       setError(message(e));
     } finally {
@@ -68,14 +53,9 @@ export function Login({
       <section className="auth-panel">
         <form onSubmit={submit}>
           <p className="eyebrow">INVITED REVIEWERS</p>
-          <h2>
-            {recovery
-                ? "Recover your account"
-                : "Welcome back"}
-          </h2>
-          <p>{recovery ? "Enter your account email to receive a password reset link." : "Sign in with your own invited account to continue."}</p>
+          <h2>Welcome back</h2>
+          <p>Sign in with your own invited account to continue.</p>
           {error && <Notice error>{error}</Notice>}
-          {notice && <Notice>{notice}</Notice>}
           <Field title="Email address">
               <input
                 type="email"
@@ -85,37 +65,14 @@ export function Login({
                 onChange={(e) => setEmail(e.target.value)}
               />
           </Field>
-          {!recovery && (
-            <Field title="Password">
-              <input
-                type="password"
-                autoComplete="current-password"
-                required
-                minLength={1}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-            </Field>
-          )}
+          <Field title="Password">
+            <input type="password" autoComplete="current-password" required minLength={1}
+              value={password} onChange={(e) => setPassword(e.target.value)} />
+          </Field>
           <button className="primary" disabled={busy}>
-            {busy
-              ? "Please wait…"
-              : recovery
-                  ? "Send recovery email"
-                  : "Sign in"}
+            {busy ? "Please wait…" : "Sign in"}
           </button>
-          <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                setRecovery(!recovery);
-                setError("");
-                setNotice("");
-                setPassword("");
-              }}
-            >
-              {recovery ? "Back to sign in" : "Forgot your password?"}
-          </button>
+          <a href="/account?mode=forgot">Forgot your password?</a>
         </form>
         <p className="muted">
           Private workspace · Your learning app account does not automatically

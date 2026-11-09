@@ -53,6 +53,25 @@ test("public signup uses the shared Auth project and exact callback without gran
   await expect(page.getByRole("status")).toContainText("another email");
 });
 
+test("reviewer sign-in sends all accounts to the shared recovery entry", async ({ page, context }) => {
+  await mockAuth(context, []);
+  await page.goto("/");
+  await page.getByRole("link", { name: "Forgot your password?" }).click();
+  await expect(page).toHaveURL("http://127.0.0.1:4173/account");
+  await expect(page.getByRole("heading", { name: "Recover your account" })).toBeVisible();
+});
+
+test("the shared recovery entry remains available to an already signed-in learner", async ({ page, context }) => {
+  await mockAuth(context, []);
+  await page.goto("/account");
+  await page.getByLabel("Email address").fill(user.email);
+  await page.getByLabel("Password", { exact: true }).fill("current-test-password");
+  await page.getByRole("button", { name: "Sign in", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "You're signed in" })).toBeVisible();
+  await page.goto("/account?mode=forgot");
+  await expect(page.getByRole("heading", { name: "Recover your account" })).toBeVisible();
+});
+
 test("recovery email return verifies the session, updates the password, and clears the URL", async ({ page, context }) => {
   const requests: string[] = [];
   await mockAuth(context, requests);

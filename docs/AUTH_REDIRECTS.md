@@ -8,7 +8,9 @@ landing URL. The Supabase `api` Edge function routes three public paths:
   account page handles it without sending the URL fragment to the server.
 - `/functions/v1/api/reset-password` redirects to the public `/account/callback`
   form, which verifies the recovery session, supports an enrolled authenticator,
-  and removes the token from the address bar as soon as the page loads.
+  and removes the token from the address bar as soon as the page loads. When an
+  older reset link returns a code without a type, the redirect marks it as a
+  recovery so the account page opens password setup after verification.
 - `/functions/v1/api/privacy` opens the learner privacy policy on the public site.
 
 The mobile app derives its explicit signup and recovery redirect URLs from

@@ -24,7 +24,7 @@ test('public browser links redirect to hosted pages without exposing credentials
     const result = await handler(request(`${path}?code=one-time-code&type=recovery`));
     assert.equal(result.status, 302);
     assert.equal(result.headers.get('location'),
-      'https://coding-moves-one-concept-review.netlify.app/account/callback?code=one-time-code&type=recovery');
+      'https://review.oneconcept.codingmoves.com/account/callback?code=one-time-code&type=recovery');
     assert.equal(result.headers.get('cache-control'), 'no-store');
     assert.equal(result.headers.get('referrer-policy'), 'no-referrer');
     assert.equal(result.headers.get('content-type'), null);
@@ -32,15 +32,15 @@ test('public browser links redirect to hosted pages without exposing credentials
   }
   const fragment = await handler(request('/confirmed#access_token=secret&type=signup'));
   assert.equal(fragment.headers.get('location'),
-    'https://coding-moves-one-concept-review.netlify.app/account/callback');
+    'https://review.oneconcept.codingmoves.com/account/callback');
   assert.doesNotMatch(fragment.headers.get('location'), /secret|#/);
   const error = await handler(request('/confirmed?error=access_denied&error_description=Expired%20link'));
   assert.equal(error.headers.get('location'),
-    'https://coding-moves-one-concept-review.netlify.app/account/callback?error=access_denied&error_description=Expired%20link');
+    'https://review.oneconcept.codingmoves.com/account/callback?error=access_denied&error_description=Expired%20link');
   const privacy = await handler(request('/privacy?ignored=1'));
   assert.equal(privacy.status, 302);
   assert.equal(privacy.headers.get('location'),
-    'https://coding-moves-one-concept-review.netlify.app/privacy');
+    'https://review.oneconcept.codingmoves.com/privacy');
   const rejected = await handler(request('/reset-password', { method: 'POST' }));
   assert.equal(rejected.status, 405);
   assert.equal(rejected.headers.get('allow'), 'GET');
@@ -48,8 +48,8 @@ test('public browser links redirect to hosted pages without exposing credentials
   assert.equal(calls.length, 0);
 });
 
-test('public browser links can switch to the verified first-party origin without leaking fragments', async () => {
-  const site = 'https://review.oneconcept.codingmoves.com';
+test('public browser links can override the first-party origin without leaking fragments', async () => {
+  const site = 'https://coding-moves-one-concept-review.netlify.app';
   const handler = createHandler({ ...config, publicSiteUrl: site }, async () => {
     throw new Error('Public redirects must not use a service request');
   });

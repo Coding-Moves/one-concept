@@ -94,6 +94,23 @@ test("recovery form refuses to change a different account's password after a ses
   expect(requests.some(request => request === "PUT /auth/v1/user")).toBe(false);
 });
 
+test("learner reset reports when the chosen password is unchanged", async ({ page, context }) => {
+  await mockAuth(context, []);
+  await page.goto(`/account/callback#access_token=${encodeURIComponent(token)}&refresh_token=fixture-refresh&type=recovery`);
+  await expect(page.getByRole("heading", { name: "Set a new password" })).toBeVisible();
+  await context.route("https://review-auth.test/auth/v1/user", route =>
+    route.request().method() === "PUT"
+      ? route.fulfill({ status: 422, contentType: "application/json",
+          headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*",
+            "access-control-expose-headers": "x-supabase-api-version", "x-supabase-api-version": "2024-01-01" },
+          body: JSON.stringify({ code: "same_password", msg: "New password should be different" }) })
+      : route.fallback());
+  await page.getByLabel("New password").fill("new-safe-password");
+  await page.getByLabel("Confirm password").fill("new-safe-password");
+  await page.getByRole("button", { name: "Update password" }).click();
+  await expect(page.getByRole("alert")).toContainText("Choose a password different from your current one");
+});
+
 test("invalid callbacks never offer password setup", async ({ page, context }) => {
   const requests: string[] = [];
   await mockAuth(context, requests);

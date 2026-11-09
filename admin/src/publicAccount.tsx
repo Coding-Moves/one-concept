@@ -19,6 +19,10 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
   const [notice, setNotice] = useState(initial.notice);
   const [error, setError] = useState(initial.error);
   const [emailKind, setEmailKind] = useState<"signup" | "recovery">("signup");
+  const [factors, setFactors] = useState<{ id: string; friendly_name?: string }[]>([]);
+  const [factor, setFactor] = useState("");
+  const [code, setCode] = useState("");
+  const [needsMfa, setNeedsMfa] = useState(false);
 
   function switchMode(next: Mode) {
     setMode(next);
@@ -26,6 +30,20 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
     setConfirmation("");
     setNotice("");
     setError("");
+    setNeedsMfa(false);
+    setCode("");
+  }
+
+  async function verifyResetAccount() {
+    const verified = await auth.auth.getUser();
+    if (verified.error || !verified.data.user) throw new Error("verify");
+    if (verified.data.user.id !== user?.id ||
+        sessionStorage.getItem(recoveryMarker) !== verified.data.user.id) {
+      sessionStorage.removeItem(recoveryMarker);
+      setUser(verified.data.user);
+      setMode("sign-in");
+      throw new Error("account");
+    }
   }
 
   async function submit(event: React.FormEvent) {
@@ -69,17 +87,26 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         setMode("check-email");
         setNotice("If this address can recover an account, a reset email will arrive shortly.");
       } else if (mode === "reset") {
-        const verified = await auth.auth.getUser();
-        if (verified.error || !verified.data.user) throw new Error("verify");
-        if (verified.data.user.id !== user?.id ||
-            sessionStorage.getItem(recoveryMarker) !== verified.data.user.id) {
-          sessionStorage.removeItem(recoveryMarker);
-          setUser(verified.data.user);
-          setMode("sign-in");
-          throw new Error("account");
+        await verifyResetAccount();
+        if (needsMfa) {
+          const challenge = await auth.auth.mfa.challengeAndVerify({ factorId: factor, code });
+          if (challenge.error) throw new Error("mfa-code");
+          setCode("");
+          setNeedsMfa(false);
+          await verifyResetAccount();
         }
         const result = await auth.auth.updateUser({ password });
-        if (result.error) throw new Error(result.error.code === "weak_password" ? "weak" : "reset");
+        if (result.error && (result.error.code === "insufficient_aal" || result.error.message.includes("AAL2 session is required to update email or password"))) {
+          const listed = await auth.auth.mfa.listFactors();
+          const verifiedFactors = listed.data?.totp.filter(item => item.status === "verified") || [];
+          if (listed.error || !verifiedFactors.length) throw new Error("mfa-unavailable");
+          setFactors(verifiedFactors);
+          setFactor(verifiedFactors[0].id);
+          setNeedsMfa(true);
+          throw new Error("mfa-required");
+        }
+        if (result.error) throw new Error(result.error.code === "weak_password" ? "weak"
+          : result.error.code === "same_password" ? "same" : "reset");
         sessionStorage.removeItem(recoveryMarker);
         const signedOut = await auth.auth.signOut({ scope: "local" });
         if (!signedOut.error) setUser(null);
@@ -94,9 +121,13 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
       const code = cause instanceof Error ? cause.message : "";
       setError(code === "rate" ? "Too many email requests. Wait a while and try again."
         : code === "weak" ? "Choose a stronger password and try again."
+        : code === "same" ? "Choose a password different from your current one."
         : code === "signin" ? "Unable to sign in. Check your email and password, then try again."
         : code === "verify" ? "Could not verify this reset session. Check your connection and try again."
         : code === "account" ? "The account changed before the password was updated. Sign out and request a new reset link."
+        : code === "mfa-required" ? "Enter the current code from your authenticator app, then update your password again."
+        : code === "mfa-code" ? "The authenticator code was not accepted. Try the current six-digit code."
+        : code === "mfa-unavailable" ? "This account needs an authenticator to change its password. Contact your account administrator if you cannot access it."
         : code === "reset" ? "Could not update your password. Request a new reset link."
         : "Unable to request an email right now. Try again later.");
     } finally {
@@ -173,6 +204,12 @@ function Account({ auth, initial }: { auth: SupabaseClient; initial: Initial }) 
         {mode !== "reset" && <label>Email address<input type="email" autoComplete="email" required value={email} onChange={event => setEmail(event.target.value)} /></label>}
         {mode !== "forgot" && <label>{mode === "reset" ? "New password" : "Password"}<input type="password" autoComplete={mode === "sign-in" ? "current-password" : "new-password"} minLength={mode === "sign-in" ? 1 : 12} required value={password} onChange={event => setPassword(event.target.value)} /></label>}
         {(mode === "sign-up" || mode === "reset") && <label>Confirm password<input type="password" autoComplete="new-password" minLength={12} required value={confirmation} onChange={event => setConfirmation(event.target.value)} /></label>}
+        {mode === "reset" && needsMfa && <>
+          {factors.length > 1 && <label>Authenticator<select value={factor} onChange={event => setFactor(event.target.value)}>
+            {factors.map(item => <option key={item.id} value={item.id}>{item.friendly_name || "Authenticator"}</option>)}
+          </select></label>}
+          <label>Current six-digit code<input inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" required value={code} onChange={event => setCode(event.target.value)} /></label>
+        </>}
         <button type="submit" disabled={busy}>{busy ? "Please wait…" : mode === "sign-up" ? "Create account" : mode === "forgot" ? "Send reset email" : mode === "reset" ? "Update password" : "Sign in"}</button>
         {mode !== "reset" && <div className="account-switch">
           {mode !== "sign-in" && <button type="button" onClick={() => switchMode("sign-in")}>Sign in</button>}

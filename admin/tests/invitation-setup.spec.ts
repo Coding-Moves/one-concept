@@ -56,3 +56,77 @@ test("a recovery email returns to the same password setup without creating a sec
   await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Finish creating your account" })).toHaveCount(0);
 });
+
+test("a reviewer recovery link requires the enrolled authenticator before saving a password", async ({ page, context }) => {
+  await fixture(context, { mfa: true, requireMfa: false });
+  await login(page);
+  await page.waitForFunction(() => !!localStorage.getItem("one-concept-review-auth"));
+  const tokens = await page.evaluate(() => {
+    const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
+    return { access: session.access_token as string, refresh: session.refresh_token as string };
+  });
+  await page.goto(`/auth/callback#access_token=${encodeURIComponent(tokens.access)}&refresh_token=${encodeURIComponent(tokens.refresh)}&type=recovery`);
+  await page.getByLabel("Password", { exact: true }).fill("new-private-password");
+  await page.getByLabel("Confirm password").fill("new-private-password");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByLabel("Current six-digit code")).toBeVisible();
+  await expect(page.getByText("Enter the current code from your authenticator app", { exact: false })).toBeVisible();
+  await page.getByLabel("Current six-digit code").fill("000000");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByText("The authenticator code was not accepted", { exact: false })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  await page.getByLabel("Current six-digit code").fill("123456");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByRole("heading", { name: "Set your password" })).toHaveCount(0);
+  await expect(page).toHaveURL(/\?view=queue$/);
+});
+
+test("a reviewer recovery link cannot update a different active account", async ({ page, context }) => {
+  await fixture(context, { requireMfa: false });
+  await login(page);
+  await page.waitForFunction(() => !!localStorage.getItem("one-concept-review-auth"));
+  const tokens = await page.evaluate(() => {
+    const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
+    return { access: session.access_token as string, refresh: session.refresh_token as string };
+  });
+  await page.goto(`/auth/callback#access_token=${encodeURIComponent(tokens.access)}&refresh_token=${encodeURIComponent(tokens.refresh)}&type=recovery`);
+  await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  let passwordWrites = 0;
+  await context.route("https://review-auth.test/auth/v1/user", route => {
+    if (route.request().method() === "PUT") {
+      passwordWrites++;
+      return route.fallback();
+    }
+    return route.fulfill({ status: 200, contentType: "application/json",
+      headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*" },
+      body: JSON.stringify({ id: "00000000-0000-4000-8000-000000000002", email: "other@example.test" }) });
+  });
+  await page.getByLabel("Password", { exact: true }).fill("new-private-password");
+  await page.getByLabel("Confirm password").fill("new-private-password");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByRole("alert")).toContainText("The account changed");
+  expect(passwordWrites).toBe(0);
+});
+
+test("a reviewer is told when the new password matches the old one", async ({ page, context }) => {
+  await fixture(context, { requireMfa: false });
+  await login(page);
+  await page.waitForFunction(() => !!localStorage.getItem("one-concept-review-auth"));
+  const tokens = await page.evaluate(() => {
+    const session = JSON.parse(localStorage.getItem("one-concept-review-auth") || "null");
+    return { access: session.access_token as string, refresh: session.refresh_token as string };
+  });
+  await page.goto(`/auth/callback#access_token=${encodeURIComponent(tokens.access)}&refresh_token=${encodeURIComponent(tokens.refresh)}&type=recovery`);
+  await expect(page.getByRole("heading", { name: "Set your password" })).toBeVisible();
+  await context.route("https://review-auth.test/auth/v1/user", route =>
+    route.request().method() === "PUT"
+      ? route.fulfill({ status: 422, contentType: "application/json",
+          headers: { "access-control-allow-origin": "*", "access-control-allow-headers": "*",
+            "access-control-expose-headers": "x-supabase-api-version", "x-supabase-api-version": "2024-01-01" },
+          body: JSON.stringify({ code: "same_password", msg: "New password should be different" }) })
+      : route.fallback());
+  await page.getByLabel("Password", { exact: true }).fill("new-private-password");
+  await page.getByLabel("Confirm password").fill("new-private-password");
+  await page.getByRole("button", { name: "Save password and continue" }).click();
+  await expect(page.getByRole("alert")).toContainText("Choose a password different from your current one");
+});

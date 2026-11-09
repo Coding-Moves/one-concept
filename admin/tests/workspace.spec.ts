@@ -90,10 +90,11 @@ test("owner sees an incomplete existing lesson as readable sections and cannot v
   await expect(page.getByRole("heading", { name: "Worked example" })).toBeVisible();
   await expect(page.getByText("Flashcard needs to be added.")).toBeVisible();
   await expect(page.getByText("References need to be added and checked.")).toBeVisible();
+  await expect(page.getByText("These checks apply to this published version", { exact: false })).toBeVisible();
   await expect(page.locator(".document-card pre.plain-value")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Verify existing lesson" })).toBeDisabled();
   await expect(page.getByText("Already approved for the team", { exact: false })).toHaveCount(0);
-  await page.getByRole("button", { name: "Open correction" }).click();
+  await page.getByRole("button", { name: "Review newer correction" }).click();
   await expect(page.getByRole("heading", { name: "Question 3" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve and publish" })).toBeVisible();
 });

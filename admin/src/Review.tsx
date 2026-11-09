@@ -356,9 +356,9 @@ export function Review({
       {notice && <Notice>{notice}</Notice>}
       {readyCorrection && (
         <Notice>
-          A complete correction is waiting for review. Review its full lesson and sources before approval.{" "}
+          You are viewing the older published version. A newer correction is waiting for review. Its content and checks are separate from this version.{" "}
           <button onClick={() => navigate({ view: "review", id: readyCorrection.id, kind: "revisions" })}>
-            Open correction
+            Review newer correction
           </button>
         </Notice>
       )}
@@ -430,8 +430,10 @@ export function Review({
               detail.body && typeof detail.body === "object" && !Array.isArray(detail.body) ? (
                 <>
                   {!detail.validation.valid && (
-                    <Notice error>
-                      This older lesson is incomplete. Read what exists below, then prepare a correction before verification.
+                    <Notice error={!readyCorrection}>
+                      {readyCorrection
+                        ? "This older published version has missing sections. Open the newer correction above to review its complete lesson."
+                        : "This older lesson is incomplete. Read what exists below, then prepare a correction before verification."}
                     </Notice>
                   )}
                 <LessonView body={detail.body} links={detail.source_links} />
@@ -567,8 +569,9 @@ export function Review({
             {detail.validation.valid ? (
               <p className="valid">✓ Structural checks passed</p>
             ) : (
-              <Notice error>
-                <strong>Corrections needed</strong>
+              <Notice error={!readyCorrection}>
+                <strong>{readyCorrection ? "Older version has missing sections" : "Corrections needed"}</strong>
+                {readyCorrection && <p>These checks apply to this published version, not the newer correction waiting for review.</p>}
                 <ul>
                   {detail.validation.errors.map((e, i) => (
                     <li key={i}>

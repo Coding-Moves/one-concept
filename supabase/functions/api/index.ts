@@ -28,7 +28,7 @@ Deno.serve(createHandler({
   },
   allowedOrigins: (Deno.env.get('ALLOWED_ORIGINS') ?? '').split(',').map(value => value.trim()).filter(Boolean),
   publicSiteUrl: Deno.env.get('PUBLIC_SITE_URL'),
-  contentLowWatermark: optionalInteger('CONTENT_LOW_WATERMARK', 10),
+  contentLowWatermark: optionalInteger('CONTENT_LOW_WATERMARK', 5),
   contentReservePerTopic: optionalInteger('CONTENT_RESERVE_PER_TOPIC', 60),
   contentActiveDays: optionalInteger('CONTENT_ACTIVE_DAYS', 90),
   editorialEnabled: Deno.env.get('EDITORIAL_ENABLED') === 'true',

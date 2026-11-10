@@ -4,7 +4,7 @@ import { createCuratedRefillTask } from './curated_refill.ts';
 
 const config = {
   enabled: true, urgentEnabled: true, apiKey: 'fixture-key', model: 'gemini-fixture',
-  activeDays: 90, reserve: 60, low: 10, critical: 3, minPool: 25,
+  activeDays: 90, reserve: 60, low: 5, critical: 3, minPool: 25,
   dailyCap: 5, topicCap: 1, urgentDailyCap: 10, urgentTopicCap: 2,
   maxConcurrent: 3, reviewLimit: 25,
 };
@@ -54,6 +54,9 @@ test('normal refill plans readers and drafts exactly one validated concept', asy
     'edge_worker_complete_curated_refill',
   ]);
   assert.equal(calls[1][1].p_global_cap, 5);
+  assert.equal(calls[0][1].p_low, 5);
+  assert.equal(calls[1][1].p_low, 5);
+  assert.ok(calls[2][1].p_learning_package.flashcard.front.length > 0);
   assert.equal(calls[2][1].p_learning_package.mcqs.length, 3);
 });
 

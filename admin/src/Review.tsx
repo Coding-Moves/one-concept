@@ -23,6 +23,11 @@ export function Review({
   me,
   id,
   kind,
+  backView,
+  nextLesson,
+  previousLesson,
+  position,
+  onMove,
   navigate,
   setDirty,
 }: {
@@ -30,6 +35,11 @@ export function Review({
   me: Me;
   id: string;
   kind: string;
+  backView?: string;
+  nextLesson?: { id: string; title: string };
+  previousLesson?: { id: string; title: string };
+  position?: { current: number; total: number };
+  onMove: (step: -1 | 1) => void;
   navigate: (r: Route) => void;
   setDirty: (v: boolean) => void;
 }) {
@@ -312,21 +322,21 @@ export function Review({
     : null;
   return (
     <>
-      <button
-        className="text-button"
-        onClick={() =>
-          navigate({
-            view:
-              kind === "published"
-                ? "published"
-                : kind === "legacy"
-                  ? "legacy"
-                  : "queue",
-          })
-        }
-      >
-        ← Back to lessons
-      </button>
+      <div className="heading-row review-navigation">
+        <button
+          className="text-button"
+          onClick={() => navigate({
+            view: backView || (kind === "published" ? "published" : kind === "legacy" ? "legacy" : "queue"),
+          })}
+        >
+          ← Back to {backView === "legacy" ? "existing lessons" : backView === "approved" ? "approved lessons" : backView === "published" ? "published lessons" : "review queue"}
+        </button>
+        {position && <span className="muted">On this page: {position.current} of {position.total}</span>}
+        <div className="review-navigation-actions">
+          {previousLesson && <button className="text-button" onClick={() => onMove(-1)}>← Previous lesson</button>}
+          {nextLesson && <button className="text-button" onClick={() => onMove(1)}>Next: {nextLesson.title} →</button>}
+        </div>
+      </div>
       <div className="page-heading heading-row">
         <div>
           <p className="eyebrow">
@@ -346,9 +356,9 @@ export function Review({
       {notice && <Notice>{notice}</Notice>}
       {readyCorrection && (
         <Notice>
-          A complete correction is waiting for review. Review its full lesson and sources before approval.{" "}
+          You are viewing the older published version. A newer correction is waiting for review. Its content and checks are separate from this version.{" "}
           <button onClick={() => navigate({ view: "review", id: readyCorrection.id, kind: "revisions" })}>
-            Open correction
+            Review newer correction
           </button>
         </Notice>
       )}
@@ -420,8 +430,10 @@ export function Review({
               detail.body && typeof detail.body === "object" && !Array.isArray(detail.body) ? (
                 <>
                   {!detail.validation.valid && (
-                    <Notice error>
-                      This older lesson is incomplete. Read what exists below, then prepare a correction before verification.
+                    <Notice error={!readyCorrection}>
+                      {readyCorrection
+                        ? "This older published version has missing sections. Open the newer correction above to review its complete lesson."
+                        : "This older lesson is incomplete. Read what exists below, then prepare a correction before verification."}
                     </Notice>
                   )}
                 <LessonView body={detail.body} links={detail.source_links} />
@@ -489,17 +501,18 @@ export function Review({
                 </fieldset>
                 <button
                   className="primary"
-                  disabled={blocked || !noted}
+                  disabled={blocked}
                   onClick={() =>
                     void op.send({
                       path: `/concepts/${cid}/revisions`,
                       method: "POST",
-                      body: command(stageToken, note, { body: edit }),
+                      body: command(stageToken, note.trim() || "Prepared a corrected lesson for review.", { body: edit }),
                     })
                   }
                 >
                   Save as new draft
                 </button>
+                <p className="muted">A review note is optional here. Your correction is saved as a draft for human review.</p>
               </>
             ) : (
               <>
@@ -556,8 +569,9 @@ export function Review({
             {detail.validation.valid ? (
               <p className="valid">✓ Structural checks passed</p>
             ) : (
-              <Notice error>
-                <strong>Corrections needed</strong>
+              <Notice error={!readyCorrection}>
+                <strong>{readyCorrection ? "Older version has missing sections" : "Corrections needed"}</strong>
+                {readyCorrection && <p>These checks apply to this published version, not the newer correction waiting for review.</p>}
                 <ul>
                   {detail.validation.errors.map((e, i) => (
                     <li key={i}>
@@ -828,6 +842,14 @@ export function Review({
                 </div>
               ))}
             </section>
+          )}
+          {nextLesson && (
+            <div className="card review-continue">
+              <p className="muted">Ready for another lesson?</p>
+              <button className="primary" onClick={() => onMove(1)}>
+                Next: {nextLesson.title} →
+              </button>
+            </div>
           )}
         </aside>
       </div>

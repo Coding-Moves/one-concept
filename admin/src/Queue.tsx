@@ -5,16 +5,31 @@ import type { Me, Member, Page, QueueItem, Taxon } from "./types";
 import { shortId } from "./types";
 import { allPages, Badge, Empty, Field, Notice, useResource } from "./ui";
 import { MarkdownText } from "./MarkdownText";
+export interface QueueState {
+  search: string;
+  topic: string;
+  subtopic: string;
+  status: string;
+  assignee: string;
+  urgency: string;
+  pages: string[];
+}
 export function Queue({
   api,
   me,
   view,
   navigate,
+  initialState,
+  onStateChange,
+  onOpen,
 }: {
   api: Api;
   me: Me;
   view: string;
   navigate: (r: Route) => void;
+  initialState?: QueueState;
+  onStateChange: (view: string, state: QueueState) => void;
+  onOpen: (view: string, kind: string, items: { id: string; title: string }[], index: number) => void;
 }) {
   const kind =
     view === "legacy"
@@ -22,22 +37,28 @@ export function Queue({
       : view === "published"
         ? "published"
         : "revisions";
-  const [search, setSearch] = useState(""),
-    [topic, setTopic] = useState(""),
-    [subtopic, setSubtopic] = useState(""),
-    [status, setStatus] = useState(view === "approved" ? "approved" : ""),
-    [assignee, setAssignee] = useState(""),
-    [urgency, setUrgency] = useState(""),
-    [pages, setPages] = useState<string[]>([""]),
+  const [search, setSearch] = useState(initialState?.search ?? ""),
+    [topic, setTopic] = useState(initialState?.topic ?? ""),
+    [subtopic, setSubtopic] = useState(initialState?.subtopic ?? ""),
+    [status, setStatus] = useState(initialState?.status ?? (view === "approved" ? "approved" : "")),
+    [assignee, setAssignee] = useState(initialState?.assignee ?? ""),
+    [urgency, setUrgency] = useState(initialState?.urgency ?? ""),
+    [pages, setPages] = useState<string[]>(initialState?.pages ?? [""]),
     [refresh, setRefresh] = useState(0);
   const [taxonomy, setTaxonomy] = useState<Taxon[]>([]),
     [members, setMembers] = useState<Member[]>([]),
     [filterError, setFilterError] = useState("");
   useEffect(() => {
+    onStateChange(view, { search, topic, subtopic, status, assignee, urgency, pages });
+  }, [view, search, topic, subtopic, status, assignee, urgency, pages, onStateChange]);
+  useEffect(() => {
     let active = true;
     allPages<Taxon>(api, "/taxonomy")
       .then((data) => {
-        if (active) setTaxonomy(data);
+        if (active) {
+          setTaxonomy(data);
+          setFilterError("");
+        }
       })
       .catch(() => {
         if (active)
@@ -230,11 +251,15 @@ export function Queue({
           </div>
         ) : data?.items.length ? (
           <div className="lesson-list">
-            {data.items.map((item) => (
+            {data.items.map((item, index) => (
               <button
                 className="lesson-row"
                 key={item.id}
-                onClick={() => navigate({ view: "review", id: item.id, kind })}
+                onClick={() => {
+                  onStateChange(view, { search, topic, subtopic, status, assignee, urgency, pages });
+                  onOpen(view, kind, data.items.map((row) => ({ id: row.id, title: row.title })), index);
+                  navigate({ view: "review", id: item.id, kind });
+                }}
               >
                 <span className="lesson-icon" aria-hidden="true">
                   ▤

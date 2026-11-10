@@ -409,6 +409,9 @@ main {
   gap: 18px;
   flex-wrap: wrap;
 }
+.review-navigation-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.review-navigation-actions button { white-space: normal; text-align: left; }
+.review-continue button { width: 100%; text-align: left; white-space: normal; }
 .queue-card {
   padding: 0;
   overflow: hidden;

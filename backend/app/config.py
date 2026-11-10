@@ -56,7 +56,7 @@ class Settings(BaseSettings):
     min_pool_per_topic: int = Field(default=25, ge=0)
     content_reserve_per_topic: int = Field(default=60, ge=1, le=365)
     # A learner nearing the end of a topic only schedules background work.
-    content_low_watermark: int = Field(default=10, ge=0, le=30)
+    content_low_watermark: int = Field(default=5, ge=0, le=30)
     content_critical_watermark: int = Field(default=3, ge=0, le=10)
     content_active_days: int = Field(default=90, ge=1, le=365)
     content_planned_reserve: int = Field(default=90, ge=1, le=1000)

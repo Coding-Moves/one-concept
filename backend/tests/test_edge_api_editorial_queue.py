@@ -101,3 +101,32 @@ async def test_editorial_queue_matches_existing_views_and_rechecks_authority(api
       has_function_privilege('service_role',
         'public.edge_api_editorial_queue(uuid,uuid,text,text,text,uuid,uuid,uuid,text,text,uuid,integer)', 'EXECUTE')"""))).one()
     assert rights == (False, True)
+
+
+@pytest.mark.asyncio
+async def test_stale_revision_is_history_not_actionable_queue_work(api, session, draft):
+    revision_id = await session.scalar(text(
+        "select id from public.concept_revisions where concept_id=:id"
+    ), {"id": draft[1]})
+    await session.execute(text(
+        "update public.concept_revisions set status='pending_review' where id=:id"
+    ), {"id": revision_id})
+    await session.execute(text(
+        "update public.concepts set content_version=content_version+1 where id=:id"
+    ), {"id": draft[1]})
+    await session.commit()
+    command = text("""select public.edge_api_editorial_queue(
+      :uid,:sid,'aal2','revisions',:status,null,null,null,null,:search,null,25)""")
+    args = {"uid": api.owner.id, "sid": api.owner.session_id,
+            "status": None, "search": draft[0]}
+    for status in (None, "pending_review"):
+        args["status"] = status
+        sql_page = _json(await session.scalar(command, args))
+        response = await api.client.get(f"{content.ROOT}/queue", headers=api.headers(),
+                                        params={"search": draft[0], **({"status": status} if status else {})})
+        assert response.status_code == 200, response.text
+        assert response.json() == sql_page
+        assert sql_page["items"] == [] and sql_page["total"] == 0
+    history = await api.client.get(f"{content.ROOT}/concepts/{draft[1]}/revisions", headers=api.headers())
+    assert history.status_code == 200
+    assert any(item["id"] == str(revision_id) for item in history.json()["items"])

@@ -79,7 +79,7 @@ const refillOptions = {
   model: setting('GEMINI_MODEL') ?? 'gemini-3.1-flash-lite',
   activeDays: integerSetting('CONTENT_ACTIVE_DAYS', 90),
   reserve: integerSetting('CONTENT_RESERVE_PER_TOPIC', 60),
-  low: integerSetting('CONTENT_LOW_WATERMARK', 10),
+  low: integerSetting('CONTENT_LOW_WATERMARK', 5),
   critical: integerSetting('CONTENT_CRITICAL_WATERMARK', 3),
   minPool: integerSetting('MIN_POOL_PER_TOPIC', 25),
   dailyCap: integerSetting('FUTURE_REFILL_DAILY_CALL_CAP', 5),

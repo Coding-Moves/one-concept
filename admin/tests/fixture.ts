@@ -1,6 +1,7 @@
 import type { BrowserContext, Page, Route } from "@playwright/test";
 export const uid = "00000000-0000-4000-8000-000000000001",
   rid = "10000000-0000-4000-8000-000000000001",
+  rid2 = "10000000-0000-4000-8000-000000000002",
   cid = "20000000-0000-4000-8000-000000000001",
   tid = "30000000-0000-4000-8000-000000000001",
   sid = "40000000-0000-4000-8000-000000000001";
@@ -77,6 +78,7 @@ export async function fixture(
     shared?: unknown;
     autoCorrection?: boolean;
     legacyIncomplete?: boolean;
+    secondLesson?: boolean;
   } = {},
 ) {
   const member = {
@@ -320,23 +322,34 @@ export async function fixture(
         (!search ||
           lesson.title.toLowerCase().includes(search.toLowerCase())) &&
         (kind !== "published" || state.status === "published");
+      const first = {
+        ...detail,
+        id: kind === "published" ? cid : rid,
+        title: lesson.title,
+        slug: "database-migrations",
+        topic_name: "Software Engineering",
+        subtopic_name: "Databases",
+        topic_id: tid,
+        subtopic_id: sid,
+        content_version: state.contentVersion,
+      };
+      const second = {
+        ...first,
+        id: rid2,
+        title: "Database Indexes",
+        slug: "database-indexes",
+        status: "pending_review",
+      };
+      const items = [
+        ...(matches ? [first] : []),
+        ...(options.secondLesson && kind === "revisions" &&
+          (!status || status === "pending_review") &&
+          (!search || second.title.toLowerCase().includes(search.toLowerCase()))
+          ? [second] : []),
+      ];
       return fulfill(route, {
-        items: matches
-          ? [
-              {
-                ...detail,
-                id: kind === "published" ? cid : rid,
-                title: lesson.title,
-                slug: "database-migrations",
-                topic_name: "Software Engineering",
-                subtopic_name: "Databases",
-                topic_id: tid,
-                subtopic_id: sid,
-                content_version: state.contentVersion,
-              },
-            ]
-          : [],
-        total: matches ? 1 : 0,
+        items,
+        total: items.length,
         next_cursor: null,
       });
     }
@@ -486,6 +499,13 @@ export async function fixture(
         provenance: state.approvedBy
           ? { registered_name: state.approvedBy }
           : null,
+      });
+    if (path.startsWith(`/revisions/${rid2}`) && options.secondLesson)
+      return fulfill(route, {
+        ...detail,
+        id: rid2,
+        status: "pending_review",
+        body: { ...state.body, title: "Database Indexes" },
       });
     if (path.startsWith("/revisions/")) return fulfill(route, detail);
     return fulfill(route, { detail: "Unexpected fixture route " + path }, 404);

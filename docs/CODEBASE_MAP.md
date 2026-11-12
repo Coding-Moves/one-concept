@@ -115,7 +115,9 @@ enforces that persisted choice for every editorial capability. Disabling it
 requires a recent TOTP method timestamp from the verified Supabase JWT;
 `0045_editorial_authenticator_choice.sql` defaults existing accounts to on and
 extends the account audit. `Queue.tsx` supplies topic/status/deadline filtering and
-shows unassigned drafts in the shared queue. `Review.tsx` and `LessonView.tsx`
+shows unassigned drafts in the shared queue. `App.tsx` retains queue filters and
+the current page's lesson order while a reviewer opens a lesson, so `Review.tsx`
+can return to that list or move to its adjacent lessons. `Review.tsx` and `LessonView.tsx`
 render complete and incomplete legacy packages, give a direct route to a pending
 correction, record the reviewer's explicit full-package confirmation, and keep
 assignment as optional coordination. Diffs, history, comments and safe corrections
@@ -129,8 +131,10 @@ through the scheduled Edge `legacy_enrichment` job; only a later human approval 
 bounded Prism token highlighting to fenced code; `LessonEditor` shows a live
 preview. Identifiers and configuration fields remain plain text.
 `api.ts` and `useCommand.ts` preserve exact operation retries and stale-token
-failures. Migration 0037 adds audited review deadlines. Queue totals are computed
-with page results in one statement; published rows require matching exact-version
+failures. Migration 0037 adds audited review deadlines. Migration 0137 excludes
+revisions based on an older content version from actionable queues while retaining
+them in history. Queue totals are computed with page results in one statement;
+published rows require matching exact-version
 provenance. Build/browser CI uses public fixture values only. See
 [the review website guide](../admin/README.md) for staging and hosting boundaries.
 

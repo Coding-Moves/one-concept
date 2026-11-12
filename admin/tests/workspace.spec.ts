@@ -45,6 +45,39 @@ test("topic filtering, full package, comments and atomic publication", async ({
     page.getByText("Approved by Amina Khan", { exact: false }),
   ).toBeVisible();
 });
+test("reviewer can continue to the next lesson and return to the same filtered list", async ({
+  page,
+  context,
+}) => {
+  const state = await fixture(context, { secondLesson: true, caps: ["review", "approve", "publish"] });
+  await login(page);
+  await page.getByLabel("Topic", { exact: true }).selectOption({ label: "Software Engineering" });
+  await page.getByLabel("Subtopic", { exact: true }).selectOption({ label: "Databases" });
+  await page.getByLabel("Search lessons").fill("Database");
+  await openLesson(page);
+  await expect(page.getByText("On this page: 1 of 2")).toBeVisible();
+  await checkAll(page);
+  await page.getByRole("button", { name: "Approve and publish" }).click();
+  await expect(page.getByText("Published successfully", { exact: false })).toBeVisible();
+  await page.getByRole("button", { name: "Next: Database Indexes →" }).last().click();
+  await expect(page.getByRole("heading", { name: "Database Indexes", exact: true }).first()).toBeVisible();
+  await expect(page.getByText("On this page: 2 of 2")).toBeVisible();
+  await page.getByRole("button", { name: "← Back to review queue" }).click();
+  await expect(page.getByLabel("Topic", { exact: true })).toHaveValue(tid);
+  await expect(page.getByLabel("Subtopic", { exact: true })).toHaveValue("40000000-0000-4000-8000-000000000001");
+  await expect(page.getByLabel("Search lessons")).toHaveValue("Database");
+  expect(state.status).toBe("published");
+});
+test("declining the unsaved-changes prompt keeps the lesson and next position", async ({ page, context }) => {
+  await fixture(context, { secondLesson: true });
+  await login(page);
+  await openLesson(page);
+  await page.getByLabel("Review note or comment").fill("Unsent review feedback");
+  page.once("dialog", (dialog) => void dialog.dismiss());
+  await page.getByRole("button", { name: "Next: Database Indexes →" }).first().click();
+  await expect(page.getByRole("heading", { name: "Database Migrations", exact: true }).first()).toBeVisible();
+  await expect(page.getByText("On this page: 1 of 2")).toBeVisible();
+});
 test("owner sees an incomplete existing lesson as readable sections and cannot verify it", async ({
   page,
   context,
@@ -57,10 +90,11 @@ test("owner sees an incomplete existing lesson as readable sections and cannot v
   await expect(page.getByRole("heading", { name: "Worked example" })).toBeVisible();
   await expect(page.getByText("Flashcard needs to be added.")).toBeVisible();
   await expect(page.getByText("References need to be added and checked.")).toBeVisible();
+  await expect(page.getByText("These checks apply to this published version", { exact: false })).toBeVisible();
   await expect(page.locator(".document-card pre.plain-value")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "Verify existing lesson" })).toBeDisabled();
   await expect(page.getByText("Already approved for the team", { exact: false })).toHaveCount(0);
-  await page.getByRole("button", { name: "Open correction" }).click();
+  await page.getByRole("button", { name: "Review newer correction" }).click();
   await expect(page.getByRole("heading", { name: "Question 3" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Approve and publish" })).toBeVisible();
 });
@@ -295,6 +329,17 @@ test("change request, diff, AI correction status and manual revision", async ({
   expect(state.body.model).toBeNull();
   expect(state.body.prompt_version).toBeNull();
   await expect(page.getByRole("heading", { name: "Generation record" })).toHaveCount(0);
+});
+test("manual correction can be saved without an optional review note", async ({ page, context }) => {
+  const state = await fixture(context);
+  await login(page);
+  await openLesson(page);
+  await page.getByRole("button", { name: "Prepare manual correction" }).click();
+  await page.getByLabel("Explanation", { exact: true }).fill("A clearer, corrected migration explanation for review.");
+  await expect(page.getByRole("button", { name: "Save as new draft" })).toBeEnabled();
+  await page.getByRole("button", { name: "Save as new draft" }).click();
+  await expect(page.getByRole("button", { name: "Submit for review" })).toBeVisible();
+  expect(state.commands.at(-1).note).toBe("Prepared a corrected lesson for review.");
 });
 test("requesting changes shows an automatically queued private correction", async ({
   page,

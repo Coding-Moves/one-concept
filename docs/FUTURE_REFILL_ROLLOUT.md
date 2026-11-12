@@ -46,9 +46,11 @@ fixed by increasing a model quota or turning on a scheduler.
 
 The production Edge worker reads `GENERATION_ENABLED` and
 `FUTURE_REFILL_ENABLED` independently. Both must be true for curated refill.
-Keep new-lesson refill paused while the existing revision queue is being
-reviewed. `editorial_generation` and `legacy_enrichment` are separate workers;
-their success does not prove new titles are being drafted.
+Review the existing revision queue before enabling new-lesson refill and keep
+enough capacity for human checks. The per-topic review limit prevents new
+claims when that queue is full; it does not require every existing revision to
+be published first. `editorial_generation` and `legacy_enrichment` are
+separate workers; their success does not prove new titles are being drafted.
 Enable the `content_pool` row in `edge_worker_jobs` and its matching Cron job
 only after checking the exact production project and target worker URL. The
 normal path claims at most one private draft per eligible low-supply topic per
@@ -57,6 +59,15 @@ day, bounded by `FUTURE_REFILL_DAILY_CALL_CAP=5` and
 The worker skips topics with no pending plan, a full review queue, no active
 reader demand, or exhausted allowance. Learner HTTP requests do not wait for a
 model call.
+
+The normal low-supply threshold is **five unread published lessons for an
+active learner** (`CONTENT_LOW_WATERMARK=5`); exactly five qualifies. It is
+not a count of all lessons in the topic. A pending curated title, an active
+supply target, room in the review queue, and available call allowance are
+still required. One successful call creates one private lesson draft with one
+flashcard and exactly three MCQs; reviewers or the owner submit and approve
+that exact revision before learners see it. Assignment to a reviewer is
+optional.
 
 Reviewer's **Request changes** can queue a separate private AI correction when
 `EDITORIAL_AUTO_CORRECTION_ENABLED=true`. It does not publish a replacement.

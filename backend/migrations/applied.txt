@@ -53,6 +53,7 @@
 0043_future_refill_daily_usage.sql
 0044_public_profile_bio_choice.sql
 0045_editorial_authenticator_choice.sql
+0137_editorial_queue_current_versions.sql
 0046_supabase_api_basics.sql
 0047_supabase_concept_api.sql
 0048_supabase_notifications_api.sql

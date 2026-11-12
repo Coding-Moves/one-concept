@@ -80,6 +80,36 @@ CLAIM = text("""select public.edge_worker_claim_curated_refill(
 
 
 @pytest.mark.asyncio
+async def test_refill_starts_at_five_unread_lessons_not_six(session, user):
+    topic, backlog = await seeded_topic(session, user)
+    subtopic = await session.scalar(text("""select id from public.subtopics
+      where topic_id=:topic"""), {"topic": topic})
+    for index in range(6):
+        await session.execute(text("""insert into public.concepts(
+          topic_id,subtopic_id,slug,title,summary,status)
+          values (:topic,:subtopic,:slug,:title,'A published test lesson','published')"""),
+          {"topic": topic, "subtopic": subtopic,
+           "slug": f"extra-{index}-{uuid4().hex[:10]}",
+           "title": f"Extra lesson {index}"})
+    await session.commit()
+    five = text("""select public.edge_worker_claim_curated_refill(
+      :topic,false,90,5,25,100,2,20,25)""")
+    assert await session.scalar(five, {"topic": topic}) is None
+    assert await session.scalar(text("""select count(*) from public.
+      future_refill_topic_daily_usage where topic_id=:topic"""),
+      {"topic": topic}) == 0
+    one = await session.scalar(text("""select id from public.concepts
+      where topic_id=:topic and title='Extra lesson 0'"""),
+      {"topic": topic})
+    await session.execute(text("""insert into public.daily_assignments(
+      user_id,concept_id,assigned_for) values (:user,:concept,:day)"""),
+      {"user": user, "concept": one, "day": date(2025, 1, 2)})
+    await session.commit()
+    claimed = decoded(await session.scalar(five, {"topic": topic}))
+    assert claimed["id"] == str(backlog)
+
+
+@pytest.mark.asyncio
 async def test_refill_claim_reap_and_private_draft_are_fenced(session, user):
     topic, backlog = await seeded_topic(session, user)
     first = decoded(await session.scalar(CLAIM, {"topic": topic}))

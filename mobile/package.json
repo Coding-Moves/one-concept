@@ -14,7 +14,7 @@
     "base64-js": "1.5.1",
     "expo": "~57.0.31",
     "expo-camera": "~57.0.6",
-    "expo-constants": "~57.0.21",
+    "expo-constants": "~57.0.23",
     "expo-dev-client": "~57.0.20",
     "expo-device": "~57.0.2",
     "expo-font": "~57.0.4",
